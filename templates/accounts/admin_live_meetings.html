@@ -40,7 +40,7 @@
                     
                     <div style="display: flex; gap: 20px; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
                         <div>
-                            <div style="font-size: 24px; font-weight: 700; color: #667eea;">{{ meeting.participants.filter(is_active=True).count }}</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #667eea;">{{ meeting.active_participants_count|default:0 }}</div>
                             <div style="font-size: 12px; color: #7f8c8d;">Active Now</div>
                         </div>
                         <div>

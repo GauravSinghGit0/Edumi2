@@ -104,3 +104,14 @@ def truncate_chars(text, max_length):
         return text
     
     return text[:max_length-3] + "..."
+
+
+@register.filter(name='get_item')
+def get_item(dictionary, key):
+    """
+    Get dictionary item by key in Django templates
+    Usage: {{ dict|get_item:key }}
+    """
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None
