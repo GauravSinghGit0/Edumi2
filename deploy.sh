@@ -37,6 +37,7 @@ step() {
 DOMAIN="eclass.dei.ac.in"
 EMAIL=""
 DB_HOST="127.0.0.1"
+USE_LETSENCRYPT=false
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER="edumi"
 DB_NAME="edumi_db"
@@ -46,9 +47,10 @@ DB_PASS="edumi_pass_2026"
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --domain)  DOMAIN="$2";  shift 2 ;;
-        --email)   EMAIL="$2";   shift 2 ;;
-        --db-host) DB_HOST="$2"; shift 2 ;;
+        --domain)       DOMAIN="$2";  shift 2 ;;
+        --email)        EMAIL="$2";   shift 2 ;;
+        --db-host)      DB_HOST="$2"; shift 2 ;;
+        --letsencrypt)  USE_LETSENCRYPT=true; shift ;;
         *) warn "Unknown argument: $1"; shift ;;
     esac
 done
@@ -244,9 +246,9 @@ LIVEKIT_INTERNAL_HTTP_URL=http://127.0.0.1:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=devsecret_must_be_32_characters_long_1234
 
-SECURE_SSL_REDIRECT=False
-SESSION_COOKIE_SECURE=False
-CSRF_COOKIE_SECURE=False
+SECURE_SSL_REDIRECT=$([ "$USE_LETSENCRYPT" = true ] || [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && echo "True" || echo "False")
+SESSION_COOKIE_SECURE=$([ "$USE_LETSENCRYPT" = true ] || [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && echo "True" || echo "False")
+CSRF_COOKIE_SECURE=$([ "$USE_LETSENCRYPT" = true ] || [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && echo "True" || echo "False")
 
 FACE_ENCRYPTION_KEY=$FACE_KEY
 FACE_MATCH_THRESHOLD=0.50
@@ -268,10 +270,13 @@ step "STEP 7: Directories & SSL Certificate Setup"
 # ------------------------------------------------------------------------------
 mkdir -p staticfiles media certs logs config
 
-if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+if [ "$USE_LETSENCRYPT" = true ] && [ "$IS_ROOT" = true ]; then
+    info "Provisioning official Let's Encrypt public SSL certificate for $DOMAIN..."
+    bash "$APP_DIR/scripts/setup_letsencrypt.sh" --domain "$DOMAIN" ${EMAIL:+--email "$EMAIL"} || true
+elif [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
     info "Using official Let's Encrypt public SSL certificate for $DOMAIN..."
-    cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" certs/edumi.crt
-    cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" certs/edumi.key
+    cp -L "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" certs/edumi.crt
+    cp -L "/etc/letsencrypt/live/$DOMAIN/privkey.pem" certs/edumi.key
 else
     info "Generating SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
     if [ -f "scripts/generate_ssl_cert.py" ]; then
