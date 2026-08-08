@@ -95,22 +95,20 @@ def get_student_stats(user):
         'face_registered': face_registered,
     }
 
+def check_port_open(host, port, timeout=2):
+    import socket
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        res = sock.connect_ex((host, port))
+        sock.close()
+        return res == 0
+    except Exception:
+        return False
+
 def get_admin_stats():
     """Get overall platform statistics for the admin panel."""
-    import requests
-    from django.conf import settings
-    camera_service_online = False
-    try:
-        internal_url = getattr(settings, 'CAMERA_SERVICE_URL', 'https://127.0.0.1:8008')
-        try:
-            response = requests.get(f"{internal_url}/cameras/", timeout=2, verify=False)
-        except Exception:
-            alt_url = internal_url.replace('http://', 'https://') if 'http://' in internal_url else internal_url.replace('https://', 'http://')
-            response = requests.get(f"{alt_url}/cameras/", timeout=2, verify=False)
-        camera_service_online = (response.status_code == 200)
-    except Exception as e:
-        logger.warning(f"Camera service connection check failed: {e}")
-        camera_service_online = False
+    camera_service_online = check_port_open('127.0.0.1', 8008)
 
     return {
         'total_users': User.objects.count(),
