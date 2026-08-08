@@ -271,7 +271,10 @@ if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
         -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
         -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
 fi
-# Ensure home directory and certs have read/execute permissions for Nginx (www-data)
+# Ensure home directory, certs, and logs have proper write/execute permissions
+mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/media" "$APP_DIR/certs" "$APP_DIR/config"
+chmod -R 777 "$APP_DIR/logs" 2>/dev/null || true
+
 if [ "$IS_ROOT" = true ]; then
     chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
     chmod -R 755 "$APP_DIR/certs" "$APP_DIR/staticfiles" "$APP_DIR/media" 2>/dev/null || true
@@ -366,13 +369,13 @@ upstream edumi_backend {
 
 server {
     listen 80;
-    server_name _;
+    server_name ${DOMAIN} www.${DOMAIN} ${LAN_IP} _;
     return 301 https://\$host\$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name _;
+    server_name ${DOMAIN} www.${DOMAIN} ${LAN_IP} _;
 
     ssl_certificate ${APP_DIR}/certs/edumi.crt;
     ssl_certificate_key ${APP_DIR}/certs/edumi.key;
