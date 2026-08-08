@@ -40,8 +40,8 @@ DB_HOST="127.0.0.1"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER="edumi"
 DB_NAME="edumi_db"
-DB_USER="edumi_user"
-DB_PASS="edumi_secure_pass_123"
+DB_USER="edumi_admin"
+DB_PASS="edumi_pass_2026"
 
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
