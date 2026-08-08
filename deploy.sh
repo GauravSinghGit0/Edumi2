@@ -36,12 +36,12 @@ step() {
 
 DOMAIN="eclass.dei.ac.in"
 EMAIL=""
-DB_HOST="10.7.11.141"
+DB_HOST="127.0.0.1"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER="edumi"
 DB_NAME="edumi_db"
 DB_USER="edumi_admin"
-DB_PASS="dei@education10"
+DB_PASS="edumi_pass_2026"
 
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
