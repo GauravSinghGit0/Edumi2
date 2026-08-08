@@ -36,12 +36,12 @@ step() {
 
 DOMAIN="eclass.dei.ac.in"
 EMAIL=""
-DB_HOST="127.0.0.1"
+DB_HOST="10.7.11.141"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER="edumi"
 DB_NAME="edumi_db"
 DB_USER="edumi_admin"
-DB_PASS="edumi_pass_2026"
+DB_PASS="dei@education10"
 
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
@@ -226,6 +226,9 @@ info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)...
 SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
 FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
 
+EXISTING_DB_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
+FINAL_DB_URL="${EXISTING_DB_URL:-postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME}"
+
 cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
@@ -233,7 +236,7 @@ ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP,*
 SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
-DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME
+DATABASE_URL=$FINAL_DB_URL
 REDIS_URL=redis://127.0.0.1:6379/0
 
 LIVEKIT_URL=wss://$DOMAIN/livekit-proxy

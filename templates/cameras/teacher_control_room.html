@@ -636,12 +636,116 @@
         lucide.createIcons();
     }
 
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     function toggleRecording() {
         if (!isRecording) {
             startRecording();
         } else {
             stopRecording();
         }
+    }
+
+    async function startRecording() {
+        const recordBtn = document.getElementById('recordBtn');
+        const fsRecordBtn = document.getElementById('fsRecordBtn');
+        const recIndicator = document.getElementById('recIndicator');
+        const qualitySelect = document.getElementById('qualitySelect');
+        const micSelect = document.getElementById('micSelect');
+
+        const quality = qualitySelect ? qualitySelect.value : '720p';
+        const audioSource = micSelect ? micSelect.value : 'pc';
+
+        const formData = new FormData();
+        formData.append('quality', quality);
+        formData.append('audio_source', audioSource);
+
+        try {
+            const response = await fetch(`/cameras/start-recording/${window.cameraId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                isRecording = true;
+                recStartTime = new Date();
+                if (recordBtn) {
+                    recordBtn.classList.add('recording');
+                    recordBtn.innerHTML = '<i data-lucide="square"></i> Stop Recording';
+                }
+                if (fsRecordBtn) {
+                    fsRecordBtn.classList.add('active');
+                    fsRecordBtn.innerHTML = '<i data-lucide="square"></i> Stop';
+                }
+                if (recIndicator) recIndicator.classList.add('active');
+                recTimerInterval = setInterval(updateRecTimer, 1000);
+                showNotification(data.message || 'Recording started successfully', 'success');
+            } else {
+                showNotification(data.message || 'Failed to start recording', 'error');
+            }
+        } catch (e) {
+            console.error('Error starting recording:', e);
+            showNotification('Error starting recording', 'error');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    async function stopRecording() {
+        const recordBtn = document.getElementById('recordBtn');
+        const fsRecordBtn = document.getElementById('fsRecordBtn');
+        const recIndicator = document.getElementById('recIndicator');
+
+        try {
+            const response = await fetch(`/cameras/stop-recording/${window.cameraId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                isRecording = false;
+                recStartTime = null;
+                if (recTimerInterval) {
+                    clearInterval(recTimerInterval);
+                    recTimerInterval = null;
+                }
+                const timerEl = document.getElementById('recTimer');
+                if (timerEl) timerEl.innerText = '00:00';
+                if (recordBtn) {
+                    recordBtn.classList.remove('recording');
+                    recordBtn.innerHTML = '<i data-lucide="video"></i> Record';
+                }
+                if (fsRecordBtn) {
+                    fsRecordBtn.classList.remove('active');
+                    fsRecordBtn.innerHTML = '<i data-lucide="video"></i> Rec';
+                }
+                if (recIndicator) recIndicator.classList.remove('active');
+                showNotification('Recording saved successfully!', 'success');
+            } else {
+                showNotification(data.message || 'Failed to stop recording', 'error');
+            }
+        } catch (e) {
+            console.error('Error stopping recording:', e);
+            showNotification('Error stopping recording', 'error');
+        }
+        if (window.lucide) lucide.createIcons();
     }
 
     // Audio Variables

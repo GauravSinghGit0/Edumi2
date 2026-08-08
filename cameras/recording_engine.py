@@ -157,16 +157,22 @@ class RecordingEngine:
 
         cmd.extend(['-pix_fmt', 'yuv420p'])
 
-        # Audio processing
-        audio_input_index = '1' if (self.audio_path and os.path.exists(self.audio_path)) else '0'
-        cmd.extend([
-            '-map', '0:v:0',
-            '-map', f'{audio_input_index}:a:0?',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-af', 'aresample=async=1000:min_hard_comp=0.1:first_pts=0'
-        ])
+        audio_input_index = '1' if (self.audio_path and os.path.exists(self.audio_path)) else None
+        cmd.extend(['-map', '0:v:0'])
+        if audio_input_index:
+            cmd.extend([
+                '-map', f'{audio_input_index}:a:0',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-ar', '44100',
+                '-af', 'aresample=async=1000:min_hard_comp=0.1:first_pts=0'
+            ])
+        else:
+            cmd.extend([
+                '-map', '0:a:0?',
+                '-c:a', 'aac',
+                '-b:a', '128k'
+            ])
 
         if self.is_chunked:
             cmd.extend([
