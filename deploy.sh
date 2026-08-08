@@ -226,12 +226,19 @@ info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)...
 SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
 FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
 
-FINAL_DB_URL="${EXISTING_DB_URL:-postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME?sslmode=prefer}"
-if [[ "$FINAL_DB_URL" != *"sslmode="* ]]; then
-    if [[ "$FINAL_DB_URL" == *"?"* ]]; then
-        FINAL_DB_URL="${FINAL_DB_URL}&sslmode=prefer"
+DATABASE_URL_STR="postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME?sslmode=prefer"
+if [ -f "$ENV_FILE" ]; then
+    EXISTING_DB=$(grep "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
+    if [ -n "$EXISTING_DB" ]; then
+        DATABASE_URL_STR="$EXISTING_DB"
+    fi
+fi
+
+if [[ "$DATABASE_URL_STR" != *"sslmode="* ]]; then
+    if [[ "$DATABASE_URL_STR" == *"?"* ]]; then
+        DATABASE_URL_STR="${DATABASE_URL_STR}&sslmode=prefer"
     else
-        FINAL_DB_URL="${FINAL_DB_URL}?sslmode=prefer"
+        DATABASE_URL_STR="${DATABASE_URL_STR}?sslmode=prefer"
     fi
 fi
 
@@ -242,7 +249,7 @@ ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP,*
 SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
-DATABASE_URL=$FINAL_DB_URL
+DATABASE_URL=$DATABASE_URL_STR
 REDIS_URL=redis://127.0.0.1:6379/0
 
 LIVEKIT_URL=wss://$DOMAIN/livekit-proxy
