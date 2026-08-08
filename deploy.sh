@@ -242,9 +242,9 @@ LIVEKIT_INTERNAL_HTTP_URL=http://127.0.0.1:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=devsecret_must_be_32_characters_long_1234
 
-SECURE_SSL_REDIRECT=True
-SESSION_COOKIE_SECURE=True
-CSRF_COOKIE_SECURE=True
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
 
 FACE_ENCRYPTION_KEY=$FACE_KEY
 FACE_MATCH_THRESHOLD=0.50
@@ -295,9 +295,11 @@ info "Running database migrations..."
 $VENV_PYTHON manage.py migrate --noinput
 log "Database schema initialized."
 
-info "Collecting static assets..."
+info "Collecting static assets and compressing styles..."
+$VENV_PYTHON manage.py compress --force 2>/dev/null || true
 $VENV_PYTHON manage.py collectstatic --noinput
-log "Static assets collected into ./staticfiles/"
+chmod -R 755 "$APP_DIR/staticfiles" 2>/dev/null || true
+log "Static assets collected and compressed into ./staticfiles/"
 
 
 # ------------------------------------------------------------------------------

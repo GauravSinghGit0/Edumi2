@@ -361,11 +361,11 @@ MEDIA_ROOT = DATABASE_DIR / 'media'
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Django Compressor
-COMPRESS_ENABLED  = not DEBUG
+COMPRESS_ENABLED  = env_bool('COMPRESS_ENABLED', 'True')
 COMPRESS_URL      = STATIC_URL
 COMPRESS_ROOT     = STATIC_ROOT
 COMPRESS_STORAGE  = 'compressor.storage.CompressorFileStorage'
-COMPRESS_OFFLINE  = not DEBUG
+COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False')
 
 # Register MIME types (Windows registry is often missing these)
 mimetypes.add_type('text/css',               '.css')
