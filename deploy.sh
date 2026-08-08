@@ -90,20 +90,13 @@ info "RAM Capacity: ${TOTAL_RAM_GB:0:4} GB"
 if [ "$IS_ROOT" = true ]; then
     info "Installing/updating required Ubuntu system packages..."
     apt-get update -qq
-    apt-get install -y -qq software-properties-common curl wget git openssl net-tools
-
-    # Add deadsnakes PPA for Python 3.11 if python3.11 is not available in default repos (e.g. Ubuntu 20.04)
-    if ! apt-cache show python3.11 &>/dev/null; then
-        info "Adding deadsnakes PPA for Python 3.11 support..."
-        add-apt-repository -y ppa:deadsnakes/ppa -y 2>/dev/null || true
-        apt-get update -qq
-    fi
+    apt-get install -y -qq software-properties-common curl wget git openssl net-tools 2>/dev/null || true
 
     apt-get install -y -qq \
-        python3.11 python3.11-venv python3.11-dev python3-pip \
+        python3 python3-venv python3-dev python3-pip \
         build-essential cmake g++ libpq-dev libffi-dev \
         ffmpeg postgresql postgresql-contrib redis-server nginx supervisor \
-        libopenblas-dev liblapack-dev libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev
+        libopenblas-dev liblapack-dev libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev 2>/dev/null || true
     log "Ubuntu system packages installed."
 fi
 
@@ -164,20 +157,30 @@ fi
 # ------------------------------------------------------------------------------
 step "STEP 5: Python Virtual Environment & Dependencies"
 # ------------------------------------------------------------------------------
-PYTHON_BIN="python3"
-if command -v python3.11 &>/dev/null; then
-    PYTHON_BIN="python3.11"
+VENV_DIR="venv"
+if [ -d ".venv" ]; then
+    VENV_DIR=".venv"
+elif [ -d "venv" ]; then
+    VENV_DIR="venv"
 fi
 
-if [ ! -d "venv" ]; then
+if [ ! -d "$VENV_DIR" ]; then
+    PYTHON_BIN="python3"
+    if command -v python3.11 &>/dev/null; then
+        PYTHON_BIN="python3.11"
+    fi
     info "Creating Python virtual environment using $PYTHON_BIN..."
     $PYTHON_BIN -m venv venv
+    VENV_DIR="venv"
 fi
 
+VENV_PYTHON="$APP_DIR/$VENV_DIR/bin/python"
+VENV_PIP="$APP_DIR/$VENV_DIR/bin/pip"
+
 info "Installing Python packages from requirements.txt..."
-./venv/bin/pip install --upgrade pip setuptools wheel -q
-./venv/bin/pip install -r requirements.txt -q
-log "Python environment ready inside ./venv/"
+$VENV_PIP install --upgrade pip setuptools wheel -q
+$VENV_PIP install -r requirements.txt -q
+log "Python environment ready inside ./$VENV_DIR"
 
 
 # ------------------------------------------------------------------------------
@@ -186,8 +189,8 @@ step "STEP 6: Environment File (.env) Setup"
 ENV_FILE="$APP_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
     info "Creating production .env file..."
-    SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || ./venv/bin/python -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
-    FACE_KEY=$(./venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
+    SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
+    FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
     
     ALLOWED_HOSTS_VAL="localhost,127.0.0.1"
     [ -n "$DOMAIN" ] && ALLOWED_HOSTS_VAL="$DOMAIN,www.$DOMAIN,$ALLOWED_HOSTS_VAL"
@@ -236,7 +239,7 @@ mkdir -p staticfiles media certs logs config
 
 if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
     info "Generating SSL certificate..."
-    ./venv/bin/python scripts/generate_ssl_cert.py 2>/dev/null || \
+    $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || \
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
         -keyout certs/edumi.key -out certs/edumi.crt \
         -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=edumi.ac.in" 2>/dev/null || true
@@ -248,11 +251,11 @@ fi
 step "STEP 8: Django Database Migrations & Static Collection"
 # ------------------------------------------------------------------------------
 info "Running database migrations..."
-./venv/bin/python manage.py migrate --noinput
+$VENV_PYTHON manage.py migrate --noinput
 log "Database schema initialized."
 
 info "Collecting static assets..."
-./venv/bin/python manage.py collectstatic --noinput
+$VENV_PYTHON manage.py collectstatic --noinput
 log "Static assets collected into ./staticfiles/"
 
 
@@ -261,6 +264,9 @@ step "STEP 9: Systemd Microservice Installation"
 # ------------------------------------------------------------------------------
 if [ "$IS_ROOT" = true ]; then
     info "Creating Systemd service unit files..."
+
+    VENV_DAPHNE="$APP_DIR/$VENV_DIR/bin/daphne"
+    VENV_CELERY="$APP_DIR/$VENV_DIR/bin/celery"
 
     CREATE_SERVICE() {
         local name=$1
@@ -284,14 +290,14 @@ WantedBy=multi-user.target
 EOF
     }
 
-    CREATE_SERVICE "edumi-auth" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8002 school_project.asgi:application"
-    CREATE_SERVICE "edumi-admin" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8003 school_project.asgi:application"
-    CREATE_SERVICE "edumi-meeting" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8004 school_project.asgi:application"
-    CREATE_SERVICE "edumi-msg" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8005 school_project.asgi:application"
-    CREATE_SERVICE "edumi-profile" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8006 school_project.asgi:application"
-    CREATE_SERVICE "edumi-video" "${APP_DIR}/venv/bin/daphne -b 127.0.0.1 -p 8007 school_project.asgi:application"
-    CREATE_SERVICE "edumi-camera" "${APP_DIR}/venv/bin/python camera_service/serve.py"
-    CREATE_SERVICE "edumi-celery" "${APP_DIR}/venv/bin/celery -A school_project worker -l info -P threads"
+    CREATE_SERVICE "edumi-auth" "${VENV_DAPHNE} -b 127.0.0.1 -p 8002 school_project.asgi:application"
+    CREATE_SERVICE "edumi-admin" "${VENV_DAPHNE} -b 127.0.0.1 -p 8003 school_project.asgi:application"
+    CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -b 127.0.0.1 -p 8004 school_project.asgi:application"
+    CREATE_SERVICE "edumi-msg" "${VENV_DAPHNE} -b 127.0.0.1 -p 8005 school_project.asgi:application"
+    CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -b 127.0.0.1 -p 8006 school_project.asgi:application"
+    CREATE_SERVICE "edumi-video" "${VENV_DAPHNE} -b 127.0.0.1 -p 8007 school_project.asgi:application"
+    CREATE_SERVICE "edumi-camera" "${VENV_PYTHON} camera_service/serve.py"
+    CREATE_SERVICE "edumi-celery" "${VENV_CELERY} -A school_project worker -l info -P threads"
 
     if [ -f "${LIVEKIT_DIR}/livekit-server" ]; then
         CREATE_SERVICE "edumi-livekit" "${LIVEKIT_DIR}/livekit-server --config ${APP_DIR}/config/livekit.yaml"
