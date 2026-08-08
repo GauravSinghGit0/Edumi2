@@ -737,39 +737,56 @@ async function init() {
         await window.room.connect(url, token);
         console.log('Connected to LiveKit room:', window.room.name);
 
-        // Initial state
+        // Initial desired media state
         window.isMicOn = window.isHost ? true : window.canSpeak;
         window.isCameraOn = window.isHost ? true : window.canVideo;
 
-        // Publish local camera + mic
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            // Attempt Microphone
+        // Check for secure context and mediaDevices availability
+        const isSecureMediaContext = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+        if (!isSecureMediaContext) {
+            console.warn('WebRTC media devices disabled due to non-secure HTTP context or browser restriction');
+            window.isMicOn = false;
+            window.isCameraOn = false;
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                showNotification('Camera & Microphone disabled: HTTPS connection required by browser.', 'warning');
+            }
+        } else {
+            // Attempt Microphone (Graceful fallback on error)
             if (window.isMicOn) {
                 try {
                     await window.room.localParticipant.setMicrophoneEnabled(true);
                 } catch (micErr) {
                     console.warn('Microphone initialization failed:', micErr);
                     window.isMicOn = false;
+                    let msg = 'Microphone access failed. Joined in listen-only mode.';
                     if (micErr.name === 'NotFoundError' || micErr.name === 'DevicesNotFoundError') {
-                        showNotification('No microphone found on this device.', 'warning');
+                        msg = 'No microphone found on this device.';
                     } else if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
-                        showNotification('Microphone access denied.', 'error');
+                        msg = 'Microphone permission denied.';
+                    } else if (micErr.name === 'NotReadableError' || micErr.name === 'TrackStartError') {
+                        msg = 'Microphone is currently in use by another app.';
                     }
+                    showNotification(msg, 'warning');
                 }
             }
 
-            // Attempt Camera
+            // Attempt Camera (Graceful fallback on error)
             if (window.isCameraOn) {
                 try {
                     await window.room.localParticipant.setCameraEnabled(true);
                 } catch (camErr) {
                     console.warn('Camera initialization failed:', camErr);
                     window.isCameraOn = false;
+                    let msg = 'Camera access failed. Joined without video.';
                     if (camErr.name === 'NotFoundError' || camErr.name === 'DevicesNotFoundError') {
-                        showNotification('No camera found on this device.', 'warning');
+                        msg = 'No camera found on this device.';
                     } else if (camErr.name === 'NotAllowedError' || camErr.name === 'PermissionDeniedError') {
-                        showNotification('Camera access denied.', 'error');
+                        msg = 'Camera permission denied.';
+                    } else if (camErr.name === 'NotReadableError' || camErr.name === 'TrackStartError') {
+                        msg = 'Camera is currently in use by another app.';
                     }
+                    showNotification(msg, 'warning');
                 }
             }
         }
@@ -910,6 +927,11 @@ function renderLocalParticipant() {
     if (!window.room || !window.room.localParticipant) return;
     const lp  = window.room.localParticipant;
     const box = getOrCreateBox(lp.identity, currentUsername, true);
+
+    if (box) {
+        box.classList.toggle('cam-off', !window.isCameraOn);
+        box.classList.toggle('muted', !window.isMicOn);
+    }
 
     // Attach camera track if already published
     if (lp.videoTrackPublications) {
@@ -1075,7 +1097,7 @@ function hideLocalScreenShare() {
 
 // ── Participant events ────────────────────────────────────────────────────────
 function onParticipantConnected(participant) {
-    if (!participant) return;
+    if (!participant || !participant.identity) return;
 
     console.log('Participant joined:', participant.identity);
     // Register in our manual registry
@@ -1095,17 +1117,21 @@ function onParticipantConnected(participant) {
 }
 
 function onParticipantDisconnected(participant) {
+    if (!participant || !participant.identity) return;
     console.log('Participant left:', participant.identity);
     // Remove from manual registry
     window._remoteParticipantsRegistry.delete(participant.identity);
     const box = document.getElementById(`video-box-${participant.identity}`);
     if (box) box.remove();
+    const audioEl = document.querySelectorAll(`[id^="audio-${participant.identity}"]`);
+    audioEl.forEach(el => el.remove());
     updateParticipantsList();
     updateParticipantCount();
     updateLayout();
 }
 
 function onTrackSubscribed(track, publication, participant) {
+    if (!participant || !participant.identity) return;
     // Never process our own tracks here — handled by renderLocalParticipant
     if (window.room && window.room.localParticipant && participant.identity === window.room.localParticipant.identity) return;
 
