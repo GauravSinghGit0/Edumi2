@@ -498,7 +498,7 @@
             const mainFeed = document.getElementById('mainFeed');
             // Point directly at the camera service — Django's ASGI server (Daphne)
             // buffers streaming responses so MJPEG never reaches the browser via proxy.
-            const baseUrl = `${window.location.protocol}//${window.location.hostname}:8003/cameras/${window.cameraId}/feed/`;
+            const baseUrl = `/cameras/${window.cameraId}/feed/`;
             mainFeed.src = `${baseUrl}?q=${qParam}&t=${new Date().getTime()}`;
         };
 

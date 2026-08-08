@@ -88,7 +88,7 @@ let lastFrameTime = 0;
 function startStream() {
     const img = document.getElementById('camera-stream');
     const streamStatus = document.getElementById('stream-status');
-    const feedUrl = `${window.location.protocol}//${window.location.hostname}:8003/cameras/{{ camera.id }}/feed/`;
+    const feedUrl = `/cameras/{{ camera.id }}/feed/`;
     
     console.log('Starting stream from:', feedUrl);
     streamStatus.textContent = 'Connecting to camera...';
@@ -295,7 +295,7 @@ function changeQuality() {
     const picker = document.getElementById('quality-picker');
     const quality = picker.value;
     const img = document.getElementById('camera-stream');
-    const baseUrl = `${window.location.protocol}//${window.location.hostname}:8003/cameras/{{ camera.id }}/feed/`;
+    const baseUrl = `/cameras/{{ camera.id }}/feed/`;
     const timestamp = new Date().getTime();
     
     // Update image source with quality param and cache buster

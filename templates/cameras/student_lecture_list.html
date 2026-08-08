@@ -223,7 +223,7 @@
         // Load live previews immediately (works under both Turbo and standard loads)
         document.querySelectorAll('.live-feed-thumb').forEach(img => {
             const camId = img.getAttribute('data-camera-id');
-            img.src = `${window.location.protocol}//${window.location.hostname}:8003/cameras/${camId}/feed/?q=low&t=${new Date().getTime()}`;
+            img.src = `/cameras/${camId}/feed/?q=low&t=${new Date().getTime()}`;
         });
 
         // Use a non-accumulating window handler pattern to avoid leaking event listeners

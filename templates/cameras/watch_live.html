@@ -311,7 +311,7 @@
     // ── Initialize Direct Feed ──
     (function initFeed() {
         // Use direct port 8003 camera service with matching SSL protocol
-        const feedUrl = `${window.location.protocol}//${window.location.hostname}:8003/cameras/${window.cameraId}/feed/?q=4k`;
+        const feedUrl = `/cameras/${window.cameraId}/feed/?q=4k`;
 
         const img = document.getElementById('mainFeed');
         if (img) {
