@@ -88,26 +88,33 @@ class CameraStreamer:
 
     def _connect_camera(self):
         """Try multiple connection strategies and path variations for IP cameras."""
-        target_urls = [self.rtsp_url]
-
-        # Auto-probe paths if IP is 10.7.16.48 or credentials needed
-        if '10.7.16.48' in self.rtsp_url or '10.7.16.48' in str(self.camera_id):
-            target_urls.extend([
-                "rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main",
-                "rtsp://test:dei%4012%4012@10.7.16.48:554/stream1",
-                "rtsp://test:dei%4012%4012@10.7.16.48:554/live/ch0",
-                "rtsp://test:dei%4012%4012@10.7.16.48:554/",
-                "http://test:dei%4012%4012@10.7.16.48/video",
-                "http://test:dei%4012%4012@10.7.16.48/mjpeg",
-                "http://test:dei%4012%4012@10.7.16.48:8080/video",
-                "http://test:dei%4012%4012@10.7.16.48/",
-            ])
+        target_urls = [self.rtsp_url]        # Auto-probe paths for IP 10.7.16.48 and generic cameras
+        target_urls.extend([
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/cam/realmonitor?channel=1&subtype=0",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/cam/realmonitor?channel=1&subtype=1",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/Streaming/Channels/101",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/Streaming/Channels/1",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/h264/ch1/main/av_stream",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/stream1",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/live/ch0",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/ch0",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/videoMain",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/media/video1",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/onvif1",
+            "rtsp://test:dei%4012%4012@10.7.16.48:554/",
+            "http://test:dei%4012%4012@10.7.16.48/video",
+            "http://test:dei%4012%4012@10.7.16.48/mjpeg",
+            "http://test:dei%4012%4012@10.7.16.48/video.cgi",
+            "http://test:dei%4012%4012@10.7.16.48/axis-cgi/mjpg/video.cgi",
+            "http://test:dei%4012%4012@10.7.16.48/",
+        ])
 
         # Remove duplicate URLs while keeping order
         seen = set()
         unique_urls = []
         for u in target_urls:
-            if u not in seen:
+            if u not in seen and u:
                 seen.add(u)
                 unique_urls.append(u)
 
@@ -126,26 +133,22 @@ class CameraStreamer:
                             if ret and frame is not None and frame.size > 0:
                                 self.connection_attempts = 0
                                 self.rtsp_url = current_url
-                                logger.info(f"HTTP camera {self.camera_id} connected: {current_url}")
+                                logger.warning(f"SUCCESS: HTTP Camera connected on {current_url}")
                                 return cap
                             time.sleep(0.3)
                     cap.release()
                 except Exception as e:
-                    logger.debug(f"HTTP stream attempt failed for {current_url}: {e}")
+                    logger.debug(f"HTTP attempt failed for {current_url}: {e}")
                 continue
 
-            # RTSP camera attempts
+            # RTSP camera attempts — clean FFMPEG transport options for Linux
             combos = [
-                ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'd3d11va', 'hwaccel;d3d11va'),
-                ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'none', ''),
-                ('udp', 'rtsp_transport;udp;stimeout;4000000', 'none', ''),
+                ('tcp', 'rtsp_transport;tcp'),
+                ('udp', 'rtsp_transport;udp'),
             ]
-            for transport, t_opt, hw_name, hw_opt in combos:
+            for transport, opts in combos:
                 cap = None
                 try:
-                    opts = t_opt
-                    if hw_opt:
-                        opts += f';{hw_opt}'
                     os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = opts
                     cap = cv2.VideoCapture(current_url, cv2.CAP_FFMPEG)
                     cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT)
@@ -157,7 +160,7 @@ class CameraStreamer:
                             if ret and frame is not None and frame.size > 0:
                                 self.connection_attempts = 0
                                 self.rtsp_url = current_url
-                                logger.info(f"RTSP camera {self.camera_id} connected via {current_url} ({transport})")
+                                logger.warning(f"SUCCESS: RTSP Camera connected on {current_url} ({transport})")
                                 return cap
                             time.sleep(0.2)
                     if cap:
@@ -165,10 +168,7 @@ class CameraStreamer:
                 except Exception as e:
                     logger.debug(f"RTSP attempt failed for {current_url}: {e}")
                     if cap:
-                        try:
-                            cap.release()
-                        except Exception:
-                            pass
+                        cap.release()
 
         # Last-resort fallback with no options
         try:
