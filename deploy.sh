@@ -343,11 +343,11 @@ if not created:
 " 2>/dev/null || true
 log "Database schema initialized & Camera 1 configured."
 
-info "Collecting static assets and compressing styles..."
-$VENV_PYTHON manage.py compress --force 2>/dev/null || true
+info "Compressing template static assets & collecting static files..."
+$VENV_PYTHON manage.py compress --force
 $VENV_PYTHON manage.py collectstatic --noinput
 chmod -R 755 "$APP_DIR/staticfiles" 2>/dev/null || true
-log "Static assets collected and compressed into ./staticfiles/"
+log "Static assets compressed and collected into ./staticfiles/"
 
 
 # ------------------------------------------------------------------------------
