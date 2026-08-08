@@ -38,7 +38,7 @@ CERT_DIR.mkdir(parents=True, exist_ok=True)
 KEY_FILE  = CERT_DIR / "edumi.key"
 CERT_FILE = CERT_DIR / "edumi.crt"
 
-DOMAIN = "edumi.ac.in"
+DOMAIN = "eclass.dei.ac.in"
 
 
 def generate_with_cryptography():

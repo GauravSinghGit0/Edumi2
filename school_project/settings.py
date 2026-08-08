@@ -379,81 +379,92 @@ mimetypes.add_type('image/x-icon',           '.ico')
 
 
 # ==============================================================================
-# LOGGING
+# LOGGING CONFIGURATION (Clean Terminal & Systemd Journal)
 # ==============================================================================
 
 LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
-LOG_LEVEL = env('LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
+LOG_LEVEL = env('LOG_LEVEL', 'INFO').upper()
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
+        'clean_console': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
         'verbose': {
-            'format': '[{levelname}] {asctime} {name} {message}',
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
-        'simple': {
-            'format': '[{levelname}] {message}',
-            'style': '{',
-        },
-    },
-    'filters': {
-        'require_debug_false': {'()': 'django.utils.log.RequireDebugFalse'},
-        'require_debug_true':  {'()': 'django.utils.log.RequireDebugTrue'},
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'django.log',
-            'maxBytes': 10 * 1024 * 1024,   # 10 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
+            'formatter': 'clean_console',
+            'level': 'INFO',
         },
         'null': {
             'class': 'logging.NullHandler',
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': LOG_LEVEL,
     },
     'loggers': {
+        # Core Django request & security logs
         'django': {
-            'handlers': ['console', 'file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
         'django.server': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'INFO',
             'propagate': False,
         },
         'django.security': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
         },
+        # App-specific loggers
+        'accounts': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'cameras': {
-            'handlers': ['console', 'file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'meetings': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
         'recording_engine': {
-            'handlers': ['console', 'file'],
-            'level': LOG_LEVEL,
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
-        # Silence noisy libraries
-        'daphne':       {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+        # Suppress noisy external libraries
+        'daphne':       {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
         'asyncio':      {'handlers': ['null'],    'level': 'CRITICAL', 'propagate': False},
         'PIL':          {'handlers': ['null'],    'level': 'CRITICAL', 'propagate': False},
+        'urllib3':      {'handlers': ['null'],    'level': 'WARNING', 'propagate': False},
     },
 }
 

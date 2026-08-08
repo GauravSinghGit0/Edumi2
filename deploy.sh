@@ -34,7 +34,7 @@ step() {
     echo -e "${BOLD}${CYAN}================================================= ${NC}"
 }
 
-DOMAIN="edumi.ac.in"
+DOMAIN="eclass.dei.ac.in"
 EMAIL=""
 DB_HOST="127.0.0.1"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -140,8 +140,14 @@ if [ "$DB_HOST" == "127.0.0.1" ] || [ "$DB_HOST" == "localhost" ]; then
         sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
         sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
-        sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB;" 2>/dev/null || true
-        log "Local PostgreSQL database ready."
+        sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB SUPERUSER;" 2>/dev/null || true
+        sudo -u postgres psql -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;" 2>/dev/null || true
+        sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
+        sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
+        sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
+        sudo -u postgres psql -d $DB_NAME -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $DB_USER;" 2>/dev/null || true
+        sudo -u postgres psql -d $DB_NAME -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $DB_USER;" 2>/dev/null || true
+        log "Local PostgreSQL database ready with full table & sequence permissions."
     fi
 else
     info "Using Remote PostgreSQL Database Host: $DB_HOST"
@@ -325,12 +331,12 @@ WantedBy=multi-user.target
 EOF
     }
 
-    CREATE_SERVICE "edumi-auth" "${VENV_DAPHNE} -b 127.0.0.1 -p 8002 school_project.asgi:application"
-    CREATE_SERVICE "edumi-admin" "${VENV_DAPHNE} -b 127.0.0.1 -p 8003 school_project.asgi:application"
-    CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -b 127.0.0.1 -p 8004 school_project.asgi:application"
-    CREATE_SERVICE "edumi-msg" "${VENV_DAPHNE} -b 127.0.0.1 -p 8005 school_project.asgi:application"
-    CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -b 127.0.0.1 -p 8006 school_project.asgi:application"
-    CREATE_SERVICE "edumi-video" "${VENV_DAPHNE} -b 127.0.0.1 -p 8007 school_project.asgi:application"
+    CREATE_SERVICE "edumi-auth" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8002 school_project.asgi:application"
+    CREATE_SERVICE "edumi-admin" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8003 school_project.asgi:application"
+    CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8004 school_project.asgi:application"
+    CREATE_SERVICE "edumi-msg" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8005 school_project.asgi:application"
+    CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8006 school_project.asgi:application"
+    CREATE_SERVICE "edumi-video" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8007 school_project.asgi:application"
     CREATE_SERVICE "edumi-camera" "${VENV_PYTHON} camera_service/serve.py"
     CREATE_SERVICE "edumi-celery" "${VENV_CELERY} -A school_project worker -l info -P threads"
 
