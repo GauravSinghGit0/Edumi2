@@ -271,6 +271,11 @@ if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
         -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
         -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
 fi
+# Ensure home directory and certs have read/execute permissions for Nginx (www-data)
+if [ "$IS_ROOT" = true ]; then
+    chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
+    chmod -R 755 "$APP_DIR/certs" "$APP_DIR/staticfiles" "$APP_DIR/media" 2>/dev/null || true
+fi
 log "SSL Certificates generated in ./certs/"
 
 
@@ -412,6 +417,7 @@ server {
         proxy_pass http://edumi_backend;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
@@ -442,5 +448,5 @@ echo ""
 echo -e "  ${BOLD}Management Commands:${NC}"
 echo -e "  • View Service Logs       : ${CYAN}journalctl -u edumi-auth -f${NC}"
 echo -e "  • Check Service Status    : ${CYAN}systemctl status edumi-auth edumi-camera edumi-celery${NC}"
-echo -e "  • Create Superuser        : ${CYAN}${APP_DIR}/venv/bin/python manage.py createsuperuser${NC}"
+echo -e "  • Create Superuser        : ${CYAN}${VENV_PYTHON} manage.py createsuperuser${NC}"
 echo ""
