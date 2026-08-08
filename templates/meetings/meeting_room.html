@@ -712,7 +712,7 @@ async function init() {
             videoCaptureDefaults: { resolution: VideoPresets.h1080.resolution },
             publishDefaults: {
                 simulcast: true,
-                videoCodec: 'h264',
+                videoCodec: 'vp8',
                 videoEncoding: VideoPresets.h1080.encoding,
                 screenShareEncoding: {
                     maxBitrate: 6_000_000,
@@ -1137,7 +1137,21 @@ function onTrackSubscribed(track, publication, participant) {
             moveToMain(box, participant.name || participant.identity, true);
         }
     } else if (track.kind === Track.Kind.Audio) {
-        track.attach(); 
+        // Remove existing audio element for this track if present
+        const existingAudio = document.getElementById(`audio-${participant.identity}-${publication.trackSid}`);
+        if (existingAudio) existingAudio.remove();
+
+        const audioEl = track.attach();
+        audioEl.id = `audio-${participant.identity}-${publication.trackSid}`;
+        audioEl.style.display = 'none';
+        document.body.appendChild(audioEl);
+
+        const playPromise = audioEl.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                console.warn(`Autoplay blocked for remote audio (${participant.identity}):`, e);
+            });
+        }
     }
 }
 
@@ -1152,6 +1166,12 @@ function onTrackUnsubscribed(track, publication, participant) {
             clearMain();
             updateLayout();
         }
+    }
+
+    if (track.kind === Track.Kind.Audio) {
+        const audioEl = document.getElementById(`audio-${participant.identity}-${publication.trackSid}`);
+        if (audioEl) audioEl.remove();
+        track.detach().forEach(el => el.remove());
     }
 }
 
