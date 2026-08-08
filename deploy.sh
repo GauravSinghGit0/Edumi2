@@ -53,6 +53,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Detect Ubuntu Server LAN IP Address
+LAN_IP=$(ip route get 8.8.8.8 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}')
+if [ -z "$LAN_IP" ]; then
+    LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+fi
+if [ -z "$LAN_IP" ]; then
+    LAN_IP="127.0.0.1"
+fi
+
 echo ""
 echo -e "${BOLD}${GREEN}"
 echo "  ███████╗██████╗ ██╗   ██╗███╗   ███╗██╗    ██████╗ "
@@ -65,10 +74,11 @@ echo -e "${NC}"
 echo -e "  ${BOLD}EduMi2 Single-File Ubuntu Server Deployment Orchestrator${NC}"
 echo -e "  Directory : ${CYAN}${APP_DIR}${NC}"
 echo -e "  DB Host   : ${CYAN}${DB_HOST}${NC}"
+echo -e "  Server IP : ${CYAN}${LAN_IP}${NC}"
 if [ -n "$DOMAIN" ]; then
     echo -e "  Domain    : ${CYAN}${DOMAIN}${NC}"
 else
-    echo -e "  Mode      : ${CYAN}Localhost / Server IP Mode${NC}"
+    echo -e "  Mode      : ${CYAN}Localhost / Server LAN IP Mode${NC}"
 fi
 echo ""
 
@@ -80,6 +90,17 @@ if [ "$(id -u)" -eq 0 ]; then IS_ROOT=true; fi
 
 if [ "$IS_ROOT" = false ]; then
     warn "Running without root privileges. If package installation fails, re-run with: sudo bash deploy.sh"
+fi
+
+# Apply UFW Firewall rules for LAN IP access
+if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
+    ufw allow 80/tcp 2>/dev/null || true
+    ufw allow 443/tcp 2>/dev/null || true
+    ufw allow 8008/tcp 2>/dev/null || true
+    ufw allow 7880/tcp 2>/dev/null || true
+    ufw allow 7881/tcp 2>/dev/null || true
+    ufw allow 50000:50200/udp 2>/dev/null || true
+    info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881, 50000-50200/udp allowed)."
 fi
 
 info "Checking system requirements..."
@@ -194,19 +215,20 @@ if [ ! -f "$ENV_FILE" ]; then
     SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
     FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
     
-    ALLOWED_HOSTS_VAL="localhost,127.0.0.1"
+    ALLOWED_HOSTS_VAL="localhost,127.0.0.1,$LAN_IP,*"
     [ -n "$DOMAIN" ] && ALLOWED_HOSTS_VAL="$DOMAIN,www.$DOMAIN,$ALLOWED_HOSTS_VAL"
 
     cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
 ALLOWED_HOSTS=$ALLOWED_HOSTS_VAL
+SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
 DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME
 REDIS_URL=redis://127.0.0.1:6379/0
 
-LIVEKIT_URL=wss://localhost/livekit-proxy
+LIVEKIT_URL=wss://$LAN_IP/livekit-proxy
 LIVEKIT_INTERNAL_URL=ws://127.0.0.1:7880
 LIVEKIT_INTERNAL_HTTP_URL=http://127.0.0.1:7880
 LIVEKIT_API_KEY=devkey
@@ -220,7 +242,7 @@ FACE_ENCRYPTION_KEY=$FACE_KEY
 FACE_MATCH_THRESHOLD=0.50
 FACE_PRESENCE_DURATION=30
 
-CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost,http://127.0.0.1
+CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost,http://127.0.0.1,http://$LAN_IP,https://$LAN_IP
 
 CAMERA_SERVICE_PORT=8008
 CAMERA_SERVICE_URL=http://127.0.0.1:8008
@@ -228,7 +250,7 @@ CAMERA_SERVICE_URL=http://127.0.0.1:8008
 FFMPEG_BINARY=ffmpeg
 FFPROBE_BINARY=ffprobe
 EOF
-    log ".env created successfully."
+    log ".env created successfully with LAN IP ($LAN_IP)."
 else
     log "Existing .env detected."
 fi
@@ -240,11 +262,12 @@ step "STEP 7: Directories & SSL Certificate Setup"
 mkdir -p staticfiles media certs logs config
 
 if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
-    info "Generating SSL certificate..."
+    info "Generating SSL certificate for LAN IP ($LAN_IP)..."
     $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || \
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
         -keyout certs/edumi.key -out certs/edumi.crt \
-        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=edumi.ac.in" 2>/dev/null || true
+        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$LAN_IP" \
+        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
     log "SSL Certificates prepared in ./certs/"
 fi
 
@@ -408,11 +431,11 @@ echo -e "${GREEN}${BOLD}================================================= ${NC}"
 echo -e "${GREEN}${BOLD}   EduMi2 Deployment Completed Successfully!     ${NC}"
 echo -e "${GREEN}${BOLD}================================================= ${NC}"
 echo ""
-echo -e "  ${BOLD}Access Endpoints:${NC}"
-echo -e "  • Web Application (HTTPS) : ${CYAN}https://localhost${NC} or ${CYAN}https://YOUR_SERVER_IP${NC}"
-echo -e "  • HTTP Redirect           : ${CYAN}http://localhost:80${NC}"
-echo -e "  • Camera Stream Service   : ${CYAN}http://127.0.0.1:8008${NC}"
-echo -e "  • LiveKit SFU Service     : ${CYAN}http://127.0.0.1:7880${NC}"
+echo -e "  ${BOLD}Access Endpoints (Accessible on same Wi-Fi / Local Network):${NC}"
+echo -e "  • Web Application (HTTPS) : ${CYAN}https://${LAN_IP}${NC} (or ${CYAN}https://localhost${NC})"
+echo -e "  • HTTP Web Application    : ${CYAN}http://${LAN_IP}${NC}"
+echo -e "  • Camera Stream Service   : ${CYAN}http://${LAN_IP}:8008${NC}"
+echo -e "  • LiveKit SFU Service     : ${CYAN}http://${LAN_IP}:7880${NC}"
 echo ""
 echo -e "  ${BOLD}Management Commands:${NC}"
 echo -e "  • View Service Logs       : ${CYAN}journalctl -u edumi-auth -f${NC}"
