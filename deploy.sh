@@ -226,8 +226,14 @@ info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)...
 SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
 FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
 
-EXISTING_DB_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
 FINAL_DB_URL="${EXISTING_DB_URL:-postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME?sslmode=prefer}"
+if [[ "$FINAL_DB_URL" != *"sslmode="* ]]; then
+    if [[ "$FINAL_DB_URL" == *"?"* ]]; then
+        FINAL_DB_URL="${FINAL_DB_URL}&sslmode=prefer"
+    else
+        FINAL_DB_URL="${FINAL_DB_URL}?sslmode=prefer"
+    fi
+fi
 
 cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
