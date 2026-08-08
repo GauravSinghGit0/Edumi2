@@ -101,8 +101,12 @@ def get_admin_stats():
     from django.conf import settings
     camera_service_online = False
     try:
-        internal_url = getattr(settings, 'CAMERA_SERVICE_URL', 'http://localhost:8003')
-        response = requests.get(f"{internal_url}/cameras/", timeout=1, verify=False)
+        internal_url = getattr(settings, 'CAMERA_SERVICE_URL', 'https://127.0.0.1:8008')
+        try:
+            response = requests.get(f"{internal_url}/cameras/", timeout=2, verify=False)
+        except Exception:
+            alt_url = internal_url.replace('http://', 'https://') if 'http://' in internal_url else internal_url.replace('https://', 'http://')
+            response = requests.get(f"{alt_url}/cameras/", timeout=2, verify=False)
         camera_service_online = (response.status_code == 200)
     except Exception as e:
         logger.warning(f"Camera service connection check failed: {e}")

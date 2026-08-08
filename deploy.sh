@@ -253,7 +253,7 @@ FACE_PRESENCE_DURATION=30
 CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN,https://localhost,https://127.0.0.1,https://$LAN_IP
 
 CAMERA_SERVICE_PORT=8008
-CAMERA_SERVICE_URL=http://127.0.0.1:8008
+CAMERA_SERVICE_URL=https://127.0.0.1:8008
 
 FFMPEG_BINARY=ffmpeg
 FFPROBE_BINARY=ffprobe
@@ -400,7 +400,7 @@ server {
         expires 7d;
     }
 
-    location ~ ^/(cameras|mobile-cameras|head-count)/ {
+    location ~ ^/(cameras/[0-9]+/(feed|zoom|test)|mobile-cameras/[0-9]+/(feed|test)|head-count)/ {
         proxy_pass http://127.0.0.1:8008;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
