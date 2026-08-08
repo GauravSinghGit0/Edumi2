@@ -22,42 +22,28 @@ if __name__ == '__main__':
     port = int(os.environ.get('CAMERA_SERVICE_PORT', 8003))
     bind = "0.0.0.0"
     
-    # SSL cert configuration
+    use_ssl = os.environ.get('CAMERA_SERVICE_SSL', 'false').lower() == 'true'
+    
     cert_file = BASE_DIR.parent / "certs" / "edumi.crt"
     key_file  = BASE_DIR.parent / "certs" / "edumi.key"
     
-    if cert_file.exists() and key_file.exists():
-        # Relative paths (forward slashes) to avoid Twisted endpoint colon conflicts on Windows
+    if use_ssl and cert_file.exists() and key_file.exists():
         cert_rel = str(cert_file.relative_to(BASE_DIR.parent)).replace("\\", "/")
         key_rel  = str(key_file.relative_to(BASE_DIR.parent)).replace("\\", "/")
-        
-        # Change working directory so relative paths resolve correctly
         os.chdir(str(BASE_DIR.parent))
         
-        ssl_endpoint = (
-            f"ssl:port={port}:interface={bind}"
-            f":certKey={cert_rel}:privateKey={key_rel}"
-        )
+        endpoint = f"ssl:port={port}:interface={bind}:certKey={cert_rel}:privateKey={key_rel}"
         print(f"Camera Service starting on HTTPS/WSS 0.0.0.0:{port} (daphne, SSL enabled)")
-        
-        server = Server(
-            application=application,
-            endpoints=[ssl_endpoint],
-            signal_handlers=True,
-            http_timeout=86400,
-            websocket_timeout=86400,
-            verbosity=0,
-        )
     else:
-        # Fallback to plain HTTP if certs don't exist
-        print(f"SSL certs not found. Camera Service starting on http://0.0.0.0:{port} (daphne, HTTP)")
-        server = Server(
-            application=application,
-            endpoints=[f"tcp:port={port}:interface={bind}"],
-            signal_handlers=True,
-            http_timeout=86400,
-            websocket_timeout=86400,
-            verbosity=0,
-        )
-        
+        endpoint = f"tcp:port={port}:interface={bind}"
+        print(f"Camera Service starting on http://0.0.0.0:{port} (daphne, HTTP)")
+
+    server = Server(
+        application=application,
+        endpoints=[endpoint],
+        signal_handlers=True,
+        http_timeout=86400,
+        websocket_timeout=86400,
+        verbosity=0,
+    )
     server.run()
