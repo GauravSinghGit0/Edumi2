@@ -34,7 +34,7 @@ step() {
     echo -e "${BOLD}${CYAN}================================================= ${NC}"
 }
 
-DOMAIN=""
+DOMAIN="edumi.ac.in"
 EMAIL=""
 DB_HOST="127.0.0.1"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -73,17 +73,13 @@ echo "  ╚══════╝╚═════╝  ╚═════╝ ╚
 echo -e "${NC}"
 echo -e "  ${BOLD}EduMi2 Single-File Ubuntu Server Deployment Orchestrator${NC}"
 echo -e "  Directory : ${CYAN}${APP_DIR}${NC}"
-echo -e "  DB Host   : ${CYAN}${DB_HOST}${NC}"
+echo -e "  Domain    : ${CYAN}${DOMAIN}${NC} (HTTPS Only)"
 echo -e "  Server IP : ${CYAN}${LAN_IP}${NC}"
-if [ -n "$DOMAIN" ]; then
-    echo -e "  Domain    : ${CYAN}${DOMAIN}${NC}"
-else
-    echo -e "  Mode      : ${CYAN}Localhost / Server LAN IP Mode${NC}"
-fi
+echo -e "  DB Host   : ${CYAN}${DB_HOST}${NC}"
 echo ""
 
 # ------------------------------------------------------------------------------
-step "STEP 1: Root Check & Ubuntu Pre-Flight Inspector"
+step "STEP 1: Root Check & Ubuntu Pre-Flight Inspector & Local DNS"
 # ------------------------------------------------------------------------------
 IS_ROOT=false
 if [ "$(id -u)" -eq 0 ]; then IS_ROOT=true; fi
@@ -92,7 +88,16 @@ if [ "$IS_ROOT" = false ]; then
     warn "Running without root privileges. If package installation fails, re-run with: sudo bash deploy.sh"
 fi
 
-# Apply UFW Firewall rules for LAN IP access
+# Set up Local DNS entries in /etc/hosts for edumi.ac.in
+if [ "$IS_ROOT" = true ]; then
+    if ! grep -q "$DOMAIN" /etc/hosts; then
+        info "Configuring Local DNS in /etc/hosts for $DOMAIN..."
+        echo -e "\n# EduMi2 Local DNS Resolution\n127.0.0.1\t$DOMAIN www.$DOMAIN\n$LAN_IP\t$DOMAIN www.$DOMAIN" >> /etc/hosts
+        log "Added $DOMAIN and www.$DOMAIN to /etc/hosts"
+    fi
+fi
+
+# Apply UFW Firewall rules for LAN IP & HTTPS access
 if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
     ufw allow 80/tcp 2>/dev/null || true
     ufw allow 443/tcp 2>/dev/null || true
@@ -100,7 +105,7 @@ if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
     ufw allow 7880/tcp 2>/dev/null || true
     ufw allow 7881/tcp 2>/dev/null || true
     ufw allow 50000:50200/udp 2>/dev/null || true
-    info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881, 50000-50200/udp allowed)."
+    info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881 allowed)."
 fi
 
 info "Checking system requirements..."
@@ -207,42 +212,39 @@ log "Python environment ready inside ./$VENV_DIR"
 
 
 # ------------------------------------------------------------------------------
-step "STEP 6: Environment File (.env) Setup"
+step "STEP 6: Environment File (.env) Setup (HTTPS Only)"
 # ------------------------------------------------------------------------------
 ENV_FILE="$APP_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-    info "Creating production .env file..."
-    SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
-    FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
-    
-    ALLOWED_HOSTS_VAL="localhost,127.0.0.1,$LAN_IP,*"
-    [ -n "$DOMAIN" ] && ALLOWED_HOSTS_VAL="$DOMAIN,www.$DOMAIN,$ALLOWED_HOSTS_VAL"
+info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)..."
 
-    cat > "$ENV_FILE" <<EOF
+SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
+FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
+
+cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
-ALLOWED_HOSTS=$ALLOWED_HOSTS_VAL
+ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP,*
 SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
 DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME
 REDIS_URL=redis://127.0.0.1:6379/0
 
-LIVEKIT_URL=wss://$LAN_IP/livekit-proxy
+LIVEKIT_URL=wss://$DOMAIN/livekit-proxy
 LIVEKIT_INTERNAL_URL=ws://127.0.0.1:7880
 LIVEKIT_INTERNAL_HTTP_URL=http://127.0.0.1:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=devsecret_must_be_32_characters_long_1234
 
-SECURE_SSL_REDIRECT=False
-SESSION_COOKIE_SECURE=False
-CSRF_COOKIE_SECURE=False
+SECURE_SSL_REDIRECT=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
 
 FACE_ENCRYPTION_KEY=$FACE_KEY
 FACE_MATCH_THRESHOLD=0.50
 FACE_PRESENCE_DURATION=30
 
-CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost,http://127.0.0.1,http://$LAN_IP,https://$LAN_IP
+CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN,https://localhost,https://127.0.0.1,https://$LAN_IP
 
 CAMERA_SERVICE_PORT=8008
 CAMERA_SERVICE_URL=http://127.0.0.1:8008
@@ -250,10 +252,7 @@ CAMERA_SERVICE_URL=http://127.0.0.1:8008
 FFMPEG_BINARY=ffmpeg
 FFPROBE_BINARY=ffprobe
 EOF
-    log ".env created successfully with LAN IP ($LAN_IP)."
-else
-    log "Existing .env detected."
-fi
+log ".env updated for HTTPS & $DOMAIN."
 
 
 # ------------------------------------------------------------------------------
@@ -261,15 +260,18 @@ step "STEP 7: Directories & SSL Certificate Setup"
 # ------------------------------------------------------------------------------
 mkdir -p staticfiles media certs logs config
 
+info "Generating SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
+if [ -f "scripts/generate_ssl_cert.py" ]; then
+    $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || true
+fi
+
 if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
-    info "Generating SSL certificate for LAN IP ($LAN_IP)..."
-    $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || \
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
         -keyout certs/edumi.key -out certs/edumi.crt \
-        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$LAN_IP" \
-        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
-    log "SSL Certificates prepared in ./certs/"
+        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
+        -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
 fi
+log "SSL Certificates generated in ./certs/"
 
 
 # ------------------------------------------------------------------------------
@@ -431,11 +433,11 @@ echo -e "${GREEN}${BOLD}================================================= ${NC}"
 echo -e "${GREEN}${BOLD}   EduMi2 Deployment Completed Successfully!     ${NC}"
 echo -e "${GREEN}${BOLD}================================================= ${NC}"
 echo ""
-echo -e "  ${BOLD}Access Endpoints (Accessible on same Wi-Fi / Local Network):${NC}"
-echo -e "  • Web Application (HTTPS) : ${CYAN}https://${LAN_IP}${NC} (or ${CYAN}https://localhost${NC})"
-echo -e "  • HTTP Web Application    : ${CYAN}http://${LAN_IP}${NC}"
-echo -e "  • Camera Stream Service   : ${CYAN}http://${LAN_IP}:8008${NC}"
-echo -e "  • LiveKit SFU Service     : ${CYAN}http://${LAN_IP}:7880${NC}"
+echo -e "  ${BOLD}Access Endpoints (Local DNS & HTTPS Enforced):${NC}"
+echo -e "  • Primary HTTPS Domain     : ${CYAN}https://${DOMAIN}${NC} (or ${CYAN}https://www.${DOMAIN}${NC})"
+echo -e "  • Fallback LAN IP (HTTPS)  : ${CYAN}https://${LAN_IP}${NC}"
+echo -e "  • LiveKit SFU Signal       : ${CYAN}wss://${DOMAIN}/livekit-proxy${NC}"
+echo -e "  • Camera MJPEG Stream      : ${CYAN}https://${DOMAIN}/cameras/${NC}"
 echo ""
 echo -e "  ${BOLD}Management Commands:${NC}"
 echo -e "  • View Service Logs       : ${CYAN}journalctl -u edumi-auth -f${NC}"
