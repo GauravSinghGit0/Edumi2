@@ -291,9 +291,34 @@ log "SSL Certificates generated in ./certs/"
 # ------------------------------------------------------------------------------
 step "STEP 8: Django Database Migrations & Static Collection"
 # ------------------------------------------------------------------------------
-info "Running database migrations..."
+info "Running database migrations & seeding default camera..."
 $VENV_PYTHON manage.py migrate --noinput
-log "Database schema initialized."
+$VENV_PYTHON -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'school_project.settings')
+django.setup()
+from cameras.models import Camera
+camera, created = Camera.objects.get_or_create(
+    id=1,
+    defaults={
+        'name': 'Default Classroom Camera (10.7.16.48)',
+        'ip_address': '10.7.16.48',
+        'port': 554,
+        'username': 'test',
+        'password': 'dei@12@12',
+        'stream_path': 'rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main',
+        'location': 'Classroom 1',
+        'is_active': True
+    }
+)
+if not created:
+    camera.ip_address = '10.7.16.48'
+    camera.username = 'test'
+    camera.password = 'dei@12@12'
+    camera.is_active = True
+    camera.save()
+" 2>/dev/null || true
+log "Database schema initialized & Camera 1 configured."
 
 info "Collecting static assets and compressing styles..."
 $VENV_PYTHON manage.py compress --force 2>/dev/null || true

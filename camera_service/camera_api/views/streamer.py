@@ -87,65 +87,88 @@ class CameraStreamer:
             self.thread.join(timeout=2.0)
 
     def _connect_camera(self):
-        """Try multiple connection strategies based on camera type (RTSP vs HTTP)."""
-        # Detect camera type from URL scheme
-        is_http = self.rtsp_url.lower().startswith('http')
+        """Try multiple connection strategies and path variations for IP cameras."""
+        target_urls = [self.rtsp_url]
 
-        if is_http:
-            # HTTP MJPEG cameras (IP Webcam, DroidCam) — no RTSP options needed
-            try:
-                os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
-                cap = cv2.VideoCapture(self.rtsp_url)
-                cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT * 2)
-                cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, RTSP_READ_TIMEOUT * 2)
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                if cap.isOpened():
-                    for _ in range(8):
-                        ret, frame = cap.read()
-                        if ret and frame is not None and frame.size > 0:
-                            self.connection_attempts = 0
-                            logger.info(f"HTTP camera {self.camera_id} connected: {self.rtsp_url}")
-                            return cap
-                        time.sleep(0.5)
-                cap.release()
-            except Exception as e:
-                logger.error(f"HTTP camera connection error: {e}")
-            return None
+        # Auto-probe paths if IP is 10.7.16.48 or credentials needed
+        if '10.7.16.48' in self.rtsp_url or '10.7.16.48' in str(self.camera_id):
+            target_urls.extend([
+                "rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main",
+                "rtsp://test:dei%4012%4012@10.7.16.48:554/stream1",
+                "rtsp://test:dei%4012%4012@10.7.16.48:554/live/ch0",
+                "rtsp://test:dei%4012%4012@10.7.16.48:554/",
+                "http://test:dei%4012%4012@10.7.16.48/video",
+                "http://test:dei%4012%4012@10.7.16.48/mjpeg",
+                "http://test:dei%4012%4012@10.7.16.48:8080/video",
+                "http://test:dei%4012%4012@10.7.16.48/",
+            ])
 
-        # RTSP cameras — try TCP then UDP, with and without HW accel
-        combos = [
-            ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'd3d11va', 'hwaccel;d3d11va'),
-            ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'none', ''),
-            ('udp', 'rtsp_transport;udp;stimeout;4000000', 'none', ''),
-        ]
-        for transport, t_opt, hw_name, hw_opt in combos:
-            cap = None
-            try:
-                opts = t_opt
-                if hw_opt:
-                    opts += f';{hw_opt}'
-                os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = opts
-                cap = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
-                cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT)
-                cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, RTSP_READ_TIMEOUT)
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                if cap.isOpened():
-                    for _ in range(5):
-                        ret, frame = cap.read()
-                        # Accept any valid frame — removed strict brightness check
-                        if ret and frame is not None and frame.size > 0:
-                            self.connection_attempts = 0
-                            logger.info(f"RTSP camera {self.camera_id} connected via {transport}/{hw_name}")
-                            return cap
-                        time.sleep(0.3)
+        # Remove duplicate URLs while keeping order
+        seen = set()
+        unique_urls = []
+        for u in target_urls:
+            if u not in seen:
+                seen.add(u)
+                unique_urls.append(u)
+
+        for current_url in unique_urls:
+            is_http = current_url.lower().startswith('http')
+            if is_http:
+                try:
+                    os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
+                    cap = cv2.VideoCapture(current_url)
+                    cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT * 2)
+                    cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, RTSP_READ_TIMEOUT * 2)
+                    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    if cap.isOpened():
+                        for _ in range(8):
+                            ret, frame = cap.read()
+                            if ret and frame is not None and frame.size > 0:
+                                self.connection_attempts = 0
+                                self.rtsp_url = current_url
+                                logger.info(f"HTTP camera {self.camera_id} connected: {current_url}")
+                                return cap
+                            time.sleep(0.3)
                     cap.release()
-            except Exception as e:
-                logger.error(f"Connection error ({transport}/{hw_name}): {e}")
-                if cap:
-                    try:
+                except Exception as e:
+                    logger.debug(f"HTTP stream attempt failed for {current_url}: {e}")
+                continue
+
+            # RTSP camera attempts
+            combos = [
+                ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'd3d11va', 'hwaccel;d3d11va'),
+                ('tcp', 'rtsp_transport;tcp;stimeout;4000000', 'none', ''),
+                ('udp', 'rtsp_transport;udp;stimeout;4000000', 'none', ''),
+            ]
+            for transport, t_opt, hw_name, hw_opt in combos:
+                cap = None
+                try:
+                    opts = t_opt
+                    if hw_opt:
+                        opts += f';{hw_opt}'
+                    os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = opts
+                    cap = cv2.VideoCapture(current_url, cv2.CAP_FFMPEG)
+                    cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT)
+                    cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, RTSP_READ_TIMEOUT)
+                    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    if cap.isOpened():
+                        for _ in range(5):
+                            ret, frame = cap.read()
+                            if ret and frame is not None and frame.size > 0:
+                                self.connection_attempts = 0
+                                self.rtsp_url = current_url
+                                logger.info(f"RTSP camera {self.camera_id} connected via {current_url} ({transport})")
+                                return cap
+                            time.sleep(0.2)
+                    if cap:
                         cap.release()
-                    except Exception:
-                        pass
+                except Exception as e:
+                    logger.debug(f"RTSP attempt failed for {current_url}: {e}")
+                    if cap:
+                        try:
+                            cap.release()
+                        except Exception:
+                            pass
 
         # Last-resort fallback with no options
         try:
