@@ -227,7 +227,7 @@ SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $
 FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
 
 EXISTING_DB_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
-FINAL_DB_URL="${EXISTING_DB_URL:-postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME}"
+FINAL_DB_URL="${EXISTING_DB_URL:-postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME?sslmode=prefer}"
 
 cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
@@ -269,16 +269,22 @@ step "STEP 7: Directories & SSL Certificate Setup"
 # ------------------------------------------------------------------------------
 mkdir -p staticfiles media certs logs config
 
-info "Generating SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
-if [ -f "scripts/generate_ssl_cert.py" ]; then
-    $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || true
-fi
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    info "Using official Let's Encrypt public SSL certificate for $DOMAIN..."
+    cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" certs/edumi.crt
+    cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" certs/edumi.key
+else
+    info "Generating SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
+    if [ -f "scripts/generate_ssl_cert.py" ]; then
+        $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || true
+    fi
 
-if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
-    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-        -keyout certs/edumi.key -out certs/edumi.crt \
-        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
-        -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
+    if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
+        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout certs/edumi.key -out certs/edumi.crt \
+            -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
+            -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
+    fi
 fi
 # Ensure home directory, certs, and logs have proper write/execute permissions
 mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/media" "$APP_DIR/certs" "$APP_DIR/config"
