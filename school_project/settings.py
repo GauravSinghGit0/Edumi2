@@ -202,13 +202,14 @@ _database_url = env('DATABASE_URL')
 if _database_url:
     try:
         import dj_database_url
-        DATABASES = {
-            'default': dj_database_url.config(
-                default=_database_url,
-                conn_max_age=0,
-                conn_health_checks=True,
-            )
-        }
+        db_config = dj_database_url.config(
+            default=_database_url,
+            conn_max_age=0,
+            conn_health_checks=True,
+        )
+        if 'sslmode' in _database_url:
+            db_config.setdefault('OPTIONS', {})['sslmode'] = 'prefer'
+        DATABASES = {'default': db_config}
     except ImportError:
         raise ImproperlyConfigured(
             "DATABASE_URL is set but dj-database-url is not installed. "

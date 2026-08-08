@@ -80,9 +80,10 @@ DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.config(conn_max_age=0)
-    }
+    db_config = dj_database_url.config(conn_max_age=0)
+    if 'sslmode' in os.environ.get('DATABASE_URL', ''):
+        db_config.setdefault('OPTIONS', {})['sslmode'] = 'prefer'
+    DATABASES = {'default': db_config}
 else:
     DATABASES = {
         'default': {
