@@ -6,13 +6,9 @@
 *.sqlite
 
 # ================================================
-# ENVIRONMENT FILES - Keep secrets out of version control
+# ENVIRONMENT FILES
 # ================================================
-.env
-.env.local
-.env.*.local
-.env.docker
-.env.production
+#.env
 
 # ================================================
 # PYTHON CACHE FILES
