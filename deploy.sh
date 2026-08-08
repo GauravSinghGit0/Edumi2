@@ -306,7 +306,7 @@ camera, created = Camera.objects.get_or_create(
         'port': 554,
         'username': 'test',
         'password': 'dei@12@12',
-        'stream_path': 'rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main',
+        'stream_path': '/h264Preview_01_main',
         'location': 'Classroom 1',
         'is_active': True
     }
@@ -315,6 +315,7 @@ if not created:
     camera.ip_address = '10.7.16.48'
     camera.username = 'test'
     camera.password = 'dei@12@12'
+    camera.stream_path = '/h264Preview_01_main'
     camera.is_active = True
     camera.save()
 " 2>/dev/null || true

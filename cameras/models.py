@@ -31,19 +31,24 @@ class Camera(models.Model):
     
     def get_stream_url(self):
         from urllib.parse import quote
+        if self.stream_path and (self.stream_path.startswith('rtsp://') or self.stream_path.startswith('http://') or self.stream_path.startswith('https://')):
+            return self.stream_path
+
+        path = self.stream_path if self.stream_path else ''
+        if path and not path.startswith('/'):
+            path = '/' + path
+
         if self.camera_type == 'rtsp':
             if self.username and self.password:
-                safe_user = quote(self.username)
-                safe_pass = quote(self.password)
-                return f"rtsp://{safe_user}:{safe_pass}@{self.ip_address}:{self.port}{self.stream_path}"
-            return f"rtsp://{self.ip_address}:{self.port}{self.stream_path}"
+                safe_user = quote(self.username, safe='')
+                safe_pass = quote(self.password, safe='')
+                return f"rtsp://{safe_user}:{safe_pass}@{self.ip_address}:{self.port}{path}"
+            return f"rtsp://{self.ip_address}:{self.port}{path}"
         elif self.camera_type == 'ip_webcam':
-            # IP Webcam standard: http://ip:port/video
             return f"http://{self.ip_address}:{self.port}/video"
         elif self.camera_type == 'droidcam':
-            # DroidCam standard: http://ip:port/mjpegfeed
             return f"http://{self.ip_address}:{self.port}/mjpegfeed"
-        return ""
+        return f"http://{self.ip_address}:{self.port}{path}" if self.ip_address else ""
     
     def get_full_rtsp_url(self):
         """Alias for compatibility with camera service"""
