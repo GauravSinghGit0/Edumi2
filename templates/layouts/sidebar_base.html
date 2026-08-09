@@ -442,7 +442,7 @@
 
             socket.onclose = function (e) {
                 console.log('Notification socket closed. Reconnecting in 3 seconds...');
-                setTimeout(connectNotificationWS, 3000);
+                window.notificationReconnectTimer = setTimeout(connectNotificationWS, 3000);
             };
 
             socket.onerror = function (err) {
@@ -506,6 +506,22 @@
         // Register initialization
         document.addEventListener('DOMContentLoaded', initializeApp);
         document.addEventListener('turbo:load', initializeApp);
+
+        // Clean up socket connections before caching or rendering a new page
+        function cleanupNotificationSocket() {
+            if (window.notificationSocket) {
+                // Remove active onclose handlers so it doesn't trigger reconnect loop
+                window.notificationSocket.onclose = null;
+                window.notificationSocket.close();
+                window.notificationSocket = null;
+            }
+            if (window.notificationReconnectTimer) {
+                clearTimeout(window.notificationReconnectTimer);
+                window.notificationReconnectTimer = null;
+            }
+        }
+        document.addEventListener('turbo:before-cache', cleanupNotificationSocket);
+        document.addEventListener('turbo:before-render', cleanupNotificationSocket);
 
         // Theme Toggle Logic
         function toggleTheme() {
