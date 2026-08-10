@@ -416,6 +416,206 @@ def _insert_clip_to_sequence(project, asset_title, asset_duration, timestamp):
 
 @login_required
 @require_POST
+def op_trim(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = TrimForm(request.POST)
+    if form.is_valid():
+        start = form.cleaned_data["start_seconds"]
+        end = form.cleaned_data["end_seconds"]
+        try:
+            tmp_out = ffmpeg_utils.trim(project.working_file.path, start, end)
+            _apply_new_working_file(project, tmp_out, "trim", f"Trimmed ({start:.1f}s to {end:.1f}s)")
+            messages.success(request, "Video trimmed successfully.")
+        except Exception as e:
+            messages.error(request, f"Trim failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid trim parameters.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_text(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = TextOverlayForm(request.POST)
+    if form.is_valid():
+        text = form.cleaned_data["text"]
+        pos = form.cleaned_data["position"]
+        font_size = form.cleaned_data["font_size"]
+        color = form.cleaned_data["color"]
+        start = form.cleaned_data.get("start_seconds")
+        end = form.cleaned_data.get("end_seconds")
+        try:
+            tmp_out = ffmpeg_utils.add_text_overlay(
+                project.working_file.path, text=text, position=pos,
+                font_size=font_size, color=color, start_seconds=start, end_seconds=end
+            )
+            _apply_new_working_file(project, tmp_out, "text_overlay", f"Added text overlay: '{text}'")
+            messages.success(request, "Text overlay added.")
+        except Exception as e:
+            messages.error(request, f"Text overlay failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid text overlay parameters.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_bg_audio(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = BackgroundAudioForm(request.POST, request.FILES)
+    if form.is_valid():
+        audio_file = form.cleaned_data["audio_file"]
+        start = form.cleaned_data.get("start_seconds") or 0.0
+        end = form.cleaned_data.get("end_seconds")
+        bg_vol = form.cleaned_data.get("bg_volume") or 0.5
+        vid_vol = form.cleaned_data.get("video_volume") or 1.0
+        
+        tmp_dir = os.path.join(settings.MEDIA_ROOT, "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        audio_tmp = os.path.join(tmp_dir, f"bg_{uuid.uuid4().hex}_{audio_file.name}")
+        with open(audio_tmp, "wb") as f:
+            for chunk in audio_file.chunks():
+                f.write(chunk)
+        try:
+            tmp_out = ffmpeg_utils.add_background_audio(
+                project.working_file.path, audio_tmp,
+                start_seconds=start, end_seconds=end,
+                bg_volume=bg_vol, video_volume=vid_vol
+            )
+            _apply_new_working_file(project, tmp_out, "merge", f"Added background audio '{audio_file.name}'")
+            messages.success(request, "Background audio applied.")
+        except Exception as e:
+            messages.error(request, f"Background audio failed: {str(e)}")
+        finally:
+            if os.path.exists(audio_tmp):
+                try: os.remove(audio_tmp)
+                except OSError: pass
+    else:
+        messages.error(request, "Invalid background audio parameters.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_rotate(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = RotateForm(request.POST)
+    if form.is_valid():
+        deg = int(form.cleaned_data["degrees"])
+        try:
+            tmp_out = ffmpeg_utils.rotate_video(project.working_file.path, degrees=deg)
+            _apply_new_working_file(project, tmp_out, "rotate", f"Rotated {deg}°")
+            messages.success(request, f"Rotated video by {deg}°.")
+        except Exception as e:
+            messages.error(request, f"Rotation failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid rotation angle.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_resize(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = ResizeForm(request.POST)
+    if form.is_valid():
+        w = form.cleaned_data["width"]
+        h = form.cleaned_data["height"]
+        try:
+            tmp_out = ffmpeg_utils.resize_video(project.working_file.path, width=w, height=h)
+            _apply_new_working_file(project, tmp_out, "resize", f"Resized to {w}x{h}")
+            messages.success(request, f"Resized video to {w}x{h}.")
+        except Exception as e:
+            messages.error(request, f"Resize failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid resolution parameters.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_grayscale(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    try:
+        tmp_out = ffmpeg_utils.apply_grayscale(project.working_file.path)
+        _apply_new_working_file(project, tmp_out, "grayscale", "Applied grayscale filter")
+        messages.success(request, "Grayscale filter applied.")
+    except Exception as e:
+        messages.error(request, f"Grayscale filter failed: {str(e)}")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_fade(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = FadeForm(request.POST)
+    if form.is_valid():
+        fin = form.cleaned_data["fade_in_seconds"]
+        fout = form.cleaned_data["fade_out_seconds"]
+        try:
+            tmp_out = ffmpeg_utils.apply_fade(project.working_file.path, fade_in_seconds=fin, fade_out_seconds=fout)
+            _apply_new_working_file(project, tmp_out, "fade", f"Applied fade in ({fin}s) & fade out ({fout}s)")
+            messages.success(request, "Fade effects applied.")
+        except Exception as e:
+            messages.error(request, f"Fade effect failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid fade parameters.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_speed(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    form = SpeedForm(request.POST)
+    if form.is_valid():
+        spf = form.cleaned_data["speed_factor"]
+        try:
+            tmp_out = ffmpeg_utils.change_speed(project.working_file.path, speed_factor=spf)
+            _apply_new_working_file(project, tmp_out, "speed", f"Changed speed to {spf}x")
+            messages.success(request, f"Speed changed to {spf}x.")
+        except Exception as e:
+            messages.error(request, f"Speed change failed: {str(e)}")
+    else:
+        messages.error(request, "Invalid speed factor.")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def op_split(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return HttpResponseForbidden()
+    try:
+        split_at = float(request.POST.get("split_at", 0.0))
+        _insert_clip_to_sequence(project, "Split Clip", 5.0, split_at)
+        messages.success(request, f"Split timeline clip at {split_at:.2f}s.")
+    except Exception as e:
+        messages.error(request, f"Split failed: {str(e)}")
+    return redirect("project_detail", pk=pk)
+
+
+@login_required
+@require_POST
 def op_reset(request, pk):
     """Discard all edits and revert current_file back to the original upload."""
     project = _get_owned_project(request, pk)

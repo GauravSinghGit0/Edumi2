@@ -144,7 +144,7 @@
 
             <div class="ve-tool-panels">
                 <!-- Hidden Trim Form to keep visual timeline functionality working -->
-                <form id="trim-form" action="/video-editing/project/{{ project.pk }}/trim/" method="post" style="display: none;">
+                <form id="trim-form" action="{% url 'op_trim' project.pk %}" method="post" style="display: none;">
                     {% csrf_token %}
                     {{ trim_form.start_seconds }}
                     {{ trim_form.end_seconds }}
@@ -200,7 +200,7 @@
                 <div class="ve-tool-section tool-section" data-panel="text">
                     <h3 class="ve-section-title">Text Overlays</h3>
 
-                    <form action="/video-editing/project/{{ project.pk }}/text/" method="post" class="ve-stacked-form"
+                    <form action="{% url 'op_text' project.pk %}" method="post" class="ve-stacked-form"
                         style="display: flex; flex-direction: column; gap: 12px;">
                         {% csrf_token %}
                         <div class="ve-field">
@@ -239,7 +239,7 @@
                 <div class="ve-tool-section tool-section" data-panel="audio">
                     <h3 class="ve-section-title">Add Background Audio</h3>
 
-                    <form id="bg-audio-form" action="/video-editing/project/{{ project.pk }}/background-audio/" method="post"
+                    <form id="bg-audio-form" action="{% url 'op_bg_audio' project.pk %}" method="post"
                         enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 12px;">
                         {% csrf_token %}
                         <div class="ve-field">
@@ -288,7 +288,7 @@
                 <!-- Effects Panel -->
                 <div class="ve-tool-section tool-section" data-panel="effects">
                     <h3 class="ve-section-title">Rotation</h3>
-                    <form action="/video-editing/project/{{ project.pk }}/rotate/" method="post"
+                    <form action="{% url 'op_rotate' project.pk %}" method="post"
                         style="display: flex; flex-direction: column; gap: 8px;">
                         {% csrf_token %}
                         <div class="ve-field">
@@ -301,7 +301,7 @@
                     <div style="height: 1px; background: var(--ve-border); margin: 12px 0;"></div>
 
                     <h3 class="ve-section-title">Resize</h3>
-                    <form action="/video-editing/project/{{ project.pk }}/resize/" method="post"
+                    <form action="{% url 'op_resize' project.pk %}" method="post"
                         style="display: flex; flex-direction: column; gap: 8px;">
                         {% csrf_token %}
                         <div class="ve-field-row" style="display: flex; gap: 8px;">
@@ -320,7 +320,7 @@
                     <div style="height: 1px; background: var(--ve-border); margin: 12px 0;"></div>
 
                     <h3 class="ve-section-title">Grayscale</h3>
-                    <form action="/video-editing/project/{{ project.pk }}/grayscale/" method="post" style="margin-bottom: 12px;">
+                    <form action="{% url 'op_grayscale' project.pk %}" method="post" style="margin-bottom: 12px;">
                         {% csrf_token %}
                         <button type="submit" class="ve-btn ve-btn-secondary ve-btn-full">Apply Grayscale
                             Filter</button>
@@ -329,7 +329,7 @@
                     <div style="height: 1px; background: var(--ve-border); margin: 12px 0;"></div>
 
                     <h3 class="ve-section-title">Fade In / Out</h3>
-                    <form action="/video-editing/project/{{ project.pk }}/fade/" method="post"
+                    <form action="{% url 'op_fade' project.pk %}" method="post"
                         style="display: flex; flex-direction: column; gap: 8px;">
                         {% csrf_token %}
                         <div class="ve-field-row" style="display: flex; gap: 8px;">
@@ -405,7 +405,7 @@
                 <!-- Speed controls in the timeline toolbar -->
                 <div class="timeline-speed-control"
                     style="display: flex; align-items: center; gap: 6px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--ve-border);">
-                    <form action="/video-editing/project/{{ project.pk }}/speed/" method="post"
+                    <form action="{% url 'op_speed' project.pk %}" method="post"
                         style="display: flex; align-items: center; gap: 6px; margin: 0;">
                         {% csrf_token %}
                         <span
@@ -432,7 +432,7 @@
                 </button>
 
                 <!-- Split form -->
-                <form id="split-form" action="/video-editing/project/{{ project.pk }}/split/" method="post" style="display: none;">
+                <form id="split-form" action="{% url 'op_split' project.pk %}" method="post" style="display: none;">
                     {% csrf_token %}
                     <input type="hidden" name="split_at" id="split-at-input" value="0">
                 </form>
@@ -661,10 +661,10 @@
     window.REEL_CSRF_TOKEN = "{{ csrf_token }}";
     window.REEL_PROJECT_HAS_AUDIO = "{{ project.has_audio }}";
     window.REEL_PROJECT_TRIM_START = Number("{{ project.trim_start|default:0.0 }}");
-    window.REEL_PROJECT_TRIM_END = JSON.parse("{{ project.trim_end|default:'null' }}");
+    window.REEL_PROJECT_TRIM_END = JSON.parse("{{ project.trim_end|default_if_none:'null' }}");
     window.REEL_PROJECT_HEIGHT = Number("{{ project.height|default:720 }}");
     window.REEL_PROJECT_CLIPS = JSON.parse('{{ project.clips_json|default:"[]"|escapejs }}');
-    window.REEL_PROJECT_TIMELINE_STATE = JSON.parse('{{ timeline_state_json|escapejs }}');
+    window.REEL_PROJECT_TIMELINE_STATE = JSON.parse('{{ timeline_state_json|default:"null"|escapejs }}');
     window.REEL_PROJECT_PROXY_STATUS = "{{ project.proxy_status }}";
     window.REEL_PROJECT_PROXY_URL = "{{ project.proxy_url|default:'' }}";
     window.REEL_PROJECT_SAVE_TIMELINE_URL = "{% url 'save_timeline' project.pk %}";

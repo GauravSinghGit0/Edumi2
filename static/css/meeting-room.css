@@ -1117,6 +1117,21 @@
         width: 100%;
         max-width: 100vw;
     }
+    .meet-main.sidebar-open {
+        padding-right: 0 !important;
+    }
+
+    .meet-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2000 !important;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.8) !important;
+    }
     
     .video-grid-container.grid-view {
         gap: 6px;

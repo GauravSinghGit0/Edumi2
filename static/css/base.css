@@ -702,4 +702,18 @@ body.dark-mode [style*="color:#374151"] {
     .logs-container {
         padding: 1rem !important;
     }
+
+    /* Auto-wrap tables in horizontal scroll on mobile */
+    table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Touch target standard size */
+    button, input[type="button"], input[type="submit"], .btn, a.btn {
+        min-height: 42px;
+    }
 }

@@ -18,7 +18,9 @@ LIVEKIT_INTERNAL = getattr(settings, 'LIVEKIT_INTERNAL_HTTP_URL', "http://localh
 @csrf_exempt
 def livekit_http_proxy(request, lk_path):
     """Proxy HTTP requests to LiveKit server."""
-    target = f"{LIVEKIT_INTERNAL}{lk_path}"
+    base_url = LIVEKIT_INTERNAL.rstrip('/')
+    clean_path = lk_path.lstrip('/')
+    target = f"{base_url}/{clean_path}"
     if request.META.get("QUERY_STRING"):
         target += f"?{request.META['QUERY_STRING']}"
 

@@ -5219,3 +5219,159 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 700 !important;
   color: var(--ve-text) !important;
 }
+
+/* ---- Layout Integration Overrides for sidebar_base.html ---- */
+.content-area:has(.ve-editor-page) {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.ve-editor-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height, 60px));
+  max-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ve-editor-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ============================================================
+   MOBILE RESPONSIVENESS OVERRIDES FOR VIDEO EDITOR
+   ============================================================ */
+
+@media (max-width: 992px) {
+  .content-area:has(.ve-editor-page) {
+    overflow-y: auto !important;
+  }
+
+  .ve-editor-page {
+    height: auto !important;
+    min-height: calc(100vh - var(--topbar-height, 56px));
+    overflow-y: auto !important;
+  }
+
+  .ve-editor-grid {
+    grid-template-columns: 1fr !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .ve-video-stage {
+    min-height: 280px !important;
+    max-height: 50vh !important;
+  }
+
+  .ve-tool-panel {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--ve-border) !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+  }
+
+  .ve-tool-tabs {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .ve-tool-tab {
+    flex-shrink: 0 !important;
+    padding: 8px 16px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .ve-editor-head {
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .ve-editor-title {
+    font-size: 16px !important;
+  }
+
+  .ve-editor-head-actions {
+    width: 100% !important;
+    justify-content: space-between !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+  }
+
+  .ve-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .visual-trim-container {
+    height: 200px !important;
+  }
+
+  .timeline-toolbar {
+    padding: 4px 8px !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .toolbar-left, .toolbar-right {
+    gap: 4px !important;
+  }
+
+  .tb-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .trim-handle {
+    width: 24px !important;
+    margin-left: -12px !important;
+    touch-action: none;
+  }
+
+  .trim-handle::before {
+    content: "";
+    position: absolute;
+    inset: -10px -8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ve-video-stage {
+    min-height: 220px !important;
+  }
+
+  .ve-player-controls {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+
+  .ve-ctrl-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .ve-time-display {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+  }
+
+  .timeline-bottom-toolbar {
+    padding: 0 8px !important;
+    height: 36px !important;
+  }
+}
+
+

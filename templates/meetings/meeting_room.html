@@ -682,8 +682,9 @@ window.TrackManager = {
 
     // Use string literals only — Track.Source constants are set later during init()
     _isScreen(source) {
-        return source === 'screen_share' || source === 'screen-share'
-            || (typeof Track !== 'undefined' && source === Track.Source.ScreenShare);
+        if (!source) return false;
+        const str = String(source).toLowerCase();
+        return str.includes('screen') || (typeof Track !== 'undefined' && source === Track.Source.ScreenShare);
     },
 
     /** Stable unique key: prefers publication.trackSid, falls back to track.sid */
@@ -832,6 +833,13 @@ async function init() {
     // ── Signaling WebSocket ──────────────────────────────────────────────────
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     window.signalingWs = new WebSocket(`${proto}//${window.location.host}/ws/meeting/${window.meetingCode}/`);
+
+    // Unlock audio playback on first user gesture (browser autoplay compliance)
+    const unlockAudio = () => {
+        document.querySelectorAll('audio').forEach(a => { a.play().catch(() => {}); });
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
     
     window.signalingWs.onmessage = (e) => {
         try {
@@ -1576,8 +1584,14 @@ async function stopScreenShare() {
         } catch (err) {
             console.warn('Error stopping screen share track:', err);
         }
+        if (screenTrackPub && screenTrackPub.track) {
+            try {
+                await window.room.localParticipant.unpublishTrack(screenTrackPub.track);
+            } catch(e) {}
+        }
         screenTrackPub = null;
     }
+    hideLocalScreenShare();
     showNotification('Screen sharing stopped', 'info');
 }
 
