@@ -119,6 +119,18 @@ class VideoProject(models.Model):
         """The file that edit operations should act on."""
         return self.current_file if self.current_file else self.original_file
 
+    @property
+    def working_file_url(self):
+        """Safely get working file URL without throwing exceptions when file is empty."""
+        try:
+            if self.current_file and hasattr(self.current_file, 'name') and self.current_file.name:
+                return self.current_file.url
+            if self.original_file and hasattr(self.original_file, 'name') and self.original_file.name:
+                return self.original_file.url
+        except Exception:
+            pass
+        return ""
+
 
 class ProjectAsset(models.Model):
     """

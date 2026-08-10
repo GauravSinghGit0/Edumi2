@@ -21,7 +21,7 @@
         <div class="ve-card ve-project-card" style="position: relative;">
             <a href="{% url 'project_detail' project.pk %}" style="text-decoration: none; color: inherit; display: block; height: 100%;">
                 <div class="ve-card-thumb">
-                    <video muted preload="metadata" src="{{ project.working_file.url }}#t=0.5"></video>
+                    {% if project.working_file_url %}<video muted preload="metadata" src="{{ project.working_file_url }}#t=0.5"></video>{% endif %}
                     <span class="ve-status-pill ve-status-{{ project.status }}">{{ project.get_status_display }}</span>
                 </div>
                 <div class="ve-card-body">

@@ -90,9 +90,24 @@ def project_list(request):
                 description=f"Uploaded {project.original_file.name.split('/')[-1]}",
             )
             
-            # Start background metadata extraction task
-            from .tasks import extract_metadata_and_proxies_task
-            extract_metadata_and_proxies_task.delay(project.id)
+            # Start background metadata extraction task with fallback
+            try:
+                from .tasks import extract_metadata_and_proxies_task
+                extract_metadata_and_proxies_task.delay(project.id)
+            except Exception:
+                try:
+                    meta = ffmpeg_utils.get_metadata(project.original_file.path)
+                    project.duration_seconds = meta.get("duration", 0.0)
+                    project.width = meta.get("width", 1920)
+                    project.height = meta.get("height", 1080)
+                    project.has_audio = meta.get("has_audio", True)
+                    project.status = "ready"
+                    orig_filename = os.path.basename(project.original_file.name)
+                    project.clips_json = json.dumps([{"title": orig_filename, "duration": meta.get("duration", 0.0)}])
+                    project.save()
+                except Exception:
+                    pass
+
             
             messages.success(request, "Video uploaded. Editor is loading...")
             return redirect("project_detail", pk=project.pk)

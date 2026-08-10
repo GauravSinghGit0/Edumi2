@@ -1391,55 +1391,42 @@ async function toggleScreenShare() {
                 throw new Error("Screen sharing is not supported or blocked (check HTTPS/localhost).");
             }
 
-            // Get the creation function with fallbacks
-            const createScreen = createLocalScreenTracks || (window.LiveKitBundle && window.LiveKitBundle.createLocalScreenTracks);
-            
-            if (typeof createScreen !== 'function') {
-                throw new Error("Screen share function not found in SDK.");
+            if (!window.room || !window.room.localParticipant) {
+                throw new Error("Not connected to meeting room.");
             }
 
-            // Use ScreenSharePresets for better text clarity if available, else fallback to VideoPresets
-            const ssPreset = ScreenSharePresets.h1080fps15 || VideoPresets.h1080;
-
-            const tracks = await createScreen({ 
-                audio: false,
-                resolution: ssPreset.resolution
-            });
-            const screenTrack = Array.isArray(tracks) ? tracks[0] : tracks;
-            
-            if (!screenTrack) throw new Error("No screen track created.");
-
-            // Set content hint to 'text' for sharper screenshare
-            if (screenTrack.mediaStreamTrack) {
-                screenTrack.mediaStreamTrack.contentHint = 'text';
-            }
-
-            if (window.room) {
+            // Official LiveKit SDK method for screen sharing
+            if (typeof window.room.localParticipant.setScreenShareEnabled === 'function') {
+                screenTrackPub = await window.room.localParticipant.setScreenShareEnabled(true, {
+                    audio: false
+                });
+            } else {
+                const createScreen = createLocalScreenTracks || (window.LiveKitBundle && window.LiveKitBundle.createLocalScreenTracks) || (window.LivekitClient && window.LivekitClient.createLocalScreenTracks);
+                if (typeof createScreen !== 'function') {
+                    throw new Error("Screen share function not found in LiveKit SDK.");
+                }
+                const tracks = await createScreen({ audio: false });
+                const screenTrack = Array.isArray(tracks) ? tracks[0] : tracks;
                 screenTrackPub = await window.room.localParticipant.publishTrack(screenTrack, {
                     name: 'screen_share',
-                    source: Track.Source.ScreenShare,
-                    videoEncoding: ssPreset.encoding,
-                    simulcast: false, // Usually screenshare doesn't need simulcast and it can degrade quality
+                    source: Track.Source.ScreenShare
                 });
             }
+
             isScreenSharing = true;
             document.getElementById('screenBtn').classList.add('active');
 
-            // --- AUTO-HIDE CAMERA ON SCREENSHARE ---
-            if (isHost && isCameraOn && window.room) {
-                await window.room.localParticipant.setCameraEnabled(false);
-                // Keep isCameraOn=true internally so we know to restore it later
-                document.getElementById('camBtn').classList.add('off');
+            if (screenTrackPub && screenTrackPub.track) {
+                const mediaTrack = screenTrackPub.track.mediaStreamTrack || screenTrackPub.track;
+                if (mediaTrack && mediaTrack.addEventListener) {
+                    mediaTrack.addEventListener('ended', stopScreenShare);
+                }
             }
-            
-            // Handle manual stop from browser UI
-            const mediaTrack = screenTrack.mediaStreamTrack || screenTrack;
-            mediaTrack.addEventListener('ended', stopScreenShare);
             
             showNotification('Screen sharing started', 'info');
         } catch(e) {
             console.error('Screen share error:', e);
-            let msg = e.message;
+            let msg = e.message || 'Unknown error';
             if (e.name === 'NotAllowedError') msg = "Permission denied by user.";
             showNotification('Screen share failed: ' + msg, 'error');
         }
@@ -1452,28 +1439,14 @@ async function stopScreenShare() {
     if (!isScreenSharing) return;
     isScreenSharing = false;
     document.getElementById('screenBtn').classList.remove('active');
-    if (screenTrackPub && window.room) {
+    if (window.room && window.room.localParticipant) {
         try {
-            const track = screenTrackPub.track;
-            await window.room.localParticipant.unpublishTrack(track);
-            if (track) track.stop();
+            await window.room.localParticipant.setScreenShareEnabled(false);
         } catch (err) {
             console.warn('Error stopping screen share track:', err);
         }
         screenTrackPub = null;
     }
-
-    // --- RESTORE CAMERA AFTER SCREENSHARE ---
-    if (isHost && isCameraOn) {
-        try {
-            await room.localParticipant.setCameraEnabled(true);
-            document.getElementById('camBtn').classList.remove('off');
-        } catch (err) {
-            console.warn('Failed to restore camera after screenshare:', err);
-        }
-    }
-
-    // Layout cleanup handled by localTrackUnpublished → hideLocalScreenShare()
     showNotification('Screen sharing stopped', 'info');
 }
 

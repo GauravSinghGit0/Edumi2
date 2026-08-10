@@ -126,6 +126,16 @@ if [ "$IS_ROOT" = true ]; then
         ffmpeg postgresql postgresql-contrib redis-server nginx supervisor \
         libopenblas-dev liblapack-dev libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev 2>/dev/null || true
     log "Ubuntu system packages installed."
+
+    if command -v ufw &>/dev/null; then
+        info "Configuring UFW firewall rules for HTTP, HTTPS, and LiveKit WebRTC..."
+        ufw allow 80/tcp >/dev/null 2>&1 || true
+        ufw allow 443/tcp >/dev/null 2>&1 || true
+        ufw allow 7880/tcp >/dev/null 2>&1 || true
+        ufw allow 7881/tcp >/dev/null 2>&1 || true
+        ufw allow 50000:50200/udp >/dev/null 2>&1 || true
+        log "Firewall ports allowed (80, 443, 7880, 7881, 50000-50200/udp)."
+    fi
 fi
 
 
@@ -188,6 +198,34 @@ if [ ! -f "$LIVEKIT_DIR/livekit-server" ]; then
 else
     log "LiveKit binary present in ./livekit-bin/livekit-server"
 fi
+
+info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
+mkdir -p "$APP_DIR/config"
+cat > "$APP_DIR/config/livekit.yaml" <<EOF
+port: 7880
+bind_addresses:
+  - ""
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50200
+  use_external_ip: false
+  node_ip: "$LAN_IP"
+  stun_servers:
+    - stun.l.google.com:19302
+    - stun1.l.google.com:19302
+
+keys:
+  devkey: devsecret_must_be_32_characters_long_1234
+
+room:
+  empty_timeout: 300
+  max_participants: 100
+
+logging:
+  level: warn
+EOF
+log "LiveKit configuration updated in ./config/livekit.yaml"
 
 
 # ------------------------------------------------------------------------------
@@ -447,7 +485,7 @@ server {
         proxy_read_timeout 3600s;
     }
 
-    location /livekit-proxy/ {
+    location /livekit-proxy {
         proxy_pass http://127.0.0.1:7880/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
