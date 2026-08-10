@@ -8,14 +8,22 @@ User = get_user_model()
 
 def send_ws_notification(recipient_id, data):
     """Generic helper to send WebSocket notification to a user"""
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f"user_{recipient_id}",
-        {
-            "type": "send_notification",
-            "data": data
-        }
-    )
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+        async_to_sync(channel_layer.group_send)(
+            f"user_{recipient_id}",
+            {
+                "type": "send_notification",
+                "data": data
+            }
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"WebSocket notification failed for user {recipient_id}: {e}"
+        )
 
 def notify_new_message(sender, recipient, conversation_id, content="New message received", created_at=None):
     """Send notification when a new message is sent"""

@@ -548,6 +548,8 @@
 {% endif %}
 
 <script>
+// VERSION: TrackManager-v3 (2026-08-09) — if you don't see this in console, browser has cached old code
+console.log('%c[EduMi Meeting] JS Version: TrackManager-v3 loaded ✅', 'background:#6366f1;color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold;');
 let room = null;
 // ── Config ────────────────────────────────────────────────────────────────────
 // Global scope variables for access across functions
@@ -667,6 +669,158 @@ window.canSpeak = true;
 window.canVideo = true;
 window.canShare = true;
 
+// ── TrackManager: Industry-standard, crash-proof track lifecycle ──────────────
+// Google Meet / Zoom pattern:
+//   - One source of truth: Map<trackSid → {el, boxId}>
+//   - Dedup guard: skip if already attached (uses publication.trackSid as key,
+//     because track.sid may be empty at TrackSubscribed time in LiveKit v1.x)
+//   - Screen share always gets its own dedicated DOM box
+//   - Never calls .play() manually — LiveKit SDK + autoplay handles it
+window.TrackManager = {
+    /** @type {Map<string, {el: HTMLElement, boxId: string}>} */
+    _attached: new Map(),
+
+    // Use string literals only — Track.Source constants are set later during init()
+    _isScreen(source) {
+        return source === 'screen_share' || source === 'screen-share'
+            || (typeof Track !== 'undefined' && source === Track.Source.ScreenShare);
+    },
+
+    /** Stable unique key: prefers publication.trackSid, falls back to track.sid */
+    _key(track, publication) {
+        return publication?.trackSid || track?.sid || null;
+    },
+
+    /** Returns the correct box — camera box or dedicated per-participant screen box */
+    _getBox(source, participant) {
+        if (this._isScreen(source)) {
+            return this._getOrCreateScreenBox(participant);
+        }
+        return getOrCreateBox(participant.identity, participant.name || participant.identity, false);
+    },
+
+    _getOrCreateScreenBox(participant) {
+        const id = `screen-box-${participant.identity}`;
+        let box = document.getElementById(id);
+        if (!box) {
+            box = document.createElement('div');
+            box.id = id;
+            box.className = 'video-box screen-share-active';
+            box.dataset.identity = `screen-${participant.identity}`;
+            const tag = document.createElement('div');
+            tag.className = 'video-nametag';
+            tag.textContent = `\uD83D\uDCBB ${participant.name || participant.identity}'s Screen`;
+            box.appendChild(tag);
+            const sidebar = document.getElementById('sidebarVideoArea');
+            if (sidebar) sidebar.appendChild(box);
+        }
+        return box;
+    },
+
+    /**
+     * Attach a remote track to its correct box.
+     * Safe to call multiple times — deduplication via trackSid.
+     */
+    attach(track, publication, participant) {
+        if (!track || !participant?.identity) return;
+
+        const key = this._key(track, publication);
+        if (!key) {
+            console.warn('TrackManager: no trackSid available, skipping attach');
+            return;
+        }
+
+        // Dedup guard — already attached, bail out
+        if (this._attached.has(key)) {
+            console.debug(`TrackManager: skip duplicate attach for ${key}`);
+            return;
+        }
+
+        const source = publication?.source || track?.source || '';
+        const box = this._getBox(source, participant);
+        if (!box) return;
+
+        // Remove any stale element of this track kind in this box
+        box.querySelectorAll(`[data-track-key]`).forEach(old => {
+            if (old.dataset.kind === track.kind) old.remove();
+        });
+
+        // LiveKit attach() returns a fully configured <video> or <audio> element
+        const el = track.attach();
+        el.dataset.trackKey = key;
+        el.dataset.kind     = track.kind;
+        el.dataset.source   = source;
+
+        const isScreen = this._isScreen(source);
+
+        if (track.kind === 'video') {
+            el.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            if (isScreen)    el.style.objectFit = 'contain';
+            el.muted         = true;
+            el.autoplay      = true;
+            el.playsInline   = true;
+            box.insertBefore(el, box.querySelector('.video-nametag'));
+
+            if (isScreen) {
+                const label = participant.name || participant.identity;
+                console.log(`TrackManager: enlarging remote screen share from ${label}`);
+                moveToMain(box, `${label}'s Screen`, true);
+            }
+        } else if (track.kind === 'audio') {
+            // Audio elements live on <body>, hidden, not inside video boxes
+            el.id            = `audio-${participant.identity}-${key}`;
+            el.style.display = 'none';
+            document.body.appendChild(el);
+        }
+
+        this._attached.set(key, { el, boxId: box.id, isScreen, identity: participant.identity });
+        console.log(`TrackManager: attached ${track.kind} [${source}] from ${participant.identity} key=${key}`);
+    },
+
+    /**
+     * Detach a remote track and clean up DOM.
+     * Safe to call even if the track was never attached.
+     */
+    detach(track, publication, participant) {
+        const key = this._key(track, publication);
+        const entry = key ? this._attached.get(key) : null;
+        const source = publication?.source || track?.source || '';
+        const isScreen = this._isScreen(source);
+
+        // Detach all elements this track was attached to via LiveKit SDK
+        try { track.detach().forEach(el => el.remove()); } catch(_) {}
+
+        // Also remove the element we tracked
+        if (entry) {
+            try { entry.el.remove(); } catch(_) {}
+            if (key) this._attached.delete(key);
+        }
+
+        // Audio cleanup by ID
+        if (track.kind === 'audio' && participant?.identity && key) {
+            const audioEl = document.getElementById(`audio-${participant.identity}-${key}`);
+            if (audioEl) audioEl.remove();
+        }
+
+        // Remove dedicated screen share box + restore main area
+        if (isScreen && participant?.identity) {
+            const screenBox = document.getElementById(`screen-box-${participant.identity}`);
+            if (screenBox) screenBox.remove();
+            clearMain();
+            updateLayout();
+        }
+
+        console.log(`TrackManager: detached ${track.kind} [${source}] from ${participant?.identity}`);
+    },
+
+    /** Full reset on room disconnect */
+    clear() {
+        this._attached.forEach(({ el }) => { try { el.remove(); } catch(_) {} });
+        this._attached.clear();
+        document.querySelectorAll('[id^="screen-box-"]').forEach(b => b.remove());
+    }
+};
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
     if (!extractLiveKitSymbols()) {
@@ -727,6 +881,11 @@ async function init() {
             .on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected)
             .on(RoomEvent.TrackSubscribed,         onTrackSubscribed)
             .on(RoomEvent.TrackUnsubscribed,       onTrackUnsubscribed)
+            .on(RoomEvent.TrackPublished,          (pub, participant) => {
+                // Track announced — media not yet ready.
+                // TrackSubscribed fires exactly when media arrives; handle it there.
+                console.log(`Track published: ${pub.source} from ${participant.identity} (waiting for subscription)`);
+            })
             .on(RoomEvent.TrackMuted,              onTrackMuted)
             .on(RoomEvent.TrackUnmuted,            onTrackUnmuted)
             .on(RoomEvent.ActiveSpeakersChanged,   onActiveSpeakersChanged)
@@ -936,8 +1095,18 @@ function renderLocalParticipant() {
     // Attach camera track if already published
     if (lp.videoTrackPublications) {
         lp.videoTrackPublications.forEach(pub => {
-            if (pub.track && pub.source === Track.Source.Camera) {
-                attachTrackToBox(pub.track, box, true);
+            if (pub.source === Track.Source.Camera) {
+                if (pub.track) {
+                    attachTrackToBox(pub.track, box, true);
+                } else {
+                    const checkInitialTrack = setInterval(() => {
+                        if (pub.track) {
+                            attachTrackToBox(pub.track, box, true);
+                            clearInterval(checkInitialTrack);
+                        }
+                    }, 200);
+                    setTimeout(() => clearInterval(checkInitialTrack), 10000);
+                }
             }
         });
     }
@@ -987,9 +1156,11 @@ function attachTrackToBox(track, box, isLocal) {
     console.log(`Attaching ${track.kind} track to ${box.id} (Local: ${isLocal}, Source: ${track.source})`);
     
     // Remove existing element for this track kind
-    const existing = box.querySelector(`[data-kind="${track.kind}"]`);
+    const existing = box.querySelector(`[data-kind="${track.kind}"], video, audio`);
     if (existing) {
-        track.detach(existing);
+        try {
+            track.detach(existing);
+        } catch(e) {}
         existing.remove();
     }
 
@@ -1021,14 +1192,9 @@ function attachTrackToBox(track, box, isLocal) {
         }
         
         box.insertBefore(el, box.querySelector('.video-nametag'));
-        
-        // Explicitly play and handle potential play errors
-        const playPromise = el.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(e => {
-                console.warn(`Autoplay blocked or failed for ${track.kind} on ${box.id}:`, e);
-            });
-        }
+        // LiveKit's track.attach() + autoplay attribute handles playback internally.
+        // Calling .play() manually races with the browser's load cycle → AbortError.
+        // For local preview we just ensure autoplay is set (already done above).
     }
 }
 
@@ -1131,74 +1297,36 @@ function onParticipantDisconnected(participant) {
 }
 
 function onTrackSubscribed(track, publication, participant) {
-    if (!participant || !participant.identity) return;
-    // Never process our own tracks here — handled by renderLocalParticipant
-    if (window.room && window.room.localParticipant && participant.identity === window.room.localParticipant.identity) return;
+    if (!participant?.identity) return;
 
-    // Visibility Restrictions for Host tracks on Student Side
+    // Never process our own tracks — handled by renderLocalParticipant
+    if (window.room?.localParticipant?.identity === participant.identity) return;
+
+    // ── Visibility permission check (teacher controls what students can see) ────
+    const source = publication?.source || track?.source || '';
     if (!isHost && userType === 'student' && participant.identity === hostId) {
-        if (track.kind === Track.Kind.Video) {
-            if (publication.source === Track.Source.Camera) {
-                if (!window.studentCanViewCamera) {
-                    console.log('Skipping attachment of host camera track because studentCanViewCamera is false');
-                    return;
-                }
-            } else if (publication.source === Track.Source.ScreenShare || publication.source === 'screen_share') {
-                if (!window.studentCanViewScreenshare) {
-                    console.log('Skipping attachment of host screenshare track because studentCanViewScreenshare is false');
-                    return;
-                }
+        if (track.kind === 'video') {
+            const isScreenSrc = source === 'screen_share' || source === 'screen-share'
+                             || (typeof Track !== 'undefined' && source === Track.Source.ScreenShare);
+            if (!isScreenSrc && window.studentCanViewCamera === false) {
+                console.log('Permission: skipping host camera (studentCanViewCamera=false)');
+                return;
+            }
+            if (isScreenSrc && window.studentCanViewScreenshare === false) {
+                console.log('Permission: skipping host screenshare (studentCanViewScreenshare=false)');
+                return;
             }
         }
     }
 
-    console.log(`Subscribed to track: ${track.kind} from ${participant.identity} (Source: ${publication.source})`);
-
-    const box = getOrCreateBox(participant.identity, participant.name || participant.identity, false);
-    if (track.kind === Track.Kind.Video) {
-        attachTrackToBox(track, box, false);
-        // If it's a screen share, automatically enlarge it in the main area
-        if (publication.source === Track.Source.ScreenShare || publication.source === 'screen_share') {
-            console.log('Enlarging remote screen share...');
-            moveToMain(box, participant.name || participant.identity, true);
-        }
-    } else if (track.kind === Track.Kind.Audio) {
-        // Remove existing audio element for this track if present
-        const existingAudio = document.getElementById(`audio-${participant.identity}-${publication.trackSid}`);
-        if (existingAudio) existingAudio.remove();
-
-        const audioEl = track.attach();
-        audioEl.id = `audio-${participant.identity}-${publication.trackSid}`;
-        audioEl.style.display = 'none';
-        document.body.appendChild(audioEl);
-
-        const playPromise = audioEl.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(e => {
-                console.warn(`Autoplay blocked for remote audio (${participant.identity}):`, e);
-            });
-        }
-    }
+    // ── Delegate to TrackManager (handles dedup + correct box selection) ────────
+    window.TrackManager.attach(track, publication, participant);
 }
 
 function onTrackUnsubscribed(track, publication, participant) {
-    const box = document.getElementById(`video-box-${participant.identity}`);
-    if (box) {
-        detachTrackFromBox(track, box);
-        if (publication.source === Track.Source.ScreenShare) {
-            // Return box to sidebar
-            const sidebar = document.getElementById('sidebarVideoArea');
-            if (sidebar) sidebar.appendChild(box);
-            clearMain();
-            updateLayout();
-        }
-    }
-
-    if (track.kind === Track.Kind.Audio) {
-        const audioEl = document.getElementById(`audio-${participant.identity}-${publication.trackSid}`);
-        if (audioEl) audioEl.remove();
-        track.detach().forEach(el => el.remove());
-    }
+    if (!participant?.identity) return;
+    // Delegate to TrackManager — it knows which box to remove and cleans up correctly
+    window.TrackManager.detach(track, publication, participant);
 }
 
 function onTrackMuted(publication, participant) {
@@ -1239,6 +1367,9 @@ function onDataReceived(payload, participant) {
 
 function onDisconnected() {
     showNotification('Disconnected from meeting', 'error');
+    if (window.TrackManager) {
+        window.TrackManager.clear();
+    }
 }
 
 function onConnectionStateChanged(state) {
@@ -1470,27 +1601,26 @@ function updateTeacherTrackSubscription() {
     
     if (!hostParticipant) return;
     
-    const box = getOrCreateBox(hostParticipant.identity, hostParticipant.name || hostParticipant.identity, false);
-    
     hostParticipant.trackPublications.forEach(pub => {
-        if (pub.track) {
-            if (pub.source === Track.Source.Camera) {
-                if (window.studentCanViewCamera) {
-                    attachTrackToBox(pub.track, box, false);
-                } else {
-                    pub.track.detach().forEach(el => el.remove());
-                }
-            } else if (pub.source === Track.Source.ScreenShare || pub.source === 'screen_share') {
-                if (window.studentCanViewScreenshare) {
-                    attachTrackToBox(pub.track, box, false);
-                    moveToMain(box, hostParticipant.name || hostParticipant.identity, true);
-                } else {
-                    pub.track.detach().forEach(el => el.remove());
-                    if (box.parentElement && box.parentElement.id === 'mainVideoArea') {
-                        clearMain();
-                        updateLayout();
-                    }
-                }
+        if (!pub.track) return;
+
+        const isScreenSrc = pub.source === Track.Source.ScreenShare || pub.source === 'screen_share';
+        const isCamSrc    = pub.source === Track.Source.Camera;
+
+        if (isCamSrc) {
+            if (window.studentCanViewCamera) {
+                // Re-attach via TrackManager (dedup-safe)
+                window.TrackManager.attach(pub.track, pub, hostParticipant);
+            } else {
+                // Detach & clean up camera track
+                window.TrackManager.detach(pub.track, pub, hostParticipant);
+            }
+        } else if (isScreenSrc) {
+            if (window.studentCanViewScreenshare) {
+                // Screen share goes into its own dedicated box via TrackManager
+                window.TrackManager.attach(pub.track, pub, hostParticipant);
+            } else {
+                window.TrackManager.detach(pub.track, pub, hostParticipant);
             }
         }
     });
