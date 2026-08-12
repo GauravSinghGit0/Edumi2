@@ -108,7 +108,7 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     current_v = None
     current_a = None
     if len(clips) > 1:
-        concat_inputs = "".join(video_outs + audio_outs)
+        concat_inputs = "".join(f"{v}{a}" for v, a in zip(video_outs, audio_outs))
         n = len(clips)
         filter_complex.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v_concat][a_concat]")
         current_v = "[v_concat]"

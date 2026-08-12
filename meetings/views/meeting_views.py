@@ -340,7 +340,7 @@ def livekit_token(request, meeting_code):
     if 'livekit-proxy' in lk_url:
         host = request.get_host()
         proto = 'wss' if (request.is_secure() or settings.LIVEKIT_URL.startswith('wss')) else 'ws'
-        lk_url = f"{proto}://{host}/livekit-proxy"
+        lk_url = f"{proto}://{host}/livekit-proxy/"
 
     return JsonResponse({'token': token, 'url': lk_url})
 

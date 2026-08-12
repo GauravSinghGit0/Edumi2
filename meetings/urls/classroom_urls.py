@@ -4,10 +4,11 @@ from meetings.views import (
     create_classroom, teacher_classrooms, student_classrooms, classroom_detail,
     join_classroom_request, approve_join_request, deny_join_request,
     remove_student, delete_classroom, leave_classroom, start_classroom_meeting,
-    classroom_attendance_history, classroom_attendance_detail,
+    classroom_attendance_history, classroom_attendance_detail, api_classrooms,
 )
 
 urlpatterns = [
+    path('api/classrooms/',                              api_classrooms,                name='api_classrooms'),
     path('classroom/create/',                            create_classroom,              name='create_classroom'),
     path('classroom/teacher/',                           teacher_classrooms,            name='teacher_classrooms'),
     path('classroom/student/',                           student_classrooms,            name='student_classrooms'),

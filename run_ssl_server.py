@@ -51,24 +51,25 @@ from daphne.server import Server  # noqa: E402  (must be before app import)
 # Now import the ASGI application (Django + Channels)
 from school_project.asgi import application  # noqa: E402
 
-print(f"Starting HTTPS/WSS on {BIND}:{PORT}")
-print(f"  Endpoint : {ssl_endpoint}")
-print(f"  Cert     : {CERT_FILE}")
-print(f"  Key      : {KEY_FILE}")
-print()
+if __name__ == '__main__':
+    print(f"Starting HTTPS/WSS on {BIND}:{PORT}")
+    print(f"  Endpoint : {ssl_endpoint}")
+    print(f"  Cert     : {CERT_FILE}")
+    print(f"  Key      : {KEY_FILE}")
+    print()
 
-server = Server(
-    application=application,
-    endpoints=[ssl_endpoint],
-    signal_handlers=True,
-    http_timeout=86400,  # 24 hours for long streaming
-    websocket_timeout=86400,
-    websocket_connect_timeout=20,
-    ping_interval=20,
-    ping_timeout=30,
-    application_close_timeout=86400,
-    root_path="",
-    verbosity=0,  # Only warnings/errors
-)
+    server = Server(
+        application=application,
+        endpoints=[ssl_endpoint],
+        signal_handlers=True,
+        http_timeout=86400,  # 24 hours for long streaming
+        websocket_timeout=86400,
+        websocket_connect_timeout=20,
+        ping_interval=20,
+        ping_timeout=30,
+        application_close_timeout=86400,
+        root_path="",
+        verbosity=0,  # Only warnings/errors
+    )
 
-server.run()
+    server.run()

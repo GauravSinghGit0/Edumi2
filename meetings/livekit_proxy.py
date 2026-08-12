@@ -34,7 +34,6 @@ class LiveKitProxyConsumer(AsyncWebsocketConsumer):
                 ping_interval=20,
                 ping_timeout=20,
                 max_size=10 * 1024 * 1024,
-                open_timeout=10,
             )
         except Exception as e:
             logger.error(f"LiveKit proxy connect failed: {e}")

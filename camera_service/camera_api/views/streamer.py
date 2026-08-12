@@ -87,28 +87,30 @@ class CameraStreamer:
             self.thread.join(timeout=2.0)
 
     def _connect_camera(self):
-        """Try multiple connection strategies and path variations for IP cameras."""
-        target_urls = [self.rtsp_url]        # Auto-probe paths for IP 10.7.16.48 and generic cameras
-        target_urls.extend([
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/cam/realmonitor?channel=1&subtype=0",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/cam/realmonitor?channel=1&subtype=1",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/Streaming/Channels/101",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/Streaming/Channels/1",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/h264/ch1/main/av_stream",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/h264Preview_01_main",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/stream1",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/live/ch0",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/ch0",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/videoMain",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/media/video1",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/onvif1",
-            "rtsp://test:dei%4012%4012@10.7.16.48:554/",
-            "http://test:dei%4012%4012@10.7.16.48/video",
-            "http://test:dei%4012%4012@10.7.16.48/mjpeg",
-            "http://test:dei%4012%4012@10.7.16.48/video.cgi",
-            "http://test:dei%4012%4012@10.7.16.48/axis-cgi/mjpg/video.cgi",
-            "http://test:dei%4012%4012@10.7.16.48/",
-        ])
+        """Try connection using specified RTSP URL and common stream paths dynamically."""
+        target_urls = []
+        if self.rtsp_url:
+            target_urls.append(self.rtsp_url)
+            from urllib.parse import urlparse, urlunparse
+            parsed = urlparse(self.rtsp_url)
+            base_netloc = parsed.netloc
+            if base_netloc:
+                common_paths = [
+                    "/cam/realmonitor?channel=1&subtype=0",
+                    "/cam/realmonitor?channel=1&subtype=1",
+                    "/Streaming/Channels/101",
+                    "/Streaming/Channels/1",
+                    "/h264/ch1/main/av_stream",
+                    "/h264Preview_01_main",
+                    "/stream1",
+                    "/live/ch0",
+                    "/ch0",
+                    "/videoMain",
+                    "/media/video1",
+                    "/onvif1",
+                ]
+                for p in common_paths:
+                    target_urls.append(urlunparse((parsed.scheme or 'rtsp', base_netloc, p, '', '', '')))
 
         # Remove duplicate URLs while keeping order
         seen = set()

@@ -123,7 +123,7 @@
                     {{ camera.ip_address }} • {{ camera.get_camera_type_display }}
                 </p>
                 {% if camera.is_mobile %}
-                    <a href="{% url 'mobile_cameras:view_mobile_camera' camera.id %}" class="btn-control">
+                    <a href="{% url 'mobile_cameras:view' camera.id %}" class="btn-control">
                         View Mobile Feed
                     </a>
                 {% else %}

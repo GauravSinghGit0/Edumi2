@@ -1,0 +1,58 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Camera Feed Diagnostic & Test{% endblock %}
+
+{% block content %}
+<div class="test-feed-container" style="max-width: 1000px; margin: 30px auto; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div>
+            <h2 style="color: #1e293b; margin-bottom: 5px;">📹 Camera Feed Tester</h2>
+            <p style="color: #64748b;">Diagnostic tool for verifying RTSP / HTTP video stream feeds</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" style="padding: 10px 18px; background: #e2e8f0; color: #334155; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            ← Back to Admin Dashboard
+        </a>
+    </div>
+
+    <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
+        <div style="margin-bottom: 20px;">
+            <label for="feedUrl" style="display: block; font-weight: 600; margin-bottom: 8px; color: #334155;">Stream / Feed URL:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="feedUrl" placeholder="Enter stream URL or /cameras/1/feed/" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;" value="/cameras/1/feed/">
+                <button onclick="testFeed()" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Test Stream
+                </button>
+            </div>
+        </div>
+
+        <div id="videoContainer" style="width: 100%; height: 480px; background: #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            <img id="feedImage" src="" alt="Stream Feed" style="max-width: 100%; max-height: 100%; display: none;">
+            <div id="placeholderText" style="color: #94a3b8; text-align: center;">
+                <p style="font-size: 3rem; margin-bottom: 10px;">📹</p>
+                <p>Click <strong>Test Stream</strong> above to display video stream</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testFeed() {
+    const url = document.getElementById('feedUrl').value;
+    const img = document.getElementById('feedImage');
+    const placeholder = document.getElementById('placeholderText');
+    if (!url) return;
+
+    placeholder.innerHTML = '<p style="color: #38bdf8;">Connecting to stream...</p>';
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    img.src = url + '?t=' + new Date().getTime();
+
+    img.onerror = function() {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = '<p style="color: #ef4444; font-size: 2rem;">❌</p><p style="color: #ef4444;">Failed to load video stream feed from ' + url + '</p>';
+    };
+}
+</script>
+{% endblock %}

@@ -22,11 +22,16 @@ from .forms import (
 from .models import VideoProject, EditOperation, ProjectAsset
 
 
+@login_required
 def serve_media_ranges(request, path):
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
-    if not os.path.exists(file_path):
+    media_root = os.path.abspath(str(settings.MEDIA_ROOT))
+    target_path = os.path.abspath(os.path.join(media_root, path))
+
+    # Prevent directory traversal attacks
+    if not target_path.startswith(media_root) or not os.path.isfile(target_path):
         raise Http404("File not found")
 
+    file_path = target_path
     file_size = os.path.getsize(file_path)
     range_header = request.META.get('HTTP_RANGE', '').strip()
     

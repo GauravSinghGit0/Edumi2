@@ -12,7 +12,7 @@ rtc:
     - stun1.l.google.com:19302
 
 keys:
-  devkey: devsecret_must_be_32_characters_long_1234
+  edumi_livekit_key_2026: edumi_livekit_sec_32chars_key_2026_prod
 
 room:
   empty_timeout: 300

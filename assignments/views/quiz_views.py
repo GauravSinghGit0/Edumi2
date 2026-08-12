@@ -57,8 +57,8 @@ def create_quiz(request, classroom_id):
         return redirect('teacher_classrooms')
     
     if request.method == 'POST':
-        title = request.POST.get('title').strip()
-        description = request.POST.get('description', '').strip()
+        title = (request.POST.get('title') or '').strip()
+        description = (request.POST.get('description') or '').strip()
         total_marks = int(request.POST.get('total_marks', 100))
         time_limit = request.POST.get('time_limit')
         time_limit = int(time_limit) if time_limit else None
@@ -204,7 +204,7 @@ def add_question(request, quiz_id):
     
     if request.method == 'POST':
         question_type = request.POST.get('question_type')
-        question_text = request.POST.get('question_text').strip()
+        question_text = (request.POST.get('question_text') or '').strip()
         marks = int(request.POST.get('marks', 1))
         order = quiz.questions.count()
         

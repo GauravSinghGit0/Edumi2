@@ -12,6 +12,7 @@ from .classroom_views import (
     delete_classroom,
     leave_classroom,
     start_classroom_meeting,
+    api_classrooms,
 )
 from .meeting_views import (
     generate_meeting_code,

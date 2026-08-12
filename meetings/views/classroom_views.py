@@ -30,10 +30,10 @@ def create_classroom(request):
         return redirect('login')
 
     if request.method == 'POST':
-        class_code = request.POST.get('class_code').strip().upper()
-        title = request.POST.get('title').strip()
+        class_code = (request.POST.get('class_code') or '').strip().upper()
+        title = (request.POST.get('title') or '').strip()
         password = request.POST.get('password')
-        description = request.POST.get('description', '').strip()
+        description = (request.POST.get('description') or '').strip()
 
         if Classroom.objects.filter(class_code=class_code).exists():
             messages.error(request, 'Class code already exists. Please choose a different one.')
@@ -94,7 +94,7 @@ def join_classroom_request(request):
         return redirect('login')
 
     if request.method == 'POST':
-        class_code = request.POST.get('class_code').strip().upper()
+        class_code = (request.POST.get('class_code') or '').strip().upper()
         password = request.POST.get('password')
 
         try:
@@ -283,3 +283,16 @@ def start_classroom_meeting(request, classroom_id):
         return redirect('join_meeting', meeting_code=meeting.meeting_code)
 
     return render(request, 'meetings/start_classroom_meeting.html', {'classroom': classroom})
+
+
+@login_required
+def api_classrooms(request):
+    """API endpoint returning JSON list of classrooms for current user."""
+    if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher':
+        classrooms = Classroom.objects.filter(teacher=request.user, is_active=True)
+    else:
+        memberships = ClassroomMembership.objects.filter(student=request.user, status='approved')
+        classrooms = Classroom.objects.filter(id__in=memberships.values_list('classroom_id', flat=True), is_active=True)
+    
+    data = [{'id': c.id, 'title': c.title, 'class_code': c.class_code} for c in classrooms]
+    return JsonResponse(data, safe=False)

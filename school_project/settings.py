@@ -491,7 +491,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # LIVEKIT
 # ==============================================================================
 
-LIVEKIT_URL              = env('LIVEKIT_URL', 'ws://localhost:8002/livekit-proxy')
+LIVEKIT_URL              = env('LIVEKIT_URL', 'ws://localhost:8002/livekit-proxy/')
 LIVEKIT_INTERNAL_URL     = env('LIVEKIT_INTERNAL_URL', 'ws://localhost:7880')
 LIVEKIT_INTERNAL_HTTP_URL = env('LIVEKIT_INTERNAL_HTTP_URL', 'http://localhost:7880')
 LIVEKIT_API_KEY          = env('LIVEKIT_API_KEY', required=True)

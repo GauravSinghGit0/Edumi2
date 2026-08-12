@@ -132,29 +132,8 @@
             document.addEventListener('DOMContentLoaded', function() {
                 {% if video.is_processed %}
                 const video = document.getElementById('mainVideo');
-                const playlistUrl = "{% url 'video_playlist' video.id %}";
-                
-                if (Hls.isSupported()) {
-                    const hls = new Hls();
-                    hls.loadSource(playlistUrl);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        console.log('HLS manifest loaded');
-                    });
-                    hls.on(Hls.Events.ERROR, function(event, data) {
-                        console.error('HLS error:', data);
-                        if (data.fatal) {
-                            // Fallback to original file on fatal error
-                            video.src = "{{ video.original_file.url }}";
-                        }
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    // Safari native HLS
-                    video.src = playlistUrl;
-                } else {
-                    // Fallback for other browsers
-                    video.src = "{{ video.original_file.url }}";
-                }
+                const videoUrl = "{{ video.original_file.url }}";
+                video.src = videoUrl;
                 {% endif %}
             });
         </script>

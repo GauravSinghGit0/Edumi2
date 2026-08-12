@@ -68,9 +68,9 @@ def create_assignment(request, classroom_id):
         return redirect('teacher_classrooms')
     
     if request.method == 'POST':
-        title = request.POST.get('title').strip()
-        description = request.POST.get('description', '').strip()
-        instructions = request.POST.get('instructions', '').strip()
+        title = (request.POST.get('title') or '').strip()
+        description = (request.POST.get('description') or '').strip()
+        instructions = (request.POST.get('instructions') or '').strip()
         total_marks = int(request.POST.get('total_marks', 100))
         due_date_str = request.POST.get('due_date')
         due_time_str = request.POST.get('due_time')

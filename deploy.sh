@@ -66,12 +66,12 @@ fi
 
 echo ""
 echo -e "${BOLD}${GREEN}"
-echo "  ███████╗██████╗ ██╗   ██╗███╗   ███╗██╗    ██████╗ "
-echo "  ██╔════╝██╔══██╗██║   ██║████╗ ████║██║    ╚════██╗"
-echo "  █████╗  ██║  ██║██║   ██║██╔████╔██║██║     █████╔╝"
-echo "  ██╔══╝  ██║  ██║██║   ██║██║╚██╔╝██║██║    ██╔═══╝ "
-echo "  ███████╗██████╔╝╚██████╔╝██║ ╚═╝ ██║██║    ███████╗"
-echo "  ╚══════╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝    ╚══════╝"
+echo "  ███████╗██████╗ ██╗   ██╗███╗   ███╗██╗"
+echo "  ██╔════╝██╔══██╗██║   ██║████╗ ████║██║"
+echo "  █████╗  ██║  ██║██║   ██║██╔████╔██║██║"
+echo "  ██╔══╝  ██║  ██║██║   ██║██║╚██╔╝██║██║"
+echo "  ███████╗██████╔╝╚██████╔╝██║ ╚═╝ ██║██║"
+echo "  ╚══════╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝"
 echo -e "${NC}"
 echo -e "  ${BOLD}EduMi2 Single-File Ubuntu Server Deployment Orchestrator${NC}"
 echo -e "  Directory : ${CYAN}${APP_DIR}${NC}"
@@ -201,6 +201,10 @@ fi
 
 info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
 mkdir -p "$APP_DIR/config"
+# Generate secure LiveKit API keys
+LK_KEY="lk_$(openssl rand -hex 8 2>/dev/null || echo "edumi_lk_key_2026")"
+LK_SECRET="$(openssl rand -hex 24 2>/dev/null || echo "edumi_lk_secret_32_characters_long_2026")"
+
 cat > "$APP_DIR/config/livekit.yaml" <<EOF
 port: 7880
 bind_addresses:
@@ -216,7 +220,7 @@ rtc:
     - stun1.l.google.com:19302
 
 keys:
-  devkey: devsecret_must_be_32_characters_long_1234
+  $LK_KEY: $LK_SECRET
 
 room:
   empty_timeout: 300
@@ -271,18 +275,18 @@ DATABASE_URL_STR="postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
 cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
-ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP,*
+ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP
 SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
 DATABASE_URL=$DATABASE_URL_STR
 REDIS_URL=redis://127.0.0.1:6379/0
 
-LIVEKIT_URL=wss://$DOMAIN/livekit-proxy
+LIVEKIT_URL=wss://$DOMAIN/livekit-proxy/
 LIVEKIT_INTERNAL_URL=ws://127.0.0.1:7880
 LIVEKIT_INTERNAL_HTTP_URL=http://127.0.0.1:7880
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=devsecret_must_be_32_characters_long_1234
+LIVEKIT_API_KEY=$LK_KEY
+LIVEKIT_API_SECRET=$LK_SECRET
 
 SECURE_SSL_REDIRECT=$([ "$USE_LETSENCRYPT" = true ] || [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && echo "True" || echo "False")
 SESSION_COOKIE_SECURE=$([ "$USE_LETSENCRYPT" = true ] || [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ] && echo "True" || echo "False")
@@ -329,12 +333,12 @@ else
     fi
 fi
 # Ensure home directory, certs, and logs have proper write/execute permissions
-mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/media" "$APP_DIR/certs" "$APP_DIR/config"
+mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/database/media" "$APP_DIR/certs" "$APP_DIR/config"
 chmod -R 777 "$APP_DIR/logs" 2>/dev/null || true
 
 if [ "$IS_ROOT" = true ]; then
     chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
-    chmod -R 755 "$APP_DIR/certs" "$APP_DIR/staticfiles" "$APP_DIR/media" 2>/dev/null || true
+    chmod -R 755 "$APP_DIR/certs" "$APP_DIR/staticfiles" "$APP_DIR/database/media" 2>/dev/null || true
 fi
 log "SSL Certificates generated in ./certs/"
 
@@ -465,7 +469,7 @@ server {
     ssl_certificate ${APP_DIR}/certs/edumi.crt;
     ssl_certificate_key ${APP_DIR}/certs/edumi.key;
 
-    client_max_body_size 100M;
+    client_max_body_size 500M;
 
     location /static/ {
         alias ${APP_DIR}/staticfiles/;
@@ -473,7 +477,7 @@ server {
     }
 
     location /media/ {
-        alias ${APP_DIR}/media/;
+        alias ${APP_DIR}/database/media/;
         expires 7d;
     }
 
@@ -485,7 +489,7 @@ server {
         proxy_read_timeout 3600s;
     }
 
-    location /livekit-proxy {
+    location ~ ^/livekit-proxy/? {
         proxy_pass http://127.0.0.1:7880/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;

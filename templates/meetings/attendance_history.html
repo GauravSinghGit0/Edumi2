@@ -1,0 +1,145 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Classrooms Attendance History{% endblock %}
+
+{% block content %}
+<style>
+    .history-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .day-section { margin-bottom: 2.5rem; }
+    .day-header { 
+        display: flex; 
+        align-items: center; 
+        gap: 1rem; 
+        margin-bottom: 1.25rem; 
+        padding-bottom: 0.75rem; 
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .day-date { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+    .day-count { 
+        font-size: 0.8rem; 
+        font-weight: 600; 
+        color: #64748b; 
+        background: #f1f5f9; 
+        padding: 0.2rem 0.75rem; 
+        border-radius: 999px; 
+    }
+
+    .meeting-card { 
+        background: white; 
+        border-radius: 1rem; 
+        padding: 1.5rem; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .meeting-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    
+    .meeting-info h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+    .meeting-meta { display: flex; gap: 1rem; color: #64748b; font-size: 0.875rem; align-items: center; }
+    .meeting-time { font-weight: 600; color: #4f46e5; }
+    
+    .meeting-stats { display: flex; gap: 1.5rem; }
+    .stat-item { text-align: center; }
+    .stat-val { display: block; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+    .stat-lbl { display: block; font-size: 0.7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+
+    .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+    .badge-ended { background: #f1f5f9; color: #64748b; }
+    .badge-live { background: #dcfce7; color: #166534; animation: pulse 2s infinite; }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+
+    .btn-view {
+        padding: 0.6rem 1.25rem;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: background 0.2s;
+    }
+    .btn-view:hover { background: #4338ca; }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 1rem;
+        border: 2px dashed #e2e8f0;
+    }
+</style>
+
+<div class="history-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="font-size: 1.875rem; font-weight: 800; color: #0f172a;">📋 Attendance History</h1>
+            <p style="color: #64748b;">Overview of all past meetings across your classrooms</p>
+        </div>
+        <a href="{% url 'teacher_classrooms' %}" style="color: #64748b; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+            ← Back to Classrooms
+        </a>
+    </div>
+
+    {% if history %}
+        {% for date_str, meetings in history.items %}
+        <div class="day-section">
+            <div class="day-header">
+                <span class="day-date">📅 {{ date_str }}</span>
+                <span class="day-count">{{ meetings|length }} Meeting{{ meetings|length|pluralize }}</span>
+            </div>
+
+            {% for meeting in meetings %}
+            <div class="meeting-card">
+                <div class="meeting-info">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <h3>{{ meeting.title }}</h3>
+                        {% if meeting.status == 'live' %}
+                            <span class="badge badge-live">🔴 LIVE</span>
+                        {% else %}
+                            <span class="badge badge-ended">Ended</span>
+                        {% endif %}
+                    </div>
+                    <div class="meeting-meta">
+                        <span class="meeting-time">
+                            Classroom: <strong>{{ meeting.classroom.title|default:"General" }}</strong>
+                        </span>
+                        <span>•</span>
+                        <span>Code: <strong>{{ meeting.meeting_code }}</strong></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 2rem;">
+                    <div class="meeting-stats">
+                        <div class="stat-item">
+                            <span class="stat-val">{{ meeting.participants.count }}</span>
+                            <span class="stat-lbl">Participants</span>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'meeting_attendance' meeting.meeting_code %}" class="btn-view">
+                        View Report
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">No attendance logs found</h2>
+            <p style="color: #64748b;">Once you conduct classroom meetings, attendance history will appear here.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

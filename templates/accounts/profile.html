@@ -74,15 +74,7 @@
         <div class="profile-hero-content">
           <!-- Avatar (overlapping cover) -->
           <div class="profile-avatar-wrap">
-            {% if profile.profile_picture %}
-            <img src="{{ profile.profile_picture.url }}" alt="Avatar" class="profile-avatar-img" id="avatarPreview">
-            {% elif profile.avatar_url %}
-            <img src="{{ profile.avatar_url }}" alt="Avatar" class="profile-avatar-img" id="avatarPreview">
-            {% else %}
-            <img
-              src="https://ui-avatars.com/api/?name={{ profile_user.get_full_name|urlencode }}&size=200&background=667eea&color=fff&bold=true"
-              alt="Avatar" class="profile-avatar-img" id="avatarPreview">
-            {% endif %}
+            <img src="{{ profile.get_profile_picture_url }}" alt="Avatar" class="profile-avatar-img" id="avatarPreview" onerror="this.src='https://ui-avatars.com/api/?name={{ profile_user.get_full_name|default:profile_user.username|urlencode }}&size=200&background=667eea&color=fff&bold=true'">
 
             {% if profile.user_type == 'student' %}
             {% if face_registered %}

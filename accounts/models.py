@@ -65,10 +65,16 @@ class UserProfile(models.Model):
     
     def get_profile_picture_url(self):
         if self.profile_picture:
-            return self.profile_picture.url
-        elif self.avatar_url:
+            try:
+                if self.profile_picture.storage.exists(self.profile_picture.name):
+                    return self.profile_picture.url
+            except Exception:
+                pass
+        if self.avatar_url:
             return self.avatar_url
-        return f"https://ui-avatars.com/api/?name={self.user.username}&background=1877f2&color=fff&size=200"
+        display_name = self.get_display_name() or self.user.username
+        import urllib.parse
+        return f"https://ui-avatars.com/api/?name={urllib.parse.quote(display_name)}&background=1877f2&color=fff&size=200"
 
 
 class StudentPhoto(models.Model):
