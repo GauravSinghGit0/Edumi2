@@ -344,8 +344,8 @@ try:
         },
     }
     WHITENOISE_ROOT         = BASE_DIR / 'staticfiles'
-    WHITENOISE_AUTOREFRESH  = DEBUG
-    WHITENOISE_USE_FINDERS  = DEBUG
+    WHITENOISE_AUTOREFRESH  = True
+    WHITENOISE_USE_FINDERS  = True
     WHITENOISE_MAX_AGE      = 0 if DEBUG else 31_536_000   # 1 year in prod
 except ImportError:
     STORAGES = {
@@ -366,7 +366,9 @@ COMPRESS_ENABLED  = env_bool('COMPRESS_ENABLED', 'True')
 COMPRESS_URL      = STATIC_URL
 COMPRESS_ROOT     = STATIC_ROOT
 COMPRESS_STORAGE  = 'compressor.storage.CompressorFileStorage'
-COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False')
+COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'True')
+COMPRESS_OFFLINE_MANIFEST = 'compressor.json'
+COMPRESS_REBUILD_TIMEOUT = 0 if DEBUG else 300
 
 # Register MIME types (Windows registry is often missing these)
 mimetypes.add_type('text/css',               '.css')

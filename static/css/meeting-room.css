@@ -424,6 +424,16 @@
     display: block;
 }
 
+/* Camera Avatar Overlay - show only when camera is OFF (cam-off class present) */
+.video-box:not(.cam-off) .video-avatar-overlay {
+    display: none;
+}
+
+.video-box.cam-off .video-avatar-overlay {
+    display: flex;
+    opacity: 1;
+}
+
 /* Enhanced Video Name Tags */
 .video-nametag {
     position: absolute;

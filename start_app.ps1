@@ -112,7 +112,7 @@ function Start-BackgroundProcess {
 # ------------------------------------------------------------------------------
 # STEP 1: Process & Port Cleanup (Kill Stale Processes)
 # ------------------------------------------------------------------------------
-Write-Host "[1/5] Cleaning up previous processes & releasing ports..." -ForegroundColor Yellow
+Write-Host "[1/6] Cleaning up previous processes & releasing ports..." -ForegroundColor Yellow
 
 $TargetPorts = @(8002, 8003, 8008, 7880, 7881, 7882)
 foreach ($Port in $TargetPorts) {
@@ -221,9 +221,9 @@ logging:
 
 
 # ------------------------------------------------------------------------------
-# STEP 3: Database Migrations
+# STEP 2: Database Migrations
 # ------------------------------------------------------------------------------
-Write-Host "[2/5] Running Database Migrations..." -ForegroundColor Yellow
+Write-Host "[2/6] Running Database Migrations..." -ForegroundColor Yellow
 & $VenvPython manage.py migrate --noinput
 if ($LASTEXITCODE -eq 0) {
     Write-Host "  -> Database schema is up to date." -ForegroundColor Green
@@ -233,9 +233,29 @@ if ($LASTEXITCODE -eq 0) {
 
 
 # ------------------------------------------------------------------------------
+# STEP 3: Build Static Assets (collectstatic + django-compressor offline)
+# ------------------------------------------------------------------------------
+Write-Host "[3/6] Building static assets & compressing CSS/JS..." -ForegroundColor Yellow
+
+& $VenvPython manage.py collectstatic --noinput --clear
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  -> [WARN] collectstatic exited with code $LASTEXITCODE (continuing)" -ForegroundColor Yellow
+} else {
+    Write-Host "  -> Static files collected successfully." -ForegroundColor Green
+}
+
+& $VenvPython manage.py compress --force
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  -> [WARN] compress exited with code $LASTEXITCODE (continuing)" -ForegroundColor Yellow
+} else {
+    Write-Host "  -> CSS/JS bundles compressed successfully." -ForegroundColor Green
+}
+
+
+# ------------------------------------------------------------------------------
 # STEP 4: Launch Microservices Silently (No Extra Windows)
 # ------------------------------------------------------------------------------
-Write-Host "[3/5] Starting Background Services (LiveKit, Camera, Celery)..." -ForegroundColor Yellow
+Write-Host "[4/6] Starting Background Services (LiveKit, Camera, Celery)..." -ForegroundColor Yellow
 
 $BGProcesses = New-Object System.Collections.ArrayList
 
@@ -279,6 +299,8 @@ if ($CeleryProc) { [void]$BGProcesses.Add($CeleryProc) }
 # ------------------------------------------------------------------------------
 # STEP 5: Start Daphne HTTPS Server (Main Single Terminal Window)
 # ------------------------------------------------------------------------------
+Write-Host "[5/6] Starting HTTPS Application Server..." -ForegroundColor Yellow
+
 $SITE_HTTP_PORT = 8002
 $lanIp = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -eq "Up" } | Select-Object -First 1 -ExpandProperty IPv4Address | Select-Object -First 1 -ExpandProperty IPAddress)
 if (-not $lanIp) { $lanIp = "127.0.0.1" }

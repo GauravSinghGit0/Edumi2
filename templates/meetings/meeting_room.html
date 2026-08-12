@@ -775,6 +775,11 @@ window.TrackManager = {
         }
 
         this._attached.set(key, { el, boxId: box.id, isScreen, identity: participant.identity });
+
+        if (track.kind === 'video' && !isScreen) {
+            box.classList.remove('cam-off');
+        }
+
         console.log(`TrackManager: attached ${track.kind} [${source}] from ${participant.identity} key=${key}`);
     },
 
@@ -801,6 +806,11 @@ window.TrackManager = {
         if (track.kind === 'audio' && participant?.identity && key) {
             const audioEl = document.getElementById(`audio-${participant.identity}-${key}`);
             if (audioEl) audioEl.remove();
+        }
+
+        if (track.kind === 'video' && !isScreen && participant?.identity) {
+            const camBox = document.getElementById(`video-box-${participant.identity}`);
+            if (camBox) camBox.classList.add('cam-off');
         }
 
         // Remove dedicated screen share box + restore main area
@@ -1169,7 +1179,6 @@ function attachTrackToBox(track, box, isLocal) {
     if (!track || !box) return;
     console.log(`Attaching ${track.kind} track to ${box.id} (Local: ${isLocal}, Source: ${track.source})`);
     
-    // Remove existing element for this track kind
     const existing = box.querySelector(`[data-kind="${track.kind}"], video, audio`);
     if (existing) {
         try {
@@ -1185,9 +1194,9 @@ function attachTrackToBox(track, box, isLocal) {
     if (track.kind === Track.Kind.Video) {
         el.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
         
-        // Mirror only for webcam, not for IP camera or screen share
         const isIpCam = track.name === 'camera' && currentVideoSource === 'ip';
-        if (isLocal && !isIpCam && track.source !== Track.Source.ScreenShare) {
+        const isScreen = track.source === Track.Source.ScreenShare;
+        if (isLocal && !isIpCam && !isScreen) {
             el.style.transform = 'scaleX(-1)';
         }
         
@@ -1200,15 +1209,15 @@ function attachTrackToBox(track, box, isLocal) {
             el.dataset.local = 'true';
         }
         
-        // Ensure srcObject is set (redundant but safe)
         if (track.mediaStreamTrack && !el.srcObject) {
             el.srcObject = new MediaStream([track.mediaStreamTrack]);
         }
         
         box.insertBefore(el, box.querySelector('.video-nametag'));
-        // LiveKit's track.attach() + autoplay attribute handles playback internally.
-        // Calling .play() manually races with the browser's load cycle → AbortError.
-        // For local preview we just ensure autoplay is set (already done above).
+
+        if (!isScreen) {
+            box.classList.remove('cam-off');
+        }
     }
 }
 
@@ -1264,13 +1273,25 @@ function hideLocalScreenShare() {
     const box = document.getElementById('local-screen-box');
     if (box) box.remove();
     clearMain();
-    // Restore camera box to sidebar
-    const camBox = document.getElementById(`video-box-${window.room.localParticipant.identity}`);
+
+    const localIdentity = window.room ? String(window.room.localParticipant.identity) : String(currentUserId);
+    let camBox = document.getElementById(`video-box-${localIdentity}`);
+
+    if (!camBox) {
+        console.warn('hideLocalScreenShare: camera box missing, recreating via renderLocalParticipant');
+        renderLocalParticipant();
+        camBox = document.getElementById(`video-box-${localIdentity}`);
+    }
+
     if (camBox) {
         camBox.classList.remove('main-presents');
-        document.getElementById('sidebarVideoArea').appendChild(camBox);
+        const sidebar = document.getElementById('sidebarVideoArea');
+        if (sidebar && camBox.parentElement !== sidebar) {
+            sidebar.appendChild(camBox);
+        }
         const v = camBox.querySelector('video');
         if (v) { v.style.objectFit = 'cover'; v.style.transform = 'scaleX(-1)'; }
+        camBox.classList.toggle('cam-off', !window.isCameraOn);
     }
     updateLayout();
 }
@@ -1421,14 +1442,34 @@ function handleSignalingMessage(data) {
 // ── Layout ────────────────────────────────────────────────────────────────────
 function moveToMain(box, label, isScreenShare) {
     const mainArea   = document.getElementById('mainVideoArea');
+    const sidebarArea = document.getElementById('sidebarVideoArea');
     const container  = document.getElementById('videoGridContainer');
     container.className = 'video-grid-container sidebar-view';
+
+    if (mainArea.children.length > 0) {
+        const currentMain = mainArea.children[0];
+        currentMain.classList.remove('main-presents');
+        const v = currentMain.querySelector('video');
+        if (v) {
+            v.style.objectFit = 'cover';
+            const isLocalCamera = window.room && currentMain.dataset.identity === String(window.room.localParticipant.identity);
+            const isLocalScreen = currentMain.dataset.identity === 'local-screen';
+            if (isLocalCamera && !isLocalScreen) {
+                v.style.transform = 'scaleX(-1)';
+            } else {
+                v.style.transform = 'none';
+            }
+        }
+        if (sidebarArea && currentMain.parentElement !== sidebarArea) {
+            sidebarArea.appendChild(currentMain);
+        }
+    }
+
     box.classList.add('main-presents');
     mainArea.innerHTML = '';
     mainArea.appendChild(box);
 
     if (isScreenShare) {
-        // Fix video to contain (not crop) for screen share
         const v = box.querySelector('video');
         if (v) { v.style.objectFit = 'contain'; v.style.transform = 'none'; }
     }
@@ -1436,8 +1477,26 @@ function moveToMain(box, label, isScreenShare) {
 
 function clearMain() {
     const mainArea  = document.getElementById('mainVideoArea');
+    const sidebarArea = document.getElementById('sidebarVideoArea');
     const container = document.getElementById('videoGridContainer');
-    mainArea.innerHTML = '';
+
+    while (mainArea.children.length > 0) {
+        const child = mainArea.children[0];
+        child.classList.remove('main-presents');
+        const v = child.querySelector('video');
+        if (v) {
+            v.style.objectFit = 'cover';
+            const isLocalCamera = window.room && child.dataset.identity === String(window.room.localParticipant.identity);
+            const isLocalScreen = child.dataset.identity === 'local-screen';
+            if (isLocalCamera && !isLocalScreen) {
+                v.style.transform = 'scaleX(-1)';
+            } else {
+                v.style.transform = 'none';
+            }
+        }
+        if (sidebarArea) sidebarArea.appendChild(child);
+    }
+
     container.className = 'video-grid-container grid-view count-' + getAllBoxes().length;
 }
 
