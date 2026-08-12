@@ -183,20 +183,29 @@ LIVEKIT_DIR="$APP_DIR/livekit-bin"
 mkdir -p "$LIVEKIT_DIR"
 
 if [ ! -f "$LIVEKIT_DIR/livekit-server" ]; then
-    info "Downloading LiveKit Server Linux binary..."
-    LIVEKIT_URL=$(curl -s https://api.github.com/repos/livekit/livekit/releases/latest \
+    # Remove Windows .exe if accidentally present (wrong platform binary)
+    if [ -f "$LIVEKIT_DIR/livekit-server.exe" ]; then
+        warn "Found Windows binary (livekit-server.exe) — removing it and downloading the correct Linux binary..."
+        rm -f "$LIVEKIT_DIR/livekit-server.exe"
+    fi
+
+    info "Downloading LiveKit Server Linux (amd64) binary from GitHub releases..."
+    LIVEKIT_DL_URL=$(curl -s https://api.github.com/repos/livekit/livekit/releases/latest \
         | grep "browser_download_url" | grep "linux_amd64.tar.gz" | head -1 \
         | cut -d '"' -f 4 || echo "")
 
-    if [ -n "$LIVEKIT_URL" ]; then
-        wget -q -O /tmp/livekit.tar.gz "$LIVEKIT_URL"
+    if [ -n "$LIVEKIT_DL_URL" ]; then
+        info "Downloading: $LIVEKIT_DL_URL"
+        wget -q --show-progress -O /tmp/livekit.tar.gz "$LIVEKIT_DL_URL"
         tar -xzf /tmp/livekit.tar.gz -C "$LIVEKIT_DIR" livekit-server
         rm -f /tmp/livekit.tar.gz
         chmod +x "$LIVEKIT_DIR/livekit-server"
-        log "LiveKit binary installed in ./livekit-bin/livekit-server"
+        log "LiveKit Linux binary installed in ./livekit-bin/livekit-server"
+    else
+        err "Could not fetch LiveKit download URL from GitHub API. Check internet access and try again."
     fi
 else
-    log "LiveKit binary present in ./livekit-bin/livekit-server"
+    log "LiveKit Linux binary already present in ./livekit-bin/livekit-server"
 fi
 
 info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
