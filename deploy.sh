@@ -210,19 +210,33 @@ fi
 
 info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
 mkdir -p "$APP_DIR/config"
-# Generate secure LiveKit API keys
-LK_KEY="lk_$(openssl rand -hex 8 2>/dev/null || echo "edumi_lk_key_2026")"
-LK_SECRET="$(openssl rand -hex 24 2>/dev/null || echo "edumi_lk_secret_32_characters_long_2026")"
+
+# Read existing LiveKit credentials from .env if present, otherwise default to devkey/devsecret
+LK_KEY=$(grep '^LIVEKIT_API_KEY=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+LK_SECRET=$(grep '^LIVEKIT_API_SECRET=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+
+if [ -z "$LK_KEY" ]; then
+    LK_KEY="devkey"
+    if [ -f "$APP_DIR/.env" ]; then
+        echo "LIVEKIT_API_KEY=$LK_KEY" >> "$APP_DIR/.env"
+    fi
+fi
+
+if [ -z "$LK_SECRET" ]; then
+    LK_SECRET="devsecret_must_be_32_characters_long_1234"
+    if [ -f "$APP_DIR/.env" ]; then
+        echo "LIVEKIT_API_SECRET=$LK_SECRET" >> "$APP_DIR/.env"
+    fi
+fi
 
 cat > "$APP_DIR/config/livekit.yaml" <<EOF
 port: 7880
 bind_addresses:
-  - ""
+  - "0.0.0.0"
 rtc:
   tcp_port: 7881
-  port_range_start: 50000
-  port_range_end: 50200
-  use_external_ip: false
+  udp_port: 7882
+  use_external_ip: true
   node_ip: "$LAN_IP"
   stun_servers:
     - stun.l.google.com:19302
@@ -236,9 +250,9 @@ room:
   max_participants: 100
 
 logging:
-  level: warn
+  level: info
 EOF
-log "LiveKit configuration updated in ./config/livekit.yaml"
+log "LiveKit configuration updated in ./config/livekit.yaml (Keys synced with .env: $LK_KEY)"
 
 
 # ------------------------------------------------------------------------------
@@ -417,34 +431,60 @@ ExecStart=${cmd}
 Restart=always
 RestartSec=5
 EnvironmentFile=${APP_DIR}/.env
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
 EOF
     }
 
-    CREATE_SERVICE "edumi-auth" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8002 school_project.asgi:application"
-    CREATE_SERVICE "edumi-admin" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8003 school_project.asgi:application"
+    CREATE_SERVICE "edumi-livekit" "${LIVEKIT_DIR}/livekit-server --config ${APP_DIR}/config/livekit.yaml"
+    CREATE_SERVICE "edumi-camera"  "${VENV_PYTHON} camera_service/serve.py"
+    CREATE_SERVICE "edumi-celery"  "${VENV_CELERY} -A school_project worker -l info -P threads"
+    CREATE_SERVICE "edumi-auth"    "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8002 school_project.asgi:application"
+    CREATE_SERVICE "edumi-admin"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8003 school_project.asgi:application"
     CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8004 school_project.asgi:application"
-    CREATE_SERVICE "edumi-msg" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8005 school_project.asgi:application"
+    CREATE_SERVICE "edumi-msg"     "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8005 school_project.asgi:application"
     CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8006 school_project.asgi:application"
-    CREATE_SERVICE "edumi-video" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8007 school_project.asgi:application"
-    CREATE_SERVICE "edumi-camera" "${VENV_PYTHON} camera_service/serve.py"
-    CREATE_SERVICE "edumi-celery" "${VENV_CELERY} -A school_project worker -l info -P threads"
-
-    if [ -f "${LIVEKIT_DIR}/livekit-server" ]; then
-        CREATE_SERVICE "edumi-livekit" "${LIVEKIT_DIR}/livekit-server --config ${APP_DIR}/config/livekit.yaml"
-    fi
+    CREATE_SERVICE "edumi-video"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8007 school_project.asgi:application"
 
     systemctl daemon-reload
-    for svc in edumi-auth edumi-admin edumi-meeting edumi-msg edumi-profile edumi-video edumi-camera edumi-celery; do
-        systemctl enable ${svc}
+
+    # ---- Start order: LiveKit first (WebRTC depends on it), then Camera, ----
+    #      Celery, then the Django upstream instances.
+    info "Starting LiveKit first and waiting for port 7880..."
+    systemctl enable edumi-livekit 2>/dev/null || true
+    systemctl restart edumi-livekit
+    sleep 2
+    LK_READY=0
+    for i in $(seq 1 20); do
+        if (echo > /dev/tcp/127.0.0.1/7880) >/dev/null 2>&1; then
+            LK_READY=1; break
+        fi
+        sleep 1
+    done
+    if [ "$LK_READY" = "1" ]; then
+        log "LiveKit is accepting connections on :7880"
+    else
+        warn "LiveKit port 7880 not open after 20s — inspect: journalctl -u edumi-livekit -n 50"
+    fi
+
+    info "Starting remaining microservices..."
+    for svc in edumi-camera edumi-celery edumi-auth edumi-admin edumi-meeting edumi-msg edumi-profile edumi-video; do
+        systemctl enable ${svc} 2>/dev/null || true
         systemctl restart ${svc}
     done
-    if [ -f "${LIVEKIT_DIR}/livekit-server" ]; then
-        systemctl enable edumi-livekit || true
-        systemctl restart edumi-livekit || true
-    fi
+
+    sleep 3
+    info "Verifying backend ports are open..."
+    for p in 8002 8003 8004 8005 8006 8007 8008; do
+        if (echo > /dev/tcp/127.0.0.1/$p) >/dev/null 2>&1; then
+            info "  Port $p — OK"
+        else
+            warn "  Port $p — NOT listening (journalctl -u edumi-* for that service)"
+        fi
+    done
     log "Systemd services started and enabled."
 fi
 
@@ -472,37 +512,24 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     server_name ${DOMAIN} www.${DOMAIN} ${LAN_IP} _;
 
     ssl_certificate ${APP_DIR}/certs/edumi.crt;
     ssl_certificate_key ${APP_DIR}/certs/edumi.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
 
     client_max_body_size 500M;
 
-    location /static/ {
-        alias ${APP_DIR}/staticfiles/;
-        expires 30d;
-    }
+    # ---------------------------------------------------------------------
+    # IMPORTANT: Use ^~ so these PREFIX locations beat the camera regex
+    # below.  Without ^~ the regex ~ ^/(cameras/...) would run first and
+    # prevent /livekit-proxy/* and /ws/* from ever matching.
+    # ---------------------------------------------------------------------
 
-    location /media/ {
-        alias ${APP_DIR}/database/media/;
-        expires 7d;
-    }
-
-    location ~ ^/(cameras/[0-9]+/(feed|zoom|test)|mobile-cameras/[0-9]+/(feed|test)|head-count)/ {
-        proxy_pass http://127.0.0.1:8008;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_buffering off;
-        proxy_read_timeout 3600s;
-    }
-
-    # LiveKit SFU WebSocket/HTTP proxy
-    # IMPORTANT: Must be a PREFIX location (not regex ~) so Nginx correctly
-    # strips /livekit-proxy/ from the URI before forwarding to LiveKit.
-    # With a regex location + proxy_pass URI, path stripping is undefined.
-    location /livekit-proxy/ {
+    # 1) LiveKit SFU WebSocket + HTTP proxy (bypass Django for speed)
+    location ^~ /livekit-proxy/ {
         proxy_pass http://127.0.0.1:7880/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -514,9 +541,11 @@ server {
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
         proxy_buffering off;
+        proxy_cache_bypass \$http_upgrade;
     }
 
-    location /ws/ {
+    # 2) Django Channels WebSockets (meeting / attendance / chat)
+    location ^~ /ws/ {
         proxy_pass http://edumi_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -527,6 +556,30 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
+        proxy_buffering off;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # 3) Camera MJPEG streams — regex is fine here now because it is
+    #    matched after the ^~ prefixes above.
+    location ~ ^/(cameras/[0-9]+/(feed|zoom|test)|mobile-cameras/[0-9]+/(feed|test)|head-count)/ {
+        proxy_pass http://127.0.0.1:8008;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+
+    location /static/ {
+        alias ${APP_DIR}/staticfiles/;
+        expires 30d;
+        access_log off;
+    }
+
+    location /media/ {
+        alias ${APP_DIR}/database/media/;
+        expires 7d;
+        access_log off;
     }
 
     location / {
@@ -535,6 +588,9 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
     }
 }
 EOF

@@ -66,7 +66,7 @@ class UserProfile(models.Model):
     def get_profile_picture_url(self):
         if self.profile_picture:
             try:
-                if self.profile_picture.storage.exists(self.profile_picture.name):
+                if hasattr(self.profile_picture, 'url') and self.profile_picture.name:
                     return self.profile_picture.url
             except Exception:
                 pass

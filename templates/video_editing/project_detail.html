@@ -80,8 +80,8 @@
                 <video preload="auto" id="main-video"
                     {% if project.proxy_url and project.proxy_status == 'completed' %}
                     src="{{ project.proxy_url }}"
-                    {% elif project.original_file and project.original_file.name %}
-                    src="{% url 'serve_media_ranges' path=project.original_file.name %}"
+                    {% elif project.working_file and project.working_file.name %}
+                    src="{% url 'serve_media_ranges' path=project.working_file.name %}"
                     {% endif %}
                 ></video>
                 <div id="text-overlay-container"></div>

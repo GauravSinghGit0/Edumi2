@@ -242,8 +242,8 @@ else:
 
 REDIS_URL = env('REDIS_URL', 'redis://localhost:6379/0')
 
-# Always use Redis if URL is provided; InMemory only as last resort (dev)
-if REDIS_URL and (not DEBUG or env_bool('FORCE_REDIS_CHANNELS', 'False') or sys.platform != 'win32'):
+# Always use Redis on Linux/Production if URL is provided; InMemory on Windows/local dev
+if REDIS_URL and sys.platform != 'win32' and (not DEBUG or env_bool('FORCE_REDIS_CHANNELS', 'False')):
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',

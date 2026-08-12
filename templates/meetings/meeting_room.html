@@ -850,6 +850,9 @@ async function init() {
         }
     };
 
+    // Render local box immediately while connecting
+    renderLocalParticipant();
+
     // Fetch token from Django
     try {
         const res   = await fetch(window.TOKEN_URL);
@@ -1091,14 +1094,17 @@ function getOrCreateBox(identity, displayName, isLocal) {
 }
 
 function renderLocalParticipant() {
-    if (!window.room || !window.room.localParticipant) return;
-    const lp  = window.room.localParticipant;
-    const box = getOrCreateBox(lp.identity, currentUsername, true);
+    const lp = window.room ? window.room.localParticipant : null;
+    const identity = lp ? String(lp.identity) : String(currentUserId);
+    if (!identity || identity === 'undefined') return;
+
+    const box = getOrCreateBox(identity, currentUsername, true);
 
     if (box) {
         box.classList.toggle('cam-off', !window.isCameraOn);
         box.classList.toggle('muted', !window.isMicOn);
     }
+    if (!lp) return;
 
     // Attach camera track if already published
     if (lp.videoTrackPublications) {
@@ -1440,11 +1446,10 @@ function getAllBoxes() {
 }
 
 function updateLayout() {
-    if (!window.room || !window.room.localParticipant) return;
-    
     const boxes = getAllBoxes();
     const container = document.getElementById('videoGridContainer');
     const mainArea = document.getElementById('mainVideoArea');
+    if (!container || !mainArea) return;
     
     // Force sidebar view
     container.className = 'video-grid-container sidebar-view';
@@ -1452,8 +1457,8 @@ function updateLayout() {
     // If main area is empty, pick a video to enlarge
     if (mainArea.children.length === 0 && boxes.length > 0) {
         // Prioritize remote participants over local camera
-        const localIdentity = window.room.localParticipant.identity;
-        const remoteBox = boxes.find(b => b.dataset.identity !== localIdentity && b.dataset.identity !== 'local-screen');
+        const localIdentity = window.room?.localParticipant?.identity ? String(window.room.localParticipant.identity) : String(currentUserId);
+        const remoteBox = boxes.find(b => String(b.dataset.identity) !== localIdentity && b.dataset.identity !== 'local-screen');
         const targetBox = remoteBox || boxes[0];
         const isScreenShare = targetBox.dataset.identity === 'local-screen';
         const label = targetBox.querySelector('.video-nametag') ? targetBox.querySelector('.video-nametag').textContent : '';
@@ -1555,6 +1560,16 @@ async function toggleScreenShare() {
             isScreenSharing = true;
             document.getElementById('screenBtn').classList.add('active');
 
+            // --- AUTO-HIDE CAMERA ON SCREENSHARE FOR HOST ---
+            if (isHost && isCameraOn && window.room) {
+                try {
+                    await window.room.localParticipant.setCameraEnabled(false);
+                    document.getElementById('camBtn').classList.add('off');
+                } catch (camErr) {
+                    console.warn('Could not auto-hide camera on screenshare:', camErr);
+                }
+            }
+
             if (screenTrackPub && screenTrackPub.track) {
                 const mediaTrack = screenTrackPub.track.mediaStreamTrack || screenTrackPub.track;
                 if (mediaTrack && mediaTrack.addEventListener) {
@@ -1584,13 +1599,19 @@ async function stopScreenShare() {
         } catch (err) {
             console.warn('Error stopping screen share track:', err);
         }
-        if (screenTrackPub && screenTrackPub.track) {
-            try {
-                await window.room.localParticipant.unpublishTrack(screenTrackPub.track);
-            } catch(e) {}
-        }
         screenTrackPub = null;
     }
+
+    // --- RESTORE CAMERA AFTER SCREENSHARE FOR HOST ---
+    if (isHost && isCameraOn && window.room) {
+        try {
+            await window.room.localParticipant.setCameraEnabled(true);
+            document.getElementById('camBtn').classList.remove('off');
+        } catch (err) {
+            console.warn('Failed to restore camera after screenshare:', err);
+        }
+    }
+
     hideLocalScreenShare();
     showNotification('Screen sharing stopped', 'info');
 }

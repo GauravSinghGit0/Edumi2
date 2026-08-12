@@ -9,7 +9,6 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 import websockets
 from django.conf import settings
-from .models import Meeting
 
 logger = logging.getLogger(__name__)
 
@@ -29,26 +28,41 @@ class LiveKitProxyConsumer(AsyncWebsocketConsumer):
         logger.info(f"LiveKit proxy -> {target}")
 
         try:
-            self._lk_ws = await websockets.connect(
-                target,
-                ping_interval=20,
-                ping_timeout=20,
-                max_size=10 * 1024 * 1024,
+            self._lk_ws = await asyncio.wait_for(
+                websockets.connect(
+                    target,
+                    ping_interval=20,
+                    ping_timeout=20,
+                    max_size=10 * 1024 * 1024,
+                    close_timeout=5,
+                    additional_headers={
+                        "X-Forwarded-For": self.scope.get("client", [""])[0] or "",
+                    },
+                ),
+                timeout=8,
             )
+        except asyncio.TimeoutError:
+            logger.error(f"LiveKit proxy connect TIMEOUT -> {target}. LiveKit server not running on {LIVEKIT_INTERNAL}?")
+            await self.close(code=1013)
+            return
         except Exception as e:
-            logger.error(f"LiveKit proxy connect failed: {e}")
-            await self.close(code=1011)
+            logger.error(
+                f"LiveKit proxy connect FAILED -> {target}. "
+                f"Verify LiveKit server is running at {LIVEKIT_INTERNAL}. "
+                f"Error: {e!r}"
+            )
+            await self.close(code=1013)
             return
 
-        await self.accept()
+        await self.accept(subprotocol=None)
         self._lk_task = asyncio.ensure_future(self._lk_to_browser())
 
     async def disconnect(self, code):
-        if hasattr(self, "_lk_task"):
+        if hasattr(self, "_lk_task") and self._lk_task and not self._lk_task.done():
             self._lk_task.cancel()
         if hasattr(self, "_lk_ws"):
             try:
-                await self._lk_ws.close()
+                await asyncio.wait_for(self._lk_ws.close(), timeout=2)
             except Exception:
                 pass
 
@@ -74,6 +88,9 @@ class LiveKitProxyConsumer(AsyncWebsocketConsumer):
                 else:
                     await self.send(text_data=msg)
         except Exception as e:
-            logger.warning(f"LiveKit -> proxy ended: {e}")
+            logger.debug(f"LiveKit -> proxy stream ended: {e}")
         finally:
-            await self.close()
+            try:
+                await self.close()
+            except Exception:
+                pass
