@@ -498,7 +498,11 @@ server {
         proxy_read_timeout 3600s;
     }
 
-    location ~ ^/livekit-proxy/? {
+    # LiveKit SFU WebSocket/HTTP proxy
+    # IMPORTANT: Must be a PREFIX location (not regex ~) so Nginx correctly
+    # strips /livekit-proxy/ from the URI before forwarding to LiveKit.
+    # With a regex location + proxy_pass URI, path stripping is undefined.
+    location /livekit-proxy/ {
         proxy_pass http://127.0.0.1:7880/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
