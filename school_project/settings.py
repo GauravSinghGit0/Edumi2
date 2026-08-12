@@ -366,7 +366,7 @@ COMPRESS_ENABLED  = env_bool('COMPRESS_ENABLED', 'True')
 COMPRESS_URL      = STATIC_URL
 COMPRESS_ROOT     = STATIC_ROOT
 COMPRESS_STORAGE  = 'compressor.storage.CompressorFileStorage'
-COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'True')
+COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False' if DEBUG else 'True')
 
 # Register MIME types (Windows registry is often missing these)
 mimetypes.add_type('text/css',               '.css')
