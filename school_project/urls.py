@@ -6,7 +6,6 @@ from django.contrib.auth import views as auth_views
 from django.views.generic import RedirectView
 from django.http import JsonResponse
 from django.db import connection
-from meetings.livekit_http_proxy import livekit_http_proxy
 from cameras.views_logic.streaming_views import camera_feed_proxy
 
 def health_check(request):
@@ -31,8 +30,6 @@ urlpatterns = [
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.svg', permanent=True)),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='admin-logout'),
     path('admin/', admin.site.urls),
-    # LiveKit HTTP proxy — must be before other routes
-    re_path(r'^livekit-proxy(?P<lk_path>/.*)$', livekit_http_proxy),
     path('', include('accounts.urls')),
     # Put the most specific route first: /cameras/<int:camera_id>/feed/
     path('cameras/<int:camera_id>/feed/', camera_feed_proxy, name='camera_feed_direct'),  # <-- New streamer view!
