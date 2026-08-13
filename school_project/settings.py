@@ -346,6 +346,7 @@ try:
     WHITENOISE_ROOT         = BASE_DIR / 'staticfiles'
     WHITENOISE_AUTOREFRESH  = True
     WHITENOISE_USE_FINDERS  = True
+    WHITENOISE_MANIFEST_STRICT = False
     WHITENOISE_MAX_AGE      = 0 if DEBUG else 31_536_000   # 1 year in prod
 except ImportError:
     STORAGES = {

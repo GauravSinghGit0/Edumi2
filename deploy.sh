@@ -399,10 +399,12 @@ if not created:
 " 2>/dev/null || true
 log "Database schema initialized & Camera 1 configured."
 
-info "Compressing template static assets & collecting static files..."
-$VENV_PYTHON manage.py compress --force
+info "Collecting static files & compressing template assets..."
+$VENV_PYTHON manage.py collectstatic --noinput --clear
+$VENV_PYTHON manage.py compress --force || true
 $VENV_PYTHON manage.py collectstatic --noinput
-chmod -R 755 "$APP_DIR/staticfiles" 2>/dev/null || true
+chmod -R 755 "$APP_DIR" "$APP_DIR/staticfiles" 2>/dev/null || true
+chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
 log "Static assets compressed and collected into ./staticfiles/"
 
 
@@ -574,6 +576,7 @@ server {
         alias ${APP_DIR}/staticfiles/;
         expires 30d;
         access_log off;
+        include /etc/nginx/mime.types;
     }
 
     location /media/ {
