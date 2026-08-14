@@ -1,242 +1,194 @@
 <div align="center">
 
-<img src="https://github.com/tarunkumar-sys/tarunkumar-sys/blob/main/matrix.svg" alt="Matrix Animation" width="100%"/>
+# 🎓 EduMi 2 — Unified Enterprise Academic Command Center
+
+**A self-hosted, end-to-end educational platform integrating real-time WebRTC virtual classrooms, AI-driven biometric attendance, live engagement analytics, RTSP camera processing, and non-destructive video editing.**
 
 <br/>
 
-<h1>
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=36&duration=3000&pause=1000&color=00C58E&center=true&vCenter=true&width=600&lines=🎓+EduMi+2;Academic+Command+Center;Built+for+Better+Classrooms" alt="Typing SVG" />
-</h1>
-
-<p align="center">
-  <strong>A unified, self-hosted educational platform combining virtual classrooms,<br/>AI-powered attendance, real-time engagement analytics, and non-destructive video editing —<br/>all secured over HTTPS with end-to-end encryption.</strong>
-</p>
-
-<br/>
-
-<!-- Badges Row 1 -->
-<p align="center">
-  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
-  <a href="https://djangoproject.com"><img src="https://img.shields.io/badge/Django-4.2-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django"/></a>
-  <a href="https://github.com/django/daphne"><img src="https://img.shields.io/badge/Daphne-ASGI%20%2F%20HTTPS-7B3F85?style=for-the-badge" alt="Daphne"/></a>
-  <a href="https://livekit.io"><img src="https://img.shields.io/badge/LiveKit-WebRTC%20SFU-00C58E?style=for-the-badge" alt="LiveKit"/></a>
-</p>
-
-<!-- Badges Row 2 -->
-<p align="center">
-  <a href="https://opencv.org"><img src="https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white" alt="OpenCV"/></a>
-  <a href="https://ffmpeg.org"><img src="https://img.shields.io/badge/FFmpeg-Video%20Processing-007808?style=for-the-badge" alt="FFmpeg"/></a>
-  <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-Celery%20Queue-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis"/></a>
-  <img src="https://img.shields.io/badge/HTTPS-SSL%20%2F%20TLS-4CAF50?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="HTTPS"/>
-</p>
-
-<!-- Badges Row 3 -->
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License"/></a>
-  <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge" alt="Status"/>
-  <img src="https://img.shields.io/badge/PRs-Welcome-orange?style=for-the-badge" alt="PRs Welcome"/>
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20Docker-blue?style=for-the-badge" alt="Platform"/>
-</p>
-
-<br/>
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Django](https://img.shields.io/badge/Django-4.2-092E20?style=for-the-badge&logo=django&logoColor=white)](https://djangoproject.com)
+[![LiveKit](https://img.shields.io/badge/LiveKit-WebRTC%20SFU-00C58E?style=for-the-badge)](https://livekit.io)
+[![Daphne](https://img.shields.io/badge/Daphne-ASGI%20%2F%20HTTPS-7B3F85?style=for-the-badge)](https://github.com/django/daphne)
+[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-Video%20Processing-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
 
-## 📌 Table of Contents
+## 📌 Executive Summary
 
-- [What is EduMi 2?](#-what-is-edumi-2)
-- [Why EduMi 2?](#-why-edumi-2)
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Project Directory Structure](#-project-directory-structure)
-- [Setup & Installation Guides](#-setup--installation-guides)
-- [Technical Architecture Specification](#-technical-architecture-specification)
-- [Ports & Credentials Reference](#-ports--credentials-reference)
-- [Contributing & License](#-contributing--license)
+**EduMi 2** consolidates fragmented educational tools — video conferencing systems, manual attendance registers, hardware surveillance monitors, and standalone video editing tools — into a single **enterprise-grade, self-hosted platform**.
+
+Built with privacy and performance at its core:
+- **100% On-Premise & Self-Hosted**: Zero third-party cloud locking or per-user subscription fees.
+- **AES-256 Encrypted Biometrics**: Facial embeddings encrypted at rest using Python `cryptography` (Fernet).
+- **Zero Latency WebRTC & WSS**: Powered by LiveKit SFU, Daphne ASGI, and Django Channels.
+- **Resilient Multi-Database Engine**: Auto-detects PostgreSQL connectivity with zero-downtime fallback to SQLite for local deployment.
 
 ---
 
-## 🎯 What is EduMi 2?
+## ✨ Core Pillars & Feature Highlights
 
-> **EduMi 2** replaces the fragmented patchwork of tools schools rely on today — video conferencing software, manual attendance registers, surveillance dashboards, and standalone video editors — with a **single, unified, self-hosted platform**.
+### 📽️ Real-Time Virtual Classrooms
+- **LiveKit WebRTC SFU Integration**: Ultra-low latency multi-party video & audio streaming.
+- **Interactive Session Tools**: Screen sharing, raised hands queue, live chat, and automated session attendance logs.
+- **Adaptive Quality Control**: Automatic resolution scaling and bandwidth adaptation.
 
-Everything runs securely over **HTTPS**. Biometrics are **encrypted at rest**. Real-time communications are powered by low-latency **WebSockets** and **WebRTC SFU**. Zero third-party cloud dependencies required.
+### 🤖 AI Biometrics & Automated Attendance
+- **Instant Roll Call**: 128-dimensional facial embedding matching via `dlib` and OpenCV.
+- **Presence Verification**: Continuous passive sampling to verify physical presence throughout sessions.
+- **Encrypted Storage**: Biometric vectors stored using AES-256 encryption.
 
----
+### 📊 Engagement & Sentiment Analytics
+- **Attention Indexing**: Real-time eye tracking and head pose estimation metrics.
+- **Emotion Recognition**: Visual sentiment categorization (Attentive, Neutral, Distracted).
+- **Teacher Analytics Dashboard**: Aggregated class metrics, heatmaps, and downloadable attendance summaries.
 
-## 💡 Why EduMi 2?
+### 📷 Hardware & Mobile Camera Management
+- **RTSP Surveillance Feeds**: Native ingestion for IP CCTV cameras.
+- **Mobile IP Camera Integration**: Transform any smartphone (Android / iOS) into a live classroom camera feed.
+- **Automated Head Counting**: Microservice-based CV pipeline for physical classroom crowd analysis.
 
-<div align="center">
-
-| ❌ The Old School Way | ✅ The EduMi 2 Way |
-| :--- | :--- |
-| Manual roll call wastes 5–10 min per class | **AI face-recognition attendance** — 100% automated |
-| Zero visibility into student attention/mood | **Real-time engagement scoring** + emotion detection |
-| 5+ fragmented tools to manage & pay for | **One platform** for meetings, cameras, recordings & editing |
-| Raw biometric data stored in plaintext | **Fernet AES-256 encryption** for all face embeddings |
-| Expensive dedicated IP camera hardware | Use any standard **Android / iPhone** as a live classroom feed |
-| Video meetings served over insecure channels | Full **HTTPS** via self-signed certs & Daphne ASGI |
-
-</div>
-
----
-
-## ✨ Key Features
-
-- **🔐 HTTPS Everywhere**: Native SSL support with Daphne ASGI, secure cookies (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`), and simple local trust script integration.
-- **🤖 AI Attendance & Engagement**: Automatic roll call using `dlib` face embedding vector analysis. Embeddings are Fernet-encrypted. Continuous polling tracks active presence.
-- **📊 Real-Time Emotion & Attention Tracking**: Captures emotional states and attention indexes. Aggregates data into visual trends and teacher report dashboards.
-- **🎥 Hybrid Camera Integration**: Interfaces with RTSP surveillance cameras and phones running IP webcam feeds. Runs parallel frames through CV analysis.
-- **🖥️ Low-Latency Virtual Classrooms**: Powered by **LiveKit SFU WebRTC** with automated meeting attendance log entries, raised-hands queues, and instant text chats.
-- **✂️ Non-Destructive Video Editor**: Browser-level auto-saving, keyboard shortcuts (`Space` to play, `S` to split, `Del` to delete), and single-pass FFmpeg export filtergraphs.
+### ✂️ Non-Destructive Video Editing Studio
+- **In-Browser Timeline Editor**: Split, trim, reorder, and layer video and audio tracks without altering raw recordings.
+- **Single-Pass FFmpeg Rendering**: High-speed, loss-free export filtergraph compilation.
+- **Automated Storage Pipeline**: Direct storage integration with session recordings.
 
 ---
 
 ## 🏗️ System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                       Browser / Client                       │
-│           HTTPS  ·  WebSocket (wss://)  ·  WebRTC            │
-└────────────────────────────┬─────────────────────────────────┘
-                             │
-               ┌─────────────▼─────────────┐
-               │   Nginx : 443   (prod)     │  ← SSL termination + static files
-               │   Daphne : 8002 (dev)      │  ← HTTPS + WSS direct
-               └─────────────┬─────────────┘
-                             │
-              ┌────────────────▼────────────────┐
-              │          Django Main App          │
-              │        school_project/            │
-              │  ┌──────────┐   ┌─────────────┐  │
-              │  │ accounts │   │  meetings   │  │  ← Auth, profiles, messaging
-              │  │          │   │  (LiveKit)  │  │  ← Virtual classrooms
-              │  ├──────────┤   ├─────────────┤  │
-              │  │attendance│   │   cameras   │  │  ← Face AI + engagement
-              │  │          │   │   (RTSP)    │  │  ← Hardware camera mgmt
-              │  ├──────────┤   ├─────────────┤  │
-              │  │  videos  │   │video_editing│  │  ← Upload & storage
-              │  │          │   │             │  │  ← Non-destructive editor
-              │  ├──────────┤   ├─────────────┤  │
-              │  │  mobile  │   │   common    │  │  ← Phone cameras
-              │  │ cameras  │   │             │  │  ← Shared utilities
-              │  └──────────┘   └─────────────┘  │
-              └────────────┬──────────┬───────────┘
-                           │          │
-                 ┌──────────▼──┐  ┌───▼──────┐
-                 │  SQLite /    │  │  Redis   │
-                 │ PostgreSQL   │  │  :6379   │
-                 └─────────────┘  └────┬─────┘
-                                       │
-                         ┌──────────────┴─────────────┐
-                         │                             │
-             ┌───────────▼──────────┐   ┌─────────────▼──────┐
-             │    Celery Worker     │   │   Camera Service    │
-             │  (face processing,   │   │   :8003 (Waitress)  │
-             │   report gen,        │   │   ─ MJPEG proxy     │
-             │   recording mgmt)    │   │   ─ Head counting   │
-             └──────────────────────┘   │   ─ Face detection  │
-                                        └──────────┬──────────┘
-                                                   │
-                                      ┌────────────▼────────────┐
-                                      │   LiveKit SFU : 7880    │
-                                      │   WebRTC peer routing   │
-                                      └─────────────────────────┘
+                                  ┌───────────────────────────┐
+                                  │    Browser Client (HTTPS) │
+                                  └─────────────┬─────────────┘
+                                                │
+                                  ┌─────────────▼─────────────┐
+                                  │   Daphne / Nginx Ingress  │ (Port 8002 / 443)
+                                  └─────────────┬─────────────┘
+                                                │
+                 ┌──────────────────────────────┼──────────────────────────────┐
+                 │                              │                              │
+    ┌────────────▼────────────┐    ┌────────────▼────────────┐    ┌────────────▼────────────┐
+    │     Django ASGI App     │    │   Waitress Camera Svc   │    │    LiveKit WebRTC SFU   │
+    │  (Auth, Sessions, Admin)│    │  (CV, Head Count, RTSP) │    │  (Media Peer Routing)   │
+    └────────────┬────────────┘    └────────────┬────────────┘    └────────────┬────────────┘
+                 │                              │                              │
+                 ├──────────────────────────────┴──────────────────────────────┤
+                 │
+    ┌────────────▼────────────┐    ┌─────────────────────────┐    ┌─────────────────────────┐
+    │ PostgreSQL / SQLite DB  │    │      Redis Broker       │    │   Celery Task Worker    │
+    │  (Smart Auto-Fallback)  │    │  (Channels & Queue)     │    │  (Async Media & Face AI)│
+    └─────────────────────────┘    └─────────────────────────┘    └─────────────────────────┘
 ```
-
-For a comprehensive technical breakdown of service topology, client-side track registries, biometric encryption pipelines, and timeline compilation, please consult the complete design documentation.
-
-> [!TIP]
-> 📖 Read the detailed **[Technical Architecture & Integration Specifications](TECHNICAL_ARCHITECTURE.md)** for a deep dive into the code infrastructure.
 
 ---
 
-## 📁 Project Directory Structure
+## 🛠️ Quickstart & Deployment
+
+### 📋 Prerequisites
+- **Python**: 3.11+
+- **PowerShell**: 5.1+ (Windows) or **Bash** (Linux/macOS)
+- **FFmpeg & FFprobe**: Installed and available on system `PATH`
+
+---
+
+### 🚀 One-Click Windows Launcher
+
+EduMi 2 includes a unified, production-tested PowerShell launcher that cleans process ports, runs database migrations, compiles static assets, launches background microservices (LiveKit SFU, Camera Service, Celery), and starts the Daphne HTTPS server:
+
+```powershell
+# 1. Clone the repository
+git clone https://github.com/GAuravgiy87/Edumi2.git
+cd Edumi2
+
+# 2. Setup Virtual Environment
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+
+# 3. Launch Enterprise Suite
+.\start_app.ps1
+```
+
+> [!NOTE]
+> Upon startup, EduMi 2 automatically displays your **Local URL** (`https://localhost:8002`) and **LAN URL** (`https://<YOUR-IP>:8002`), allowing devices on the same Wi-Fi network to connect securely.
+
+---
+
+### 🐧 Linux / Production Deployment
+
+For Linux servers or production deployment using Nginx and systemd:
+
+```bash
+# 1. Environment configuration
+cp .env.example .env
+nano .env
+
+# 2. Run Database Migrations & Static Build
+python3 manage.py migrate
+python3 manage.py collectstatic --noinput
+python3 manage.py compress --force
+
+# 3. Run Application via Daphne
+daphne -b 0.0.0.0 -p 8002 school_project.asgi:application
+```
+
+Alternatively, use the Docker container setup:
+```bash
+docker-compose up -d --build
+```
+
+---
+
+## 🔢 Port & Microservice Reference
+
+| Service | Port | Protocol | Description |
+|---|---|---|---|
+| **Daphne (Main App)** | `8002` | HTTPS / WSS | Primary application server & WebSocket engine |
+| **Camera Microservice** | `8008` | HTTP | Computer vision proxy & head counting API |
+| **LiveKit SFU** | `7880` | HTTP / WS | WebRTC media signaling server |
+| **LiveKit RTC TCP/UDP** | `7881` / `7882` | TCP / UDP | WebRTC media transport ports |
+| **Redis** | `6379` | TCP | Channel layer & Celery message broker |
+| **Nginx Ingress** | `443` | HTTPS | Production SSL termination reverse proxy |
+
+---
+
+## 🔒 Security & Privacy Architecture
+
+- **End-to-End SSL/TLS**: All browser traffic forced over TLS 1.3 with secure HTTP-only session cookies (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`).
+- **Biometric Encryption at Rest**: Face descriptors are encrypted using Fernet symmetric encryption before insertion into database records.
+- **Non-Invasive Architecture**: Biometric raw images are discarded immediately after embedding extraction; only encrypted vectors remain stored.
+
+---
+
+## 📁 Repository Structure
 
 ```
 Edumi2/
-├── school_project/          # Django project configuration, ASGI & Celery routes
-├── accounts/                # User authentication, roles, and notifications
-├── attendance/              # Face profiling and attention tracking database logic
-├── cameras/                 # Hardware camera MJPEG proxies and controls
-├── mobile_cameras/          # Mobile phone IP camera pipelines
-├── meetings/                # LiveKit WebRTC meetings room & consumer routes
-├── videos/                  # General repository for video upload storage
-├── video_editing/           # Non-destructive editor sequencing and commands
-├── common/                  # Shared classes and UI elements
-├── camera_service/          # Waitress microservice running CV pipelines (port 8003)
-├── templates/               # Global templates directory
-├── static/                  # Shared CSS, JS files, assets
-├── config/                  # Configuration files (LiveKit, environmental examples)
-├── certs/                   # Local SSL/TLS keys
-└── scripts/                 # Administration and setups script suite
+├── school_project/          # Django core settings, middleware, ASGI configuration
+├── accounts/                # User authentication, roles, profile management
+├── attendance/              # Facial AI recognition & continuous engagement metrics
+├── cameras/                 # Hardware RTSP camera integration & stream relay
+├── camera_service/          # Waitress microservice for dedicated OpenCV pipelines
+├── mobile_cameras/          # Phone IP camera endpoints & stream parsing
+├── meetings/                # LiveKit WebRTC meeting rooms & signaling handlers
+├── video_editing/           # Non-destructive video editor & FFmpeg filter builder
+├── videos/                  # Video recording storage & metadata management
+├── common/                  # Shared helper functions, baseline models, utilities
+├── certs/                   # Development SSL/TLS certificates
+├── config/                  # Microservice configuration files (LiveKit, Nginx)
+├── scripts/                 # System administration & cert generator scripts
+└── start_app.ps1            # One-click enterprise PowerShell launcher
 ```
 
 ---
 
-## 🛠️ Setup & Installation Guides
+## 📄 License & Credits
 
-To make the onboarding process cleaner and easier to read, we have divided the installation instructions based on target environments:
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 
-*   🏁 **[Windows Developer Setup Guide](SETUP_WINDOWS.md)** — Detailed steps for running locally on Windows.
-*   🐧 **[Linux Developer Setup Guide](SETUP_LINUX.md)** — Instructions for setting up development environments on Linux.
-*   🐳 **[Production Server Deployment Guide](SETUP_PRODUCTION.md)** — Instructions for deploying using Docker Compose, systemd, and Nginx.
-
----
-
-## ⚙️ Technical Architecture Specification
-
-If you are developing features, extending the face-matching service, or contributing to the video editor's FFmpeg filter compilation pipelines, read the architecture runbook:
-
-👉 **[TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md)**
-
-It contains:
-- Service topologies and communication protocols (ASGI, Daphne, Redis).
-- LiveKit WebRTC SFU client-side track registry details (`TrackManager`).
-- Fernet AES-256 biometric encryption specifications.
-- Non-destructive video editing and compiler filtergraph setups.
-- Waitress CV service orchestration and troubleshooting schemas.
-
----
-
-## 🔢 Ports & Credentials Reference
-
-<div align="center">
-
-| Service | Port | Protocol | Usage |
-|---|---|---|---|
-| Django / Daphne | **8002** | HTTPS / WSS | Local web client interface |
-| Camera Service (Waitress) | **8003** | HTTP | Internal AI computer vision calculations |
-| LiveKit SFU | **7880** | WS / HTTP | WebRTC media engine signaling |
-| Redis | **6379** | TCP | Task broker queue & channel layer |
-| Nginx (Production) | **443** | HTTPS | Production ingress port |
-
-</div>
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-1. Fork the repository.
-2. Create your branch: `git checkout -b feature/your-feature-name`
-3. Commit your changes: `git commit -m 'feat: add some feature'`
-4. Push to the branch: `git push origin feature/your-feature-name`
-5. Open a Pull Request.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-<div align="center">
-
-**Built for better classrooms.**
-
-<sub>Made with ❤️ by <a href="https://github.com/GAuravgiy87">GAuravgiy87</a> and <a href="https://github.com/tarunkumar-sys">tarunkumar-sys</a>.</sub>
-
-</div>
+Developed with ❤️ for modern classrooms by [GAuravgiy87](https://github.com/GAuravgiy87) and [tarunkumar-sys](https://github.com/tarunkumar-sys).
