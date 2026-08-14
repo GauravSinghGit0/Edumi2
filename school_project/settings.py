@@ -199,7 +199,26 @@ DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
 _database_url = env('DATABASE_URL')
 
-if _database_url:
+def _is_db_reachable(db_url):
+    if not db_url:
+        return False
+    try:
+        import urllib.parse
+        import socket
+        parsed = urllib.parse.urlparse(db_url)
+        if parsed.scheme in ('postgres', 'postgresql'):
+            host = parsed.hostname or '127.0.0.1'
+            port = parsed.port or 5432
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1.0)
+            res = s.connect_ex((host, port))
+            s.close()
+            return res == 0
+        return True
+    except Exception:
+        return False
+
+if _database_url and _is_db_reachable(_database_url):
     try:
         import dj_database_url
         db_config = dj_database_url.config(
@@ -216,6 +235,14 @@ if _database_url:
             "Run: pip install dj-database-url psycopg2-binary"
         )
 else:
+    if _database_url:
+        import warnings
+        warnings.warn(
+            f"DATABASE_URL is configured but target host is unreachable. "
+            "Falling back to SQLite database at 'database/db.sqlite3'.",
+            RuntimeWarning,
+            stacklevel=1,
+        )
     # SQLite — fine for dev, not recommended for production
     DATABASES = {
         'default': {
@@ -227,7 +254,7 @@ else:
             },
         }
     }
-    if not DEBUG:
+    if not DEBUG and not _database_url:
         import warnings
         warnings.warn(
             "Production is using SQLite. Set DATABASE_URL to a PostgreSQL connection string.",

@@ -78,10 +78,31 @@ ROOT_URLCONF = 'camera_service.urls'
 DATABASE_DIR = MAIN_PROJECT_DIR / 'database'
 DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
-if os.environ.get('DATABASE_URL'):
+db_url = os.environ.get('DATABASE_URL')
+
+def _is_db_reachable(db_url):
+    if not db_url:
+        return False
+    try:
+        import urllib.parse
+        import socket
+        parsed = urllib.parse.urlparse(db_url)
+        if parsed.scheme in ('postgres', 'postgresql'):
+            host = parsed.hostname or '127.0.0.1'
+            port = parsed.port or 5432
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1.0)
+            res = s.connect_ex((host, port))
+            s.close()
+            return res == 0
+        return True
+    except Exception:
+        return False
+
+if db_url and _is_db_reachable(db_url):
     import dj_database_url
     db_config = dj_database_url.config(conn_max_age=0)
-    if 'sslmode' in os.environ.get('DATABASE_URL', ''):
+    if 'sslmode' in db_url:
         db_config.setdefault('OPTIONS', {})['sslmode'] = 'prefer'
     DATABASES = {'default': db_config}
 else:
