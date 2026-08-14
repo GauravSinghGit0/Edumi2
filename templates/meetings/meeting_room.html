@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/meeting-room.css' %}">
+    <script src="{% static 'js/video_quality_manager.js' %}"></script>
     
     <!-- LiveKit JS SDK (browser bundle) - Multiple CDNs for reliability -->
     <script id="livekit-sdk" 
@@ -342,6 +343,7 @@
             <h3>{{ meeting.title }}</h3>
             <span class="meet-code">{{ meeting.meeting_code }}</span>
         </div>
+        <div id="qualityWidgetContainer" style="margin-left:auto; margin-right:16px;"></div>
         <div class="recording-indicator" id="recordingIndicator" style="display:none;">
             <span class="recording-dot"></span>
             <span class="recording-text">Recording</span>
@@ -841,24 +843,23 @@ async function init() {
     }
 
     // ── Signaling WebSocket ──────────────────────────────────────────────────
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    window.signalingWs = new WebSocket(`${proto}//${window.location.host}/ws/meeting/${window.meetingCode}/`);
-
-    // Unlock audio playback on first user gesture (browser autoplay compliance)
-    const unlockAudio = () => {
-        document.querySelectorAll('audio').forEach(a => { a.play().catch(() => {}); });
-    };
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    
-    window.signalingWs.onmessage = (e) => {
-        try {
-            const data = JSON.parse(e.data);
-            handleSignalingMessage(data);
-        } catch(err) {
-            console.error('Signaling parse error:', err);
-        }
-    };
+    try {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        window.signalingWs = new WebSocket(`${proto}//${window.location.host}/ws/meeting/${window.meetingCode}/`);
+        window.signalingWs.onerror = (e) => {
+            console.warn('Signaling WebSocket error (non-fatal):', e);
+        };
+        window.signalingWs.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                handleSignalingMessage(data);
+            } catch(err) {
+                console.error('Signaling parse error:', err);
+            }
+        };
+    } catch (wsErr) {
+        console.warn('Signaling WebSocket creation failed:', wsErr);
+    }
 
     // Render local box immediately while connecting
     renderLocalParticipant();
@@ -884,17 +885,9 @@ async function init() {
         window.room = new Room({
             adaptiveStream: true,
             dynacast: true,
-            videoCaptureDefaults: {
-                resolution: (VideoPresets && VideoPresets.h1080) ? VideoPresets.h1080 : { width: 1920, height: 1080 }
-            },
             publishDefaults: {
                 simulcast: true,
                 videoCodec: 'vp8',
-                videoEncoding: { maxBitrate: 4_500_000, maxFramerate: 30 },
-                screenShareEncoding: {
-                    maxBitrate: 8_000_000,
-                    maxFramerate: 30,
-                }
             },
         });
 
@@ -918,6 +911,22 @@ async function init() {
 
         await window.room.connect(url, token);
         console.log('Connected to LiveKit room:', window.room.name);
+
+        // Initialize Video Quality Manager & Auto Bitrate Monitor
+        if (window.VideoQualityManager) {
+            const container = document.getElementById('qualityWidgetContainer');
+            if (container) {
+                container.innerHTML = '';
+                const ui = window.VideoQualityManager.createQualitySelectorUI({
+                    onQualityChange: (mode) => {
+                        window.VideoQualityManager.applyQualityToLiveKit(window.room, mode);
+                        showNotification(`Video quality set to ${mode.toUpperCase()}`, 'info');
+                    }
+                });
+                container.appendChild(ui);
+            }
+            window.VideoQualityManager.startBitrateMonitor(window.room);
+        }
 
         // Initial desired media state
         window.isMicOn = window.isHost ? true : window.canSpeak;
@@ -1121,13 +1130,16 @@ function renderLocalParticipant() {
     // Attach camera track if already published
     if (lp.videoTrackPublications) {
         lp.videoTrackPublications.forEach(pub => {
-            if (pub.source === Track.Source.Camera) {
+            const isCam = pub.source === 'camera' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.Camera);
+            if (isCam) {
                 if (pub.track) {
                     attachTrackToBox(pub.track, box, true);
+                    box.classList.remove('cam-off');
                 } else {
                     const checkInitialTrack = setInterval(() => {
                         if (pub.track) {
                             attachTrackToBox(pub.track, box, true);
+                            box.classList.remove('cam-off');
                             clearInterval(checkInitialTrack);
                         }
                     }, 200);
@@ -1141,7 +1153,10 @@ function renderLocalParticipant() {
     lp.on(window.LiveKitBundle.ParticipantEvent.LocalTrackPublished || 'localTrackPublished', pub => {
         console.log('Local track published:', pub.source, pub.trackSid);
         
-        if (pub.source === Track.Source.ScreenShare) {
+        const isScreen = pub.source === 'screen_share' || pub.source === 'screen-share' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.ScreenShare);
+        const isCam = pub.source === 'camera' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.Camera);
+
+        if (isScreen) {
             // Handle screen share
             if (pub.track) {
                 showLocalScreenShare(pub.track);
@@ -1154,14 +1169,16 @@ function renderLocalParticipant() {
                 }, 100);
                 setTimeout(() => clearInterval(checkTrack), 5000);
             }
-        } else if (pub.source === Track.Source.Camera) {
+        } else if (isCam) {
             // Handle camera (including IP camera)
             if (pub.track) {
                 attachTrackToBox(pub.track, box, true);
+                box.classList.remove('cam-off');
             } else {
                 const checkTrack = setInterval(() => {
                     if (pub.track) {
                         attachTrackToBox(pub.track, box, true);
+                        box.classList.remove('cam-off');
                         clearInterval(checkTrack);
                     }
                 }, 100);
@@ -1193,11 +1210,13 @@ function attachTrackToBox(track, box, isLocal) {
     el.dataset.kind = track.kind;
     el.dataset.source = track.source;
     
-    if (track.kind === Track.Kind.Video) {
+    const isVideo = track.kind === 'video' || (typeof Track !== 'undefined' && track.kind === Track?.Kind?.Video);
+    const isScreen = track.source === 'screen_share' || track.source === 'screen-share' || (typeof Track !== 'undefined' && track.source === Track?.Source?.ScreenShare);
+    
+    if (isVideo) {
         el.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
         
         const isIpCam = track.name === 'camera' && currentVideoSource === 'ip';
-        const isScreen = track.source === Track.Source.ScreenShare;
         if (isLocal && !isIpCam && !isScreen) {
             el.style.transform = 'scaleX(-1)';
         }
@@ -1576,6 +1595,7 @@ async function toggleCamera() {
         // Update UI
         const localBox = (window.room) ? document.getElementById(`video-box-${window.room.localParticipant.identity}`) : null;
         if (localBox) localBox.classList.toggle('cam-off', !isCameraOn);
+        if (isCameraOn) renderLocalParticipant();
     } catch (e) {
         console.error('Camera toggle error:', e);
         isCameraOn = !isCameraOn; // Revert state
@@ -1621,18 +1641,13 @@ async function toggleScreenShare() {
             isScreenSharing = true;
             document.getElementById('screenBtn').classList.add('active');
 
-            // --- AUTO-HIDE CAMERA ON SCREENSHARE FOR HOST ---
-            if (isHost && isCameraOn && window.room) {
-                try {
-                    await window.room.localParticipant.setCameraEnabled(false);
-                    document.getElementById('camBtn').classList.add('off');
-                } catch (camErr) {
-                    console.warn('Could not auto-hide camera on screenshare:', camErr);
-                }
-            }
+            // Keep active camera stream intact without interrupting WebRTC renegotiation
 
             if (screenTrackPub && screenTrackPub.track) {
                 const mediaTrack = screenTrackPub.track.mediaStreamTrack || screenTrackPub.track;
+                if (window.VideoQualityManager && mediaTrack) {
+                    window.VideoQualityManager.optimizeScreenShareTrack(mediaTrack);
+                }
                 if (mediaTrack && mediaTrack.addEventListener) {
                     mediaTrack.addEventListener('ended', stopScreenShare);
                 }

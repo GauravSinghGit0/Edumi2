@@ -21,29 +21,30 @@ BIND      = "0.0.0.0"
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "school_project.settings")
 
-# ── Verify cert files exist (Auto-generate if missing) ─────────────────────────
-if not CERT_FILE.exists() or not KEY_FILE.exists():
-    print(f"[INFO] SSL Certificate not found at {CERT_FILE}. Auto-generating self-signed certificates...")
-    try:
-        from scripts import generate_ssl_cert
-        generate_ssl_cert.main()
-    except Exception as e:
-        print(f"[ERROR] Failed to auto-generate SSL certificate: {e}")
-        sys.exit(1)
+# ── Build Twisted endpoint string ────────────────────────────────
+USE_SSL = os.environ.get("USE_SSL", "False").lower() in ["true", "1", "yes"]
 
-# ── Relative paths (forward slashes) to avoid Twisted endpoint colon conflicts ──
-cert_rel = str(CERT_FILE.relative_to(BASE_DIR)).replace("\\", "/")
-key_rel  = str(KEY_FILE.relative_to(BASE_DIR)).replace("\\", "/")
+if USE_SSL:
+    # Verify cert files exist
+    if not CERT_FILE.exists() or not KEY_FILE.exists():
+        print(f"[INFO] SSL Certificate not found at {CERT_FILE}. Auto-generating self-signed certificates...")
+        try:
+            from scripts import generate_ssl_cert
+            generate_ssl_cert.main()
+        except Exception as e:
+            print(f"[ERROR] Failed to auto-generate SSL certificate: {e}")
+            sys.exit(1)
+
+    cert_rel = str(CERT_FILE.relative_to(BASE_DIR)).replace("\\", "/")
+    key_rel  = str(KEY_FILE.relative_to(BASE_DIR)).replace("\\", "/")
+    endpoint = f"ssl:port={PORT}:interface={BIND}:certKey={cert_rel}:privateKey={key_rel}"
+    server_proto = "HTTPS/WSS"
+else:
+    endpoint = f"tcp:port={PORT}:interface={BIND}"
+    server_proto = "HTTP/WS"
 
 # Change working directory so relative paths resolve correctly
 os.chdir(BASE_DIR)
-
-# ── Build Twisted SSL endpoint string ────────────────────────────────
-# Format: ssl:port=N:interface=ADDR:certKey=PATH:privateKey=PATH
-ssl_endpoint = (
-    f"ssl:port={PORT}:interface={BIND}"
-    f":certKey={cert_rel}:privateKey={key_rel}"
-)
 
 # ── Create and run Daphne server ─────────────────────────────────────
 # Import order matters: daphne.server installs the Twisted asyncio reactor
@@ -52,16 +53,57 @@ from daphne.server import Server  # noqa: E402  (must be before app import)
 # Now import the ASGI application (Django + Channels)
 from school_project.asgi import application  # noqa: E402
 
+import socket
+import subprocess
+
+_lk_process_handles = []
+
+def ensure_livekit_running():
+    # Check if port 7880 is already listening
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex(('127.0.0.1', 7880))
+    sock.close()
+    if result == 0:
+        print("[INFO] LiveKit SFU server is already running on port 7880.")
+        return
+
+    lk_exe = BASE_DIR / "livekit-bin" / "livekit-server.exe"
+    config_path = BASE_DIR / "config" / "livekit.yaml"
+
+    if lk_exe.exists() and config_path.exists():
+        print(f"[INFO] Auto-starting LiveKit SFU server on port 7880...")
+        try:
+            log_dir = BASE_DIR / "logs"
+            log_dir.mkdir(exist_ok=True)
+            out_file = open(log_dir / "livekit.stdout.log", "a", encoding="utf-8")
+            err_file = open(log_dir / "livekit.stderr.log", "a", encoding="utf-8")
+            global _lk_process_handles
+            _lk_process_handles = [out_file, err_file]
+
+            creation_flag = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0
+            proc = subprocess.Popen(
+                [str(lk_exe), "--config", str(config_path)],
+                stdout=out_file,
+                stderr=err_file,
+                creationflags=creation_flag
+            )
+            _lk_process_handles.append(proc)
+            print("[SUCCESS] LiveKit SFU server launched in background on port 7880.")
+        except Exception as e:
+            print(f"[WARN] Failed to auto-start LiveKit server: {e}")
+    else:
+        print(f"[WARN] LiveKit server binary or config not found at {lk_exe}.")
+
 if __name__ == '__main__':
-    print(f"Starting HTTPS/WSS on {BIND}:{PORT}")
-    print(f"  Endpoint : {ssl_endpoint}")
-    print(f"  Cert     : {CERT_FILE}")
-    print(f"  Key      : {KEY_FILE}")
+    ensure_livekit_running()
+    print(f"Starting {server_proto} on http://{BIND}:{PORT}")
+    print(f"  Endpoint : {endpoint}")
     print()
 
     server = Server(
         application=application,
-        endpoints=[ssl_endpoint],
+        endpoints=[endpoint],
         signal_handlers=True,
         http_timeout=86400,  # 24 hours for long streaming
         websocket_timeout=86400,

@@ -109,6 +109,8 @@ def generate_hls_proxy(project_id):
         
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
+            "-preset", "superfast",
+            "-threads", "0",
             "-profile:v", "baseline", "-level", "3.0",
             "-s", "854x480", "-start_number", "0",
             "-hls_time", "10", "-hls_list_size", "0",

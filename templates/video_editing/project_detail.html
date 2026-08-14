@@ -66,9 +66,9 @@
         <div class="ve-video-stage" id="video-stage">
             <div class="ve-video-wrapper" id="video-wrapper" style="position: relative;">
                 <div class="processing-overlay" id="processing-overlay"
-                    style="{% if project.status == 'processing' or project.proxy_status == 'processing' %}display: flex;{% else %}display: none;{% endif %}">
+                    style="{% if project.status == 'processing' %}display: flex;{% else %}display: none;{% endif %}">
                     <div class="spinner"></div>
-                    <p>{% if project.proxy_status == 'processing' %}Generating Playback Proxy…{% else %}Processing video…{% endif %}</p>
+                    <p>Exporting video timeline…</p>
                 </div>
                 {% if project.status == 'error' %}
                 <div class="error-banner"

@@ -1032,13 +1032,10 @@ def chunked_upload_view(request):
             except OSError:
                 pass
             
-            # Start HLS proxy generation if Celery worker is running
+            # Start HLS proxy generation asynchronously without blocking HTTP response
             try:
                 from .tasks import generate_hls_proxy
-                from school_project.celery import app as celery_app
-                inspect = celery_app.control.inspect()
-                if inspect and inspect.stats():
-                    generate_hls_proxy.delay(project.id)
+                generate_hls_proxy.delay(project.id)
             except Exception:
                 pass
             

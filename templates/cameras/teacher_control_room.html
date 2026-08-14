@@ -264,6 +264,7 @@
 {% block content %}
 <!-- Include HLS.js for chunked video preview support -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="{% static 'js/video_quality_manager.js' %}"></script>
 <div class="control-room-container">
     <div class="main-panel">
         <div class="video-monitor">
@@ -332,9 +333,12 @@
 
             <div style="display:flex; align-items:center; gap:0.5rem;">
                 <select class="quality-select" id="qualitySelect" style="padding: 0.25rem 0.5rem; font-size:0.75rem; height:32px;">
-                    {% for q in qualities %}
-                    <option value="{{ q }}" {% if q == default_quality %}selected{% endif %}>{{ q }}</option>
-                    {% endfor %}
+                    <option value="auto">Auto (Adaptive)</option>
+                    <option value="2K">2K (1440p)</option>
+                    <option value="1080p">1080p (Full HD)</option>
+                    <option value="720p">720p (HD)</option>
+                    <option value="480p">480p (SD)</option>
+                    <option value="360p">360p (SD Low)</option>
                 </select>
                 <button class="action-btn" title="Full Screen" onclick="toggleFullScreen()" style="width:32px; height:32px; background:#f8fafc;">
                     <i data-lucide="maximize" style="width:16px;"></i>
@@ -491,20 +495,20 @@
             
             let qParam = 'med';
             if (quality === '4K') qParam = '4k';
+            else if (quality === '2K' || quality === '1440p') qParam = '2k';
             else if (quality === '1080p') qParam = 'high';
             else if (quality === '720p') qParam = 'med';
+            else if (quality === 'auto') qParam = 'auto';
             else qParam = 'low';
             
             const mainFeed = document.getElementById('mainFeed');
-            // Point directly at the camera service — Django's ASGI server (Daphne)
-            // buffers streaming responses so MJPEG never reaches the browser via proxy.
             const baseUrl = `/cameras/${window.cameraId}/feed/`;
             mainFeed.src = `${baseUrl}?q=${qParam}&t=${new Date().getTime()}`;
         };
 
         qualitySelect.addEventListener('change', () => {
             updateFeedQuality();
-            showNotification(`Quality switched to ${qualitySelect.value}`, 'info');
+            showNotification(`Quality switched to ${qualitySelect.value.toUpperCase()}`, 'info');
         });
 
         // Apply initial quality
