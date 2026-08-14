@@ -11,6 +11,34 @@ from .ffmpeg_helpers import get_ffmpeg_binary
 
 logger = logging.getLogger('cameras')
 
+_working_encoder_cache = None
+
+def _get_working_encoder():
+    global _working_encoder_cache
+    if _working_encoder_cache is not None:
+        return _working_encoder_cache
+
+    ffmpeg_bin = get_ffmpeg_binary()
+    candidate_encoders = ['h264_nvenc', 'h264_qsv', 'h264_amf']
+    for candidate in candidate_encoders:
+        try:
+            cmd = [
+                ffmpeg_bin, '-y', '-hide_banner', '-loglevel', 'error',
+                '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=30',
+                '-c:v', candidate, '-f', 'null', '-'
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+            if res.returncode == 0:
+                logger.info(f"Hardware encoder '{candidate}' tested successfully.")
+                _working_encoder_cache = candidate
+                return candidate
+        except Exception as e:
+            logger.debug(f"Encoder '{candidate}' test failed: {e}")
+
+    logger.info("No functional hardware encoder found; defaulting to software 'libx264'.")
+    _working_encoder_cache = 'libx264'
+    return 'libx264'
+
 class RecordingEngine:
     """FFmpeg-based recording engine for high-quality AV synchronization"""
     
@@ -107,20 +135,8 @@ class RecordingEngine:
         }
         res = quality_map.get(quality, '1280x720')
 
-        # Determine encoder: Use hardware-accelerated if available, else libx264
-        encoder = 'libx264'
-        try:
-            test_cmd = [get_ffmpeg_binary(), '-hide_banner', '-encoders']
-            encoders_output = subprocess.check_output(test_cmd, stderr=subprocess.STDOUT).decode()
-            if 'h264_amf' in encoders_output:
-                encoder = 'h264_amf'
-            elif 'h264_nvenc' in encoders_output:
-                encoder = 'h264_nvenc'
-            elif 'h264_qsv' in encoders_output:
-                encoder = 'h264_qsv'
-        except Exception as e:
-            logger.warning(f"Failed to detect encoders, using libx264: {e}")
-
+        # Determine encoder: Use verified hardware-accelerated encoder if available, else libx264
+        encoder = _get_working_encoder()
         logger.info(f"Using encoder: {encoder} for recording")
 
         # Build robust FFmpeg command
@@ -150,10 +166,10 @@ class RecordingEngine:
         cmd.extend(['-s', res, '-c:v', encoder])
 
         # Encoder-specific options
-        if encoder in ['h264_amf', 'h264_nvenc', 'h264_qsv']:
-            cmd.extend(['-quality', 'balanced', '-rc', 'cbr', '-b:v', '4M' if quality == '4K' else '2.5M'])
-        else:
+        if encoder == 'libx264':
             cmd.extend(['-preset', 'ultrafast', '-crf', '23', '-profile:v', 'main'])
+        else:
+            cmd.extend(['-b:v', '4M' if quality == '4K' else '2.5M'])
 
         cmd.extend(['-pix_fmt', 'yuv420p'])
 

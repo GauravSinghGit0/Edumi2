@@ -66,9 +66,9 @@
         <div class="ve-video-stage" id="video-stage">
             <div class="ve-video-wrapper" id="video-wrapper" style="position: relative;">
                 <div class="processing-overlay" id="processing-overlay"
-                    style="{% if project.status == 'processing' or project.proxy_status == 'processing' %}display: flex;{% else %}display: none;{% endif %}">
+                    style="{% if project.status == 'processing' %}display: flex;{% else %}display: none;{% endif %}">
                     <div class="spinner"></div>
-                    <p>{% if project.proxy_status == 'processing' %}Generating Playback Proxy…{% else %}Processing video…{% endif %}</p>
+                    <p>Exporting video timeline…</p>
                 </div>
                 {% if project.status == 'error' %}
                 <div class="error-banner"
@@ -78,10 +78,10 @@
                 </div>
                 {% endif %}
                 <video preload="auto" id="main-video"
-                    {% if project.proxy_url and project.proxy_status == 'completed' %}
-                    src="{{ project.proxy_url }}"
-                    {% elif project.working_file and project.working_file.name %}
+                    {% if project.working_file and project.working_file.name %}
                     src="{% url 'serve_media_ranges' path=project.working_file.name %}"
+                    {% elif project.original_file and project.original_file.name %}
+                    src="{% url 'serve_media_ranges' path=project.original_file.name %}"
                     {% endif %}
                 ></video>
                 <div id="text-overlay-container"></div>
@@ -630,30 +630,11 @@
         </div>
     </div>
 
-</div>
-
 {% endblock %}
 
 {% block ve_extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        var video = document.getElementById('main-video');
-        var proxyUrl = "{{ project.proxy_url|default:'' }}";
-        var proxyStatus = "{{ project.proxy_status }}";
-        
-        if (proxyUrl && proxyStatus === 'completed') {
-            if (Hls.isSupported()) {
-                var hls = new Hls();
-                hls.loadSource(proxyUrl);
-                hls.attachMedia(video);
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = proxyUrl;
-            }
-        }
-    });
-</script>
 <script>
     window.REEL_STATUS_URL = "{% url 'project_status' project.pk %}";
     window.REEL_PROJECT_STATUS = "{{ project.status }}";
@@ -671,17 +652,40 @@
     window.REEL_PROJECT_EXPORT_TIMELINE_URL = "{% url 'export_timeline' project.pk %}";
     window.REEL_PROJECT_OPERATIONS = [
         {% for op in operations %}
-    {
-        "type": "{{ op.operation_type|escapejs }}",
+        {
+            "type": "{{ op.operation_type|escapejs }}",
             "title": "{{ op.get_operation_type_display|escapejs }}",
-                "description": "{{ op.description|escapejs }}",
-                    "trim_start": {{ op.trim_start|default:0.0 }},
-                    "trim_end": {{ op.trim_end|default:0.0 }}
-    } {% if not forloop.last %}, {% endif %}
-    {% endfor %}
+            "description": "{{ op.description|escapejs }}",
+            "trim_start": {{ op.trim_start|default:0.0 }},
+            "trim_end": {{ op.trim_end|default:0.0 }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
     ];
 
-    function initEditorScript() {
+    document.addEventListener("DOMContentLoaded", function () {
+        var video = document.getElementById('main-video');
+        var proxyUrl = "{{ project.proxy_url|default:'' }}";
+        var proxyStatus = "{{ project.proxy_status }}";
+        var fallbackSrc = "{% if project.working_file and project.working_file.name %}{% url 'serve_media_ranges' path=project.working_file.name %}{% elif project.original_file and project.original_file.name %}{% url 'serve_media_ranges' path=project.original_file.name %}{% endif %}";
+
+        if (proxyUrl && proxyStatus === 'completed') {
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                var hls = new Hls();
+                hls.loadSource(proxyUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal && fallbackSrc) {
+                        console.warn("[HLS Error] Fallback to direct MP4 source:", fallbackSrc);
+                        hls.destroy();
+                        video.src = fallbackSrc;
+                        video.load();
+                    }
+                });
+            } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = proxyUrl;
+            }
+        }
+
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
@@ -693,37 +697,29 @@
         const historyDrawerBackdrop = document.getElementById("history-drawer-backdrop");
 
         if (showHistoryBtn && historyDrawer) {
-            showHistoryBtn.addEventListener("click", (e) => {
+            showHistoryBtn.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.add("open");
             });
         }
         if (historyDrawerClose && historyDrawer) {
-            historyDrawerClose.addEventListener("click", (e) => {
+            historyDrawerClose.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.remove("open");
             });
         }
-
         if (historyDrawerBackdrop && historyDrawer) {
-            historyDrawerBackdrop.addEventListener("click", (e) => {
+            historyDrawerBackdrop.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.remove("open");
             });
         }
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initEditorScript);
-    } else {
-        initEditorScript();
-    }
 
         // Wait for duration to be available (since app.js sets it)
         function tryAddOriginalWaveform() {
             const timelineBlock = document.getElementById("visual-trim-container");
             if (timelineBlock && typeof window.duration !== 'undefined' && window.duration > 0) {
-                const basePxPerSecond = 15; // Same as in app.js
+                const basePxPerSecond = 15;
                 const zoomFactor = 1.0;
                 const totalWidth = Math.max(800, window.duration * basePxPerSecond * zoomFactor);
                 const waveformContainer = document.getElementById("original-audio-waveform");
@@ -781,8 +777,6 @@
             });
         }
 
-
-
         const undoBtn = document.getElementById("tb-undo");
         if (undoBtn) {
             undoBtn.addEventListener("click", function () {
@@ -790,13 +784,6 @@
                 if (firstHistoryUndo) {
                     firstHistoryUndo.click();
                 }
-            });
-        }
-
-        const redoBtn = document.getElementById("tb-redo");
-        if (redoBtn) {
-            redoBtn.addEventListener("click", function () {
-                // Client-side Redo placeholder
             });
         }
     });

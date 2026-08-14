@@ -1,4 +1,7 @@
-/* Meeting Room - Modern Clean Design with Performance Optimizations */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 :root {
     --bg-card: #1e293b;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -426,12 +429,15 @@
 
 /* Camera Avatar Overlay - show only when camera is OFF (cam-off class present) */
 .video-box:not(.cam-off) .video-avatar-overlay {
-    display: none;
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .video-box.cam-off .video-avatar-overlay {
-    display: flex;
-    opacity: 1;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 /* Enhanced Video Name Tags */
@@ -1178,32 +1184,70 @@
         max-height: 25vh !important;
     }
     
-    /* Enhanced Mobile screen share layout */
+    /* Mobile Topbar & Layout Fixes */
+    .meet-topbar {
+        padding: 6px 12px !important;
+        min-height: 50px !important;
+        height: auto !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: space-between !alignment;
+    }
+    
+    .meet-info h3 {
+        font-size: 13px !important;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #qualityWidgetContainer {
+        transform: scale(0.85);
+        transform-origin: right center;
+        margin-left: auto !important;
+        margin-right: 4px !important;
+    }
+
+    .video-grid-container.sidebar-view,
     .video-grid-container.screen-share-view {
-        flex-direction: column;
-        gap: 8px;
+        flex-direction: column !important;
+        gap: 6px !important;
+        padding: 6px !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
     }
     
+    .sidebar-view .main-video-area,
     .screen-share-main {
-        height: 50vh;
-        width: 100%;
-        min-height: 200px;
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-height: 45vh !important;
+        max-height: 65vh !important;
+        border-radius: 12px !important;
     }
     
+    .sidebar-view .sidebar-video-area,
     .screen-share-sidebar {
-        width: 100%;
-        flex-direction: row;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: 8px;
-        gap: 8px;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 105px !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        flex-wrap: nowrap !important;
+        padding: 4px 0 !important;
+        gap: 6px !important;
     }
     
+    .sidebar-view .sidebar-video-area .video-box,
     .screen-share-sidebar .video-box {
-        min-width: 120px;
-        width: 120px;
-        max-height: 90px;
-        flex-shrink: 0;
+        width: 110px !important;
+        min-width: 110px !important;
+        height: 75px !important;
+        max-height: 75px !important;
+        flex-shrink: 0 !important;
     }
     
     .screen-share-sidebar .video-nametag {

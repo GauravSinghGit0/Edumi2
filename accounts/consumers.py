@@ -4,25 +4,23 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        if self.scope["user"].is_anonymous:
-            await self.close()
-        else:
-            self.user_id = self.scope["user"].id
+        user = self.scope.get("user")
+        if user and not user.is_anonymous:
+            self.user_id = user.id
             self.group_name = f"user_{self.user_id}"
-            
-            # Join user-specific group
             await self.channel_layer.group_add(
                 self.group_name,
                 self.channel_name
             )
-            
-            # Join global notifications group
-            await self.channel_layer.group_add(
-                "public_notifications",
-                self.channel_name
-            )
-            
-            await self.accept()
+        else:
+            self.group_name = "user_anonymous"
+
+        # Join global notifications group
+        await self.channel_layer.group_add(
+            "public_notifications",
+            self.channel_name
+        )
+        await self.accept()
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):

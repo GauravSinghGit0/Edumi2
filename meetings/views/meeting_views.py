@@ -331,16 +331,24 @@ def livekit_token(request, meeting_code):
         .with_grants(VideoGrants(
             room_join=True, room=meeting_code,
             can_publish=True, can_subscribe=True, can_publish_data=True,
+            can_publish_sources=['camera', 'microphone', 'screen_share', 'screen_share_audio'],
             room_admin=is_host,
         ))
         .to_jwt()
     )
 
     lk_url = settings.LIVEKIT_URL
-    if 'livekit-proxy' in lk_url:
-        host = request.get_host()
+    host = request.get_host()  # e.g. "localhost:8002" or "10.7.11.141:8002"
+    host_name = host.split(':')[0]
+
+    # For local/LAN environments, connect directly to LiveKit WS port 7880
+    if host_name in ['localhost', '127.0.0.1']:
+        lk_url = "ws://127.0.0.1:7880"
+    elif host_name.startswith('192.168.') or host_name.startswith('10.') or host_name.startswith('172.'):
+        lk_url = f"ws://{host_name}:7880"
+    elif 'livekit-proxy' in lk_url:
         proto = 'wss' if (request.is_secure() or settings.LIVEKIT_URL.startswith('wss')) else 'ws'
-        lk_url = f"{proto}://{host}/livekit-proxy"  # no trailing slash — SDK appends /rtc correctly
+        lk_url = f"{proto}://{host}/livekit-proxy"
 
     return JsonResponse({'token': token, 'url': lk_url})
 

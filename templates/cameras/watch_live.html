@@ -138,8 +138,9 @@
             <img id="mainFeed" src="" class="live-feed" alt="Live Stream">
             <audio id="liveAudio" autoplay></audio>
             
-            <!-- Audio Controls -->
-            <div style="position:absolute; bottom:1rem; right:1rem; display:flex; gap:0.5rem; z-index:10;">
+            <!-- Audio & Quality Controls -->
+            <div style="position:absolute; bottom:1rem; right:1rem; display:flex; gap:0.5rem; z-index:10; align-items:center;">
+                <div id="liveQualityWidget"></div>
                 <button onclick="toggleAudio()" class="btn-action" id="audioToggleBtn" style="background:rgba(15,23,42,0.8); color:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
                     <i data-lucide="volume-2" id="audioIcon"></i>
                 </button>
@@ -188,6 +189,7 @@
     </div>
 </div>
 
+<script src="{% static 'js/video_quality_manager.js' %}"></script>
 <script>
 (function() {
     // ── Global Variables ──
@@ -308,10 +310,28 @@
         if (window.lucide) lucide.createIcons();
     };
 
-    // ── Initialize Direct Feed ──
+    // ── Initialize Direct Feed & Quality ──
     (function initFeed() {
-        // Use direct port 8003 camera service with matching SSL protocol
-        const feedUrl = `/cameras/${window.cameraId}/feed/?q=4k`;
+        if (window.VideoQualityManager) {
+            const qWidget = document.getElementById('liveQualityWidget');
+            if (qWidget && !qWidget.children.length) {
+                qWidget.appendChild(window.VideoQualityManager.createQualitySelectorUI({
+                    onQualityChange: (mode) => {
+                        let qParam = 'med';
+                        if (mode === '2K' || mode === '1440p') qParam = '2k';
+                        else if (mode === '1080p') qParam = 'high';
+                        else if (mode === '720p') qParam = 'med';
+                        else if (mode === 'auto') qParam = 'auto';
+                        else qParam = 'low';
+                        
+                        const img = document.getElementById('mainFeed');
+                        if (img) img.src = `/cameras/${window.cameraId}/feed/?q=${qParam}&t=${new Date().getTime()}`;
+                    }
+                }));
+            }
+        }
+
+        const feedUrl = `/cameras/${window.cameraId}/feed/?q=high`;
 
         const img = document.getElementById('mainFeed');
         if (img) {

@@ -194,10 +194,8 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: "__LAN_IP__"
-  stun_servers:
-    - stun.l.google.com:19302
-    - stun1.l.google.com:19302
+  node_ip: "127.0.0.1"
+  stun_servers: []
 
 keys:
   __LK_KEY_LINE__
@@ -210,7 +208,7 @@ logging:
   level: info
 '@
             $lkKeyLine = '  {0}: {1}' -f $LK_KEY, $LK_SECRET
-            $newYaml = $newYamlTpl.Replace('__LAN_IP__', $LAN_IP).Replace('__LK_KEY_LINE__', $lkKeyLine)
+            $newYaml = $newYamlTpl.Replace('__LK_KEY_LINE__', $lkKeyLine)
             Set-Content -Path $LkConfigPath -Value $newYaml -Encoding UTF8
             Write-Host ("  -> LiveKit config updated (bind=0.0.0.0, LAN IP={0})" -f $LAN_IP) -ForegroundColor Gray
         } catch {
@@ -237,7 +235,7 @@ if ($LASTEXITCODE -eq 0) {
 # ------------------------------------------------------------------------------
 Write-Host "[3/6] Building static assets & compressing CSS/JS..." -ForegroundColor Yellow
 
-& $VenvPython manage.py collectstatic --noinput --clear
+& $VenvPython manage.py collectstatic --noinput
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  -> [WARN] collectstatic exited with code $LASTEXITCODE (continuing)" -ForegroundColor Yellow
 } else {
@@ -297,15 +295,15 @@ if ($CeleryProc) { [void]$BGProcesses.Add($CeleryProc) }
 
 
 # ------------------------------------------------------------------------------
-# STEP 5: Start Daphne HTTPS Server (Main Single Terminal Window)
+# STEP 5: Start Daphne HTTP Server (Main Single Terminal Window)
 # ------------------------------------------------------------------------------
-Write-Host "[5/6] Starting HTTPS Application Server..." -ForegroundColor Yellow
+Write-Host "[5/6] Starting HTTP Application Server..." -ForegroundColor Yellow
 
 $SITE_HTTP_PORT = 8002
 $lanIp = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -eq "Up" } | Select-Object -First 1 -ExpandProperty IPv4Address | Select-Object -First 1 -ExpandProperty IPAddress)
 if (-not $lanIp) { $lanIp = "127.0.0.1" }
-$localUrl = ("https://localhost:{0}" -f $SITE_HTTP_PORT)
-$lanUrl   = ("https://{0}:{1}" -f $lanIp, $SITE_HTTP_PORT)
+$localUrl = ("http://localhost:{0}" -f $SITE_HTTP_PORT)
+$lanUrl   = ("http://{0}:{1}" -f $lanIp, $SITE_HTTP_PORT)
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Green

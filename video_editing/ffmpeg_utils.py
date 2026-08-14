@@ -37,6 +37,13 @@ def _tmp_path(suffix=".mp4"):
     return os.path.join(tmp_dir, f"{uuid.uuid4().hex}{suffix}")
 
 
+def _get_font_arg():
+    win_font = "C:/Windows/Fonts/arial.ttf"
+    if os.path.exists(win_font):
+        return "fontfile='C\\:/Windows/Fonts/arial.ttf':"
+    return ""
+
+
 def probe(path):
     """Return parsed ffprobe JSON info for a media file: duration, streams, etc."""
     cmd = [
@@ -238,9 +245,9 @@ def add_text_overlay(input_path, text, position="bottom", font_size=80,
     if start_seconds is not None and end_seconds is not None:
         enable_clause = f":enable='between(t,{start_seconds},{end_seconds})'"
 
-    font_path = "C\\:/Windows/Fonts/arial.ttf"
+    font_arg = _get_font_arg()
     drawtext = (
-        f"drawtext=fontfile='{font_path}':text='{safe_text}':fontcolor={color}:fontsize={font_size}:"
+        f"drawtext={font_arg}text='{safe_text}':fontcolor={color}:fontsize={font_size}:"
         f"box=1:boxcolor=black@0.5:boxborderw=8:{pos}{enable_clause}"
     )
 
@@ -564,9 +571,9 @@ def process_combined_edits(input_path, state):
             enable_clause = f":enable='between(t,{o_start},{o_end})'"
             
         safe_text = txt.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\u2019")
-        font_path = "C\\:/Windows/Fonts/arial.ttf"
+        font_arg = _get_font_arg()
         drawtext = (
-            f"drawtext=fontfile='{font_path}':text='{safe_text}':fontcolor={color}:fontsize={font_size}:"
+            f"drawtext={font_arg}text='{safe_text}':fontcolor={color}:fontsize={font_size}:"
             f"box=1:boxcolor=black@0.5:boxborderw=8:{pos}{enable_clause}"
         )
         filter_complex_parts.append(f"[{v_in}]{drawtext}[v_txt{idx}]")

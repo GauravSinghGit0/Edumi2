@@ -300,7 +300,7 @@ def generate_with_pyopenssl():
     print(f"     SANs           : {', '.join(san_entries)}")
 
 
-if __name__ == "__main__":
+def main():
     if USE_CRYPTOGRAPHY:
         import ipaddress
         print("Using cryptography library...")
@@ -308,3 +308,6 @@ if __name__ == "__main__":
     else:
         print("Using pyOpenSSL library...")
         generate_with_pyopenssl()
+
+if __name__ == "__main__":
+    main()

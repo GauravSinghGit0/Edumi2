@@ -16,48 +16,40 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # SeparateDatabaseAndState: state_operations update Django's internal
-        # schema tracking; database_operations is empty because the columns
-        # are already there.
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='active',
-                    field=models.BooleanField(default=True),
-                ),
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='parameters',
-                    field=models.JSONField(blank=True, null=True),
-                ),
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='resource_file',
-                    field=models.FileField(
-                        blank=True, null=True,
-                        upload_to=video_editing.models.project_upload_path,
-                    ),
-                ),
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='trim_end',
-                    field=models.FloatField(blank=True, null=True),
-                ),
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='trim_start',
-                    field=models.FloatField(default=0.0),
-                ),
-                migrations.AddField(
-                    model_name='editoperation',
-                    name='video_file',
-                    field=models.FileField(
-                        blank=True, null=True,
-                        upload_to=video_editing.models.project_upload_path,
-                    ),
-                ),
-            ],
-            database_operations=[],   # columns already exist — nothing to run
+        migrations.AddField(
+            model_name='editoperation',
+            name='active',
+            field=models.BooleanField(default=True),
+        ),
+        migrations.AddField(
+            model_name='editoperation',
+            name='parameters',
+            field=models.JSONField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='editoperation',
+            name='resource_file',
+            field=models.FileField(
+                blank=True, null=True,
+                upload_to=video_editing.models.project_upload_path,
+            ),
+        ),
+        migrations.AddField(
+            model_name='editoperation',
+            name='trim_end',
+            field=models.FloatField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='editoperation',
+            name='trim_start',
+            field=models.FloatField(default=0.0),
+        ),
+        migrations.AddField(
+            model_name='editoperation',
+            name='video_file',
+            field=models.FileField(
+                blank=True, null=True,
+                upload_to=video_editing.models.project_upload_path,
+            ),
         ),
     ]

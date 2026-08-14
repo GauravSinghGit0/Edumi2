@@ -440,9 +440,22 @@
                 }
             }
 
+            window.notificationReconnectAttempts = window.notificationReconnectAttempts || 0;
+            const maxAttempts = 5;
+
+            socket.onopen = function () {
+                window.notificationReconnectAttempts = 0;
+            };
+
             socket.onclose = function (e) {
-                console.log('Notification socket closed. Reconnecting in 3 seconds...');
-                window.notificationReconnectTimer = setTimeout(connectNotificationWS, 3000);
+                if (window.notificationReconnectAttempts < maxAttempts) {
+                    window.notificationReconnectAttempts++;
+                    const delay = Math.min(3000 * window.notificationReconnectAttempts, 15000);
+                    console.log(`Notification socket closed. Reconnect attempt ${window.notificationReconnectAttempts}/${maxAttempts} in ${delay / 1000}s...`);
+                    window.notificationReconnectTimer = setTimeout(connectNotificationWS, delay);
+                } else {
+                    console.warn('Notification socket disconnected: Max reconnect attempts reached.');
+                }
             };
 
             socket.onerror = function (err) {
