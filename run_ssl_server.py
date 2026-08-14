@@ -21,14 +21,15 @@ BIND      = "0.0.0.0"
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "school_project.settings")
 
-# ── Verify cert files exist ──────────────────────────────────────────
-if not CERT_FILE.exists():
-    print(f"[ERROR] Certificate not found: {CERT_FILE}")
-    print("        Run: python scripts/generate_ssl_cert.py")
-    sys.exit(1)
-if not KEY_FILE.exists():
-    print(f"[ERROR] Private key not found: {KEY_FILE}")
-    sys.exit(1)
+# ── Verify cert files exist (Auto-generate if missing) ─────────────────────────
+if not CERT_FILE.exists() or not KEY_FILE.exists():
+    print(f"[INFO] SSL Certificate not found at {CERT_FILE}. Auto-generating self-signed certificates...")
+    try:
+        from scripts import generate_ssl_cert
+        generate_ssl_cert.main()
+    except Exception as e:
+        print(f"[ERROR] Failed to auto-generate SSL certificate: {e}")
+        sys.exit(1)
 
 # ── Relative paths (forward slashes) to avoid Twisted endpoint colon conflicts ──
 cert_rel = str(CERT_FILE.relative_to(BASE_DIR)).replace("\\", "/")

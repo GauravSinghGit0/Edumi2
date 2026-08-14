@@ -53,18 +53,31 @@ for _h in ('localhost', '127.0.0.1'):
     if _h not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_h)
 
-# Auto-detect LAN/server IP and add to ALLOWED_HOSTS (dev convenience only)
-if DEBUG:
-    import socket as _socket
-    try:
-        _s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-        _s.connect(('8.8.8.8', 80))
-        _lan_ip = _s.getsockname()[0]
-        _s.close()
-        if _lan_ip not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(_lan_ip)
-    except Exception:
-        pass
+# Auto-detect local LAN/server IP addresses and add to ALLOWED_HOSTS
+import socket as _socket
+_detected_ips = []
+try:
+    _hostname = _socket.gethostname()
+    _host_ips = _socket.gethostbyname_ex(_hostname)[2]
+    for _ip in _host_ips:
+        if _ip not in _detected_ips:
+            _detected_ips.append(_ip)
+except Exception:
+    pass
+
+try:
+    _s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+    _s.connect(('8.8.8.8', 80))
+    _primary_ip = _s.getsockname()[0]
+    _s.close()
+    if _primary_ip not in _detected_ips:
+        _detected_ips.append(_primary_ip)
+except Exception:
+    pass
+
+for _ip in _detected_ips:
+    if _ip not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_ip)
 
 
 # ==============================================================================
@@ -104,6 +117,17 @@ for _plat_var in ('RENDER_EXTERNAL_URL', 'RAILWAY_STATIC_URL', 'FLY_APP_NAME'):
     _url = env(_plat_var)
     if _url and _url not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_url)
+
+# Automatically add all allowed hosts/IPs to CSRF_TRUSTED_ORIGINS
+for _host in ALLOWED_HOSTS:
+    if _host != '*':
+        for _scheme in ('https://', 'http://'):
+            _origin = f"{_scheme}{_host}:8002"
+            if _origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_origin)
+            _origin_plain = f"{_scheme}{_host}"
+            if _origin_plain not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_origin_plain)
 
 
 # ==============================================================================
@@ -209,7 +233,45 @@ if _database_url:
         )
         if 'sslmode' in _database_url:
             db_config.setdefault('OPTIONS', {})['sslmode'] = 'prefer'
-        DATABASES = {'default': db_config}
+            
+        # Test PostgreSQL connection if connecting to localhost/127.0.0.1 to fallback gracefully if local DB server is offline or creds fail
+        if db_config.get('ENGINE') == 'django.db.backends.postgresql':
+            db_host = str(db_config.get('HOST', '') or '127.0.0.1')
+            if db_host in ('127.0.0.1', 'localhost', '::1', ''):
+                try:
+                    import psycopg2
+                    conn_info = {
+                        'dbname': db_config.get('NAME'),
+                        'user': db_config.get('USER'),
+                        'password': db_config.get('PASSWORD'),
+                        'host': db_host,
+                        'port': db_config.get('PORT') or '5432',
+                        'connect_timeout': 2
+                    }
+                    conn = psycopg2.connect(**conn_info)
+                    conn.close()
+                    DATABASES = {'default': db_config}
+                except Exception as e:
+                    import warnings
+                    warnings.warn(
+                        f"PostgreSQL local connection failed ({e}). Falling back to local SQLite database (db.sqlite3).",
+                        RuntimeWarning,
+                        stacklevel=1,
+                    )
+                    DATABASES = {
+                        'default': {
+                            'ENGINE': 'django.db.backends.sqlite3',
+                            'NAME': DATABASE_DIR / 'db.sqlite3',
+                            'OPTIONS': {
+                                'timeout': 30,
+                                'check_same_thread': False,
+                            },
+                        }
+                    }
+            else:
+                DATABASES = {'default': db_config}
+        else:
+            DATABASES = {'default': db_config}
     except ImportError:
         raise ImproperlyConfigured(
             "DATABASE_URL is set but dj-database-url is not installed. "

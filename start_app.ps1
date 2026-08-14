@@ -237,7 +237,7 @@ if ($LASTEXITCODE -eq 0) {
 # ------------------------------------------------------------------------------
 Write-Host "[3/6] Building static assets & compressing CSS/JS..." -ForegroundColor Yellow
 
-& $VenvPython manage.py collectstatic --noinput --clear
+& $VenvPython manage.py collectstatic --noinput
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  -> [WARN] collectstatic exited with code $LASTEXITCODE (continuing)" -ForegroundColor Yellow
 } else {
@@ -300,6 +300,11 @@ if ($CeleryProc) { [void]$BGProcesses.Add($CeleryProc) }
 # STEP 5: Start Daphne HTTPS Server (Main Single Terminal Window)
 # ------------------------------------------------------------------------------
 Write-Host "[5/6] Starting HTTPS Application Server..." -ForegroundColor Yellow
+
+if (-not (Test-Path "certs\edumi.crt")) {
+    Write-Host "  -> SSL certificate missing. Auto-generating certificate..." -ForegroundColor Yellow
+    & $VenvPython scripts\generate_ssl_cert.py
+}
 
 $SITE_HTTP_PORT = 8002
 $lanIp = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -eq "Up" } | Select-Object -First 1 -ExpandProperty IPv4Address | Select-Object -First 1 -ExpandProperty IPAddress)
