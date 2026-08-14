@@ -884,13 +884,15 @@ async function init() {
         window.room = new Room({
             adaptiveStream: true,
             dynacast: true,
-            videoCaptureDefaults: { resolution: VideoPresets.h1080.resolution },
+            videoCaptureDefaults: {
+                resolution: (VideoPresets && VideoPresets.h1080) ? VideoPresets.h1080 : { width: 1920, height: 1080 }
+            },
             publishDefaults: {
                 simulcast: true,
                 videoCodec: 'vp8',
-                videoEncoding: VideoPresets.h1080.encoding,
+                videoEncoding: { maxBitrate: 4_500_000, maxFramerate: 30 },
                 screenShareEncoding: {
-                    maxBitrate: 6_000_000,
+                    maxBitrate: 8_000_000,
                     maxFramerate: 30,
                 }
             },
@@ -2425,3 +2427,4 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
 </script>
 </body>
 </html>
+

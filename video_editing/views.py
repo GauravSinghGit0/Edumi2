@@ -125,7 +125,7 @@ def project_list(request):
 
 def _get_owned_project(request, pk):
     project = get_object_or_404(VideoProject, pk=pk)
-    if project.owner_id != request.user.id:
+    if not request.user.is_superuser and project.owner_id != request.user.id:
         return None
     return project
 
