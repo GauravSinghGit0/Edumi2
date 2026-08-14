@@ -192,41 +192,6 @@
         {% if profile.user_type == 'student' %}
         <!-- STUDENT LEFT SIDEBAR -->
         <aside class="profile-sidebar-left">
-          <!-- Profile Strength / EduKarma Card -->
-          <div class="profile-card card-strength">
-            <div class="card-header">
-              <h2 class="card-title">Profile Strength</h2>
-            </div>
-            <div class="card-body strength-body">
-              <div class="edukarma-ring-wrap">
-                <svg width="120" height="120" viewBox="0 0 110 110">
-                  <defs>
-                    <linearGradient id="karmaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#818cf8" />
-                      <stop offset="100%" stop-color="#4f46e5" />
-                    </linearGradient>
-                  </defs>
-                  <circle class="ring-bg" cx="55" cy="55" r="46" />
-                  <circle class="ring-fill" cx="55" cy="55" r="46"
-                    stroke-dasharray="{{ completion_dash|default:0 }} 289" id="completionRing" />
-                </svg>
-                <div class="edukarma-inner">
-                  <span class="edukarma-num">{{ edukarma_score|default:0 }}</span>
-                  <span class="edukarma-label">EDUKARMA</span>
-                </div>
-              </div>
-              <p class="edukarma-tagline">
-                {% if completion >= 80 %}
-                Top 5% of active learners this month. Keep it up!
-                {% elif completion >= 50 %}
-                You're making great progress!
-                {% else %}
-                Complete your profile to boost your score
-                {% endif %}
-              </p>
-            </div>
-          </div>
-
           <!-- Verified Identity Card -->
           <div class="profile-card card-verified">
             <div class="card-header header-verified">
