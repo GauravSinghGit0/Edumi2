@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from django.views.generic import RedirectView
 from django.http import JsonResponse
 from django.db import connection
+from django.views.static import serve
 from meetings.livekit_http_proxy import livekit_http_proxy
 from cameras.views_logic.streaming_views import camera_feed_proxy
 
@@ -49,9 +50,10 @@ urlpatterns = [
 handler404 = 'accounts.views.error_404'
 handler500 = 'accounts.views.error_500'
 
-# Static and media files are served by WhiteNoise middleware (always on,
-# regardless of DEBUG). Do NOT add Django's debug static handler here —
-# it bypasses WhiteNoise, uses the wrong directory, and breaks MIME types
-# on Windows.
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media files (profile pictures, cover photos, recorded videos, etc.)
+# WhiteNoise handles static files from STATIC_ROOT, but django.views.static.serve
+# is required to serve uploaded media files from MEDIA_ROOT regardless of DEBUG setting.
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
+
