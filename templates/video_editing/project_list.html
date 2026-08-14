@@ -202,7 +202,8 @@
                         if (data.project_id) {
                             completed = true;
                             isUploading = false;
-                            window.location.href = `{% url 'project_list' %}project/${data.project_id}/`;
+                            const baseUrl = "{% url 'project_list' %}".replace(/\/+$/, '');
+                            window.location.href = `${baseUrl}/project/${data.project_id}/`;
                             break;
                         }
                     } catch (err) {

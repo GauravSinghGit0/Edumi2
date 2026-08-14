@@ -2,7 +2,7 @@ import os
 import subprocess
 import json
 from django.conf import settings
-from .ffmpeg_utils import FFmpegError, get_metadata
+from .ffmpeg_utils import FFmpegError, get_metadata, _get_font_arg
 
 def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     """
@@ -260,8 +260,8 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         enable_str = f"between(t,{start},{end})"
         next_v = f"[v_txt{idx}]"
         
-        font_path = "C\\:/Windows/Fonts/arial.ttf"
-        drawtext_filter = (f"{current_v}drawtext=fontfile='{font_path}':text='{txt}':x={x}:y={y}:"
+        font_arg = _get_font_arg()
+        drawtext_filter = (f"{current_v}drawtext={font_arg}text='{txt}':x={x}:y={y}:"
                            f"fontsize={fontsize}:fontcolor={fontcolor}:box=1:boxcolor=black@0.5:boxborderw=8:enable='{enable_str}'{next_v}")
         filter_complex.append(drawtext_filter)
         current_v = next_v

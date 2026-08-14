@@ -22,6 +22,8 @@ from .forms import (
 from .models import VideoProject, EditOperation, ProjectAsset
 
 
+import mimetypes
+
 @login_required
 def serve_media_ranges(request, path):
     media_root = os.path.abspath(str(settings.MEDIA_ROOT))
@@ -35,6 +37,10 @@ def serve_media_ranges(request, path):
     file_size = os.path.getsize(file_path)
     range_header = request.META.get('HTTP_RANGE', '').strip()
     
+    mime_type, _ = mimetypes.guess_type(target_path)
+    if not mime_type:
+        mime_type = 'video/mp4'
+
     def file_iterator(fn, offset, length):
         with open(fn, 'rb') as f:
             f.seek(offset)
@@ -58,13 +64,13 @@ def serve_media_ranges(request, path):
                 return StreamingHttpResponse(status=416)
                 
             length = end - start + 1
-            response = StreamingHttpResponse(file_iterator(file_path, start, length), status=206, content_type='video/mp4')
+            response = StreamingHttpResponse(file_iterator(file_path, start, length), status=206, content_type=mime_type)
             response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
             response['Accept-Ranges'] = 'bytes'
             response['Content-Length'] = str(length)
             return response
 
-    response = StreamingHttpResponse(file_iterator(file_path, 0, file_size), content_type='video/mp4')
+    response = StreamingHttpResponse(file_iterator(file_path, 0, file_size), content_type=mime_type)
     response['Accept-Ranges'] = 'bytes'
     response['Content-Length'] = str(file_size)
     return response
@@ -762,9 +768,21 @@ def export_project(request, pk):
 
     try:
         from .tasks import export_video_task
-        # Queue the Celery task
-        export_video_task.delay(project.id, data)
-        messages.success(request, "Export started! Your video is being processed in the background.")
+        executed_sync = False
+        try:
+            from school_project.celery import app as celery_app
+            inspect = celery_app.control.inspect()
+            if inspect and inspect.stats():
+                export_video_task.delay(project.id, data)
+            else:
+                export_video_task(project.id, data)
+                executed_sync = True
+        except Exception:
+            export_video_task(project.id, data)
+            executed_sync = True
+
+        msg = "Export complete!" if executed_sync else "Export started! Your video is being processed."
+        messages.success(request, msg)
         from django.urls import reverse
         return JsonResponse({
             "status": "success", 
@@ -920,10 +938,18 @@ def export_timeline(request, pk):
         project.status = "processing"
         project.save(update_fields=['status'])
         from .tasks import export_video_task
-        # Pass the parsed dict (not the JSON string) — export_video_task /
-        # compile_timeline_to_ffmpeg expect a dict with a "tracks" list.
-        export_video_task.delay(project.id, data)
-        return JsonResponse({"status": "processing"})
+        try:
+            from school_project.celery import app as celery_app
+            inspect = celery_app.control.inspect()
+            if inspect and inspect.stats():
+                export_video_task.delay(project.id, data)
+                return JsonResponse({"status": "processing"})
+            else:
+                export_video_task(project.id, data)
+                return JsonResponse({"status": "success"})
+        except Exception:
+            export_video_task(project.id, data)
+            return JsonResponse({"status": "success"})
     except Exception as e:
         project.status = "error"
         project.error_message = str(e)
@@ -973,19 +999,47 @@ def chunked_upload_view(request):
             with open(final_file_path, 'rb') as final_file:
                 project.original_file.save(filename, File(final_file))
                 
+            # Extract metadata and initialize clips_json synchronously so editor works immediately
+            try:
+                meta = ffmpeg_utils.get_metadata(project.original_file.path)
+                project.duration_seconds = meta.get("duration", 0.0)
+                project.width = meta.get("width", 1920)
+                project.height = meta.get("height", 1080)
+                project.has_audio = meta.get("has_audio", True)
+                project.status = "ready"
+                orig_filename = os.path.basename(project.original_file.name)
+                project.clips_json = json.dumps([{"title": orig_filename, "duration": meta.get("duration", 0.0)}])
+            except Exception as e:
+                project.status = "ready"
+                project.clips_json = json.dumps([{"title": filename, "duration": 0.0}])
+
             project.proxy_status = 'pending'
             project.save()
+
+            # Record upload operation
+            try:
+                EditOperation.objects.create(
+                    project=project,
+                    operation_type="upload",
+                    description=f"Uploaded {filename}",
+                )
+            except Exception:
+                pass
+
             os.remove(final_file_path)
             try:
                 os.rmdir(temp_dir)
             except OSError:
                 pass
             
-            # Start proxy generation task
+            # Start HLS proxy generation if Celery worker is running
             try:
                 from .tasks import generate_hls_proxy
-                generate_hls_proxy.delay(project.id)
-            except ImportError:
+                from school_project.celery import app as celery_app
+                inspect = celery_app.control.inspect()
+                if inspect and inspect.stats():
+                    generate_hls_proxy.delay(project.id)
+            except Exception:
                 pass
             
             return JsonResponse({'success': True, 'project_id': project.id})
