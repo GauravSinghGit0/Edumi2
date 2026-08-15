@@ -3,7 +3,6 @@ Quiz management views:
 Teacher: create, list, edit, archive, view submissions, evaluate
 Student: list, view detail, submit, view feedback
 """
-import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse

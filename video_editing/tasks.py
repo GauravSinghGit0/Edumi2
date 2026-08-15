@@ -1,5 +1,4 @@
 from celery import shared_task
-from django.shortcuts import get_object_or_404
 from .models import VideoProject
 from . import ffmpeg_utils
 from .views import _apply_new_working_file

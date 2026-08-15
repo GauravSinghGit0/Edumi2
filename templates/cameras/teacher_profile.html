@@ -76,9 +76,11 @@
 {% block content %}
 <div class="profile-container">
     <div class="profile-header">
-        <div class="profile-avatar">{{ target_teacher.username|slice:":1"|upper }}</div>
+        <div class="profile-avatar" style="overflow: hidden;">
+            <img src="{% if target_teacher.userprofile %}{{ target_teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ target_teacher.get_full_name|default:target_teacher.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="{{ target_teacher.username }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ target_teacher.get_full_name|default:target_teacher.username|urlencode }}&background=6366f1&color=fff'">
+        </div>
         <div class="profile-info">
-            <h1>{{ target_teacher.username }}</h1>
+            <h1>{% if target_teacher.userprofile %}{{ target_teacher.userprofile.get_display_name }}{% else %}{{ target_teacher.get_full_name|default:target_teacher.username }}{% endif %}</h1>
             <p style="color:#64748b; margin-bottom:1rem;">Senior Instructor • Edumi Academic Team</p>
             <div class="profile-stats">
                 <span>{{ recordings.count }} Recordings</span>

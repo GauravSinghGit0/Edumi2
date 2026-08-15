@@ -155,7 +155,27 @@
         </div>
       </div>
 
-      {% if profile.user_type == 'teacher' %}
+      {% if is_admin_role %}
+      <!-- Admin Info Strip -->
+      <div class="teacher-info-strip" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-color: #4338ca;">
+        <div class="teacher-info-col">
+          <div class="strip-label" style="color: #a5b4fc;">SYSTEM ROLE</div>
+          <div class="strip-value view-field" style="color: white; font-weight: 700;">Administrator</div>
+        </div>
+        <div class="teacher-info-col">
+          <div class="strip-label" style="color: #a5b4fc;">ACCESS PRIVILEGES</div>
+          <div class="strip-value view-field" style="color: white; font-weight: 600;">Full System & User Control</div>
+        </div>
+        <div class="teacher-info-col">
+          <div class="strip-label" style="color: #a5b4fc;">ADMIN PANEL</div>
+          <div class="strip-value view-field">
+            <a href="{% url 'admin_panel' %}" style="color: #38bdf8; font-weight: 600; text-decoration: none;">
+              Open Admin Dashboard &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+      {% elif profile.user_type == 'teacher' %}
       <!-- Teacher Info Strip -->
       <div class="teacher-info-strip">
         <div class="teacher-info-col">

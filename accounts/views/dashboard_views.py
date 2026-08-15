@@ -4,8 +4,6 @@ Dashboard views for teachers and students.
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 
-from accounts.models import UserProfile
-
 
 @login_required
 def teacher_dashboard(request):

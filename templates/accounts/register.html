@@ -130,44 +130,147 @@
             </div>
 
             <h1>Create account</h1>
-            <p class="auth-subtitle">Join Edumi to get started</p>
+            <p class="auth-subtitle">Join EduMi to get started</p>
 
-            <form method="post" class="auth-form">
+            {% if errors.non_field_errors %}
+            <div class="error-alert" style="margin-bottom: 1.25rem;">
+                {% for err in errors.non_field_errors %}{{ err }}<br>{% endfor %}
+            </div>
+            {% elif error %}
+            <div class="error-alert" style="margin-bottom: 1.25rem;">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'register' %}" class="auth-form" id="registerForm" novalidate>
                 {% csrf_token %}
 
-                <div class="form-field">
-                    <label>Username</label>
-                    <input type="text" name="username" required placeholder="Choose a username" autofocus>
+                <!-- Username Field -->
+                <div class="form-field {% if errors.username %}has-error{% endif %}" id="field-group-username">
+                    <div class="field-header">
+                        <label for="usernameInput">Username</label>
+                        <span class="field-badge" id="username-badge"></span>
+                    </div>
+                    <div class="input-with-icon">
+                        <input type="text" name="username" id="usernameInput" required
+                               placeholder="e.g. alex_rivera"
+                               value="{{ form_data.username|default:'' }}"
+                               autocomplete="username" autofocus>
+                        <span class="input-status-icon" id="username-icon"></span>
+                    </div>
+                    <div class="field-error" id="error-username">
+                        {% if errors.username %}{{ errors.username.0 }}{% endif %}
+                    </div>
+                    <div class="field-hint">3-30 characters, letters, numbers, and underscores only.</div>
                 </div>
 
-                <div class="form-field">
-                    <label>Password</label>
-                    <input type="password" name="password1" required placeholder="Create a password">
+                <!-- Email Field -->
+                <div class="form-field {% if errors.email %}has-error{% endif %}" id="field-group-email">
+                    <div class="field-header">
+                        <label for="emailInput">Email Address</label>
+                        <span class="field-badge" id="email-badge"></span>
+                    </div>
+                    <div class="input-with-icon">
+                        <input type="email" name="email" id="emailInput" required
+                               placeholder="alex@university.edu"
+                               value="{{ form_data.email|default:'' }}"
+                               autocomplete="email">
+                        <span class="input-status-icon" id="email-icon"></span>
+                    </div>
+                    <div class="field-error" id="error-email">
+                        {% if errors.email %}{{ errors.email.0 }}{% endif %}
+                    </div>
+                    <div class="field-hint">We'll send a verification link and code here.</div>
                 </div>
 
-                <div class="form-field">
-                    <label>Confirm Password</label>
-                    <input type="password" name="password2" required placeholder="Confirm your password">
-                </div>
-
-                <div class="form-field">
-                    <label>I am a</label>
-                    <select name="user_type" required>
+                <!-- Role Selection -->
+                <div class="form-field {% if errors.user_type %}has-error{% endif %}" id="field-group-user_type">
+                    <label for="roleSelect">I am a</label>
+                    <select name="user_type" id="roleSelect" required>
                         <option value="">Select your role</option>
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher</option>
+                        <option value="student" {% if form_data.user_type == 'student' %}selected{% endif %}>Student</option>
+                        <option value="teacher" {% if form_data.user_type == 'teacher' %}selected{% endif %}>Teacher / Instructor</option>
                     </select>
+                    <div class="field-error" id="error-user_type">
+                        {% if errors.user_type %}{{ errors.user_type.0 }}{% endif %}
+                    </div>
                 </div>
 
-                {% if error %}
-                <div class="error-alert">{{ error }}</div>
-                {% endif %}
+                <!-- Password 1 Field -->
+                <div class="form-field {% if errors.password1 %}has-error{% endif %}" id="field-group-password1">
+                    <label for="password1Input">Password</label>
+                    <div class="password-field">
+                        <input type="password" name="password1" id="password1Input" required
+                               placeholder="Create a strong password"
+                               autocomplete="new-password">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password1Input', this)" aria-label="Toggle password visibility">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
 
-                <button type="submit" class="btn-login">Create Account</button>
+                    <!-- Password Strength Meter -->
+                    <div class="password-strength-container" id="strengthContainer" style="display: none;">
+                        <div class="strength-meter-bar">
+                            <div class="strength-meter-fill" id="strengthFill"></div>
+                        </div>
+                        <div class="strength-label-row">
+                            <span class="strength-label-text">Strength:</span>
+                            <span class="strength-text" id="strengthText">Weak</span>
+                        </div>
+                    </div>
+
+                    <!-- Password Requirement Checklist -->
+                    <div class="password-requirements" id="passwordRequirements" style="display: none;">
+                        <div class="req-item" id="req-length">
+                            <span class="req-icon">✕</span> At least 8 characters
+                        </div>
+                        <div class="req-item" id="req-letters-numbers">
+                            <span class="req-icon">✕</span> Letters and numbers
+                        </div>
+                        <div class="req-item" id="req-symbols-case">
+                            <span class="req-icon">✕</span> Mixed case or special symbols
+                        </div>
+                        <div class="req-item" id="req-not-common">
+                            <span class="req-icon">✕</span> Not a common password
+                        </div>
+                    </div>
+
+                    <div class="field-error" id="error-password1">
+                        {% if errors.password1 %}{{ errors.password1.0 }}{% endif %}
+                    </div>
+                </div>
+
+                <!-- Password 2 Field -->
+                <div class="form-field {% if errors.password2 %}has-error{% endif %}" id="field-group-password2">
+                    <label for="password2Input">Confirm Password</label>
+                    <div class="password-field">
+                        <input type="password" name="password2" id="password2Input" required
+                               placeholder="Confirm your password"
+                               autocomplete="new-password">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password2Input', this)" aria-label="Toggle password visibility">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="field-error" id="error-password2">
+                        {% if errors.password2 %}{{ errors.password2.0 }}{% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="submitBtn" style="margin-top: 1rem;">
+                    Create Account
+                </button>
             </form>
 
             <p class="signup-link">
-                Already have an account? <a href="{% url 'login' %}">login</a>
+                Already have an account? <a href="{% url 'login' %}">Log in</a>
             </p>
         </div>
     </div>
@@ -200,13 +303,9 @@
             <div class="feature-detail-content">
                 <h3>Key Features:</h3>
                 <ul>
-                    <li><strong>Role-Based Access Control:</strong> Separate dashboards and permissions for
-                        administrators, teachers, and students</li>
-                    <li><strong>User Profiles:</strong> Comprehensive profile management with photos, contact
-                        information, and academic details</li>
-                    <li><strong>Bulk Operations:</strong> Add, edit, or remove multiple users efficiently</li>
-                    <li><strong>Activity Tracking:</strong> Monitor user login history and platform engagement</li>
-                    <li><strong>Custom Permissions:</strong> Fine-grained control over what each user can access</li>
+                    <li><strong>Role-Based Access Control:</strong> Separate dashboards and permissions for administrators, teachers, and students</li>
+                    <li><strong>Email Verification:</strong> Enterprise-grade cryptographic verification flow</li>
+                    <li><strong>User Profiles:</strong> Comprehensive profile management with photos and academic details</li>
                 </ul>
             </div>
         </div>
@@ -224,12 +323,8 @@
             <div class="feature-detail-content">
                 <h3>Key Features:</h3>
                 <ul>
-                    <li><strong>HD Video & Audio:</strong> Crystal-clear communication with adaptive bitrate streaming
-                    </li>
-                    <li><strong>Screen Sharing:</strong> Share presentations, documents, and applications in real-time
-                    </li>
-                    <li><strong>Interactive Chat:</strong> Text messaging with file sharing during meetings</li>
-                    <li><strong>Recording:</strong> Record sessions for later review and archival</li>
+                    <li><strong>HD Video & Audio:</strong> Crystal-clear communication with adaptive bitrate streaming</li>
+                    <li><strong>Screen Sharing:</strong> Share presentations and documents in real-time</li>
                 </ul>
             </div>
         </div>
@@ -244,14 +339,6 @@
             </div>
             <h2>Live Camera Monitoring</h2>
             <p class="feature-detail-subtitle">Advanced security and monitoring system</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>RTSP Camera Support:</strong> Connect professional IP cameras with RTSP protocol</li>
-                    <li><strong>Mobile Camera Integration:</strong> Use smartphones as security cameras</li>
-                    <li><strong>Permission-Based Access:</strong> Control who can view specific cameras</li>
-                </ul>
-            </div>
         </div>
 
         <div class="feature-detail" id="realtime-updates">
@@ -265,47 +352,235 @@
             </div>
             <h2>Real-time Updates</h2>
             <p class="feature-detail-subtitle">Instant notifications and live data synchronization</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>WebSocket Technology:</strong> Bi-directional real-time communication</li>
-                    <li><strong>Live Notifications:</strong> Instant alerts for meetings, messages, and updates</li>
-                    <li><strong>Auto-Sync:</strong> Data updates automatically across all devices</li>
-                </ul>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Scripts for feature slider -->
 <script>
-    function openFeatureSlider(featureId) {
-        const slider = document.getElementById('featureSlider');
-        const allDetails = document.querySelectorAll('.feature-detail');
-        const targetDetail = document.getElementById(featureId);
-        allDetails.forEach(detail => detail.classList.remove('active'));
-        if (targetDetail) targetDetail.classList.add('active');
-        slider.classList.remove('closing');
-        slider.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeFeatureSlider() {
-        const slider = document.getElementById('featureSlider');
-        slider.classList.add('closing');
-        setTimeout(() => {
-            slider.classList.remove('active', 'closing');
-            document.body.style.overflow = '';
-        }, 300);
-    }
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeFeatureSlider();
-    });
+    // Common weak passwords list to mirror Django's CommonPasswordValidator in frontend
+    const COMMON_PASSWORDS = new Set([
+        '12345678', '123456789', 'password', 'password123', 'admin123',
+        'qwerty123', 'welcome1', 'iloveyou', 'abc12345', 'pass1234'
+    ]);
 
-    // Eyes follow cursor
+    function debounce(func, delay = 350) {
+        let timer;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.style.opacity = '1';
+        } else {
+            input.type = 'password';
+            btn.style.opacity = '0.6';
+        }
+    }
+
+    // Availability Checker Function
+    function checkFieldAvailability(field, value, badgeEl, errorEl, iconEl, groupEl) {
+        if (!value) {
+            badgeEl.innerText = '';
+            badgeEl.className = 'field-badge';
+            errorEl.innerText = '';
+            iconEl.innerHTML = '';
+            groupEl.classList.remove('has-error', 'is-valid');
+            return;
+        }
+
+        iconEl.innerHTML = '<span class="status-spinner"></span>';
+
+        fetch(`/accounts/check-availability/?field=${encodeURIComponent(field)}&value=${encodeURIComponent(value)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.available) {
+                    badgeEl.innerText = 'Available';
+                    badgeEl.className = 'field-badge badge-success';
+                    errorEl.innerText = '';
+                    iconEl.innerHTML = '<span class="status-icon icon-success">✓</span>';
+                    groupEl.classList.remove('has-error');
+                    groupEl.classList.add('is-valid');
+                } else {
+                    badgeEl.innerText = data.valid_format ? 'Taken' : 'Invalid';
+                    badgeEl.className = 'field-badge badge-error';
+                    errorEl.innerText = data.message || 'Unavailable';
+                    iconEl.innerHTML = '<span class="status-icon icon-error">✕</span>';
+                    groupEl.classList.add('has-error');
+                    groupEl.classList.remove('is-valid');
+                }
+            })
+            .catch(() => {
+                iconEl.innerHTML = '';
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        const usernameInput = document.getElementById('usernameInput');
+        const usernameBadge = document.getElementById('username-badge');
+        const usernameError = document.getElementById('error-username');
+        const usernameIcon = document.getElementById('username-icon');
+        const usernameGroup = document.getElementById('field-group-username');
+
+        const emailInput = document.getElementById('emailInput');
+        const emailBadge = document.getElementById('email-badge');
+        const emailError = document.getElementById('error-email');
+        const emailIcon = document.getElementById('email-icon');
+        const emailGroup = document.getElementById('field-group-email');
+
+        const password1Input = document.getElementById('password1Input');
+        const password2Input = document.getElementById('password2Input');
+        const password1Error = document.getElementById('error-password1');
+        const password2Error = document.getElementById('error-password2');
+        const strengthContainer = document.getElementById('strengthContainer');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthText = document.getElementById('strengthText');
+        const requirementsList = document.getElementById('passwordRequirements');
+
+        // Username availability checking
+        const debouncedCheckUsername = debounce(() => {
+            checkFieldAvailability('username', usernameInput.value.trim(), usernameBadge, usernameError, usernameIcon, usernameGroup);
+        }, 350);
+
+        usernameInput.addEventListener('input', debouncedCheckUsername);
+        usernameInput.addEventListener('blur', () => {
+            checkFieldAvailability('username', usernameInput.value.trim(), usernameBadge, usernameError, usernameIcon, usernameGroup);
+        });
+
+        // Email availability checking
+        const debouncedCheckEmail = debounce(() => {
+            checkFieldAvailability('email', emailInput.value.trim(), emailBadge, emailError, emailIcon, emailGroup);
+        }, 350);
+
+        emailInput.addEventListener('input', debouncedCheckEmail);
+        emailInput.addEventListener('blur', () => {
+            checkFieldAvailability('email', emailInput.value.trim(), emailBadge, emailError, emailIcon, emailGroup);
+        });
+
+        // Password strength meter & validators
+        password1Input.addEventListener('focus', () => {
+            strengthContainer.style.display = 'block';
+            requirementsList.style.display = 'block';
+        });
+
+        password1Input.addEventListener('input', function () {
+            const pwd = this.value;
+            if (!pwd) {
+                strengthFill.style.width = '0%';
+                strengthText.innerText = '';
+                return;
+            }
+
+            let score = 0;
+
+            // Rule 1: Length >= 8
+            const hasLen = pwd.length >= 8;
+            updateReqItem('req-length', hasLen);
+            if (hasLen) score += 1;
+            if (pwd.length >= 12) score += 1;
+
+            // Rule 2: Letters and Numbers
+            const hasLetters = /[a-zA-Z]/.test(pwd);
+            const hasNumbers = /[0-9]/.test(pwd);
+            const hasLettersAndNums = hasLetters && hasNumbers;
+            updateReqItem('req-letters-numbers', hasLettersAndNums);
+            if (hasLettersAndNums) score += 1;
+
+            // Rule 3: Mixed case or symbols
+            const hasMixedCase = /[a-z]/.test(pwd) && /[A-Z]/.test(pwd);
+            const hasSymbols = /[^a-zA-Z0-9]/.test(pwd);
+            const hasSymbolsOrCase = hasMixedCase || hasSymbols;
+            updateReqItem('req-symbols-case', hasSymbolsOrCase);
+            if (hasSymbolsOrCase) score += 1;
+
+            // Rule 4: Not Common
+            const isCommon = COMMON_PASSWORDS.has(pwd.toLowerCase()) || /^[0-9]+$/.test(pwd);
+            updateReqItem('req-not-common', !isCommon);
+            if (!isCommon && hasLen) score += 1;
+
+            // Evaluate Strength
+            if (score <= 2) {
+                strengthFill.style.width = '30%';
+                strengthFill.style.backgroundColor = '#ef4444';
+                strengthText.innerText = 'Weak';
+                strengthText.style.color = '#ef4444';
+            } else if (score <= 4) {
+                strengthFill.style.width = '65%';
+                strengthFill.style.backgroundColor = '#f59e0b';
+                strengthText.innerText = 'Medium';
+                strengthText.style.color = '#f59e0b';
+            } else {
+                strengthFill.style.width = '100%';
+                strengthFill.style.backgroundColor = '#10b981';
+                strengthText.innerText = 'Strong';
+                strengthText.style.color = '#10b981';
+            }
+
+            // Check password match if password 2 is already filled
+            if (password2Input.value) {
+                validatePasswordMatch();
+            }
+        });
+
+        function updateReqItem(id, isValid) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const icon = el.querySelector('.req-icon');
+            if (isValid) {
+                el.classList.add('valid');
+                icon.innerText = '✓';
+            } else {
+                el.classList.remove('valid');
+                icon.innerText = '✕';
+            }
+        }
+
+        function validatePasswordMatch() {
+            if (password2Input.value && password1Input.value !== password2Input.value) {
+                password2Error.innerText = 'Passwords do not match.';
+                document.getElementById('field-group-password2').classList.add('has-error');
+            } else {
+                password2Error.innerText = '';
+                document.getElementById('field-group-password2').classList.remove('has-error');
+            }
+        }
+
+        password2Input.addEventListener('input', validatePasswordMatch);
+
+        // Feature slider
+        window.openFeatureSlider = function (featureId) {
+            const slider = document.getElementById('featureSlider');
+            const allDetails = document.querySelectorAll('.feature-detail');
+            const targetDetail = document.getElementById(featureId);
+            allDetails.forEach(detail => detail.classList.remove('active'));
+            if (targetDetail) targetDetail.classList.add('active');
+            slider.classList.remove('closing');
+            slider.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeFeatureSlider = function () {
+            const slider = document.getElementById('featureSlider');
+            slider.classList.add('closing');
+            setTimeout(() => {
+                slider.classList.remove('active', 'closing');
+                document.body.style.overflow = '';
+            }, 300);
+        };
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeFeatureSlider();
+        });
+
+        // Interactive Pupils follow cursor
         const pupils = document.querySelectorAll('.pupil');
-        const passwordInputs = document.querySelectorAll('input[type="password"]');
         const eyes = document.querySelectorAll('.shape-eye');
+        const passwordInputs = document.querySelectorAll('input[type="password"]');
         let isLookingAway = false;
 
         document.addEventListener('mousemove', function (e) {

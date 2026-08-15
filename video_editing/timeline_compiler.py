@@ -1,7 +1,5 @@
 import os
 import subprocess
-import json
-from django.conf import settings
 from .ffmpeg_utils import FFmpegError, get_metadata, _get_font_arg
 
 def compile_timeline_to_ffmpeg(project, timeline_json, output_path):

@@ -6,6 +6,7 @@ from accounts import admin_list_views
 urlpatterns = [
     path('admin-panel/',                    views.admin_panel,                          name='admin_panel'),
     path('user-management/',                views.user_management,                      name='user_management'),
+    path('user-management/<int:user_id>/edit/', views.admin_edit_user,                  name='admin_edit_user'),
     path('delete-user/<int:user_id>/',      views.delete_user,                          name='delete_user'),
     path('architecture/',                   views.architecture_view,                    name='architecture'),
 

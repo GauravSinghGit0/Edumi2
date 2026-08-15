@@ -1,4 +1,3 @@
-import time
 from celery import shared_task
 from django.utils import timezone
 from .models import Meeting, MeetingChat, MeetingSummary
@@ -15,9 +14,6 @@ def generate_meeting_summary(meeting_id):
         
         if not chats.exists():
             return "No chat history found for summary."
-
-        # Simulate AI processing time
-        time.sleep(5)
 
         # Build prompt from chat history
         chat_history = []

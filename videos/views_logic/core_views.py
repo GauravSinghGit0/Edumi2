@@ -32,15 +32,48 @@ def video_detail(request, video_id):
     })
 
 
+from common.validators import (
+    check_uploaded_file,
+    ALLOWED_VIDEO_EXTENSIONS,
+    ALLOWED_IMAGE_EXTENSIONS,
+    MAX_VIDEO_SIZE,
+    MAX_IMAGE_SIZE,
+)
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def upload_video(request):
     """Handle video upload and start processing."""
-    if request.method == 'POST' and request.FILES.get('video'):
+    if request.method == 'POST':
+        video_file = request.FILES.get('video')
+        if not video_file:
+            return JsonResponse({'status': 'error', 'message': 'No video file provided.'}, status=400)
+
+        # Validate video file
+        is_valid, err_msg = check_uploaded_file(
+            video_file,
+            allowed_extensions=ALLOWED_VIDEO_EXTENSIONS,
+            max_size=MAX_VIDEO_SIZE,
+            file_category="video"
+        )
+        if not is_valid:
+            return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+
+        # Validate optional thumbnail
+        thumbnail = request.FILES.get('thumbnail')
+        if thumbnail:
+            is_thumb_valid, thumb_err = check_uploaded_file(
+                thumbnail,
+                allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                max_size=MAX_IMAGE_SIZE,
+                file_category="thumbnail"
+            )
+            if not is_thumb_valid:
+                return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
+
         title = request.POST.get('title', 'Untitled Video')
         description = request.POST.get('description', '')
-        video_file = request.FILES['video']
-        thumbnail = request.FILES.get('thumbnail')
 
         # Create video object
         video = Video.objects.create(
@@ -90,8 +123,18 @@ def edit_video(request, video_id):
         video.title = request.POST.get('title', video.title)
         video.description = request.POST.get('description', video.description)
         
-        if request.FILES.get('thumbnail'):
-            video.thumbnail = request.FILES['thumbnail']
+        thumbnail = request.FILES.get('thumbnail')
+        if thumbnail:
+            is_thumb_valid, thumb_err = check_uploaded_file(
+                thumbnail,
+                allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                max_size=MAX_IMAGE_SIZE,
+                file_category="thumbnail"
+            )
+            if not is_thumb_valid:
+                messages.error(request, f"Thumbnail error: {thumb_err}")
+                return render(request, 'videos/edit_video.html', {'video': video})
+            video.thumbnail = thumbnail
             
         video.save()
         messages.success(request, "Video updated successfully!")

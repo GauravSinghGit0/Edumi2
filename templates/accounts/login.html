@@ -147,8 +147,8 @@
                 {% csrf_token %}
 
                 <div class="form-field">
-                    <label>Email</label>
-                    <input type="text" name="username" required placeholder="Enter your email" autofocus>
+                    <label>Username or Email</label>
+                    <input type="text" name="username" required placeholder="Enter your username or email" value="{{ entered_username|default:'' }}" autofocus>
                 </div>
 
                 <div class="form-field">
@@ -174,7 +174,22 @@
                     <a href="#" class="forgot-link">Forgot password?</a>
                 </div>
 
-                {% if error %}
+                {% if unverified_error %}
+                <div class="error-alert" style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
+                    <div style="font-weight: 700; margin-bottom: 4px;">Email Verification Required</div>
+                    <div>{{ error }}</div>
+                    <div style="margin-top: 10px;">
+                        <button type="button" id="loginResendBtn" onclick="resendLoginVerification('{{ unverified_email }}')"
+                                style="background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                            Resend verification email
+                        </button>
+                        <a href="{% url 'verify_email' %}" style="margin-left: 8px; font-size: 0.8rem; color: #b45309; text-decoration: underline;">
+                            Enter code
+                        </a>
+                    </div>
+                    <div id="loginResendStatus" style="font-size: 0.75rem; margin-top: 6px; display: none;"></div>
+                </div>
+                {% elif error %}
                 <div class="error-alert">{{ error }}</div>
                 {% endif %}
 
@@ -462,6 +477,66 @@
                 eyes.forEach(eye => eye.classList.add('looking-away'));
             }
         }
+    }
+
+    function resendLoginVerification(email) {
+        const btn = document.getElementById('loginResendBtn');
+        const status = document.getElementById('loginResendStatus');
+        if (!email) {
+            email = document.querySelector('input[name="username"]').value;
+        }
+        if (!email) {
+            status.style.display = 'block';
+            status.style.color = '#dc2626';
+            status.innerText = 'Please enter your username or email above first.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Sending...';
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+        fetch("{% url 'resend_verification' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({'email': email})
+        })
+        .then(r => r.json())
+        .then(d => {
+            status.style.display = 'block';
+            if (d.ok) {
+                status.style.color = '#065f46';
+                status.innerText = d.message || 'Verification link sent!';
+                let countdown = 60;
+                const timer = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        btn.innerText = `Resend in ${countdown}s`;
+                    } else {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        btn.innerText = 'Resend verification email';
+                    }
+                }, 1000);
+            } else {
+                status.style.color = '#dc2626';
+                status.innerText = d.error || 'Failed to resend.';
+                btn.disabled = false;
+                btn.innerText = 'Resend verification email';
+            }
+        })
+        .catch(e => {
+            status.style.display = 'block';
+            status.style.color = '#dc2626';
+            status.innerText = 'Network error. Please try again.';
+            btn.disabled = false;
+            btn.innerText = 'Resend verification email';
+        });
     }
 </script>
 {% endblock %}

@@ -8,13 +8,14 @@ onto the VideoProject model. Keeping this as small composable functions
 editing features later.
 """
 import json
+import logging
 import os
-import shlex
 import subprocess
-import tempfile
 import uuid
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class FFmpegError(Exception):
@@ -213,24 +214,23 @@ def add_text_overlay(input_path, text, position="bottom", font_size=80,
     start_seconds/end_seconds: optional window during which text is shown;
     if omitted, text shows for the whole video.
     """
-    import sys
-    print("DEBUG: add_text_overlay called with position:", repr(position), file=sys.stderr)
+    logger.debug("add_text_overlay called with position: %s", repr(position))
     out_path = _tmp_path()
 
     if isinstance(position, str) and position.startswith("custom:"):
-        print("DEBUG: using custom position!", file=sys.stderr)
+        logger.debug("using custom position!")
         try:
             parts = position[7:].split(",")
             x_pct = float(parts[0])
             y_pct = float(parts[1])
-            print("DEBUG: x_pct, y_pct:", x_pct, y_pct, file=sys.stderr)
+            logger.debug("x_pct: %s, y_pct: %s", x_pct, y_pct)
             pos = f"x=(w-text_w)*{x_pct/100:.3f}:y=(h-text_h)*{y_pct/100:.3f}"
-            print("DEBUG: ffmpeg pos string:", pos, file=sys.stderr)
+            logger.debug("ffmpeg pos string: %s", pos)
         except Exception as e:
-            print("DEBUG: exception parsing custom position:", e, file=sys.stderr)
+            logger.debug("exception parsing custom position: %s", e)
             pos = "x=(w-text_w)/2:y=h-th-40"
     else:
-        print("DEBUG: using predefined position:", position, file=sys.stderr)
+        logger.debug("using predefined position: %s", position)
         position_map = {
             "top": "x=(w-text_w)/2:y=40",
             "bottom": "x=(w-text_w)/2:y=h-th-40",

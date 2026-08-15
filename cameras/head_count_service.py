@@ -9,11 +9,9 @@ import threading
 import time
 import logging
 import os
-from io import BytesIO
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from django.conf import settings
-from collections import defaultdict, deque
+from collections import deque
 
 # Force OpenCV to use TCP transport for RTSP to prevent "bad cseq" and packet loss
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
@@ -269,7 +267,6 @@ class HeadCountManager:
     def stop_session(self, camera_type, camera_id):
         """Stop a head counting session"""
         from .models import HeadCountSession
-        from django.db import transaction
         
         camera_key = self.get_camera_key(camera_type, camera_id)
         

@@ -142,11 +142,11 @@
         
         <div class="video-actions">
             <div class="uploader-info">
-                <div class="uploader-avatar">
-                    {{ video.uploaded_by.username|slice:":1"|upper }}
+                <div class="uploader-avatar" style="overflow: hidden;">
+                    <img src="{% if video.uploaded_by.userprofile %}{{ video.uploaded_by.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ video.uploaded_by.get_full_name|default:video.uploaded_by.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="{{ video.uploaded_by.username }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ video.uploaded_by.get_full_name|default:video.uploaded_by.username|urlencode }}&background=6366f1&color=fff'">
                 </div>
                 <div>
-                    <div class="font-weight-bold" style="color:#1e293b;">{{ video.uploaded_by.username }}</div>
+                    <div class="font-weight-bold" style="color:#1e293b;">{% if video.uploaded_by.userprofile %}{{ video.uploaded_by.userprofile.get_display_name }}{% else %}{{ video.uploaded_by.get_full_name|default:video.uploaded_by.username }}{% endif %}</div>
                     <div class="text-muted small">Uploaded {{ video.uploaded_at|date:"M d, Y" }}</div>
                 </div>
             </div>

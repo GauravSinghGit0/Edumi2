@@ -58,6 +58,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     'type': 'user_joined',
                     'user_id': user_data['id'],
                     'username': user_data['username'],
+                    'display_name': user_data['display_name'],
+                    'pfp_url': user_data['pfp_url'],
                     'is_host': user_data['is_host'],
                     'is_admin': user_data['is_admin'],
                 }
@@ -69,6 +71,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_meta(self):
+        from common.utils import get_user_display_name, get_user_avatar_url
         try:
             meeting = Meeting.objects.get(meeting_code=self.meeting_code)
             # Record join while we are here
@@ -92,6 +95,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             return {
                 'id': self.user.id,
                 'username': self.user.username,
+                'display_name': get_user_display_name(self.user),
+                'pfp_url': get_user_avatar_url(self.user),
                 'is_host': meeting.teacher == self.user or self.user.is_superuser,
                 'is_admin': self.user.is_superuser
             }
@@ -109,6 +114,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                  return {
                      'id': self.user.id,
                      'username': self.user.username,
+                     'display_name': get_user_display_name(self.user),
+                     'pfp_url': get_user_avatar_url(self.user),
                      'is_host': is_host,
                      'is_admin': self.user.is_superuser
                  }
@@ -116,18 +123,21 @@ class MeetingConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_active_participants(self):
+        from common.utils import get_user_display_name, get_user_avatar_url
         try:
             meeting = Meeting.objects.get(meeting_code=self.meeting_code)
             # Find all users who are marked active in this meeting, excluding self
             active = MeetingParticipant.objects.filter(
                 meeting=meeting, 
                 is_active=True
-            ).exclude(user=self.user).select_related('user')
+            ).exclude(user=self.user).select_related('user', 'user__userprofile')
             
             return [
                 {
                     'user_id': p.user.id,
                     'username': p.user.username,
+                    'display_name': get_user_display_name(p.user),
+                    'pfp_url': get_user_avatar_url(p.user),
                     'is_host': meeting.teacher == p.user or p.user.is_superuser,
                     'is_admin': p.user.is_superuser
                 } for p in active
@@ -137,7 +147,14 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 # Return from in-memory tracking
                 participants = cam_room_participants.get(self.meeting_code, {})
                 return [
-                    {'user_id': uid, 'username': uname, 'is_host': False, 'is_admin': False}
+                    {
+                        'user_id': uid,
+                        'username': uname,
+                        'display_name': uname,
+                        'pfp_url': f"https://ui-avatars.com/api/?name={uname}&background=1877f2&color=fff",
+                        'is_host': False,
+                        'is_admin': False
+                    }
                     for uid, uname in participants.items()
                     if uid != self.user.id
                 ]
@@ -222,6 +239,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             
             elif message_type == 'chat':
                 if 'message' in data:
+                    from common.utils import get_user_display_name, get_user_avatar_url
                     await self.save_chat_message(data['message'])
                     await self.channel_layer.group_send(
                         self.room_group_name,
@@ -229,6 +247,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                             'type': 'chat_message',
                             'message': data['message'],
                             'username': self.user.username,
+                            'display_name': get_user_display_name(self.user),
+                            'pfp_url': get_user_avatar_url(self.user),
                             'user_id': self.user.id,
                             'timestamp': data.get('timestamp', timezone.now().isoformat())
                         }
@@ -268,6 +288,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'type': 'user_joined',
             'user_id': event['user_id'],
             'username': event['username'],
+            'display_name': event.get('display_name', event['username']),
+            'pfp_url': event.get('pfp_url', ''),
             'is_host': event.get('is_host', False),
             'is_admin': event.get('is_admin', False),
         }))
@@ -313,6 +335,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'type': 'chat',
             'message': event['message'],
             'username': event['username'],
+            'display_name': event.get('display_name', event['username']),
+            'pfp_url': event.get('pfp_url', ''),
             'user_id': event['user_id'],
             'timestamp': event.get('timestamp')
         }))

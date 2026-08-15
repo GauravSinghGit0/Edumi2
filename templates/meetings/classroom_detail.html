@@ -186,9 +186,9 @@
                 {% for membership in pending_requests %}
                 <div class="student-item" data-id="{{ membership.id }}" style="flex-direction: column; align-items: stretch; gap: 0.75rem; background: #fffbeb;">
                     <div class="student-meta">
-                        <img src="https://ui-avatars.com/api/?name={{ membership.student.username }}&background=f59e0b&color=fff" alt="">
+                        <img src="{% if membership.student.userprofile %}{{ membership.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=f59e0b&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=f59e0b&color=fff'">
                         <div>
-                            <p style="margin:0; font-size: 0.875rem; font-weight: 700;">{{ membership.student.get_full_name|default:membership.student.username }}</p>
+                            <p style="margin:0; font-size: 0.875rem; font-weight: 700;">{% if membership.student.userprofile %}{{ membership.student.userprofile.get_display_name }}{% else %}{{ membership.student.get_full_name|default:membership.student.username }}{% endif %}</p>
                             <p style="margin:0; font-size: 0.75rem; color: #92400e;">{{ membership.requested_at|timesince }} ago</p>
                         </div>
                     </div>
@@ -253,8 +253,8 @@
                 {% for membership in approved_students %}
                 <div class="student-item">
                     <div class="student-meta">
-                        <img src="https://ui-avatars.com/api/?name={{ membership.student.username }}&background=6366f1&color=fff" alt="">
-                        <span>{{ membership.student.get_full_name|default:membership.student.username }}</span>
+                        <img src="{% if membership.student.userprofile %}{{ membership.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff'">
+                        <span>{% if membership.student.userprofile %}{{ membership.student.userprofile.get_display_name }}{% else %}{{ membership.student.get_full_name|default:membership.student.username }}{% endif %}</span>
                     </div>
                     <button onclick="removeStudent({{ membership.id }})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;"><i data-lucide="user-minus" style="width: 16px; height: 16px;"></i></button>
                 </div>

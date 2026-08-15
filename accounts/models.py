@@ -48,11 +48,22 @@ class UserProfile(models.Model):
     twitter = models.URLField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
     
+    # Verification & Security
+    is_verified = models.BooleanField(default=False, db_index=True, help_text='Designates whether user has verified their email address.')
+    email_verified_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp of email verification')
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_seen = models.DateTimeField(null=True, blank=True, help_text='Timestamp of last activity')
     
+    def verify_email(self):
+        """Mark profile email as verified."""
+        from django.utils import timezone
+        self.is_verified = True
+        self.email_verified_at = timezone.now()
+        self.save(update_fields=['is_verified', 'email_verified_at'])
+
     def __str__(self):
         return f"{self.user.username} - {self.user_type}"
     
@@ -75,6 +86,79 @@ class UserProfile(models.Model):
         display_name = self.get_display_name() or self.user.username
         import urllib.parse
         return f"https://ui-avatars.com/api/?name={urllib.parse.quote(display_name)}&background=1877f2&color=fff&size=200"
+
+    @property
+    def role(self):
+        return self.user_type
+
+    @property
+    def is_student_role(self):
+        return self.user_type == 'student'
+
+    @property
+    def is_teacher_role(self):
+        return self.user_type == 'teacher'
+
+    @property
+    def is_admin_role(self):
+        return self.user_type == 'admin' or (self.user and self.user.is_superuser)
+
+    def get_identity_dict(self):
+        """Standardized serializable identity representation across LMS modules."""
+        return {
+            'user_id': self.user_id,
+            'username': self.user.username,
+            'display_name': self.get_display_name(),
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'email': self.user.email,
+            'role': self.user_type,
+            'is_verified': bool(self.is_verified),
+            'is_superuser': bool(self.user.is_superuser),
+            'pfp_url': self.get_profile_picture_url(),
+            'phone': self.phone or self.contact_number or '',
+            'bio': self.bio or '',
+            'headline': self.headline or '',
+            'student_id': self.student_id or self.roll_number or '',
+            'roll_number': self.roll_number or self.student_id or '',
+            'branch': self.branch or '',
+            'grade': self.grade or '',
+            'employee_id': self.employee_id or '',
+            'department': self.department or '',
+            'specialization': self.specialization or '',
+        }
+
+    def get_dashboard_url(self):
+        """Returns the appropriate landing dashboard URL for this user."""
+        if self.user.is_superuser or self.user_type == 'admin':
+            return '/admin/'
+        elif self.user_type == 'teacher':
+            return '/teacher-dashboard/'
+        elif self.user_type == 'student':
+            return '/student-dashboard/'
+        return '/home/'
+
+
+class EmailVerificationOTP(models.Model):
+    """
+    Enterprise-grade database-backed OTP persistence for email verification.
+    Stores SHA-256 hashed 6-digit codes with TTL, single-use status, and attempt throttling.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='verification_otps', db_index=True)
+    otp_hash = models.CharField(max_length=128, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    is_used = models.BooleanField(default=False, db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_used', 'expires_at']),
+        ]
+
+    def __str__(self):
+        return f"OTP for {self.user.username} (used={self.is_used})"
 
 
 class StudentPhoto(models.Model):
@@ -114,3 +198,12 @@ from .messaging_models import Conversation, Message
 
 # Import notification model
 from .notification_models import Notification
+
+__all__ = [
+    'UserProfile',
+    'EmailVerificationOTP',
+    'UserAchievement',
+    'Conversation',
+    'Message',
+    'Notification',
+]

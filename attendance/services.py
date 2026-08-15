@@ -2,9 +2,8 @@
 Service layer for Attendance app.
 Contains business logic for reports and face registration helpers.
 """
-from django.utils import timezone
 from django.db.models import Count, Q
-from .models import AttendanceRecord, StudentFaceProfile, AttendanceSettings, ClassSchedule
+from .models import AttendanceRecord, StudentFaceProfile
 
 def get_daily_report_context(classroom, report_date):
     """Generate data for the daily attendance report."""

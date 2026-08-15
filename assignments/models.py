@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from meetings.models import Classroom
+from common.validators import (
+    validate_assignment_file,
+    validate_assignment_submission_file,
+    validate_image_file,
+)
 
 User = get_user_model()
 
@@ -68,7 +73,7 @@ class AssignmentQuestionFile(models.Model):
     ]
     
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='question_files')
-    file = models.FileField(upload_to=assignment_question_upload_path, blank=True, null=True)
+    file = models.FileField(upload_to=assignment_question_upload_path, blank=True, null=True, validators=[validate_assignment_file])
     link_url = models.URLField(blank=True, null=True)
     filename = models.CharField(max_length=255)
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default='file')
@@ -127,7 +132,7 @@ class AssignmentSubmissionFile(models.Model):
     ]
     
     submission = models.ForeignKey(AssignmentSubmission, on_delete=models.CASCADE, related_name="files")
-    file = models.FileField(upload_to=assignment_submission_upload_path, blank=True, null=True)
+    file = models.FileField(upload_to=assignment_submission_upload_path, blank=True, null=True, validators=[validate_assignment_submission_file])
     link_url = models.URLField(blank=True, null=True)
     filename = models.CharField(max_length=255)
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default='file')
@@ -178,7 +183,7 @@ class Question(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
     question_type = models.CharField(max_length=10, choices=QUESTION_TYPE_CHOICES)
     question_text = models.TextField()
-    question_image = models.ImageField(upload_to="quizzes/questions/", blank=True, null=True)
+    question_image = models.ImageField(upload_to="quizzes/questions/", blank=True, null=True, validators=[validate_image_file])
     marks = models.IntegerField(default=1)
     order = models.IntegerField(default=0)
 

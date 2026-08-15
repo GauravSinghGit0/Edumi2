@@ -152,11 +152,11 @@
         
         <div class="video-actions">
             <div class="uploader-info">
-                <div class="uploader-avatar">
-                    {{ recording.teacher.username|slice:":1"|upper }}
+                <div class="uploader-avatar" style="overflow: hidden;">
+                    <img src="{% if recording.teacher.userprofile %}{{ recording.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ recording.teacher.get_full_name|default:recording.teacher.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="{{ recording.teacher.username }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ recording.teacher.get_full_name|default:recording.teacher.username|urlencode }}&background=6366f1&color=fff'">
                 </div>
                 <div>
-                    <div class="font-weight-bold" style="color:#1e293b;">{{ recording.teacher.username }}</div>
+                    <div class="font-weight-bold" style="color:#1e293b;">{% if recording.teacher.userprofile %}{{ recording.teacher.userprofile.get_display_name }}{% else %}{{ recording.teacher.get_full_name|default:recording.teacher.username }}{% endif %}</div>
                     <div class="text-muted small">Recorded on {{ recording.created_at|date:"M d, Y" }}</div>
                 </div>
             </div>

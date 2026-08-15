@@ -15,7 +15,6 @@ from django.core.files.base import ContentFile
 
 from attendance.models import StudentFaceProfile
 from attendance.face_service import get_face_service
-from attendance.forms import FacePhotoForm
 
 logger = logging.getLogger('attendance')
 

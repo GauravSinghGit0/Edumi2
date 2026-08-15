@@ -1,0 +1,371 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="auth-split-container">
+    <!-- Left Side - Brand & Info -->
+    <div class="auth-left-panel">
+        <div class="auth-logo">
+            <img src="{% static 'images/logo.svg' %}" alt="EduMi">
+        </div>
+        <div class="auth-info">
+            <h2>Verify Your Email</h2>
+            <p style="color: #4b5563; text-align: center; font-size: 0.95rem; margin-top: 10px;">
+                Secure authentication and single sign-on across the EduMi ecosystem.
+            </p>
+        </div>
+    </div>
+
+    <!-- Right Side - OTP & Verification Form -->
+    <div class="auth-right-panel">
+        <div class="auth-form-container">
+            <div class="auth-icon" style="background: #4f46e5;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width: 24px; height: 24px;">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+            </div>
+
+            <h1>Check your inbox</h1>
+            <p class="auth-subtitle" style="margin-bottom: 0.5rem;">
+                We've sent a 6-digit verification code to
+            </p>
+            
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <div class="email-chip" id="emailChip">
+                    <span id="displayEmailText">{{ email|default:"your email address" }}</span>
+                    <button type="button" class="change-email-btn" onclick="toggleChangeEmail()">Change</button>
+                </div>
+
+                <div id="changeEmailContainer" style="display: none; margin-top: 10px;">
+                    <input type="email" id="customEmailInput" value="{{ email }}" placeholder="Enter correct email"
+                           style="padding: 6px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.85rem; width: 240px;">
+                    <button type="button" onclick="saveChangedEmail()"
+                            style="background: #4f46e5; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-left: 4px;">
+                        Update
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Alert Box -->
+            <div id="statusAlert" class="otp-badge-alert {% if error %}error{% endif %}" style="{% if not error %}display: none;{% endif %}">
+                <span id="statusAlertIcon">
+                    {% if error %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {% endif %}
+                </span>
+                <span id="statusAlertMsg">{{ error|default:"" }}</span>
+            </div>
+
+            <!-- OTP Submission Form -->
+            <form method="post" action="{% url 'verify_email' %}" class="auth-form" id="otpForm">
+                {% csrf_token %}
+                <input type="hidden" name="email" id="emailHidden" value="{{ email }}">
+                <input type="hidden" name="otp_code" id="otpCodeHidden" value="">
+
+                <div class="otp-container">
+                    <label style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 10px;">
+                        Enter 6-digit verification code
+                    </label>
+
+                    <div class="otp-boxes-wrapper {% if error %}is-invalid{% endif %}" id="otpBoxesWrapper">
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" autofocus>
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="1">
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="2">
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="3">
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="4">
+                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="5">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="verifyBtn" style="margin-top: 1rem;">
+                    Verify & Activate Account
+                </button>
+            </form>
+
+            <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--gray-200); padding-top: 20px;">
+                <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 10px;">
+                    Didn't receive the email? Check your spam folder or
+                </p>
+                <button type="button" id="resendBtn" class="btn-secondary" onclick="resendEmail()"
+                        style="background: transparent; border: 1px solid var(--gray-300); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--gray-800); transition: all 0.2s;">
+                    Resend verification email
+                </button>
+                <div id="resendStatus" style="font-size: 0.85rem; margin-top: 10px; display: none; font-weight: 500;"></div>
+            </div>
+
+            <p class="signup-link" style="margin-top: 24px;">
+                Back to <a href="{% url 'login' %}">Log in</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const otpBoxes = Array.from(document.querySelectorAll('.otp-digit-box'));
+const otpBoxesWrapper = document.getElementById('otpBoxesWrapper');
+const otpForm = document.getElementById('otpForm');
+const verifyBtn = document.getElementById('verifyBtn');
+const statusAlert = document.getElementById('statusAlert');
+const statusAlertMsg = document.getElementById('statusAlertMsg');
+const statusAlertIcon = document.getElementById('statusAlertIcon');
+const emailHidden = document.getElementById('emailHidden');
+const otpCodeHidden = document.getElementById('otpCodeHidden');
+
+// Helper to show alert banner
+function showAlert(type, message) {
+    statusAlert.className = `otp-badge-alert ${type}`;
+    statusAlert.style.display = 'flex';
+    statusAlertMsg.innerText = message;
+    if (type === 'error') {
+        statusAlertIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>`;
+    } else if (type === 'success') {
+        statusAlertIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`;
+    } else {
+        statusAlertIcon.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>`;
+    }
+}
+
+// Focus handling & auto-advance for 6-box segmented inputs
+otpBoxes.forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val ? val[0] : '';
+
+        if (e.target.value) {
+            box.classList.add('filled');
+            otpBoxesWrapper.classList.remove('is-invalid');
+            if (idx < otpBoxes.length - 1) {
+                otpBoxes[idx + 1].focus();
+                otpBoxes[idx + 1].select();
+            }
+        } else {
+            box.classList.remove('filled');
+        }
+
+        checkAutoSubmit();
+    });
+
+    box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace') {
+            if (!box.value && idx > 0) {
+                otpBoxes[idx - 1].focus();
+                otpBoxes[idx - 1].value = '';
+                otpBoxes[idx - 1].classList.remove('filled');
+            } else {
+                box.value = '';
+                box.classList.remove('filled');
+            }
+        } else if (e.key === 'ArrowLeft' && idx > 0) {
+            otpBoxes[idx - 1].focus();
+        } else if (e.key === 'ArrowRight' && idx < otpBoxes.length - 1) {
+            otpBoxes[idx + 1].focus();
+        }
+    });
+
+    // Paste handling (e.g. user copies 6 digits from email and pastes)
+    box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
+        if (digits) {
+            digits.split('').forEach((d, i) => {
+                if (otpBoxes[i]) {
+                    otpBoxes[i].value = d;
+                    otpBoxes[i].classList.add('filled');
+                }
+            });
+            otpBoxesWrapper.classList.remove('is-invalid');
+            const nextIdx = Math.min(digits.length, 5);
+            otpBoxes[nextIdx].focus();
+            checkAutoSubmit();
+        }
+    });
+});
+
+function getCombinedOtp() {
+    return otpBoxes.map(b => b.value).join('');
+}
+
+function checkAutoSubmit() {
+    const code = getCombinedOtp();
+    if (code.length === 6) {
+        otpForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+}
+
+// Toggle Email editing
+function toggleChangeEmail() {
+    const container = document.getElementById('changeEmailContainer');
+    const isHidden = container.style.display === 'none';
+    container.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('customEmailInput').focus();
+    }
+}
+
+function saveChangedEmail() {
+    const newEmail = document.getElementById('customEmailInput').value.trim();
+    if (!newEmail || !newEmail.includes('@')) {
+        showAlert('error', 'Please enter a valid email address.');
+        return;
+    }
+    emailHidden.value = newEmail;
+    document.getElementById('displayEmailText').innerText = newEmail;
+    document.getElementById('changeEmailContainer').style.display = 'none';
+    showAlert('info', `Email updated to ${newEmail}. Click Resend to get a fresh code.`);
+}
+
+// Form Submission via AJAX with Fallback
+otpForm?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const emailVal = emailHidden.value.trim();
+    const otpVal = getCombinedOtp();
+
+    if (otpVal.length !== 6) {
+        showAlert('error', 'Please enter all 6 digits of your verification code.');
+        otpBoxesWrapper.classList.add('shake');
+        setTimeout(() => otpBoxesWrapper.classList.remove('shake'), 500);
+        return;
+    }
+
+    otpCodeHidden.value = otpVal;
+    verifyBtn.disabled = true;
+    verifyBtn.innerText = 'Verifying...';
+
+    fetch("{% url 'verify_email' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({
+            'email': emailVal,
+            'otp_code': otpVal
+        })
+    })
+    .then(r => r.json().then(data => ({ status: r.status, ok: r.ok, data })))
+    .then(({ ok, data }) => {
+        if (ok && data.status === 'success') {
+            otpBoxesWrapper.classList.remove('is-invalid');
+            otpBoxesWrapper.classList.add('is-success');
+            showAlert('success', data.message || 'Email verified! Entering your workspace...');
+            verifyBtn.innerText = 'Redirecting...';
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/student-dashboard/';
+            }, 600);
+        } else {
+            otpBoxesWrapper.classList.remove('is-success');
+            otpBoxesWrapper.classList.add('is-invalid', 'shake');
+            setTimeout(() => otpBoxesWrapper.classList.remove('shake'), 500);
+            showAlert('error', data.error || 'Verification failed. Please try again.');
+            verifyBtn.disabled = false;
+            verifyBtn.innerText = 'Verify & Activate Account';
+            
+            // Clear boxes and focus first box for instant retry
+            otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+            otpBoxes[0].focus();
+        }
+    })
+    .catch(err => {
+        showAlert('error', 'Network error. Please check your connection and try again.');
+        verifyBtn.disabled = false;
+        verifyBtn.innerText = 'Verify & Activate Account';
+    });
+});
+
+// Resend Email with Countdown
+function resendEmail() {
+    const btn = document.getElementById('resendBtn');
+    const status = document.getElementById('resendStatus');
+    const emailVal = emailHidden.value.trim();
+
+    btn.disabled = true;
+    btn.innerText = 'Sending...';
+
+    fetch("{% url 'resend_verification' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({
+            'email': emailVal
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.already_verified) {
+            showAlert('success', data.message || 'Account already verified! Entering dashboard...');
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/student-dashboard/';
+            }, 800);
+            return;
+        }
+
+        if (data.ok) {
+            showAlert('success', '✓ A fresh 6-digit code has been sent to your email.');
+            // Clear boxes and focus first
+            otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+            otpBoxesWrapper.classList.remove('is-invalid', 'is-success');
+            otpBoxes[0].focus();
+
+            let countdown = 60;
+            const timer = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    btn.innerText = `Resend in ${countdown}s`;
+                } else {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.innerText = 'Resend verification email';
+                }
+            }, 1000);
+        } else {
+            showAlert('error', data.error || 'Failed to resend. Please try again later.');
+            btn.disabled = false;
+            btn.innerText = 'Resend verification email';
+        }
+    })
+    .catch(err => {
+        showAlert('error', 'Network error. Please try again.');
+        btn.disabled = false;
+        btn.innerText = 'Resend verification email';
+    });
+}
+</script>
+{% endblock %}

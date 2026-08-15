@@ -1,5 +1,4 @@
 import os
-import shutil
 import uuid
 import json
 import re
@@ -20,6 +19,17 @@ from .forms import (
     BackgroundAudioForm,
 )
 from .models import VideoProject, EditOperation, ProjectAsset
+from common.validators import (
+    check_uploaded_file,
+    sanitize_filename,
+    get_file_extension,
+    ALLOWED_VIDEO_EXTENSIONS,
+    ALLOWED_IMAGE_EXTENSIONS,
+    ALLOWED_AUDIO_EXTENSIONS,
+    MAX_VIDEO_SIZE,
+    MAX_AUDIO_SIZE,
+    MAX_IMAGE_SIZE,
+)
 
 
 import mimetypes
@@ -807,11 +817,21 @@ def upload_audio_temp(request, pk):
         
     audio_file = request.FILES.get("audio_file")
     if not audio_file:
-        return JsonResponse({"error": "no_file"}, status=400)
+        return JsonResponse({"error": "no_file", "message": "No audio file provided."}, status=400)
+
+    is_valid, err_msg = check_uploaded_file(
+        audio_file,
+        allowed_extensions=ALLOWED_AUDIO_EXTENSIONS,
+        max_size=MAX_AUDIO_SIZE,
+        file_category="audio"
+    )
+    if not is_valid:
+        return JsonResponse({"error": "invalid_file", "message": err_msg}, status=400)
         
     tmp_dir = os.path.join(settings.MEDIA_ROOT, "tmp")
     os.makedirs(tmp_dir, exist_ok=True)
-    audio_tmp_path = os.path.join(tmp_dir, f"audio_{uuid.uuid4().hex}_{audio_file.name}")
+    clean_name = sanitize_filename(audio_file.name)
+    audio_tmp_path = os.path.join(tmp_dir, f"audio_{uuid.uuid4().hex}_{clean_name}")
     
     with open(audio_tmp_path, "wb") as dest:
         for chunk in audio_file.chunks():
@@ -820,7 +840,7 @@ def upload_audio_temp(request, pk):
     return JsonResponse({
         "status": "success",
         "temp_path": audio_tmp_path,
-        "filename": audio_file.name
+        "filename": clean_name
     })
 
 
@@ -835,11 +855,44 @@ def upload_asset(request, pk):
     if not video_file:
         return JsonResponse({"error": "No file uploaded"}, status=400)
 
+    ext = get_file_extension(video_file.name)
+    asset_type = "video"
+    allowed_exts = ALLOWED_VIDEO_EXTENSIONS
+    max_size = MAX_VIDEO_SIZE
+
+    if ext in ALLOWED_AUDIO_EXTENSIONS:
+        asset_type = "audio"
+        allowed_exts = ALLOWED_AUDIO_EXTENSIONS
+        max_size = MAX_AUDIO_SIZE
+    elif ext in ALLOWED_IMAGE_EXTENSIONS:
+        asset_type = "image"
+        allowed_exts = ALLOWED_IMAGE_EXTENSIONS
+        max_size = MAX_IMAGE_SIZE
+    elif ext in ALLOWED_VIDEO_EXTENSIONS:
+        asset_type = "video"
+        allowed_exts = ALLOWED_VIDEO_EXTENSIONS
+        max_size = MAX_VIDEO_SIZE
+    else:
+        return JsonResponse({
+            "error": f"Unsupported media type '.{ext}'. Supported types: video, audio, and images."
+        }, status=400)
+
+    is_valid, err_msg = check_uploaded_file(
+        video_file,
+        allowed_extensions=allowed_exts,
+        max_size=max_size,
+        file_category=asset_type
+    )
+    if not is_valid:
+        return JsonResponse({"error": err_msg}, status=400)
+
+    clean_name = sanitize_filename(video_file.name)
     asset = ProjectAsset.objects.create(
         project=project,
         file=video_file,
-        title=video_file.name,
-        filename=video_file.name
+        title=clean_name,
+        filename=clean_name,
+        asset_type=asset_type
     )
 
     try:

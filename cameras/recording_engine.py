@@ -5,8 +5,7 @@ import logging
 import time
 import signal
 from django.conf import settings
-from django.utils import timezone
-from .models import Camera, CameraRecording
+from .models import CameraRecording
 from .ffmpeg_helpers import get_ffmpeg_binary
 
 logger = logging.getLogger('cameras')

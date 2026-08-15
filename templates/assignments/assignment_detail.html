@@ -207,9 +207,9 @@
                 <div class="submission-item {% if sub.status == 'late' %}late{% elif sub.status == 'submitted' %}submitted{% endif %}">
                     <div class="submission-header">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <img src="https://ui-avatars.com/api/?name={{ sub.student.username }}&background=4f46e5&color=fff" style="width: 40px; height: 40px; border-radius: 50%;" alt="">
+                            <img src="{% if sub.student.userprofile %}{{ sub.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ sub.student.get_full_name|default:sub.student.username|urlencode }}&background=4f46e5&color=fff{% endif %}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ sub.student.get_full_name|default:sub.student.username|urlencode }}&background=4f46e5&color=fff'">
                             <div>
-                                <p style="margin: 0; font-weight: 700; color: #0f172a;">{{ sub.student.get_full_name|default:sub.student.username }}</p>
+                                <p style="margin: 0; font-weight: 700; color: #0f172a;">{% if sub.student.userprofile %}{{ sub.student.userprofile.get_display_name }}{% else %}{{ sub.student.get_full_name|default:sub.student.username }}{% endif %}</p>
                                 <p style="margin: 0; font-size: 0.8125rem; color: #64748b;">
                                     {% if sub.student.userprofile.roll_number %}{{ sub.student.userprofile.roll_number }}{% else %}Roll # not set{% endif %}
                                 </p>

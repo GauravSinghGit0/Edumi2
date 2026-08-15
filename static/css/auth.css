@@ -866,3 +866,327 @@ body:has(.auth-split-container) {
         padding: 2rem 1rem 3rem;
     }
 }
+
+/* ==============================================================================
+   INDUSTRIAL AUTH & VALIDATION ENHANCEMENTS
+   ============================================================================== */
+
+.field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(0.3rem, 1vh, 0.4rem);
+}
+
+.field-header label {
+    margin-bottom: 0 !important;
+}
+
+.field-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    display: none;
+    transition: all 0.2s ease;
+}
+
+.field-badge.badge-success {
+    display: inline-block;
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.field-badge.badge-error {
+    display: inline-block;
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.input-with-icon {
+    position: relative;
+    width: 100%;
+}
+
+.input-status-icon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.status-icon {
+    font-size: 0.9rem;
+    font-weight: 800;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-icon.icon-success {
+    color: #10b981;
+}
+
+.status-icon.icon-error {
+    color: #ef4444;
+}
+
+.status-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(79, 70, 229, 0.2);
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.form-field.has-error input,
+.form-field.has-error select {
+    border-bottom-color: #ef4444 !important;
+}
+
+.form-field.is-valid input {
+    border-bottom-color: #10b981 !important;
+}
+
+.field-error {
+    color: #dc2626;
+    font-size: 0.775rem;
+    font-weight: 600;
+    margin-top: 4px;
+    line-height: 1.4;
+    min-height: 1.1rem;
+    transition: opacity 0.2s ease;
+}
+
+.field-hint {
+    color: var(--gray-500);
+    font-size: 0.725rem;
+    margin-top: 2px;
+}
+
+/* Password Strength Meter */
+.password-strength-container {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.strength-meter-bar {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.strength-meter-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+    border-radius: 9999px;
+}
+
+.strength-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 0.75rem;
+}
+
+.strength-label-text {
+    color: var(--gray-600);
+}
+
+.strength-text {
+    font-weight: 700;
+}
+
+/* Password Requirements Checklist */
+.password-requirements {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #f3f4f6;
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.req-item {
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s ease;
+}
+
+.req-item .req-icon {
+    font-weight: 800;
+    font-size: 0.75rem;
+    color: #ef4444;
+}
+
+.req-item.valid {
+    color: #065f46;
+    font-weight: 500;
+}
+
+.req-item.valid .req-icon {
+    color: #10b981;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Segmented 6-Digit OTP Styles & Animations (Google/Zoom Style)
+   ───────────────────────────────────────────────────────────── */
+.otp-container {
+    margin: 1.25rem 0 1rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.otp-boxes-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+}
+
+.otp-digit-box {
+    width: 48px;
+    height: 58px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    color: #111827;
+    background: #ffffff;
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 480px) {
+    .otp-boxes-wrapper {
+        gap: 6px;
+    }
+    .otp-digit-box {
+        width: 40px;
+        height: 50px;
+        font-size: 1.35rem;
+        border-radius: 8px;
+    }
+}
+
+.otp-digit-box:focus {
+    border-color: #4f46e5;
+    background: #fdfdfd;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    transform: translateY(-2px);
+}
+
+.otp-digit-box.filled {
+    border-color: #6366f1;
+    background: #f5f3ff;
+    color: #4338ca;
+}
+
+.otp-boxes-wrapper.shake {
+    animation: otp-shake 0.45s ease-in-out;
+}
+
+.otp-boxes-wrapper.is-invalid .otp-digit-box {
+    border-color: #ef4444 !important;
+    background: #fef2f2 !important;
+    color: #991b1b !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.otp-boxes-wrapper.is-success .otp-digit-box {
+    border-color: #10b981 !important;
+    background: #ecfdf5 !important;
+    color: #065f46 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+@keyframes otp-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+}
+
+.otp-badge-alert {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+    transition: all 0.3s ease;
+}
+
+.otp-badge-alert.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.otp-badge-alert.success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.otp-badge-alert.info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+}
+
+.email-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f3f4f6;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    color: #374151;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.email-chip .change-email-btn {
+    color: #4f46e5;
+    font-size: 0.775rem;
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 4px;
+}

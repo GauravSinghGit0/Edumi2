@@ -484,6 +484,8 @@
     data-meeting-code="{{ meeting.meeting_code }}"
     data-user-id="{{ user.id }}"
     data-username="{{ user.username }}"
+    data-display-name="{{ display_name }}"
+    data-pfp-url="{{ pfp_url }}"
     data-is-host="{% if is_host %}true{% else %}false{% endif %}"
     data-user-type="{{ user_type }}"
     data-host-id="{{ host_id }}"
@@ -562,6 +564,8 @@ window.meetingConfig = {
     meetingCode: _d.meetingCode,
     currentUserId: _d.userId,
     currentUsername: _d.username,
+    currentDisplayName: _d.displayName || _d.username,
+    currentPfpUrl: _d.pfpUrl || '',
     isHost: _d.isHost === 'true',
     userType: _d.userType,
     hostId: _d.hostId,
@@ -581,18 +585,20 @@ window.meetingConfig = {
 };
 
 // Global shortcuts using window properties to prevent Turbo redeclaration errors
-window.meetingCode     = window.meetingConfig.meetingCode;
-window.currentUserId   = window.meetingConfig.currentUserId;
-window.currentUsername = window.meetingConfig.currentUsername;
-window.isHost          = window.meetingConfig.isHost;
-window.userType        = window.meetingConfig.userType;
-window.hostId          = window.meetingConfig.hostId;
-window.TOKEN_URL       = window.meetingConfig.TOKEN_URL;
-window.LEAVE_URL       = window.meetingConfig.LEAVE_URL;
-window.SLEEP_URL       = window.meetingConfig.SLEEP_URL;
-window.UNFREEZE_URL    = window.meetingConfig.UNFREEZE_URL;
-window.AFTER_LEAVE     = window.meetingConfig.AFTER_LEAVE;
-window.CSRF            = window.meetingConfig.CSRF;
+window.meetingCode        = window.meetingConfig.meetingCode;
+window.currentUserId      = window.meetingConfig.currentUserId;
+window.currentUsername    = window.meetingConfig.currentUsername;
+window.currentDisplayName = window.meetingConfig.currentDisplayName;
+window.currentPfpUrl      = window.meetingConfig.currentPfpUrl;
+window.isHost             = window.meetingConfig.isHost;
+window.userType           = window.meetingConfig.userType;
+window.hostId             = window.meetingConfig.hostId;
+window.TOKEN_URL          = window.meetingConfig.TOKEN_URL;
+window.LEAVE_URL          = window.meetingConfig.LEAVE_URL;
+window.SLEEP_URL          = window.meetingConfig.SLEEP_URL;
+window.UNFREEZE_URL       = window.meetingConfig.UNFREEZE_URL;
+window.AFTER_LEAVE        = window.meetingConfig.AFTER_LEAVE;
+window.CSRF               = window.meetingConfig.CSRF;
 window.studentCanViewCamera = window.meetingConfig.studentCanViewCamera;
 window.studentCanViewScreenshare = window.meetingConfig.studentCanViewScreenshare;
 
@@ -1081,8 +1087,8 @@ function getOrCreateBox(identity, displayName, isLocal) {
     overlay.className = 'video-avatar-overlay';
     overlay.id = `avatar-overlay-${identity}`;
 
-    let pfpUrl = null;
-    let name = displayName;
+    let pfpUrl = isLocal ? (window.meetingConfig?.currentPfpUrl || null) : null;
+    let name = isLocal ? (window.meetingConfig?.currentDisplayName || displayName) : displayName;
     let participantObj = null;
     if (isLocal) {
         participantObj = (window.room) ? window.room.localParticipant : null;
@@ -1119,7 +1125,7 @@ function renderLocalParticipant() {
     const identity = lp ? String(lp.identity) : String(currentUserId);
     if (!identity || identity === 'undefined') return;
 
-    const box = getOrCreateBox(identity, currentUsername, true);
+    const box = getOrCreateBox(identity, window.meetingConfig?.currentDisplayName || currentUsername, true);
 
     if (box) {
         box.classList.toggle('cam-off', !window.isCameraOn);
@@ -1436,7 +1442,7 @@ function onConnectionStateChanged(state) {
 function handleSignalingMessage(data) {
     switch(data.type) {
         case 'chat':
-            appendChatMessage(data.username, data.message, data.user_id == currentUserId);
+            appendChatMessage(data.username, data.message, data.user_id == currentUserId, data.display_name, data.pfp_url);
             break;
         case 'kick_user':
             if (data.user_id == currentUserId) {
@@ -1970,12 +1976,13 @@ async function sendChatMessage() {
     signalingWs.send(payload);
 }
 
-function appendChatMessage(username, text, isOwn) {
+function appendChatMessage(username, text, isOwn, displayName, pfpUrl) {
     const panel = document.getElementById('chatMessages');
     const div   = document.createElement('div');
     div.className = 'chat-msg' + (isOwn ? ' own' : '');
+    const senderName = isOwn ? 'You' : (displayName || username);
     div.innerHTML = `
-        <div class="chat-msg-header"><strong style="color: #cbd5e1;">${username}</strong><span class="chat-msg-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div>
+        <div class="chat-msg-header"><strong style="color: #cbd5e1;">${senderName}</strong><span class="chat-msg-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div>
         <div class="chat-msg-text">${text}</div>`;
     panel.appendChild(div);
     panel.scrollTop = panel.scrollHeight;
@@ -2175,11 +2182,15 @@ function updateParticipantsList() {
     const list = document.getElementById('participantsList');
     if (!list) return;
 
+    const myName = window.meetingConfig?.currentDisplayName || currentUsername;
+    const myFallback = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(myName) + '&background=1877f2&color=fff&size=128';
+    const myPfp = window.meetingConfig?.currentPfpUrl || myFallback;
+
     list.innerHTML = `
         <div class="participant-item">
-            <div class="participant-avatar"><img src="https://ui-avatars.com/api/?name=${currentUsername}&background=1877f2&color=fff" alt="${currentUsername}"></div>
+            <div class="participant-avatar"><img src="${myPfp}" alt="${myName}" onerror="this.src='${myFallback}'"></div>
             <div class="participant-info">
-                <div class="participant-name">${currentUsername} (You)</div>
+                <div class="participant-name">${myName} (You)</div>
                 ${isHost ? '<span class="host-label">Host</span>' : ''}
             </div>
         </div>`;
@@ -2204,7 +2215,7 @@ function updateParticipantsList() {
         const item = document.createElement('div');
         item.className = 'participant-item';
         item.innerHTML = `
-            <div class="participant-avatar"><img src="${finalPfp}" alt="${name}"></div>
+            <div class="participant-avatar"><img src="${finalPfp}" alt="${name}" onerror="this.src='${fallbackPfp}'"></div>
             <div class="participant-info">
                 <div class="participant-name">${name}</div>
                 ${isParticipantHost ? '<span class="host-label">Host</span>' : ''}

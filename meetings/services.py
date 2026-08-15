@@ -2,9 +2,7 @@
 Service layer for Meetings app.
 Contains business logic for classroom and meeting management.
 """
-from django.utils import timezone
-from .models import Meeting, MeetingParticipant, Classroom, ClassroomMembership, MeetingSummary
-from attendance.models import AttendanceRecord
+from .models import ClassroomMembership
 from django.db.models import Count, Q
 
 def get_classroom_detail_context(classroom, user):

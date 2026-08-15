@@ -150,9 +150,11 @@
         <div class="video-info">
             <h1 class="video-title">Live Lecture: {{ camera.name }}</h1>
             <div class="teacher-strip">
-                <div class="teacher-avatar">{{ teacher.username|slice:":1"|upper|default:"A" }}</div>
+                <div class="teacher-avatar" style="overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                    <img src="{% if teacher.userprofile %}{{ teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ teacher.get_full_name|default:teacher.username|default:'Administrator'|urlencode }}&background=6366f1&color=fff{% endif %}" alt="{{ teacher.username|default:'Teacher' }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ teacher.get_full_name|default:teacher.username|default:'Teacher'|urlencode }}&background=6366f1&color=fff'">
+                </div>
                 <div>
-                    <div style="font-weight:700; color:#1e293b;">{{ teacher.username|default:"Administrator" }}</div>
+                    <div style="font-weight:700; color:#1e293b;">{% if teacher.userprofile %}{{ teacher.userprofile.get_display_name }}{% else %}{{ teacher.get_full_name|default:teacher.username|default:"Administrator" }}{% endif %}</div>
                     <div style="font-size:0.875rem; color:#64748b;">Classroom Instructor</div>
                 </div>
                 <div style="margin-left:auto;">

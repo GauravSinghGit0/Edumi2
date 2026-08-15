@@ -4,7 +4,6 @@ after a meeting ends.
 """
 import logging
 from collections import Counter
-from django.utils import timezone
 
 logger = logging.getLogger('attendance.engagement')
 

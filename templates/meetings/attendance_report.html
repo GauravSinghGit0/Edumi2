@@ -163,10 +163,10 @@
         <div class="participant-row">
             <!-- Student Info -->
             <div class="user-info">
-                <img src="https://ui-avatars.com/api/?name={{ p.user.username }}&background=6366f1&color=fff&size=36"
-                     class="user-avatar" alt="{{ p.user.username }}">
+                <img src="{% if p.user.userprofile %}{{ p.user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ p.user.get_full_name|default:p.user.username|urlencode }}&background=6366f1&color=fff&size=36{% endif %}"
+                     class="user-avatar" alt="{{ p.user.username }}" onerror="this.src='https://ui-avatars.com/api/?name={{ p.user.get_full_name|default:p.user.username|urlencode }}&background=6366f1&color=fff&size=36'">
                 <div>
-                    <div class="user-name">{{ p.user.get_full_name|default:p.user.username }}</div>
+                    <div class="user-name">{% if p.user.userprofile %}{{ p.user.userprofile.get_display_name }}{% else %}{{ p.user.get_full_name|default:p.user.username }}{% endif %}</div>
                     <div class="user-meta">@{{ p.user.username }}</div>
                 </div>
             </div>

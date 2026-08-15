@@ -1,5 +1,6 @@
 """
 User profile views: view, edit, directory, search.
+Fully integrated with the Centralized Identity System for Admin, Teacher, and Student roles.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -16,77 +17,34 @@ User = get_user_model()
 
 @login_required
 def profile_view(request, username=None):
-    """View any user's profile; handles own-profile POST updates."""
+    """
+    Unified Centralized Profile view for Admin, Teacher, and Student.
+    Handles viewing and editing own profile or admin editing any profile.
+    """
     if username:
         profile_user = get_object_or_404(User, username=username)
     else:
         profile_user = request.user
 
+    is_own_profile = bool(profile_user.id == request.user.id)
+    can_edit = bool(is_own_profile or request.user.is_superuser)
+
+    # Ensure profile exists (Centralized Identity Single Source of Truth)
     try:
         profile = profile_user.userprofile
     except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=profile_user, user_type='admin') if profile_user.is_superuser else None
+        user_type = 'admin' if profile_user.is_superuser else 'student'
+        profile = UserProfile.objects.create(
+            user=profile_user,
+            user_type=user_type,
+            is_verified=bool(profile_user.is_superuser)
+        )
 
-    is_own_profile = request.user == profile_user
-
-    if is_own_profile and request.method == 'POST':
+    if can_edit and request.method == 'POST':
         try:
-            if not profile:
-                profile = UserProfile.objects.create(user=request.user, user_type='admin' if request.user.is_superuser else 'teacher')
-
-            request.user.first_name = request.POST.get('first_name', '').strip()
-            request.user.last_name = request.POST.get('last_name', '').strip()
-            request.user.email = request.POST.get('email', '').strip()
-            request.user.save()
-
-            profile.display_name = request.POST.get('display_name', '').strip()
-            profile.bio = request.POST.get('bio', '').strip()
-            phone_val = (request.POST.get('phone') or request.POST.get('contact_number') or '').strip()
-            profile.phone = phone_val
-            profile.contact_number = phone_val
-            profile.address = request.POST.get('address', '').strip()
-            profile.headline = request.POST.get('headline', '').strip()
-            profile.subjects = request.POST.get('subjects', '').strip()
-            profile.github = request.POST.get('github', '').strip()
-
-            avatar_choice = request.POST.get('avatar_choice', '').strip()
-            if request.FILES.get('avatar'):
-                profile.profile_picture = request.FILES['avatar']
-                profile.avatar_url = None
-            elif request.FILES.get('profile_picture'):
-                profile.profile_picture = request.FILES['profile_picture']
-                profile.avatar_url = None
-            elif avatar_choice:
-                profile.avatar_url = avatar_choice
-                profile.profile_picture = None
-
-            if request.FILES.get('cover_photo'):
-                profile.cover_photo = request.FILES['cover_photo']
-
-            dob = request.POST.get('date_of_birth', '').strip()
-            profile.date_of_birth = dob if dob else None
-            profile.linkedin = request.POST.get('linkedin', '').strip()
-            profile.twitter = request.POST.get('twitter', '').strip()
-            profile.website = request.POST.get('website', '').strip()
-
-            if profile.user_type == 'student':
-                profile.student_id = request.POST.get('student_id', '').strip()
-                profile.roll_number = request.POST.get('roll_number', '').strip()
-                profile.branch = request.POST.get('branch', '').strip()
-                profile.cgpa = request.POST.get('cgpa', '').strip()
-                profile.grade = request.POST.get('grade', '').strip()
-                enrollment = request.POST.get('enrollment_date', '').strip()
-                profile.enrollment_date = enrollment if enrollment else None
-            elif profile.user_type == 'teacher':
-                profile.employee_id = request.POST.get('employee_id', '').strip()
-                profile.department = request.POST.get('department', '').strip()
-                profile.specialization = request.POST.get('specialization', '').strip()
-                profile.availability_weekday = request.POST.get('availability_weekday', '').strip()
-                profile.availability_friday = request.POST.get('availability_friday', '').strip()
-                join = request.POST.get('join_date', '').strip()
-                profile.join_date = join if join else None
-
-            profile.save()
+            from accounts.services import update_user_identity
+            update_user_identity(profile_user, request.user, request.POST, request.FILES)
+            profile.refresh_from_db()
 
             # Save achievements if submitted
             achievement_ids = request.POST.getlist('achievement_id[]')
@@ -107,9 +65,9 @@ def profile_view(request, username=None):
                 description = achievement_descriptions[i].strip() if i < len(achievement_descriptions) else ""
                 icon_type = achievement_icons[i].strip() if i < len(achievement_icons) else "award"
 
-                if ach_id:
+                if ach_id and ach_id.isdigit():
                     try:
-                        ach = UserAchievement.objects.get(id=ach_id, profile=profile)
+                        ach = UserAchievement.objects.get(id=int(ach_id), profile=profile)
                         ach.title = title
                         ach.date_str = date_str
                         ach.description = description
@@ -128,16 +86,17 @@ def profile_view(request, username=None):
                     )
                     submitted_ids.append(ach.id)
 
-            profile.achievements.exclude(id__in=submitted_ids).delete()
+            if 'achievement_title[]' in request.POST:
+                profile.achievements.exclude(id__in=submitted_ids).delete()
 
             messages.success(request, 'Profile updated successfully!')
-            return redirect('profile_view', username=request.user.username)
+            return redirect('profile_view', username=profile_user.username)
         except Exception as e:
             messages.error(request, f'Error updating profile: {str(e)}')
 
     # Profile completion score
     completion = 0
-    if is_own_profile and profile:
+    if profile:
         if profile.display_name: completion += 10
         if profile_user.first_name: completion += 10
         if profile_user.last_name: completion += 10
@@ -150,7 +109,7 @@ def profile_view(request, username=None):
 
     completion_dash = int(completion * 2.89)
 
-    # Correct target user's face registered status
+    # Face verification status for students
     face_registered = False
     try:
         from attendance.models import StudentFaceProfile
@@ -161,9 +120,14 @@ def profile_view(request, username=None):
     except Exception:
         pass
 
+    # Role-specific stats calculation
     stats = {}
-    if profile_user.is_superuser:
+    is_admin_role = bool(profile_user.is_superuser or (profile and profile.user_type == 'admin'))
+
+    if is_admin_role:
         stats['total_users'] = User.objects.count()
+        stats['total_students'] = User.objects.filter(userprofile__user_type='student').count()
+        stats['total_teachers'] = User.objects.filter(userprofile__user_type='teacher').count()
         stats['total_meetings'] = Meeting.objects.count()
         stats['live_meetings'] = Meeting.objects.filter(status='live').count()
         stats['total_cameras'] = Camera.objects.count()
@@ -171,6 +135,12 @@ def profile_view(request, username=None):
         stats['total_meetings'] = Meeting.objects.filter(teacher=profile_user, classroom__isnull=True).count()
         stats['live_meetings'] = Meeting.objects.filter(teacher=profile_user, status='live', classroom__isnull=True).count()
         stats['completed_meetings'] = Meeting.objects.filter(teacher=profile_user, status='ended', classroom__isnull=True).count()
+        from meetings.models import Classroom, ClassroomMembership
+        teacher_classrooms = Classroom.objects.filter(teacher=profile_user)
+        stats['total_students'] = ClassroomMembership.objects.filter(
+            classroom__in=teacher_classrooms,
+            status='approved'
+        ).values_list('student', flat=True).distinct().count()
     elif profile and profile.user_type == 'student':
         from meetings.models import ClassroomMembership
         stats['enrolled_courses'] = ClassroomMembership.objects.filter(
@@ -179,7 +149,7 @@ def profile_view(request, username=None):
         ).count()
         stats['meetings_attended'] = profile_user.meetingparticipant_set.count()
 
-    # Calculate dynamic EduKarma score for students
+    # Dynamic EduKarma score for students
     edukarma_score = 0
     if profile and profile.user_type == 'student':
         meetings_count = stats.get('meetings_attended', 0)
@@ -195,11 +165,15 @@ def profile_view(request, username=None):
             subjects_list = [s.strip() for s in profile.subjects.split() if s.strip()]
 
     achievements = profile.achievements.all() if profile else []
+    identity = profile.get_identity_dict() if profile else {}
 
     return render(request, 'accounts/profile.html', {
         'profile_user': profile_user,
         'profile': profile,
+        'identity': identity,
         'is_own_profile': is_own_profile,
+        'can_edit': can_edit,
+        'is_admin_role': is_admin_role,
         'stats': stats,
         'completion': completion,
         'completion_dash': completion_dash,
@@ -216,51 +190,19 @@ def edit_profile(request):
     try:
         profile = request.user.userprofile
     except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=request.user, user_type='student')
+        user_type = 'admin' if request.user.is_superuser else 'student'
+        profile = UserProfile.objects.create(user=request.user, user_type=user_type)
 
     if request.method == 'POST':
-        request.user.first_name = request.POST.get('first_name', '')
-        request.user.last_name = request.POST.get('last_name', '')
-        request.user.email = request.POST.get('email', '')
-        request.user.save()
-
-        profile.display_name = request.POST.get('display_name', '').strip()
-        profile.bio = request.POST.get('bio', '').strip()
-        profile.phone = request.POST.get('phone', '').strip()
-        profile.contact_number = request.POST.get('phone', '').strip()  # Sync contact_number with phone
-        profile.address = request.POST.get('address', '').strip()
-
-        if request.FILES.get('profile_picture'):
-            profile.profile_picture = request.FILES['profile_picture']
-
-        dob = request.POST.get('date_of_birth')
-        if dob:
-            profile.date_of_birth = dob
-
-        profile.linkedin = request.POST.get('linkedin', '').strip()
-        profile.twitter = request.POST.get('twitter', '').strip()
-        profile.website = request.POST.get('website', '').strip()
-
-        if profile.user_type == 'student':
-            profile.student_id = request.POST.get('student_id', '').strip()
-            profile.roll_number = request.POST.get('student_id', '').strip()  # Sync roll_number with student_id
-            profile.branch = request.POST.get('branch', '').strip()  # Save branch
-            profile.grade = request.POST.get('grade', '').strip()
-            enrollment = request.POST.get('enrollment_date', '').strip()
-            if enrollment:
-                profile.enrollment_date = enrollment
-        elif profile.user_type == 'teacher':
-            profile.employee_id = request.POST.get('employee_id', '')
-            profile.department = request.POST.get('department', '')
-            profile.specialization = request.POST.get('specialization', '')
-            join = request.POST.get('join_date')
-            if join:
-                profile.join_date = join
-
-        profile.save()
+        from accounts.services import update_user_identity
+        update_user_identity(request.user, request.user, request.POST, request.FILES)
+        messages.success(request, 'Profile updated successfully!')
         return redirect('profile_view', username=request.user.username)
 
-    return render(request, 'accounts/edit_profile.html', {'profile': profile})
+    return render(request, 'accounts/edit_profile.html', {
+        'profile': profile,
+        'identity': profile.get_identity_dict()
+    })
 
 
 @login_required

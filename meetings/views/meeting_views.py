@@ -21,7 +21,7 @@ User = get_user_model()
 
 from livekit.api import AccessToken, VideoGrants
 from meetings.models import (
-    Meeting, MeetingParticipant, Classroom, ClassroomMembership,
+    Meeting, MeetingParticipant, ClassroomMembership,
     MeetingAttendanceLog, MeetingSummary, KickedParticipant,
 )
 from meetings.tasks import generate_meeting_summary
@@ -208,13 +208,16 @@ def join_meeting(request, meeting_code):
         epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
         host_joined_at_ms = int((host_participant.joined_at - epoch).total_seconds() * 1000)
 
-    # Pass visibility flags to template
+    # Pass visibility flags and user identity to template
+    from common.utils import get_user_display_name, get_user_avatar_url
     context = {
         'meeting': meeting,
         'participant': participant,
         'is_host': is_host,
         'host_id': str(meeting.teacher.id),
         'user_type': request.user.userprofile.user_type if hasattr(request.user, 'userprofile') else 'student',
+        'display_name': get_user_display_name(request.user),
+        'pfp_url': get_user_avatar_url(request.user),
         'livekit_url': settings.LIVEKIT_URL,
         'face_not_registered': face_not_registered,
         'teacher_cameras': teacher_cameras,
@@ -241,15 +244,19 @@ def pre_join(request, meeting_code):
 @login_required
 def verify_face_prejoin(request):
     """AJAX: compare captured frame to stored face embedding."""
-    data = json.loads(request.body)
-    image_data = data.get('image')
-    meeting_code = data.get('meeting_code')
+    try:
+        data = json.loads(request.body)
+        image_data = data.get('image')
+        meeting_code = data.get('meeting_code')
 
-    if not image_data:
-        return JsonResponse({'success': False, 'message': 'No image provided'})
+        if not image_data or ';base64,' not in image_data:
+            return JsonResponse({'success': False, 'message': 'No valid image provided'})
 
-    format, imgstr = image_data.split(';base64,')
-    image_bytes = base64.b64decode(imgstr)
+        format, imgstr = image_data.split(';base64,')
+        image_bytes = base64.b64decode(imgstr)
+    except Exception as e:
+        logger.error(f"Invalid payload for verify_face_prejoin: {e}")
+        return JsonResponse({'success': False, 'message': 'Invalid image data'})
 
     try:
         profile = StudentFaceProfile.objects.get(student=request.user)
@@ -292,7 +299,7 @@ def verify_face_prejoin(request):
                         attendance_record.face_match_confidence = max(attendance_record.face_match_confidence, result.get('confidence', 0.0))
                         attendance_record.save()
             except Exception as e:
-                print(f"Error creating attendance record: {e}")
+                logger.error(f"Error creating attendance record: {e}")
         
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'message': result['message']})
@@ -311,22 +318,22 @@ def livekit_token(request, meeting_code):
             return JsonResponse({'error': 'Access denied'}, status=403)
 
     import json
-    pfp_url = None
-    display_name = request.user.username
-    if hasattr(request.user, 'userprofile'):
-        pfp_url = request.user.userprofile.get_profile_picture_url()
-        display_name = getattr(request.user.userprofile, 'display_name', '') or request.user.get_full_name() or request.user.username
+    from common.utils import get_user_display_name, get_user_avatar_url
+
+    display_name = get_user_display_name(request.user)
+    pfp_url = get_user_avatar_url(request.user)
 
     metadata_str = json.dumps({
         'pfp': pfp_url,
-        'display_name': display_name
+        'display_name': display_name,
+        'username': request.user.username
     })
 
     is_host = meeting.teacher == request.user or request.user.is_superuser
     token = (
         AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
         .with_identity(str(request.user.id))
-        .with_name(request.user.username)
+        .with_name(display_name)
         .with_metadata(metadata_str)
         .with_grants(VideoGrants(
             room_join=True, room=meeting_code,
@@ -412,7 +419,7 @@ def meeting_summary(request, meeting_code):
 def end_meeting(request, meeting_id):
     """Teacher/admin ends a meeting, logs leaves, triggers summary generation."""
     meeting = get_object_or_404(Meeting, id=meeting_id)
-    if meeting.teacher != request.user and request.user.username != 'Admin' and not request.user.is_superuser:
+    if meeting.teacher != request.user and not request.user.is_superuser:
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
 
     end_time = timezone.now()
@@ -465,7 +472,7 @@ def leave_meeting(request, meeting_id):
             if not MeetingParticipant.objects.filter(meeting=meeting, is_active=True).exists():
                 code = meeting.meeting_code
                 meeting.delete()
-                print(f"Temporary meeting {code} deleted (last participant left).")
+                logger.info(f"Temporary meeting {code} deleted (last participant left).")
 
         return JsonResponse({'status': 'success'})
     except MeetingParticipant.DoesNotExist:
@@ -486,7 +493,7 @@ def get_participants(request, meeting_id):
 def delete_meeting(request, meeting_id):
     """Teacher/admin permanently deletes a meeting."""
     meeting = get_object_or_404(Meeting, id=meeting_id)
-    if meeting.teacher != request.user and request.user.username != 'Admin' and not request.user.is_superuser:
+    if meeting.teacher != request.user and not request.user.is_superuser:
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
     meeting.delete()
     return JsonResponse({'status': 'success'})
@@ -497,7 +504,7 @@ def delete_meeting(request, meeting_id):
 def cancel_meeting(request, meeting_id):
     """Teacher/admin cancels a scheduled meeting and notifies participants."""
     meeting = get_object_or_404(Meeting, id=meeting_id)
-    if meeting.teacher != request.user and request.user.username != 'Admin' and not request.user.is_superuser:
+    if meeting.teacher != request.user and not request.user.is_superuser:
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
     meeting.status = 'cancelled'
     meeting.save()

@@ -2,8 +2,6 @@
 Custom template tags and filters for common use
 """
 from django import template
-from django.utils import timezone
-from datetime import timedelta
 from common.utils import format_duration, time_since, is_teacher, is_student, get_user_type
 
 register = template.Library()
@@ -115,3 +113,22 @@ def get_item(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key)
     return None
+
+
+@register.filter(name='user_display_name')
+def user_display_name_filter(user):
+    """
+    Get user display name: {{ user|user_display_name }}
+    """
+    from common.utils import get_user_display_name
+    return get_user_display_name(user)
+
+
+@register.filter(name='user_avatar_url')
+def user_avatar_url_filter(user):
+    """
+    Get user profile picture / avatar URL: {{ user|user_avatar_url }}
+    """
+    from common.utils import get_user_avatar_url
+    return get_user_avatar_url(user)
+

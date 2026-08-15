@@ -3,7 +3,6 @@ import os
 import sys
 import subprocess
 import asyncio
-import threading
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings

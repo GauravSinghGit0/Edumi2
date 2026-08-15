@@ -1,9 +1,9 @@
 from django import forms
-
 from .models import VideoProject
-
-
-ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
+from common.validators import (
+    validate_video_file,
+    validate_audio_file,
+)
 
 
 class VideoUploadForm(forms.ModelForm):
@@ -19,14 +19,7 @@ class VideoUploadForm(forms.ModelForm):
 
     def clean_original_file(self):
         f = self.cleaned_data["original_file"]
-        ext = ("." + f.name.rsplit(".", 1)[-1]).lower() if "." in f.name else ""
-        if ext not in ALLOWED_VIDEO_EXTENSIONS:
-            raise forms.ValidationError(
-                f"Unsupported file type '{ext}'. Allowed types: {', '.join(ALLOWED_VIDEO_EXTENSIONS)}"
-            )
-        max_size = 500 * 1024 * 1024
-        if f.size > max_size:
-            raise forms.ValidationError("File too large. Maximum upload size is 500MB.")
+        validate_video_file(f)
         return f
 
 
@@ -62,6 +55,11 @@ class MergeForm(forms.Form):
         choices=[("end", "Add to end"), ("start", "Add to start")],
         initial="end",
     )
+
+    def clean_clip_file(self):
+        f = self.cleaned_data["clip_file"]
+        validate_video_file(f)
+        return f
 
 
 class TextOverlayForm(forms.Form):
@@ -131,8 +129,5 @@ class BackgroundAudioForm(forms.Form):
 
     def clean_audio_file(self):
         f = self.cleaned_data["audio_file"]
-        ext = ("." + f.name.rsplit(".", 1)[-1]).lower() if "." in f.name else ""
-        allowed = [".mp3", ".wav", ".m4a", ".ogg", ".aac"]
-        if ext not in allowed:
-            raise forms.ValidationError(f"Unsupported audio type '{ext}'. Allowed types: {', '.join(allowed)}")
+        validate_audio_file(f)
         return f

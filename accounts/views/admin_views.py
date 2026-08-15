@@ -10,7 +10,7 @@ from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 
 from meetings.models import Meeting, Classroom, ClassroomMembership
-from cameras.models import Camera, CameraPermission, CameraRecording, HeadCountSession
+from cameras.models import Camera, CameraPermission, CameraRecording
 
 User = get_user_model()
 
@@ -49,8 +49,38 @@ def user_management(request):
     """List all users for admin management."""
     if not request.user.is_superuser:
         return redirect('login')
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.all().select_related('userprofile').order_by('-date_joined')
     return render(request, 'accounts/user_management.html', {'users': users})
+
+
+@login_required
+def admin_edit_user(request, user_id):
+    """Admin view to inspect and edit any participant's profile and assign roles."""
+    if not request.user.is_superuser:
+        return redirect('login')
+
+    target_user = get_object_or_404(User, id=user_id)
+    from accounts.models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(
+        user=target_user,
+        defaults={'user_type': 'admin' if target_user.is_superuser else 'student'}
+    )
+
+    if request.method == 'POST':
+        from accounts.services import update_user_identity
+        from django.contrib import messages
+        try:
+            update_user_identity(target_user, request.user, request.POST, request.FILES)
+            messages.success(request, f"User {target_user.username}'s identity and profile updated successfully.")
+            return redirect('user_management')
+        except Exception as e:
+            messages.error(request, f"Error updating user: {e}")
+
+    return render(request, 'accounts/admin_edit_user.html', {
+        'target_user': target_user,
+        'profile': profile,
+    })
+
 
 
 @login_required

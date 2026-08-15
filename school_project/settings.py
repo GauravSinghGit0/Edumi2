@@ -352,10 +352,9 @@ else:
 
 
 # ==============================================================================
-# CACHING
-# ==============================================================================
+IS_TESTING = 'test' in sys.argv or 'pytest' in sys.modules
 
-if REDIS_URL and not DEBUG:
+if REDIS_URL and not DEBUG and not IS_TESTING:
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -395,6 +394,33 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+
+# ==============================================================================
+# EMAIL & SMTP CONFIGURATION (Email Verification & OTP Delivery)
+# ==============================================================================
+
+EMAIL_HOST          = env('EMAIL_HOST', '')
+EMAIL_PORT          = int(env('EMAIL_PORT', '587'))
+EMAIL_USE_TLS       = env_bool('EMAIL_USE_TLS', 'True')
+EMAIL_USE_SSL       = env_bool('EMAIL_USE_SSL', 'False')
+EMAIL_HOST_USER     = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL  = env('DEFAULT_FROM_EMAIL', 'EduMi Support <noreply@edumi.com>')
+SERVER_EMAIL        = DEFAULT_FROM_EMAIL
+EMAIL_TIMEOUT       = int(env('EMAIL_TIMEOUT', '10'))
+
+# If EMAIL_HOST is provided, use SMTP; otherwise in DEBUG fall back gracefully to console
+_default_email_backend = 'django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST else (
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+)
+EMAIL_BACKEND = env('EMAIL_BACKEND', _default_email_backend)
+
+# Token & OTP Lifespans
+EMAIL_VERIFICATION_TOKEN_LIFETIME = int(env('EMAIL_VERIFICATION_TOKEN_LIFETIME', '86400'))  # 24 hours
+EMAIL_OTP_LIFETIME = int(env('EMAIL_OTP_LIFETIME', '900'))  # 15 minutes (in seconds)
+REGISTRATION_RATE_LIMIT = int(env('REGISTRATION_RATE_LIMIT', '10'))  # 10 attempts per hour
+REGISTRATION_RATE_PERIOD = int(env('REGISTRATION_RATE_PERIOD', '3600'))
 
 
 # ==============================================================================

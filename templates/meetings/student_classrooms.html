@@ -119,8 +119,8 @@
                 <p class="course-desc">{{ classroom.description|default:"No description provided for this course."|truncatewords:20 }}</p>
                 
                 <div class="teacher-info">
-                    <img src="https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username }}&background=6366f1&color=fff" class="teacher-avatar" alt="">
-                    <span class="teacher-name">{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}</span>
+                    <img src="{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=6366f1&color=fff{% endif %}" class="teacher-avatar" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=6366f1&color=fff'">
+                    <span class="teacher-name">{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}</span>
                 </div>
 
                 <div class="card-actions">

@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, StreamingHttpResponse
 
-from mobile_cameras.models import MobileCamera, MobileCameraPermission
+from mobile_cameras.models import MobileCamera
 from .utils import is_admin, can_view_mobile_camera, test_mobile_camera_paths, parse_camera_url
 
 logger = logging.getLogger('mobile_cameras')

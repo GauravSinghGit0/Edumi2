@@ -1,6 +1,4 @@
-"""
-Video processing utilities (FFmpeg, etc.)
-"""
+import logging
 import os
 import subprocess
 from django.conf import settings
@@ -8,6 +6,8 @@ from django.core.files.base import ContentFile
 from django.core.files.temp import NamedTemporaryFile
 
 from videos.models import Video, VideoQuality, VideoChunk
+
+logger = logging.getLogger(__name__)
 
 
 def process_video_sync(video_id):
@@ -35,7 +35,7 @@ def process_video_sync(video_id):
         video.save()
 
     except Exception as e:
-        print(f"Error processing video {video_id}: {e}")
+        logger.error(f"Error processing video {video_id}: {e}")
 
 
 def extract_thumbnail(video):
@@ -69,7 +69,7 @@ def extract_thumbnail(video):
             os.remove(temp_thumb_path)
             
     except Exception as e:
-        print(f"Error extracting thumbnail for video {video.id}: {e}")
+        logger.error(f"Error extracting thumbnail for video {video.id}: {e}")
 
 
 def get_video_duration(file_path):
@@ -140,7 +140,7 @@ def create_quality_version(video, quality):
             os.remove(output_path)
 
     except Exception as e:
-        print(f"Error creating {quality} version: {e}")
+        logger.error(f"Error creating {quality} version: {e}")
 
 
 def create_video_chunks(video_quality):
@@ -195,4 +195,5 @@ def create_video_chunks(video_quality):
                 os.remove(os.path.join(output_dir, file))
 
     except Exception as e:
-        print(f"Error creating chunks: {e}")
+        logger.error(f"Error creating chunks: {e}")
+

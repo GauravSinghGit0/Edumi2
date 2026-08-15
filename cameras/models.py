@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 import logging
+from common.validators import validate_video_file, validate_image_file
 from .ffmpeg_helpers import get_ffmpeg_binary
 
 logger = logging.getLogger(__name__)
@@ -94,8 +95,8 @@ class CameraRecording(models.Model):
     teacher = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    video_file = models.FileField(upload_to=get_recording_upload_path)
-    thumbnail = models.ImageField(upload_to=get_thumbnail_upload_path, blank=True)
+    video_file = models.FileField(upload_to=get_recording_upload_path, validators=[validate_video_file])
+    thumbnail = models.ImageField(upload_to=get_thumbnail_upload_path, blank=True, validators=[validate_image_file])
     duration = models.DurationField(null=True, blank=True)
     file_size = models.BigIntegerField(null=True, blank=True) # In bytes
     is_published = models.BooleanField(default=False)

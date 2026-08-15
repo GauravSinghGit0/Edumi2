@@ -6,14 +6,19 @@ Student: list, view detail, submit, view feedback
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
 from django.contrib import messages
-from django.conf import settings
 
 from meetings.models import Classroom
 from assignments.models import Assignment, AssignmentQuestionFile, AssignmentSubmission, AssignmentSubmissionFile
+from common.validators import (
+    check_uploaded_file,
+    sanitize_filename,
+    ALLOWED_ASSIGNMENT_EXTENSIONS,
+    MAX_ASSIGNMENT_SIZE,
+    MAX_SUBMISSION_SIZE,
+)
 
 
 def get_default_due_date():
@@ -84,6 +89,27 @@ def create_assignment(request, classroom_id):
         else:
             due_date = get_default_due_date()
         
+        # Validate file uploads for question files before proceeding
+        files = request.FILES.getlist('question_files')
+        for file in files:
+            is_valid, err_msg = check_uploaded_file(
+                file,
+                allowed_extensions=ALLOWED_ASSIGNMENT_EXTENSIONS,
+                max_size=MAX_ASSIGNMENT_SIZE,
+                file_category="question file"
+            )
+            if not is_valid:
+                messages.error(request, f"File error ({file.name}): {err_msg}")
+                return render(request, 'assignments/create_assignment.html', {
+                    'classroom': classroom,
+                    'default_due_date': due_date_str or get_default_due_date().strftime("%Y-%m-%d"),
+                    'default_due_time': due_time_str or "23:59",
+                    'title': title,
+                    'description': description,
+                    'instructions': instructions,
+                    'total_marks': total_marks,
+                })
+
         assignment = Assignment.objects.create(
             classroom=classroom,
             title=title,
@@ -94,14 +120,13 @@ def create_assignment(request, classroom_id):
             created_by=request.user
         )
         
-        # Handle file uploads for question files
-        files = request.FILES.getlist('question_files')
+        # Save question files
         for file in files:
-            filename = file.name
+            clean_name = sanitize_filename(file.name)
             AssignmentQuestionFile.objects.create(
                 assignment=assignment,
                 file=file,
-                filename=filename,
+                filename=clean_name,
                 file_type='file'
             )
         
@@ -157,6 +182,21 @@ def edit_assignment(request, assignment_id):
             due_datetime = datetime.strptime(f"{due_date_str} {due_time_str}", "%Y-%m-%d %H:%M")
             assignment.due_date = timezone.make_aware(due_datetime)
         
+        # Handle new file uploads with validation
+        files = request.FILES.getlist('question_files')
+        for file in files:
+            is_valid, err_msg = check_uploaded_file(
+                file,
+                allowed_extensions=ALLOWED_ASSIGNMENT_EXTENSIONS,
+                max_size=MAX_ASSIGNMENT_SIZE,
+                file_category="question file"
+            )
+            if not is_valid:
+                messages.error(request, f"File error ({file.name}): {err_msg}")
+                return render(request, 'assignments/edit_assignment.html', {
+                    'assignment': assignment
+                })
+
         # Handle status change
         action = request.POST.get('action')
         if action == 'publish':
@@ -166,14 +206,13 @@ def edit_assignment(request, assignment_id):
         
         assignment.save()
         
-        # Handle new file uploads
-        files = request.FILES.getlist('question_files')
+        # Save valid new files
         for file in files:
-            filename = file.name
+            clean_name = sanitize_filename(file.name)
             AssignmentQuestionFile.objects.create(
                 assignment=assignment,
                 file=file,
-                filename=filename,
+                filename=clean_name,
                 file_type='file'
             )
         
@@ -279,6 +318,33 @@ def submit_assignment(request, assignment_id):
     ).first()
     
     if request.method == 'POST':
+        files = request.FILES.getlist('submission_files')
+        link_texts = request.POST.getlist('submission_link_text[]')
+        link_urls = request.POST.getlist('submission_link_url[]')
+        
+        has_valid_links = any(t.strip() and u.strip() for t, u in zip(link_texts, link_urls))
+        if not files and not has_valid_links and not existing_submission:
+            messages.error(request, 'Please select at least one file or add a link to submit.')
+            return render(request, 'assignments/submit_assignment.html', {
+                'assignment': assignment,
+                'existing_submission': existing_submission
+            })
+
+        # Validate all submission files before creating/updating record
+        for file in files:
+            is_valid, err_msg = check_uploaded_file(
+                file,
+                allowed_extensions=ALLOWED_ASSIGNMENT_EXTENSIONS,
+                max_size=MAX_SUBMISSION_SIZE,
+                file_category="submission file"
+            )
+            if not is_valid:
+                messages.error(request, f"File error ({file.name}): {err_msg}")
+                return render(request, 'assignments/submit_assignment.html', {
+                    'assignment': assignment,
+                    'existing_submission': existing_submission
+                })
+
         # Create or update submission
         submission, created = AssignmentSubmission.objects.get_or_create(
             assignment=assignment,
@@ -286,19 +352,16 @@ def submit_assignment(request, assignment_id):
         )
         
         # Handle file uploads
-        files = request.FILES.getlist('submission_files')
         for file in files:
-            filename = file.name
+            clean_name = sanitize_filename(file.name)
             AssignmentSubmissionFile.objects.create(
                 submission=submission,
                 file=file,
-                filename=filename,
+                filename=clean_name,
                 file_type='file'
             )
         
         # Handle links
-        link_texts = request.POST.getlist('submission_link_text[]')
-        link_urls = request.POST.getlist('submission_link_url[]')
         for text, url in zip(link_texts, link_urls):
             if text.strip() and url.strip():
                 AssignmentSubmissionFile.objects.create(

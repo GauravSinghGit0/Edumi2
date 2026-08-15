@@ -1,20 +1,8 @@
 
-import os
-import re
 import logging
-import threading
-import time
-from typing import Optional
-from urllib.parse import urlparse, quote
-from django.utils import timezone
-from datetime import datetime, timedelta
-from django.contrib.auth import get_user_model
-from django.db.models import Avg, Max, Min, Count, Q
+from urllib.parse import quote
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from ..models import Camera, CameraPermission, HeadCountLog, HeadCountSession, CameraRecording
-
-User = get_user_model()
 
 logger = logging.getLogger('cameras')
 

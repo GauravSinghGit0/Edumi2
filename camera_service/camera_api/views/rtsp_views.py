@@ -3,7 +3,6 @@ camera_service/camera_api/views/rtsp_views.py
 Django views for RTSP camera streaming, zoom control, and diagnostics.
 """
 import os
-import time
 import logging
 
 import cv2
@@ -61,7 +60,6 @@ def update_camera_zoom(request, camera_id):
 
 def test_camera(request, camera_id):
     """Test camera connection with OpenCV and optional FFprobe diagnostics."""
-    import subprocess
     try:
         from cameras.models import Camera
         camera = Camera.objects.get(id=camera_id)

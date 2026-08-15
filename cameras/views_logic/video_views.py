@@ -12,7 +12,19 @@ from django.db.models import Q
 from django.core.files import File
 from django.conf import settings
 from ..models import Camera, CameraRecording, RecordingChunk
-from .utils import get_video_stream, is_admin
+from .utils import get_video_stream
+
+from common.validators import (
+    check_uploaded_file,
+    sanitize_filename,
+    get_file_extension,
+    validate_file_signature,
+    ALLOWED_VIDEO_EXTENSIONS,
+    ALLOWED_IMAGE_EXTENSIONS,
+    DANGEROUS_EXTENSIONS,
+    MAX_VIDEO_SIZE,
+    MAX_IMAGE_SIZE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +111,27 @@ def upload_video(request):
             if not video_file:
                 return JsonResponse({'status': 'error', 'message': 'Please select a video file.'})
 
+            # Validate video file
+            is_valid, err_msg = check_uploaded_file(
+                video_file,
+                allowed_extensions=ALLOWED_VIDEO_EXTENSIONS,
+                max_size=MAX_VIDEO_SIZE,
+                file_category="video"
+            )
+            if not is_valid:
+                return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+
+            # Validate thumbnail if provided
+            if thumbnail_file:
+                is_thumb_valid, thumb_err = check_uploaded_file(
+                    thumbnail_file,
+                    allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                    max_size=MAX_IMAGE_SIZE,
+                    file_category="thumbnail"
+                )
+                if not is_thumb_valid:
+                    return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
+
             camera = None
             if camera_id:
                 camera = Camera.objects.filter(id=camera_id).first()
@@ -166,6 +199,26 @@ def camera_chunked_upload(request):
         if not all([chunk, filename, upload_id]):
             return JsonResponse({'status': 'error', 'message': 'Missing chunk data'}, status=400)
 
+        clean_filename = sanitize_filename(filename)
+        ext = get_file_extension(clean_filename)
+
+        if ext in DANGEROUS_EXTENSIONS:
+            return JsonResponse({'status': 'error', 'message': f"Files with extension '.{ext}' are not allowed."}, status=400)
+
+        if ext not in ALLOWED_VIDEO_EXTENSIONS:
+            allowed_str = ', '.join([f'.{e}' for e in sorted(ALLOWED_VIDEO_EXTENSIONS)])
+            return JsonResponse({'status': 'error', 'message': f"Unsupported video type '.{ext}'. Allowed types: {allowed_str}"}, status=400)
+
+        if thumbnail_file:
+            is_thumb_valid, thumb_err = check_uploaded_file(
+                thumbnail_file,
+                allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                max_size=MAX_IMAGE_SIZE,
+                file_category="thumbnail"
+            )
+            if not is_thumb_valid:
+                return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
+
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -176,7 +229,7 @@ def camera_chunked_upload(request):
 
         if chunk_index == total_chunks - 1:
             # Final chunk received, assemble video file
-            final_file_path = os.path.join(temp_dir, filename)
+            final_file_path = os.path.join(temp_dir, clean_filename)
             with open(final_file_path, 'wb+') as final_file:
                 for i in range(total_chunks):
                     part_path = os.path.join(temp_dir, f'chunk_{i}')
@@ -184,6 +237,19 @@ def camera_chunked_upload(request):
                         with open(part_path, 'rb') as part:
                             final_file.write(part.read())
                         os.remove(part_path)
+
+            # Check assembled file size and signature
+            total_size = os.path.getsize(final_file_path)
+            if total_size > MAX_VIDEO_SIZE:
+                os.remove(final_file_path)
+                return JsonResponse({'status': 'error', 'message': f"Total file size exceeds limit of {MAX_VIDEO_SIZE // (1024*1024)} MB."}, status=400)
+
+            with open(final_file_path, 'rb') as f:
+                header = f.read(512)
+            is_sig_valid, sig_err = validate_file_signature(header, ext)
+            if not is_sig_valid:
+                os.remove(final_file_path)
+                return JsonResponse({'status': 'error', 'message': f"Invalid video file content: {sig_err}"}, status=400)
 
             camera = None
             if camera_id:
@@ -198,7 +264,7 @@ def camera_chunked_upload(request):
                 is_published=False
             )
             with open(final_file_path, 'rb') as final_file:
-                recording.video_file.save(filename, File(final_file))
+                recording.video_file.save(clean_filename, File(final_file))
 
             if thumbnail_file:
                 recording.thumbnail = thumbnail_file
@@ -307,7 +373,6 @@ def edit_recording(request, recording_id):
     from video_editing import ffmpeg_utils
     from django.core.files import File
     from django.contrib import messages
-    import shutil
     import tempfile
     import uuid
     import subprocess

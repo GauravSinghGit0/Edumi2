@@ -71,7 +71,6 @@ def get_ffprobe_binary():
 def get_video_duration(file_path):
     """Get the duration of a video file in seconds using ffprobe."""
     import subprocess
-    import json
     if not file_path or not os.path.exists(file_path):
         return None
     ffprobe_bin = get_ffprobe_binary()

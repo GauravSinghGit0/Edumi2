@@ -141,7 +141,8 @@
                         <td>
                             <div style="display: flex; gap: 0.5rem;">
                                 <a href="{% url 'profile_view' user.username %}" class="btn-small">View</a>
-                                {% if user.username != 'Admin' %}
+                                <a href="{% url 'admin_edit_user' user.id %}" class="btn-small" style="background: #4f46e5;">Edit</a>
+                                {% if user != request.user %}
                                 <form method="POST" action="{% url 'delete_user' user.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-small" style="background: #e4294b;">Delete</button>

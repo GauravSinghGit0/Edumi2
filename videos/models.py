@@ -1,11 +1,10 @@
 """
 Video models for handling video storage, multiple qualities, and chunked streaming.
 """
-import os
 from uuid import uuid4
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
+from common.validators import validate_video_file, validate_image_file
 
 
 def video_upload_path(instance, filename):
@@ -32,8 +31,8 @@ class Video(models.Model):
     
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    original_file = models.FileField(upload_to=video_upload_path)
-    thumbnail = models.ImageField(upload_to='videos/thumbnails/', blank=True, null=True)
+    original_file = models.FileField(upload_to=video_upload_path, validators=[validate_video_file])
+    thumbnail = models.ImageField(upload_to='videos/thumbnails/', blank=True, null=True, validators=[validate_image_file])
     file_size = models.PositiveBigIntegerField(blank=True, null=True)
     duration_seconds = models.PositiveIntegerField(blank=True, null=True)
     mime_type = models.CharField(max_length=100, blank=True, null=True)

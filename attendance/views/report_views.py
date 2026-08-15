@@ -11,7 +11,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
-from django.views.decorators.http import require_GET
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.conf import settings

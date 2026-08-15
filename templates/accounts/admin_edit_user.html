@@ -1,0 +1,310 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Edit User — {{ target_user.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-user-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: clamp(1rem, 2vw, 2rem);
+}
+
+.edit-user-card {
+    background: #ffffff;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.edit-user-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    color: white;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.edit-user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.edit-user-header-info h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.edit-user-header-info p {
+    margin: 0;
+    opacity: 0.85;
+    font-size: 0.875rem;
+}
+
+.edit-user-body {
+    padding: 2rem;
+}
+
+.form-section-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.65rem 0.875rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    background: #f8fafc;
+}
+
+.form-control:focus {
+    background: #ffffff;
+    border-color: #4f46e5;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+    padding: 0.75rem 1.75rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-user-container">
+    <div class="edit-user-card">
+        <div class="edit-user-header">
+            <img src="{{ profile.get_profile_picture_url }}" 
+                 alt="{{ target_user.username }}" 
+                 class="edit-user-avatar"
+                 onerror="this.src='https://ui-avatars.com/api/?name={{ target_user.username }}&background=1877f2&color=fff&size=200'">
+            <div class="edit-user-header-info">
+                <h2>{{ profile.get_display_name }} (@{{ target_user.username }})</h2>
+                <p>Joined {{ target_user.date_joined|date:"M d, Y" }} • Last login: {{ target_user.last_login|date:"M d, Y H:i"|default:"Never" }}</p>
+            </div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="edit-user-body">
+            {% csrf_token %}
+
+            <!-- System Role & Status -->
+            <div class="form-section-title">
+                <i data-lucide="shield-check" style="width: 20px;"></i>
+                Account Role & Permissions
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="role">Primary LMS Role *</label>
+                    <select name="role" id="role" class="form-control" onchange="toggleRoleSections(this.value)">
+                        <option value="student" {% if profile.user_type == 'student' %}selected{% endif %}>Student</option>
+                        <option value="teacher" {% if profile.user_type == 'teacher' %}selected{% endif %}>Teacher</option>
+                        <option value="admin" {% if profile.user_type == 'admin' or target_user.is_superuser %}selected{% endif %}>Administrator</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="is_active">Account Status</label>
+                    <select name="is_active" id="is_active" class="form-control">
+                        <option value="true" {% if target_user.is_active %}selected{% endif %}>Active (Can Login)</option>
+                        <option value="false" {% if not target_user.is_active %}selected{% endif %}>Suspended / Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Identity & Personal Information -->
+            <div class="form-section-title">
+                <i data-lucide="user" style="width: 20px;"></i>
+                Personal Information
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="first_name">First Name</label>
+                    <input type="text" name="first_name" id="first_name" class="form-control" value="{{ target_user.first_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" name="last_name" id="last_name" class="form-control" value="{{ target_user.last_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="display_name">Display Name</label>
+                    <input type="text" name="display_name" id="display_name" class="form-control" value="{{ profile.display_name }}" placeholder="e.g. Dr. Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" name="email" id="email" class="form-control" value="{{ target_user.email }}">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone / Contact Number</label>
+                    <input type="text" name="phone" id="phone" class="form-control" value="{{ profile.phone|default:profile.contact_number }}">
+                </div>
+                <div class="form-group">
+                    <label for="date_of_birth">Date of Birth</label>
+                    <input type="date" name="date_of_birth" id="date_of_birth" class="form-control" value="{{ profile.date_of_birth|date:'Y-m-d' }}">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="bio">Biography / About</label>
+                <textarea name="bio" id="bio" rows="3" class="form-control">{{ profile.bio }}</textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="profile_picture">Update Profile Picture (Image)</label>
+                <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="form-control">
+            </div>
+
+            <!-- Student Academic Details -->
+            <div id="student-section" {% if profile.user_type != 'student' %}style="display:none;"{% endif %}>
+                <div class="form-section-title">
+                    <i data-lucide="graduation-cap" style="width: 20px;"></i>
+                    Student Academic Information
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="roll_number">Roll Number / Student ID</label>
+                        <input type="text" name="roll_number" id="roll_number" class="form-control" value="{{ profile.roll_number|default:profile.student_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="branch">Branch / Major</label>
+                        <input type="text" name="branch" id="branch" class="form-control" value="{{ profile.branch }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="grade">Grade / Class</label>
+                        <input type="text" name="grade" id="grade" class="form-control" value="{{ profile.grade }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="cgpa">CGPA / Academic Score</label>
+                        <input type="text" name="cgpa" id="cgpa" class="form-control" value="{{ profile.cgpa }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teacher Faculty Details -->
+            <div id="teacher-section" {% if profile.user_type != 'teacher' %}style="display:none;"{% endif %}>
+                <div class="form-section-title">
+                    <i data-lucide="briefcase" style="width: 20px;"></i>
+                    Faculty & Department Information
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="employee_id">Employee / Faculty ID</label>
+                        <input type="text" name="employee_id" id="employee_id" class="form-control" value="{{ profile.employee_id }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <input type="text" name="department" id="department" class="form-control" value="{{ profile.department }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="specialization">Specialization / Subject</label>
+                        <input type="text" name="specialization" id="specialization" class="form-control" value="{{ profile.specialization }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'user_management' %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">
+                    <i data-lucide="check" style="width: 18px;"></i>
+                    Save Identity Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleRoleSections(role) {
+    const studentSec = document.getElementById('student-section');
+    const teacherSec = document.getElementById('teacher-section');
+    if (role === 'student') {
+        studentSec.style.display = 'block';
+        teacherSec.style.display = 'none';
+    } else if (role === 'teacher') {
+        studentSec.style.display = 'none';
+        teacherSec.style.display = 'block';
+    } else {
+        studentSec.style.display = 'block';
+        teacherSec.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}
