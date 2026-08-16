@@ -208,8 +208,47 @@ def join_meeting(request, meeting_code):
         epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
         host_joined_at_ms = int((host_participant.joined_at - epoch).total_seconds() * 1000)
 
-    # Pass visibility flags and user identity to template
+    # Preload full user directory (Teacher + Classroom Members + Meeting Participants)
+    # This provides a zero-latency, 100% resilient source of truth for avatars and user identification.
     from common.utils import get_user_display_name, get_user_avatar_url
+    user_directory = {}
+
+    def _add_user_to_dir(user_obj, role='student'):
+        if not user_obj:
+            return
+        uid = str(user_obj.id)
+        if uid in user_directory:
+            return
+        avatar = get_user_avatar_url(user_obj)
+        if avatar and avatar.startswith('/'):
+            avatar = request.build_absolute_uri(avatar)
+        user_directory[uid] = {
+            'id': uid,
+            'username': user_obj.username,
+            'display_name': get_user_display_name(user_obj),
+            'pfp': avatar,
+            'role': role,
+        }
+
+    # 1. Add Meeting Host
+    _add_user_to_dir(meeting.teacher, role='host')
+
+    # 2. Add Current User
+    _add_user_to_dir(request.user, role='host' if is_host else 'student')
+
+    # 3. Add Classroom Members
+    if meeting.classroom:
+        memberships = ClassroomMembership.objects.filter(
+            classroom=meeting.classroom, status='approved'
+        ).select_related('student', 'student__userprofile')
+        for m in memberships:
+            _add_user_to_dir(m.student, role='student')
+
+    # 4. Add Active/Past Meeting Participants
+    meeting_participants = MeetingParticipant.objects.filter(meeting=meeting).select_related('user', 'user__userprofile')
+    for mp in meeting_participants:
+        _add_user_to_dir(mp.user, role='host' if (mp.user == meeting.teacher or mp.user.is_superuser) else 'student')
+
     context = {
         'meeting': meeting,
         'participant': participant,
@@ -223,7 +262,9 @@ def join_meeting(request, meeting_code):
         'teacher_cameras': teacher_cameras,
         'student_can_view_camera': meeting.student_can_view_camera,
         'student_can_view_screenshare': meeting.student_can_view_screenshare,
+        'allow_chat': meeting.allow_chat,
         'host_joined_at_ms': host_joined_at_ms,
+        'user_directory_json': json.dumps(user_directory),
     }
     return render(request, 'meetings/live/meeting_room.html', context)
 
@@ -322,6 +363,8 @@ def livekit_token(request, meeting_code):
 
     display_name = get_user_display_name(request.user)
     pfp_url = get_user_avatar_url(request.user)
+    if pfp_url and pfp_url.startswith('/'):
+        pfp_url = request.build_absolute_uri(pfp_url)
 
     metadata_str = json.dumps({
         'pfp': pfp_url,

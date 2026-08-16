@@ -77,21 +77,41 @@
     <style>
         /* AI Monitoring Styles */
     #face-att-badge {
-        position: fixed; bottom: 100px; right: 24px; z-index: 1000;
+        position: fixed; bottom: 100px; right: var(--face-badge-offset, 24px); z-index: 40;
         display: flex; align-items: center; gap: 10px;
-        padding: 12px 20px; border-radius: 16px;
+        padding: 12px 18px; border-radius: 16px;
         font-size: 13px; font-weight: 600; color: #fff;
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(15, 23, 42, 0.85);
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        max-width: 300px;
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, transform 0.4s ease;
+        max-width: 320px;
     }
     #face-att-badge.state-active    { border-color: rgba(99, 102, 241, 0.4); }
     #face-att-badge.state-progress  { border-color: rgba(245, 158, 11, 0.4); }
     #face-att-badge.state-success   { border-color: rgba(16, 185, 129, 0.4); }
     #face-att-badge.state-warning   { border-color: rgba(239, 68, 68, 0.4); }
+
+    .face-att-close {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+        cursor: pointer;
+        padding: 2px 6px;
+        margin-left: 4px;
+        border-radius: 4px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    .face-att-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
     
     .fa-dot {
         width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
@@ -110,35 +130,7 @@
         width: 0%; transition: width 0.5s ease;
     }
 
-    /* Participant List Dark Mode UI Fix */
-    .meet-sidebar {
-        background: #111827 !important; /* Darker Slate/Gray */
-        color: #f8fafc !important;
-        border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    .sidebar-header {
-        background: #0f172a !important; /* Dark Slate 900 */
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-        padding: 16px !important;
-    }
-    .sidebar-tab {
-        color: #94a3b8 !important;
-    }
-    .sidebar-tab:hover {
-        background: rgba(255, 255, 255, 0.05) !important;
-        color: #fff !important;
-    }
-    .sidebar-tab.active {
-        background: rgba(99, 102, 241, 0.2) !important;
-        color: #818cf8 !important;
-    }
-    .close-sidebar {
-        color: #94a3b8 !important;
-    }
-    .close-sidebar:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: #fff !important;
-    }
+
 
     /* Camera Switch Modal Styles */
     .modal-overlay {
@@ -343,13 +335,21 @@
             <h3>{{ meeting.title }}</h3>
             <span class="meet-code">{{ meeting.meeting_code }}</span>
         </div>
-        <div id="qualityWidgetContainer" style="margin-left:auto; margin-right:16px;"></div>
-        <div class="recording-indicator" id="recordingIndicator" style="display:none;">
-            <span class="recording-dot"></span>
-            <span class="recording-text">Recording</span>
-            <span class="recording-timer" id="recordingTimer">00:00</span>
+        <div class="meet-topbar-right">
+            <!-- Unified Quality + Bitrate OLED Control -->
+            <div id="unifiedQualityControl" class="unified-quality-control-wrap"></div>
+
+            <div class="recording-indicator" id="recordingIndicator" style="display:none;">
+                <span class="recording-dot"></span>
+                <span class="recording-text">Recording</span>
+                <span class="recording-timer" id="recordingTimer">00:00</span>
+            </div>
+            <div class="meet-timer-badge" title="Meeting duration">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="meet-timer-label">Duration:</span>
+                <span class="meet-timer" id="meetTimer">00:00</span>
+            </div>
         </div>
-        <div class="meet-timer" id="meetTimer">00:00</div>
     </div>
 
     <!-- Video Area -->
@@ -359,38 +359,84 @@
             <div id="sidebarVideoArea" class="sidebar-video-area"></div>
         </div>
 
-        <!-- People / Chat Sidebar -->
+        <!-- People / Chat Sidebar (Google Meet Style) -->
         <div class="meet-sidebar" id="meetSidebar" style="display:none;">
             <div class="sidebar-header">
-                <div class="sidebar-tabs">
-                    <button class="sidebar-tab active" onclick="switchSidebarTab('people')">
+                <div class="sidebar-tabs" role="tablist">
+                    <button class="sidebar-tab active" onclick="switchSidebarTab('people')" id="peopleTabBtn" role="tab" aria-selected="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span>People</span>
                     </button>
-                    <button class="sidebar-tab" onclick="switchSidebarTab('chat')">
+                    <button class="sidebar-tab" onclick="switchSidebarTab('chat')" id="chatTabBtn" role="tab" aria-selected="false">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         <span>Chat</span>
+                        <span class="chat-tab-badge" id="chatBadge" style="display: none;">0</span>
                     </button>
                 </div>
-                <button class="close-sidebar" onclick="toggleSidebar()">✕</button>
+                <button class="close-sidebar" onclick="toggleSidebar()" title="Close panel" aria-label="Close panel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
             <div class="sidebar-content">
-                <div class="sidebar-panel active" id="peoplePanel">
-                    <div class="participants-count"><span id="participantCount">1</span> in call</div>
+                <div class="sidebar-panel active" id="peoplePanel" role="tabpanel">
+                    <div class="participants-count">In call (<span id="participantCount">1</span>)</div>
                     <div class="participants-list" id="participantsList"></div>
                     {% if is_host %}
-                    <div class="banned-section" style="margin-top: 2rem; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1rem;">
-                        <div class="participants-count" style="background: rgba(239, 68, 68, 0.05); color: #ef4444; border-bottom: none;">Banned Students</div>
+                    <div class="banned-section" id="bannedSection">
+                        <div class="banned-header">Banned Students</div>
                         <div class="participants-list" id="bannedList"></div>
                     </div>
                     {% endif %}
                 </div>
-                <div class="sidebar-panel" id="chatPanel" style="display:none;">
-                    <div class="chat-messages" id="chatMessages"></div>
-                    <div class="chat-input-box">
-                        <input type="text" id="chatInput" placeholder="Send a message to everyone"
-                               onkeydown="if(event.key==='Enter') sendChatMessage()"/>
-                        <button onclick="sendChatMessage()" class="send-btn">Send</button>
+                <div class="sidebar-panel" id="chatPanel" style="display:none;" role="tabpanel">
+                    <div class="chat-header-section">
+                        {% if is_host %}
+                        <div class="chat-host-control-card" id="chatHostControlBar">
+                            <div class="chat-perm-text">
+                                <div class="chat-perm-title">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    <span>Let everyone send messages</span>
+                                </div>
+                                <span class="chat-perm-sub">When off, only you can send messages</span>
+                            </div>
+                            <button type="button" 
+                                    class="chat-switch-btn active" 
+                                    id="chatPermSwitch" 
+                                    role="switch" 
+                                    aria-checked="true" 
+                                    aria-label="Let everyone send messages"
+                                    onclick="toggleChatPermission()">
+                                <span class="chat-switch-thumb"></span>
+                            </button>
+                        </div>
+                        {% endif %}
+                        <div class="chat-status-banner" id="chatStatusBanner" style="display: none;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span id="chatStatusBannerText">Chat is limited to the host</span>
+                        </div>
+                        <div class="chat-info-pill">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Messages are visible to everyone in the call</span>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-empty-state" id="chatEmptyState">
+                            <div class="chat-empty-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <div class="chat-empty-title">No messages yet</div>
+                            <div class="chat-empty-subtitle">Send a message to start the conversation with everyone.</div>
+                        </div>
+                    </div>
+                    <div class="chat-composer-box">
+                        <div class="chat-input-wrapper">
+                            <textarea id="chatInput" rows="1" placeholder="Send a message..." 
+                                      autocomplete="off"
+                                      onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendChatMessage(); }"></textarea>
+                            <button onclick="sendChatMessage()" id="chatSendBtn" class="chat-send-btn" title="Send message (Enter)" aria-label="Send message" disabled>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -398,34 +444,28 @@
     </div>
 
     <!-- Controls -->
-    <div class="meet-controls">
+    <div class="meet-controls" role="toolbar" aria-label="Meeting Controls">
 
         <!-- Mic -->
-        <div class="control-btn-wrap">
-            <button class="control-button" id="micBtn" onclick="toggleMic()" title="Microphone">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            </button>
-            <span class="control-btn-label" id="micLabel">Mute</span>
-        </div>
+        <button class="control-button" id="micBtn" onclick="toggleMic()" title="Turn off microphone (Ctrl+D)" data-tooltip="Turn off microphone (Ctrl+D)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
 
         <!-- Camera -->
-        <div class="control-btn-wrap">
-            <button class="control-button" id="camBtn" onclick="toggleCamera()" title="Camera">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-            </button>
-            <span class="control-btn-label" id="camLabel">Camera</span>
-        </div>
+        <button class="control-button off" id="camBtn" onclick="toggleCamera()" title="Turn on camera (Ctrl+E)" data-tooltip="Turn on camera (Ctrl+E)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/></svg>
+        </button>
 
-        <div class="control-divider"></div>
+        <div class="control-separator"></div>
 
-        <!-- More Options -->
+        <!-- More Options Container -->
         <div class="more-options-container">
             <!-- Popup menu — shown above the button -->
             <div class="more-options-menu" id="moreOptionsMenu">
 
                 <button class="menu-item" id="screenBtn" onclick="toggleScreenShare(); toggleMoreOptions();">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    <span>Share Screen</span>
+                    <span>Share Screen <span style="font-size:11px; opacity:0.6; margin-left: auto; padding-left: 8px;">Ctrl+Alt+S</span></span>
                 </button>
 
                 {% if is_host %}
@@ -459,23 +499,31 @@
             </div>
 
             <!-- The ⋮ trigger button -->
-            <button class="control-button" id="moreBtn" onclick="toggleMoreOptions()" title="More options">
+            <button class="control-button" id="moreBtn" onclick="toggleMoreOptions()" title="More options" data-tooltip="More options">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+                <span class="notification-badge" id="moreBadge" style="display:none;"></span>
             </button>
-            <span class="more-btn-label">More</span>
         </div>
 
-        <div class="control-divider"></div>
+        <div class="control-separator"></div>
 
-        <!-- Leave -->
-        <div class="control-btn-wrap">
-            <button class="control-button danger" onclick="leaveMeeting()" title="Leave call">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            </button>
-            <span class="control-btn-label">Leave</span>
-        </div>
+        <!-- Leave Call -->
+        <button class="control-button danger" onclick="leaveMeeting()" title="Leave call" data-tooltip="Leave call">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
 
     </div>
+</div>
+
+<!-- Bottom-Right Google Meet Style Grid Pagination Widget -->
+<div class="grid-pagination-controls" id="gridPaginationControls" style="display: none;">
+    <button class="page-nav-btn" id="prevPageBtn" onclick="changeGridPage(-1)" title="Previous page" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span class="page-indicator" id="pageIndicator">1 / 1</span>
+    <button class="page-nav-btn" id="nextPageBtn" onclick="changeGridPage(1)" title="Next page">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
 </div>
 
 <!-- Meeting metadata -->
@@ -504,8 +552,27 @@
     data-banned-users-url="{% url 'get_banned_users' meeting.id %}"
     data-revoke-ban-url="{% url 'revoke_ban' meeting.id 0 %}"
     data-global-control-url="{% url 'meeting_global_control' meeting.id %}"
+    data-allow-chat="{% if allow_chat %}true{% else %}false{% endif %}"
     data-host-joined-at-ms="{{ host_joined_at_ms }}">
 </script>
+<script id="user-directory-data" type="application/json">
+{{ user_directory_json|safe }}
+</script>
+
+<!-- Kick Confirmation Modal -->
+<div id="kickConfirmModal" class="kick-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="kickModalTitle">
+    <div class="kick-modal-card">
+        <div class="kick-modal-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+        </div>
+        <h4 class="kick-modal-title" id="kickModalTitle">Remove from meeting?</h4>
+        <p class="kick-modal-desc" id="kickModalDesc">Are you sure you want to remove this student? They will not be able to rejoin for 1 hour.</p>
+        <div class="kick-modal-actions">
+            <button type="button" class="kick-modal-btn cancel" onclick="closeKickModal()" aria-label="Cancel removal">Cancel</button>
+            <button type="button" class="kick-modal-btn confirm" id="confirmKickBtn" onclick="executeKickUser()" aria-label="Confirm remove student">Remove</button>
+        </div>
+    </div>
+</div>
 
 {% if is_host %}
 <!-- Camera Selection Modal -->
@@ -581,8 +648,208 @@ window.meetingConfig = {
     globalControlUrl: _d.globalControlUrl,
     studentCanViewCamera: _d.studentCanViewCamera === 'true',
     studentCanViewScreenshare: _d.studentCanViewScreenshare === 'true',
+    allowChat: _d.allowChat !== 'false',
     hostJoinedAtMs: parseInt(_d.hostJoinedAtMs || "0")
 };
+
+window.allowChat = window.meetingConfig.allowChat;
+
+// ── Industry-Grade Identity & Avatar Architecture (Google Meet / Zoom pattern) ──
+window.IdentityDirectory = {
+    _cache: new Map(),
+
+    init(preloadJson) {
+        if (preloadJson) {
+            try {
+                const data = typeof preloadJson === 'string' ? JSON.parse(preloadJson) : preloadJson;
+                Object.values(data).forEach(u => {
+                    if (u && u.id) {
+                        this.register(u.id, u);
+                        if (u.username) this.register(u.username, u);
+                    }
+                });
+            } catch(e) {
+                console.warn('Failed to parse preloaded user directory:', e);
+            }
+        }
+        if (window.meetingConfig.currentUserId) {
+            this.register(window.meetingConfig.currentUserId, {
+                id: String(window.meetingConfig.currentUserId),
+                username: window.meetingConfig.currentUsername,
+                display_name: window.meetingConfig.currentDisplayName,
+                pfp: window.meetingConfig.currentPfpUrl,
+                role: window.meetingConfig.isHost ? 'host' : 'student'
+            });
+        }
+    },
+
+    getDeterministicColor(str) {
+        let hash = 0;
+        const clean = String(str || 'User').trim();
+        for (let i = 0; i < clean.length; i++) {
+            hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const h = Math.abs(hash) % 360;
+        return `hsl(${h}, 62%, 42%)`;
+    },
+
+    register(identity, data = {}) {
+        if (!identity) return null;
+        const key = String(identity);
+        const existing = this._cache.get(key) || {};
+
+        let pfp = data.pfp || data.pfpUrl || data.pfp_url || existing.pfp || null;
+        if (pfp && typeof pfp === 'string') {
+            pfp = pfp.trim();
+            if (pfp.startsWith('/')) pfp = window.location.origin + pfp;
+            if (pfp === '' || pfp === 'null' || pfp === 'undefined') pfp = null;
+        }
+
+        const displayName = data.displayName || data.display_name || data.name || existing.displayName || existing.username || key;
+        const username = data.username || existing.username || key;
+        const role = data.role || existing.role || (key === String(window.meetingConfig.hostId) ? 'host' : 'student');
+        const color = existing.color || this.getDeterministicColor(username || displayName || key);
+
+        const record = {
+            id: key,
+            username,
+            displayName,
+            pfp,
+            role,
+            color
+        };
+
+        this._cache.set(key, record);
+        if (username && username !== key) {
+            this._cache.set(username, record);
+        }
+
+        return record;
+    },
+
+    resolve(identity, fallbackName = null) {
+        if (!identity) {
+            return {
+                id: 'unknown',
+                displayName: fallbackName || 'User',
+                pfp: null,
+                color: '#6366f1',
+                role: 'student'
+            };
+        }
+
+        const key = String(identity);
+        let record = this._cache.get(key);
+
+        if ((!record || !record.pfp) && window.room) {
+            const p = (window.room.remoteParticipants ? window.room.remoteParticipants.get(key) : null) ||
+                      (window.room.localParticipant && String(window.room.localParticipant.identity) === key ? window.room.localParticipant : null);
+            if (p && p.metadata) {
+                try {
+                    const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+                    if (meta && (meta.pfp || meta.display_name)) {
+                        record = this.register(key, meta);
+                    }
+                } catch(e) {}
+            }
+        }
+
+        if (!record) {
+            record = this.register(key, { displayName: fallbackName || key });
+        }
+
+        return record;
+    },
+
+    getAvatarSvg(name, bgColor) {
+        const cleanName = (name || 'User').trim();
+        const parts = cleanName.split(/\s+/).filter(Boolean);
+        let initials = '';
+        if (parts.length >= 2) {
+            initials = (parts[0][0] + parts[1][0]).toUpperCase();
+        } else if (parts.length === 1 && parts[0].length >= 2) {
+            initials = parts[0].substring(0, 2).toUpperCase();
+        } else if (parts.length === 1) {
+            initials = parts[0][0].toUpperCase();
+        } else {
+            initials = '?';
+        }
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">` +
+            `<rect width="128" height="128" rx="64" fill="${bgColor || '#6366f1'}"/>` +
+            `<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" ` +
+            `font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" ` +
+            `font-size="52" font-weight="600">${initials}</text>` +
+            `</svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    },
+
+    syncCardDOM(identity) {
+        if (!identity) return;
+        const key = String(identity);
+        const user = this.resolve(key);
+
+        const box = document.getElementById(`video-box-${key}`);
+        if (box) {
+            const img = box.querySelector('.video-avatar-img');
+            const fallbackSvg = this.getAvatarSvg(user.displayName, user.color);
+            const targetSrc = user.pfp || fallbackSvg;
+
+            if (img && img.getAttribute('src') !== targetSrc) {
+                if (user.pfp) {
+                    const preload = new Image();
+                    preload.onload = () => {
+                        if (img) {
+                            img.src = user.pfp;
+                            img.onerror = () => { img.onerror = null; img.src = fallbackSvg; };
+                        }
+                    };
+                    preload.onerror = () => {
+                        if (img) {
+                            img.src = fallbackSvg;
+                        }
+                    };
+                    preload.src = user.pfp;
+                } else {
+                    img.src = fallbackSvg;
+                }
+            }
+
+            const nameTag = box.querySelector('.video-nametag');
+            if (nameTag && !nameTag.textContent.startsWith('💻')) {
+                const isLocal = window.room?.localParticipant?.identity === key || String(window.meetingConfig.currentUserId) === key;
+                nameTag.textContent = isLocal ? 'You' : user.displayName;
+            }
+        }
+    }
+};
+
+// Initialize preloaded user directory
+try {
+    const _userDirEl = document.getElementById('user-directory-data');
+    if (_userDirEl) {
+        window.IdentityDirectory.init(_userDirEl.textContent.trim());
+    }
+} catch(e) {}
+
+// Initialize Unified Quality Control early
+try {
+    if (window.VideoQualityManager) {
+        const _qContainer = document.getElementById('unifiedQualityControl') || document.getElementById('qualityWidgetContainer');
+        if (_qContainer && !_qContainer.children.length) {
+            const _uqcUI = window.VideoQualityManager.createUnifiedQualityControl({
+                onQualityChange: (mode) => {
+                    if (window.room) {
+                        window.VideoQualityManager.applyQualityToLiveKit(window.room, mode);
+                    }
+                    showNotification(`Video quality set to ${mode.toUpperCase()}`, 'info');
+                }
+            });
+            _qContainer.appendChild(_uqcUI);
+        }
+    }
+} catch(e) {
+    console.warn('Early quality control init warning:', e);
+}
 
 // Global shortcuts using window properties to prevent Turbo redeclaration errors
 window.meetingCode        = window.meetingConfig.meetingCode;
@@ -661,10 +928,25 @@ function getRemoteParticipants() {
     if (window.room) {
         const pMap = window.room.remoteParticipants || window.room.participants;
         if (pMap && typeof pMap.forEach === 'function') {
-            pMap.forEach((p, key) => { if (p && p.identity) combined.set(p.identity, p); });
+            pMap.forEach((p, key) => { 
+                if (p && p.identity) combined.set(String(p.identity), p); 
+            });
         }
     }
     return Array.from(combined.values());
+}
+
+function getRemoteParticipant(identity) {
+    if (!identity) return null;
+    const strId = String(identity);
+    if (window.room) {
+        const pMap = window.room.remoteParticipants || window.room.participants;
+        if (pMap) {
+            const p = pMap.get(strId) || pMap.get(identity);
+            if (p) return p;
+        }
+    }
+    return window._remoteParticipantsRegistry.get(strId) || window._remoteParticipantsRegistry.get(identity) || null;
 }
 window.ipCamImg = null;
 window.ipCamAnimationId = null;
@@ -711,17 +993,26 @@ window.TrackManager = {
     _getOrCreateScreenBox(participant) {
         const id = `screen-box-${participant.identity}`;
         let box = document.getElementById(id);
+        const screenLabel = getScreenShareLabel(participant.identity, participant.name || participant.identity);
         if (!box) {
             box = document.createElement('div');
             box.id = id;
-            box.className = 'video-box screen-share-active';
+            box.className = 'video-box screen-share-active sharing-screen';
             box.dataset.identity = `screen-${participant.identity}`;
-            const tag = document.createElement('div');
-            tag.className = 'video-nametag';
-            tag.textContent = `\uD83D\uDCBB ${participant.name || participant.identity}'s Screen`;
-            box.appendChild(tag);
+
+            // Screen share primary stage badge (Single Top-Left Badge)
+            const shareBadge = document.createElement('div');
+            shareBadge.className = 'screen-share-indicator-badge';
+            shareBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> ${screenLabel}`;
+            box.appendChild(shareBadge);
+
             const sidebar = document.getElementById('sidebarVideoArea');
             if (sidebar) sidebar.appendChild(box);
+        } else {
+            const badge = box.querySelector('.screen-share-indicator-badge');
+            if (badge) {
+                badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> ${screenLabel}`;
+            }
         }
         return box;
     },
@@ -771,9 +1062,21 @@ window.TrackManager = {
             box.insertBefore(el, box.querySelector('.video-nametag'));
 
             if (isScreen) {
-                const label = participant.name || participant.identity;
-                console.log(`TrackManager: enlarging remote screen share from ${label}`);
-                moveToMain(box, `${label}'s Screen`, true);
+                const screenLabel = getScreenShareLabel(participant.identity, participant.name || participant.identity);
+                console.log(`TrackManager: enlarging screen share for [${screenLabel}]`);
+                moveToMain(box, screenLabel, true);
+
+                // Add presenting visual indicator to presenter's camera tile
+                const camBox = document.getElementById(`video-box-${participant.identity}`);
+                if (camBox) {
+                    camBox.classList.add('is-presenting');
+                    if (!camBox.querySelector('.presenting-badge')) {
+                        const pb = document.createElement('div');
+                        pb.className = 'presenting-badge';
+                        pb.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Presenting`;
+                        camBox.appendChild(pb);
+                    }
+                }
             }
         } else if (track.kind === 'audio') {
             // Audio elements live on <body>, hidden, not inside video boxes
@@ -821,10 +1124,17 @@ window.TrackManager = {
             if (camBox) camBox.classList.add('cam-off');
         }
 
-        // Remove dedicated screen share box + restore main area
+        // Remove dedicated screen share box + restore main area + remove presenting indicator
         if (isScreen && participant?.identity) {
             const screenBox = document.getElementById(`screen-box-${participant.identity}`);
             if (screenBox) screenBox.remove();
+
+            const camBox = document.getElementById(`video-box-${participant.identity}`);
+            if (camBox) {
+                camBox.classList.remove('is-presenting');
+                camBox.querySelector('.presenting-badge')?.remove();
+            }
+
             clearMain();
             updateLayout();
         }
@@ -901,6 +1211,10 @@ async function init() {
         window.room
             .on(RoomEvent.ParticipantConnected,    onParticipantConnected)
             .on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected)
+            .on(RoomEvent.ParticipantMetadataChanged, (arg1, arg2) => {
+                updateParticipantMetadataUI(arg1, arg2);
+                updateParticipantsList();
+            })
             .on(RoomEvent.TrackSubscribed,         onTrackSubscribed)
             .on(RoomEvent.TrackUnsubscribed,       onTrackUnsubscribed)
             .on(RoomEvent.TrackPublished,          (pub, participant) => {
@@ -920,10 +1234,9 @@ async function init() {
 
         // Initialize Video Quality Manager & Auto Bitrate Monitor
         if (window.VideoQualityManager) {
-            const container = document.getElementById('qualityWidgetContainer');
-            if (container) {
-                container.innerHTML = '';
-                const ui = window.VideoQualityManager.createQualitySelectorUI({
+            const container = document.getElementById('unifiedQualityControl') || document.getElementById('qualityWidgetContainer');
+            if (container && !container.children.length) {
+                const ui = window.VideoQualityManager.createUnifiedQualityControl({
                     onQualityChange: (mode) => {
                         window.VideoQualityManager.applyQualityToLiveKit(window.room, mode);
                         showNotification(`Video quality set to ${mode.toUpperCase()}`, 'info');
@@ -988,9 +1301,23 @@ async function init() {
             }
         }
 
-        // Update UI buttons
+        // Update UI buttons and permissions
         updateControlButtons();
         renderLocalParticipant();
+        updateChatPermissionUI(window.allowChat);
+
+        // Bind composer input listener for active send button state
+        const chatInp = document.getElementById('chatInput');
+        if (chatInp) {
+            chatInp.addEventListener('input', () => {
+                const sendBtn = document.getElementById('chatSendBtn');
+                const hasText = chatInp.value.trim().length > 0;
+                if (sendBtn) {
+                    sendBtn.classList.toggle('active', hasText);
+                    sendBtn.disabled = !hasText || (!window.allowChat && !window.isHost);
+                }
+            });
+        }
 
         // Seed manual registry from SDK's remoteParticipants map (already connected peers)
         if (window.room.remoteParticipants) {
@@ -1014,8 +1341,13 @@ async function init() {
         }
         startTimer();
 
-        // Periodically refresh the participants list to prevent out-of-sync states
+        // Periodically refresh the participants list and video card avatars to prevent out-of-sync states
         setInterval(() => {
+            getRemoteParticipants().forEach(p => {
+                if (p && p.identity) {
+                    updateParticipantMetadataUI(p);
+                }
+            });
             updateParticipantsList();
             updateParticipantCount();
         }, 2000);
@@ -1042,24 +1374,63 @@ function updateControlButtons() {
     micBtn.innerHTML = isMicOn ? micOnIcon : micOffIcon;
     camBtn.innerHTML = isCameraOn ? camOnIcon : camOffIcon;
 
-    // Update labels
+    const micTip = (isMicOn ? 'Turn off microphone' : 'Turn on microphone') + ' (Ctrl+D)';
+    const camTip = (isCameraOn ? 'Turn off camera' : 'Turn on camera') + ' (Ctrl+E)';
+
+    micBtn.setAttribute('title', micTip);
+    micBtn.setAttribute('data-tooltip', micTip);
+    camBtn.setAttribute('title', camTip);
+    camBtn.setAttribute('data-tooltip', camTip);
+
+    // Update labels if present
     if (micLabel) micLabel.textContent = isMicOn ? 'Mute' : 'Unmute';
     if (camLabel) camLabel.textContent = isCameraOn ? 'Camera' : 'Start video';
 }
 
+// ── Shared Avatar Generation (Routes through IdentityDirectory) ────────────
+function getLocalInitialsAvatar(name, bgColor = '#6366f1') {
+    return window.IdentityDirectory.getAvatarSvg(name, bgColor);
+}
+
+function getAvatarUrl(name, pfpUrl, bgColor = '#6366f1') {
+    if (pfpUrl && typeof pfpUrl === 'string' && pfpUrl.trim() !== '' && pfpUrl !== 'null' && pfpUrl !== 'undefined') {
+        if (pfpUrl.startsWith('/')) {
+            return window.location.origin + pfpUrl;
+        }
+        return pfpUrl;
+    }
+    return window.IdentityDirectory.getAvatarSvg(name, bgColor);
+}
+window.getLocalInitialsAvatar = getLocalInitialsAvatar;
+window.getAvatarUrl = getAvatarUrl;
+
 // ── Render helpers ────────────────────────────────────────────────────────────
+function getScreenShareLabel(identity, name) {
+    const localId = window.room?.localParticipant?.identity 
+        ? String(window.room.localParticipant.identity) 
+        : String(window.meetingConfig?.currentUserId || window.currentUserId || '');
+    const cleanId = String(identity || '').replace(/^(screen|video-box)-/, '');
+    const isSelf = (cleanId === localId) || (cleanId === 'local-screen') || (cleanId === 'local') || (window.room && cleanId === String(window.room.localParticipant.identity));
+    return isSelf ? 'Your Screen' : `${name || cleanId}'s Screen`;
+}
+
 function getOrCreateBox(identity, displayName, isLocal) {
-    let box = document.getElementById(`video-box-${identity}`);
-    if (box) return box;
+    const key = String(identity);
+    let box = document.getElementById(`video-box-${key}`);
+    if (box) {
+        window.IdentityDirectory.syncCardDOM(key);
+        return box;
+    }
+
+    const user = window.IdentityDirectory.resolve(key, displayName);
 
     box = document.createElement('div');
-    box.id = `video-box-${identity}`;
-    box.className = 'video-box';
-    box.dataset.identity = identity;
-    box.dataset.userId   = identity; // Required for Face Tracking
-    box.style.cursor = 'pointer'; // Make it look clickable
+    box.id = `video-box-${key}`;
+    box.className = 'video-box cam-off';
+    box.dataset.identity = key;
+    box.dataset.userId   = key;
+    box.style.cursor = 'pointer';
     
-    // Click to enlarge this video
     box.onclick = () => {
         if (box.parentElement.id !== 'mainVideoArea') {
             const mainArea = document.getElementById('mainVideoArea');
@@ -1073,57 +1444,95 @@ function getOrCreateBox(identity, displayName, isLocal) {
                 }
                 document.getElementById('sidebarVideoArea').appendChild(currentMain);
             }
-            moveToMain(box, displayName, identity === 'local-screen');
+            moveToMain(box, user.displayName, key === 'local-screen');
         }
     };
 
     const nameTag = document.createElement('div');
     nameTag.className = 'video-nametag';
-    nameTag.textContent = isLocal ? 'You' : displayName;
+    nameTag.textContent = isLocal ? 'You' : user.displayName;
     box.appendChild(nameTag);
 
-    // Create and append avatar overlay for camera-off state
     const overlay = document.createElement('div');
     overlay.className = 'video-avatar-overlay';
-    overlay.id = `avatar-overlay-${identity}`;
+    overlay.id = `avatar-overlay-${key}`;
 
-    let pfpUrl = isLocal ? (window.meetingConfig?.currentPfpUrl || null) : null;
-    let name = isLocal ? (window.meetingConfig?.currentDisplayName || displayName) : displayName;
-    let participantObj = null;
-    if (isLocal) {
-        participantObj = (window.room) ? window.room.localParticipant : null;
-    } else {
-        const pMap = (window.room) ? (window.room.remoteParticipants || window.room.participants) : null;
-        participantObj = (pMap) ? pMap.get(identity) : null;
-    }
-
-    if (participantObj && participantObj.metadata) {
-        try {
-            const meta = JSON.parse(participantObj.metadata);
-            if (meta.pfp) pfpUrl = meta.pfp;
-            if (meta.display_name) name = meta.display_name;
-        } catch(e) {}
-    }
-
-    const fallbackPfp = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=6366f1&color=fff&size=128';
-    const finalPfp = pfpUrl || fallbackPfp;
+    const fallbackSvg = window.IdentityDirectory.getAvatarSvg(user.displayName, user.color);
+    const initialSrc = user.pfp || fallbackSvg;
 
     overlay.innerHTML = `
-        <img class="video-avatar-img" src="${finalPfp}" alt="${name}" onerror="this.src='${fallbackPfp}'">
-        <div class="video-avatar-name">${name}</div>
+        <div class="video-avatar-wrapper">
+            <img class="video-avatar-img" src="${initialSrc}" alt="${user.displayName}" onerror="this.onerror=null; this.src='${fallbackSvg}';">
+        </div>
     `;
     box.appendChild(overlay);
 
+    if (isLocal) {
+        box.classList.toggle('cam-off', !window.isCameraOn);
+    }
+
+    const micBadge = document.createElement('div');
+    micBadge.className = 'video-card-status-badge';
+    micBadge.id = `mic-badge-${key}`;
+    micBadge.title = 'Microphone muted';
+    micBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+    box.appendChild(micBadge);
+
     document.getElementById('sidebarVideoArea').appendChild(box);
     updateLayout();
-    updateParticipantsList(); // Update list when new box is created
+    updateParticipantsList();
+
+    // Trigger preload sync
+    window.IdentityDirectory.syncCardDOM(key);
+
     return box;
+}
+
+function updateParticipantMetadataUI(participant, metadata) {
+    let pObj = null;
+    let metaStr = null;
+
+    if (participant && typeof participant === 'object' && participant.identity) {
+        pObj = participant;
+        metaStr = metadata || participant.metadata;
+    } else if (metadata && typeof metadata === 'object' && metadata.identity) {
+        pObj = metadata;
+        metaStr = typeof participant === 'string' ? participant : pObj.metadata;
+    } else if (typeof participant === 'string' || typeof participant === 'number') {
+        pObj = getRemoteParticipant(participant);
+        metaStr = pObj?.metadata;
+    }
+
+    const identity = pObj ? String(pObj.identity) : String(participant);
+    if (!identity || identity === 'undefined') return;
+
+    if (pObj) {
+        window._remoteParticipantsRegistry.set(identity, pObj);
+    }
+
+    const rawMeta = metaStr || pObj?.metadata;
+    if (rawMeta) {
+        try {
+            const meta = typeof rawMeta === 'string' ? JSON.parse(rawMeta) : rawMeta;
+            window.IdentityDirectory.register(identity, meta);
+        } catch(e) {}
+    }
+
+    window.IdentityDirectory.syncCardDOM(identity);
 }
 
 function renderLocalParticipant() {
     const lp = window.room ? window.room.localParticipant : null;
     const identity = lp ? String(lp.identity) : String(currentUserId);
     if (!identity || identity === 'undefined') return;
+
+    // Clean up pre-connect stale box if identity transitioned
+    if (lp && String(currentUserId) !== String(lp.identity)) {
+        const staleBox = document.getElementById(`video-box-${currentUserId}`);
+        if (staleBox && staleBox.id !== `video-box-${identity}`) {
+            staleBox.remove();
+        }
+    }
 
     const box = getOrCreateBox(identity, window.meetingConfig?.currentDisplayName || currentUsername, true);
 
@@ -1134,14 +1543,16 @@ function renderLocalParticipant() {
     if (!lp) return;
 
     // Attach camera track if already published
-    if (lp.videoTrackPublications) {
-        lp.videoTrackPublications.forEach(pub => {
+    const pubs = lp.videoTrackPublications || lp.tracks;
+    if (pubs) {
+        pubs.forEach(pub => {
             const isCam = pub.source === 'camera' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.Camera);
             if (isCam) {
-                if (pub.track) {
-                    attachTrackToBox(pub.track, box, true);
+                const targetTrack = pub.track || pub.videoTrack;
+                if (targetTrack) {
+                    attachTrackToBox(targetTrack, box, true);
                     box.classList.remove('cam-off');
-                } else {
+                } else if (pub.setSubscribed) {
                     const checkInitialTrack = setInterval(() => {
                         if (pub.track) {
                             attachTrackToBox(pub.track, box, true);
@@ -1155,50 +1566,37 @@ function renderLocalParticipant() {
         });
     }
 
-    // Also listen for future local track publications (e.g. screen share or IP camera)
-    lp.on(window.LiveKitBundle.ParticipantEvent.LocalTrackPublished || 'localTrackPublished', pub => {
-        console.log('Local track published:', pub.source, pub.trackSid);
-        
-        const isScreen = pub.source === 'screen_share' || pub.source === 'screen-share' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.ScreenShare);
-        const isCam = pub.source === 'camera' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.Camera);
+    // Listen for future local track publications
+    if (!lp._customTrackSubscribed) {
+        lp._customTrackSubscribed = true;
+        lp.on(window.LiveKitBundle.ParticipantEvent.LocalTrackPublished || 'localTrackPublished', pub => {
+            console.log('Local track published:', pub.source, pub.trackSid);
+            const liveIdentity = window.room?.localParticipant?.identity ? String(window.room.localParticipant.identity) : String(currentUserId);
+            const currentBox = getOrCreateBox(liveIdentity, window.meetingConfig?.currentDisplayName || currentUsername, true);
 
-        if (isScreen) {
-            // Handle screen share
-            if (pub.track) {
-                showLocalScreenShare(pub.track);
-            } else {
-                const checkTrack = setInterval(() => {
-                    if (pub.track) {
-                        showLocalScreenShare(pub.track);
-                        clearInterval(checkTrack);
-                    }
-                }, 100);
-                setTimeout(() => clearInterval(checkTrack), 5000);
+            const isScreen = pub.source === 'screen_share' || pub.source === 'screen-share' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.ScreenShare);
+            const isCam = pub.source === 'camera' || (typeof Track !== 'undefined' && pub.source === Track?.Source?.Camera);
+
+            if (isScreen) {
+                if (pub.track) showLocalScreenShare(pub.track);
+            } else if (isCam) {
+                if (pub.track) {
+                    attachTrackToBox(pub.track, currentBox, true);
+                    currentBox.classList.remove('cam-off');
+                } else {
+                    const checkTrack = setInterval(() => {
+                        if (pub.track) {
+                            attachTrackToBox(pub.track, currentBox, true);
+                            currentBox.classList.remove('cam-off');
+                            clearInterval(checkTrack);
+                        }
+                    }, 100);
+                    setTimeout(() => clearInterval(checkTrack), 5000);
+                }
             }
-        } else if (isCam) {
-            // Handle camera (including IP camera)
-            if (pub.track) {
-                attachTrackToBox(pub.track, box, true);
-                box.classList.remove('cam-off');
-            } else {
-                const checkTrack = setInterval(() => {
-                    if (pub.track) {
-                        attachTrackToBox(pub.track, box, true);
-                        box.classList.remove('cam-off');
-                        clearInterval(checkTrack);
-                    }
-                }, 100);
-                setTimeout(() => clearInterval(checkTrack), 5000);
-            }
-        }
-    });
-    lp.on(window.LiveKitBundle.ParticipantEvent.LocalTrackUnpublished || 'localTrackUnpublished', pub => {
-        if (pub.source === Track.Source.ScreenShare) {
-            hideLocalScreenShare();
-        }
-    });
+        });
+    }
 }
-
 
 function attachTrackToBox(track, box, isLocal) {
     if (!track || !box) return;
@@ -1245,6 +1643,16 @@ function attachTrackToBox(track, box, isLocal) {
         if (!isScreen) {
             box.classList.remove('cam-off');
         }
+
+        // Force playback on local media stream element to prevent WebRTC black frame zero freeze
+        try {
+            const playPromise = el.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.debug('Local video autoplay play catch:', err);
+                });
+            }
+        } catch(err) {}
     }
 }
 
@@ -1260,12 +1668,15 @@ function showLocalScreenShare(track) {
     if (!box) {
         box = document.createElement('div');
         box.id = 'local-screen-box';
-        box.className = 'video-box';
+        box.className = 'video-box screen-share-active sharing-screen';
         box.dataset.identity = 'local-screen';
-        const tag = document.createElement('div');
-        tag.className = 'video-nametag';
-        tag.textContent = 'Your Screen';
-        box.appendChild(tag);
+        
+        // Screen share primary stage badge (Single Top-Left Badge)
+        const shareBadge = document.createElement('div');
+        shareBadge.className = 'screen-share-indicator-badge';
+        shareBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Your Screen`;
+        box.appendChild(shareBadge);
+
         document.getElementById('sidebarVideoArea').appendChild(box);
     }
     
@@ -1280,17 +1691,31 @@ function showLocalScreenShare(track) {
     el.playsInline = true;
     box.insertBefore(el, box.querySelector('.video-nametag'));
 
-    // Add stop button overlay
+    // Add stop button overlay (Zoom-style top floating banner pill)
     let stopBtn = box.querySelector('.screen-stop-btn');
     if (!stopBtn) {
         stopBtn = document.createElement('button');
         stopBtn.className = 'screen-stop-btn';
         stopBtn.textContent = 'Stop Sharing';
-        stopBtn.style.cssText = `position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-            background:rgba(239,68,68,0.9);color:#fff;border:none;border-radius:8px;
-            padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;z-index:10;`;
+        stopBtn.style.cssText = `position:absolute;top:8px;left:50%;transform:translateX(-50%);
+            background:rgba(239,68,68,0.85);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:12px;
+            padding:3px 12px;font-size:11px;font-weight:600;cursor:pointer;z-index:30;
+            box-shadow:0 2px 10px rgba(0,0,0,0.4);backdrop-filter:blur(8px);letter-spacing:0.3px;`;
         stopBtn.onclick = stopScreenShare;
         box.appendChild(stopBtn);
+    }
+
+    // Add presenting indicator to local camera card
+    const localIdentity = window.room?.localParticipant?.identity ? String(window.room.localParticipant.identity) : String(currentUserId);
+    const localCamBox = document.getElementById(`video-box-${localIdentity}`);
+    if (localCamBox) {
+        localCamBox.classList.add('is-presenting');
+        if (!localCamBox.querySelector('.presenting-badge')) {
+            const pb = document.createElement('div');
+            pb.className = 'presenting-badge';
+            pb.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Presenting`;
+            localCamBox.appendChild(pb);
+        }
     }
 
     moveToMain(box, 'Your Screen', true);
@@ -1312,6 +1737,8 @@ function hideLocalScreenShare() {
 
     if (camBox) {
         camBox.classList.remove('main-presents');
+        camBox.classList.remove('is-presenting');
+        camBox.querySelector('.presenting-badge')?.remove();
         const sidebar = document.getElementById('sidebarVideoArea');
         if (sidebar && camBox.parentElement !== sidebar) {
             sidebar.appendChild(camBox);
@@ -1329,10 +1756,19 @@ function onParticipantConnected(participant) {
 
     console.log('Participant joined:', participant.identity);
     // Register in our manual registry
-    window._remoteParticipantsRegistry.set(participant.identity, participant);
+    window._remoteParticipantsRegistry.set(String(participant.identity), participant);
     getOrCreateBox(participant.identity, participant.name || participant.identity, false);
+    updateParticipantMetadataUI(participant);
     updateParticipantsList();
     updateParticipantCount();
+
+    // Listen for metadata changes directly on participant instance
+    if (typeof participant.on === 'function') {
+        participant.on('participantMetadataChanged', () => {
+            updateParticipantMetadataUI(participant);
+            updateParticipantsList();
+        });
+    }
 
     // Subscribe to any already-published tracks
     if (participant.trackPublications) {
@@ -1423,6 +1859,9 @@ function onDataReceived(payload, participant) {
         } else if (msg.type === 'meeting_unfrozen') {
             isSleeping = false;
             showNotification('Meeting is now active', 'success');
+        } else if (msg.type === 'chat_permission_update') {
+            window.allowChat = msg.allow_chat;
+            updateChatPermissionUI(msg.allow_chat);
         }
     } catch(e) { console.warn('Data parse error:', e); }
 }
@@ -1461,6 +1900,10 @@ function handleSignalingMessage(data) {
                 window.studentCanViewScreenshare = data.value;
                 showNotification(data.message, 'info');
                 updateTeacherTrackSubscription();
+            } else if (data.control_type === 'allow_chat') {
+                window.allowChat = data.value;
+                updateChatPermissionUI(data.value);
+                showNotification(data.message || (data.value ? 'Chat enabled for everyone' : 'Chat limited to host only'), 'info');
             }
             break;
     }
@@ -1478,10 +1921,11 @@ function moveToMain(box, label, isScreenShare) {
         currentMain.classList.remove('main-presents');
         const v = currentMain.querySelector('video');
         if (v) {
-            v.style.objectFit = 'cover';
+            const isScreen = currentMain.dataset.identity === 'local-screen' || String(currentMain.dataset.identity).startsWith('screen-');
+            v.style.objectFit = isScreen ? 'contain' : 'cover';
+            v.style.objectPosition = isScreen ? 'center' : 'center 35%';
             const isLocalCamera = window.room && currentMain.dataset.identity === String(window.room.localParticipant.identity);
-            const isLocalScreen = currentMain.dataset.identity === 'local-screen';
-            if (isLocalCamera && !isLocalScreen) {
+            if (isLocalCamera && !isScreen) {
                 v.style.transform = 'scaleX(-1)';
             } else {
                 v.style.transform = 'none';
@@ -1496,9 +1940,21 @@ function moveToMain(box, label, isScreenShare) {
     mainArea.innerHTML = '';
     mainArea.appendChild(box);
 
-    if (isScreenShare) {
-        const v = box.querySelector('video');
-        if (v) { v.style.objectFit = 'contain'; v.style.transform = 'none'; }
+    const tag = box.querySelector('.video-nametag');
+    if (tag && label && !box.id.includes('screen')) {
+        tag.textContent = label;
+    }
+
+    const v = box.querySelector('video');
+    if (v) {
+        if (isScreenShare) {
+            v.style.objectFit = 'contain';
+            v.style.objectPosition = 'center';
+            v.style.transform = 'none';
+        } else {
+            v.style.objectFit = 'cover';
+            v.style.objectPosition = 'center 35%';
+        }
     }
 }
 
@@ -1531,14 +1987,69 @@ function getAllBoxes() {
     return Array.from(document.querySelectorAll('.video-box'));
 }
 
+window.currentGridPage = 1;
+window.gridPageSize = 25;
+
+function changeGridPage(direction) {
+    window.currentGridPage += direction;
+    updateLayout();
+}
+
+function updateGridPagination() {
+    const paginationWidget = document.getElementById('gridPaginationControls');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const indicator = document.getElementById('pageIndicator');
+    if (!paginationWidget) return;
+
+    const sidebar = document.getElementById('sidebarVideoArea');
+    if (!sidebar) return;
+    const boxes = Array.from(sidebar.children).filter(el => el.classList.contains('video-box'));
+    const totalBoxes = boxes.length;
+    const pageSize = window.gridPageSize || 25;
+    const totalPages = Math.max(1, Math.ceil(totalBoxes / pageSize));
+
+    if (window.currentGridPage > totalPages) window.currentGridPage = totalPages;
+    if (window.currentGridPage < 1) window.currentGridPage = 1;
+
+    if (totalBoxes > pageSize) {
+        paginationWidget.style.display = 'flex';
+        if (indicator) indicator.textContent = `${window.currentGridPage} / ${totalPages}`;
+        if (prevBtn) prevBtn.disabled = (window.currentGridPage <= 1);
+        if (nextBtn) nextBtn.disabled = (window.currentGridPage >= totalPages);
+
+        const startIndex = (window.currentGridPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+
+        boxes.forEach((box, index) => {
+            if (index >= startIndex && index < endIndex) {
+                box.style.display = '';
+            } else {
+                box.style.display = 'none';
+            }
+        });
+    } else {
+        paginationWidget.style.display = 'none';
+        boxes.forEach(box => {
+            box.style.display = '';
+        });
+    }
+}
+
 function updateLayout() {
     const boxes = getAllBoxes();
     const container = document.getElementById('videoGridContainer');
     const mainArea = document.getElementById('mainVideoArea');
+    const sidebarArea = document.getElementById('sidebarVideoArea');
     if (!container || !mainArea) return;
     
     // Force sidebar view
     container.className = 'video-grid-container sidebar-view';
+
+    // Content-aware: tag sidebar with participant count
+    if (sidebarArea) {
+        sidebarArea.dataset.count = sidebarArea.children.length;
+    }
     
     // If main area is empty, pick a video to enlarge
     if (mainArea.children.length === 0 && boxes.length > 0) {
@@ -1552,6 +2063,7 @@ function updateLayout() {
     }
     
     updateParticipantCount();
+    updateGridPagination();
 }
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -1565,7 +2077,7 @@ async function toggleMic() {
         const micOnIcon  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
         const micOffIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
         btn.innerHTML = isMicOn ? micOnIcon : micOffIcon;
-        if (label) label.textContent = isMicOn ? 'Mute' : 'Unmute';
+        if (label) label.textContent = isMicOn ? 'Unmuted' : 'Muted';
     } catch (e) {
         console.error('Mic toggle error:', e);
         isMicOn = !isMicOn; // Revert state
@@ -1596,7 +2108,7 @@ async function toggleCamera() {
         const camOnIcon  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
         const camOffIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/></svg>';
         btn.innerHTML = isCameraOn ? camOnIcon : camOffIcon;
-        if (label) label.textContent = isCameraOn ? 'Camera' : 'Start video';
+        if (label) label.textContent = isCameraOn ? 'Cam On' : 'Cam Off';
 
         // Update UI
         const localBox = (window.room) ? document.getElementById(`video-box-${window.room.localParticipant.identity}`) : null;
@@ -1956,17 +2468,167 @@ async function stopIpCameraStream() {
     showNotification('Monitoring stopped', 'info');
 }
 
-// ── Chat ──────────────────────────────────────────────────────────────────────
-async function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const text  = input.value.trim();
-    if (!text || !signalingWs || signalingWs.readyState !== WebSocket.OPEN) {
-        if (!signalingWs || signalingWs.readyState !== WebSocket.OPEN) {
-            showNotification('Chat connection not ready. Please wait.', 'warning');
+// ── Kick Confirmation Modal Flow ─────────────────────────────────────────────
+window._pendingKickUser = null;
+
+function openKickModal(userId, displayName) {
+    window._pendingKickUser = { id: userId, name: displayName || userId };
+    const desc = document.getElementById('kickModalDesc');
+    if (desc) {
+        desc.textContent = `Are you sure you want to remove ${displayName || 'this student'}? They will be temporarily banned from this meeting for 1 hour.`;
+    }
+    const modal = document.getElementById('kickConfirmModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeKickModal() {
+    window._pendingKickUser = null;
+    const modal = document.getElementById('kickConfirmModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function executeKickUser() {
+    if (!window._pendingKickUser || !isHost) return;
+    const { id, name } = window._pendingKickUser;
+    closeKickModal();
+
+    const targetUrl = window.meetingConfig.kickUrl.replace('/0/', `/${id}/`);
+    try {
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showNotification(`${name} has been removed`, 'info');
+            const row = document.querySelector(`.participant-item[data-identity="${id}"]`);
+            if (row) {
+                row.classList.add('removing');
+                setTimeout(() => {
+                    row.remove();
+                    updateParticipantCount();
+                }, 280);
+            }
+        } else {
+            showNotification(data.message || 'Failed to remove student', 'error');
         }
+    } catch(err) {
+        showNotification('Error removing student: ' + err.message, 'error');
+    }
+}
+window.openKickModal = openKickModal;
+window.closeKickModal = closeKickModal;
+window.executeKickUser = executeKickUser;
+
+// ── Chat Permission & Quick Reactions ─────────────────────────────────────────
+async function toggleChatPermission() {
+    if (!isHost) return;
+    const newState = !window.allowChat;
+    
+    try {
+        const res = await fetch(window.meetingConfig.globalControlUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'allow_chat', value: newState })
+        });
+        if (res.ok) {
+            window.allowChat = newState;
+            updateChatPermissionUI(newState);
+            if (window.room && window.room.localParticipant) {
+                const payload = JSON.stringify({ type: 'chat_permission_update', allow_chat: newState });
+                window.room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            }
+            showNotification(newState ? 'Chat enabled for everyone' : 'Chat limited to host only', 'info');
+        }
+    } catch(err) {
+        showNotification('Failed to update chat permission', 'error');
+    }
+}
+
+function updateChatPermissionUI(allowed) {
+    window.allowChat = allowed;
+
+    const toggle = document.getElementById('chatPermSwitch');
+    if (toggle) {
+        toggle.classList.toggle('active', allowed);
+        toggle.setAttribute('aria-checked', allowed ? 'true' : 'false');
+    }
+
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
+    const statusBanner = document.getElementById('chatStatusBanner');
+    const statusText = document.getElementById('chatStatusBannerText');
+
+    if (!isHost) {
+        if (!allowed) {
+            if (input) {
+                input.disabled = true;
+                input.value = '';
+                input.placeholder = 'Only the host can send messages';
+            }
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.classList.remove('active');
+            }
+            if (statusBanner) {
+                statusBanner.style.display = 'flex';
+                if (statusText) statusText.textContent = 'Chat is limited to the host';
+            }
+        } else {
+            if (input) {
+                input.disabled = false;
+                input.placeholder = 'Type a message here...';
+            }
+            if (statusBanner) {
+                statusBanner.style.display = 'none';
+            }
+        }
+    } else {
+        if (input) {
+            input.disabled = false;
+            input.placeholder = 'Send a message to everyone...';
+        }
+        if (statusBanner) {
+            statusBanner.style.display = allowed ? 'none' : 'flex';
+            if (statusText) statusText.textContent = 'Chat is limited to you (Host)';
+        }
+    }
+}
+window.toggleChatPermission = toggleChatPermission;
+window.updateChatPermissionUI = updateChatPermissionUI;
+
+async function sendQuickReaction(emoji) {
+    if (!window.allowChat && !isHost) {
+        showNotification('Chat is limited to host', 'warning');
         return;
     }
-    input.value = '';
+    await sendChatMessage(emoji);
+}
+window.sendQuickReaction = sendQuickReaction;
+
+async function sendChatMessage(overrideText) {
+    const input = document.getElementById('chatInput');
+    const text = (typeof overrideText === 'string' ? overrideText : (input ? input.value : '')).trim();
+    if (!text) return;
+
+    if (!window.allowChat && !isHost) {
+        showNotification('Chat is limited to host', 'warning');
+        return;
+    }
+
+    if (!signalingWs || signalingWs.readyState !== WebSocket.OPEN) {
+        showNotification('Chat connection not ready. Please wait.', 'warning');
+        return;
+    }
+
+    if (input && typeof overrideText !== 'string') {
+        input.value = '';
+        const sendBtn = document.getElementById('chatSendBtn');
+        if (sendBtn) {
+            sendBtn.classList.remove('active');
+            sendBtn.disabled = true;
+        }
+    }
 
     const payload = JSON.stringify({ 
         type: 'chat', 
@@ -1976,18 +2638,76 @@ async function sendChatMessage() {
     signalingWs.send(payload);
 }
 
-function appendChatMessage(username, text, isOwn, displayName, pfpUrl) {
+function appendChatMessage(username, text, isOwn, displayName, pfpUrl, userId) {
     const panel = document.getElementById('chatMessages');
-    const div   = document.createElement('div');
-    div.className = 'chat-msg' + (isOwn ? ' own' : '');
-    const senderName = isOwn ? 'You' : (displayName || username);
-    div.innerHTML = `
-        <div class="chat-msg-header"><strong style="color: #cbd5e1;">${senderName}</strong><span class="chat-msg-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div>
-        <div class="chat-msg-text">${text}</div>`;
-    panel.appendChild(div);
-    panel.scrollTop = panel.scrollHeight;
+    const emptyState = document.getElementById('chatEmptyState');
+    if (emptyState) emptyState.remove();
 
-    // Fixed badge notification logic
+    const uid = userId || username;
+    const user = window.IdentityDirectory.resolve(uid, displayName || username);
+    const fallbackSvg = window.IdentityDirectory.getAvatarSvg(user.displayName, user.color);
+    const finalPfp = pfpUrl || user.pfp || fallbackSvg;
+    const senderName = isOwn ? 'You' : user.displayName;
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const isParticipantHost = String(uid) === String(hostId) || user.role === 'host';
+
+    // Sanitize and linkify text
+    const escapedText = String(text || '')
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    
+    // Auto-link URLs
+    const urlPattern = /(\b(https?:\/\/|www\.)[^\s<]+)/gi;
+    const formattedText = escapedText.replace(urlPattern, (url) => {
+        const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+        return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`;
+    });
+
+    const isNearBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 70;
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'chat-msg-row' + (isOwn ? ' own' : '');
+    
+    if (isOwn) {
+        msgEl.innerHTML = `
+            <div class="chat-msg-content">
+                <div class="chat-msg-meta">
+                    <span class="chat-msg-time">${timeStr}</span>
+                    <span class="chat-msg-author">You</span>
+                </div>
+                <div class="chat-msg-bubble">
+                    ${formattedText}
+                </div>
+            </div>
+        `;
+    } else {
+        msgEl.innerHTML = `
+            <div class="chat-msg-avatar">
+                <img src="${finalPfp}" alt="${senderName}" onerror="this.onerror=null; this.src='${fallbackSvg}';">
+            </div>
+            <div class="chat-msg-content">
+                <div class="chat-msg-meta">
+                    <span class="chat-msg-author">${senderName}</span>
+                    ${isParticipantHost ? '<span class="chat-msg-role-badge">Host</span>' : ''}
+                    <span class="chat-msg-time">${timeStr}</span>
+                </div>
+                <div class="chat-msg-bubble">
+                    ${formattedText}
+                </div>
+            </div>
+        `;
+    }
+
+    panel.appendChild(msgEl);
+
+    if (isNearBottom || isOwn) {
+        panel.scrollTop = panel.scrollHeight;
+    }
+
+    // Badge notification logic
     const sidebar = document.getElementById('meetSidebar');
     const chatPanel = document.getElementById('chatPanel');
     const isSidebarHidden = sidebar.style.display === 'none';
@@ -1998,7 +2718,11 @@ function appendChatMessage(username, text, isOwn, displayName, pfpUrl) {
         const badge = document.getElementById('chatBadge');
         if (badge) {
             badge.textContent = unreadMessages;
-            badge.style.display = 'block';
+            badge.style.display = 'inline-flex';
+        }
+        const moreBadge = document.getElementById('moreBadge');
+        if (moreBadge) {
+            moreBadge.style.display = 'block';
         }
     }
 }
@@ -2073,21 +2797,29 @@ async function fetchBannedUsers() {
     list.innerHTML = '';
     if (data.banned && data.banned.length > 0) {
         data.banned.forEach(u => {
+            const pfp = getAvatarUrl(u.username, null, '#ef4444');
+            const fallback = getLocalInitialsAvatar(u.username, '#ef4444');
             const item = document.createElement('div');
             item.className = 'participant-item';
             item.innerHTML = `
-                <div class="participant-avatar"><img src="https://ui-avatars.com/api/?name=${u.username}&background=ef4444&color=fff" alt="${u.username}"></div>
+                <div class="participant-avatar"><img src="${pfp}" alt="${u.username}" onerror="this.onerror=null; this.src='${fallback}';"></div>
                 <div class="participant-info">
-                    <div class="participant-name">${u.username}</div>
-                    <div style="font-size:10px; color:#ef4444;">Banned until ${new Date(u.banned_until).toLocaleTimeString()}</div>
+                    <div class="participant-name"><span>${u.username}</span></div>
+                    <div style="font-size:10px; color:#f87171; line-height: 1.2;">Banned until ${new Date(u.banned_until).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
                 </div>
                 <div class="participant-actions">
-                    <button class="action-btn" onclick="window.unbanUser('${u.id}')" title="Unban Student">✅</button>
+                    <button class="participant-action-btn success" onclick="window.unbanUser('${u.id}')" title="Unban student" aria-label="Unban student">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <polyline points="17 11 19 13 23 9"/>
+                        </svg>
+                    </button>
                 </div>`;
             list.appendChild(item);
         });
     } else {
-        list.innerHTML = '<p style="text-align:center; color:#999; font-size:12px; padding:10px;">No banned students</p>';
+        list.innerHTML = '<p style="text-align:center; color:#64748b; font-size:11px; padding:12px; font-style:italic;">No banned students</p>';
     }
 }
 
@@ -2100,6 +2832,12 @@ window.toggleCameraModal = toggleCameraModal;
 window.switchCameraSource = switchCameraSource;
 window.stopIpCameraStream = stopIpCameraStream;
 window.sendChatMessage = sendChatMessage;
+window.sendQuickReaction = sendQuickReaction;
+window.toggleChatPermission = toggleChatPermission;
+window.updateChatPermissionUI = updateChatPermissionUI;
+window.openKickModal = openKickModal;
+window.closeKickModal = closeKickModal;
+window.executeKickUser = executeKickUser;
 window.toggleSleepMode = toggleSleepMode;
 window.toggleGlobalControl = toggleGlobalControl;
 window.toggleStudentViewPermission = toggleStudentViewPermission;
@@ -2123,7 +2861,9 @@ async function leaveMeeting() {
 function openSidebar(tab) {
     document.getElementById('meetSidebar').style.display = 'flex';
     document.getElementById('meetMain').classList.add('sidebar-open');
+    document.documentElement.style.setProperty('--face-badge-offset', '324px');
     switchSidebarTab(tab);
+    if (typeof updateLayout === 'function') updateLayout();
 }
 
 function toggleSidebar() {
@@ -2131,6 +2871,8 @@ function toggleSidebar() {
     const isOpen = s.style.display !== 'none';
     s.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('meetMain').classList.toggle('sidebar-open', !isOpen);
+    document.documentElement.style.setProperty('--face-badge-offset', !isOpen ? '324px' : '24px');
+    if (typeof updateLayout === 'function') updateLayout();
 }
 
 // ── More Options ──────────────────────────────────────────────────────────────
@@ -2152,6 +2894,73 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// ── Keyboard Shortcuts ───────────────────────────────────────────────────────
+// Ctrl + D  → Microphone mute/unmute
+// Ctrl + E  → Camera on/off
+// Esc       → Close menu / dialog / popup / sidebar
+// Ctrl+Alt+S → Screen sharing start/stop
+document.addEventListener('keydown', function(e) {
+    const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+
+    // Esc: Close open popups, modals, or sidebars (active regardless of typing state)
+    if (e.key === 'Escape') {
+        let handled = false;
+        
+        // 1. Close camera modal if present & open
+        const camModal = document.getElementById('cameraModal');
+        if (camModal && camModal.style.display !== 'none') {
+            if (typeof toggleCameraModal === 'function') toggleCameraModal();
+            handled = true;
+        }
+        
+        // 2. Close options menu if open
+        const menu = document.getElementById('moreOptionsMenu');
+        if (menu && menu.classList.contains('open')) {
+            if (typeof toggleMoreOptions === 'function') toggleMoreOptions();
+            handled = true;
+        }
+
+        // 3. Close sidebar if open
+        const sidebar = document.getElementById('meetSidebar');
+        if (sidebar && sidebar.style.display !== 'none') {
+            if (typeof toggleSidebar === 'function') toggleSidebar();
+            handled = true;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            return;
+        }
+    }
+
+    // Do not trigger media shortcuts when user is typing text in inputs or textareas
+    if (isTyping) return;
+
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+
+    // Ctrl + D: Microphone mute/unmute
+    if (isCtrlOrCmd && !e.altKey && !e.shiftKey && key === 'd') {
+        e.preventDefault();
+        if (typeof toggleMic === 'function') toggleMic();
+        return;
+    }
+
+    // Ctrl + E: Camera on/off
+    if (isCtrlOrCmd && !e.altKey && !e.shiftKey && key === 'e') {
+        e.preventDefault();
+        if (typeof toggleCamera === 'function') toggleCamera();
+        return;
+    }
+
+    // Ctrl + Alt + S: Screen sharing start/stop
+    if (isCtrlOrCmd && e.altKey && !e.shiftKey && key === 's') {
+        e.preventDefault();
+        if (typeof toggleScreenShare === 'function') toggleScreenShare();
+        return;
+    }
+});
+
 function switchSidebarTab(tab) {
     document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
     // Use CSS class-based show/hide to match the .sidebar-panel / .sidebar-panel.active rules
@@ -2167,6 +2976,8 @@ function switchSidebarTab(tab) {
         unreadMessages = 0;
         const badge = document.getElementById('chatBadge');
         if (badge) badge.style.display = 'none';
+        const moreBadge = document.getElementById('moreBadge');
+        if (moreBadge) moreBadge.style.display = 'none';
         // Scroll chat to bottom on open
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -2182,50 +2993,78 @@ function updateParticipantsList() {
     const list = document.getElementById('participantsList');
     if (!list) return;
 
-    const myName = window.meetingConfig?.currentDisplayName || currentUsername;
-    const myFallback = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(myName) + '&background=1877f2&color=fff&size=128';
-    const myPfp = window.meetingConfig?.currentPfpUrl || myFallback;
+    const myId = String(window.meetingConfig?.currentUserId || window.currentUserId);
+    const myUser = window.IdentityDirectory.resolve(myId, window.meetingConfig?.currentDisplayName || currentUsername);
+    const myFallback = window.IdentityDirectory.getAvatarSvg(myUser.displayName, myUser.color);
+    const myPfp = myUser.pfp || myFallback;
 
-    list.innerHTML = `
-        <div class="participant-item">
-            <div class="participant-avatar"><img src="${myPfp}" alt="${myName}" onerror="this.src='${myFallback}'"></div>
+    let html = `
+        <div class="participant-item" data-identity="${myId}">
+            <div class="participant-avatar"><img src="${myPfp}" alt="${myUser.displayName}" onerror="this.onerror=null; this.src='${myFallback}';"></div>
             <div class="participant-info">
-                <div class="participant-name">${myName} (You)</div>
-                ${isHost ? '<span class="host-label">Host</span>' : ''}
+                <div class="participant-name">
+                    <span>${myUser.displayName} (You)</span>
+                    ${isHost ? '<span class="host-label">Host</span>' : ''}
+                </div>
             </div>
         </div>`;
 
-    getRemoteParticipants().forEach(p => {
-        if (!p) return;
+    const remotes = getRemoteParticipants();
+    if (remotes.length === 0) {
+        html += `
+            <div class="people-empty-state" id="peopleEmptyState">
+                <div class="people-empty-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="people-empty-title">You're the only one here</div>
+                <div class="people-empty-subtitle">Waiting for students to join...</div>
+            </div>`;
+    }
 
-        let name = p.name || p.identity;
-        let pfpUrl = null;
+    list.innerHTML = html;
+
+    remotes.forEach(p => {
+        if (!p) return;
+        const identity = String(p.identity);
         if (p.metadata) {
             try {
-                const meta = JSON.parse(p.metadata);
-                if (meta.display_name) name = meta.display_name;
-                if (meta.pfp) pfpUrl = meta.pfp;
+                const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+                window.IdentityDirectory.register(identity, meta);
             } catch(e) {}
         }
-
-        const fallbackPfp = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=6366f1&color=fff&size=128';
-        const finalPfp = pfpUrl || fallbackPfp;
-        const isParticipantHost = p.identity === hostId;
+        const user = window.IdentityDirectory.resolve(identity, p.name || identity);
+        const fallback = window.IdentityDirectory.getAvatarSvg(user.displayName, user.color);
+        const pfp = user.pfp || fallback;
+        const isParticipantHost = identity === String(hostId);
+        const safeName = (user.displayName || identity).replace(/'/g, "\\'");
 
         const item = document.createElement('div');
         item.className = 'participant-item';
+        item.dataset.identity = identity;
         item.innerHTML = `
-            <div class="participant-avatar"><img src="${finalPfp}" alt="${name}" onerror="this.src='${fallbackPfp}'"></div>
+            <div class="participant-avatar"><img src="${pfp}" alt="${user.displayName}" onerror="this.onerror=null; this.src='${fallback}';"></div>
             <div class="participant-info">
-                <div class="participant-name">${name}</div>
-                ${isParticipantHost ? '<span class="host-label">Host</span>' : ''}
+                <div class="participant-name">
+                    <span>${user.displayName}</span>
+                    ${isParticipantHost ? '<span class="host-label">Host</span>' : ''}
+                </div>
             </div>
             ${isHost && !isParticipantHost ? `
             <div class="participant-actions">
-                <button class="action-btn danger" onclick="kickUser('${p.identity}')" title="Kick Out">🚫</button>
+                <button class="participant-action-btn danger" onclick="openKickModal('${identity}', '${safeName}')" title="Remove student from meeting" aria-label="Remove ${user.displayName} from meeting">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <line x1="18" y1="8" x2="23" y2="13"/>
+                        <line x1="23" y1="8" x2="18" y2="13"/>
+                    </svg>
+                </button>
             </div>
             ` : ''}`;
         list.appendChild(item);
+
+        // Also sync the video card for this participant
+        window.IdentityDirectory.syncCardDOM(identity);
     });
     // Note: fetchBannedUsers is called separately (when People tab is opened)
     // to avoid excessive API polling every 2s.
@@ -2290,12 +3129,35 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
                 <div id="face-att-progress-bar"><div id="face-att-progress-fill"></div></div>
             </div>
         </div>
+        <button class="face-att-close" id="face-att-close-btn" title="Dismiss" aria-label="Dismiss">✕</button>
     `;
     document.body.appendChild(badge);
 
     const badgeText = badge.querySelector('#face-att-text');
     const progWrap  = badge.querySelector('#face-att-prog-wrap');
     const progFill  = badge.querySelector('#face-att-progress-fill');
+    const closeBtn  = badge.querySelector('#face-att-close-btn');
+
+    function scheduleAutoDismiss(ms = 10000) {
+        clearTimeout(window._faceAttDismissTimer);
+        window._faceAttDismissTimer = setTimeout(() => {
+            if (badge && badge.parentElement) {
+                badge.style.opacity = '0';
+                setTimeout(() => badge.remove(), 400);
+            }
+        }, ms);
+    }
+
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            clearTimeout(window._faceAttDismissTimer);
+            badge.style.opacity = '0';
+            setTimeout(() => badge.remove(), 400);
+        };
+    }
+
+    // Auto-dismiss initial state after 15s if connection fails or stalls
+    scheduleAutoDismiss(15000);
 
     function connect() {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -2307,12 +3169,16 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
                     if (data.has_profile) {
                         badgeText.textContent = 'Face Recognition Active';
                         startCapture(data.interval * 1000);
+                        scheduleAutoDismiss(6000);
                     } else {
                         badge.className = 'state-warning';
                         badgeText.innerHTML = 'No profile found. <a href="/attendance/face/setup/" style="color:#f87171">Register Now</a>';
+                        scheduleAutoDismiss(12000);
                     }
                     break;
                 case 'verification_progress':
+                    clearTimeout(window._faceAttDismissTimer);
+                    badge.style.opacity = '1';
                     const pct = Math.round((data.verified_seconds / data.required_seconds) * 100);
                     badge.className = 'state-progress';
                     badgeText.textContent = `Verifying... ${pct}%`;
@@ -2325,11 +3191,12 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
                     badgeText.textContent = 'Attendance Recorded!';
                     progWrap.style.display = 'none';
                     stopCapture();
-                    setTimeout(() => badge.style.opacity = '0', 5000);
+                    scheduleAutoDismiss(5000);
                     break;
                 case 'verification_failed':
                     badge.className = 'state-warning';
                     badgeText.textContent = data.message || 'Face Not Recognized';
+                    scheduleAutoDismiss(10000);
                     break;
             }
         };
