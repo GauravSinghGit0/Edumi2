@@ -1,0 +1,200 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Teacher Console | EduMi{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-container {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+    }
+
+    /* Layout Split */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: var(--space-lg);
+    }
+    
+    .glass-card {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-sm);
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-md);
+    }
+    .card-title {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+    .card-title i { color: var(--color-primary); }
+    
+    /* Control Center Grid */
+    .control-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--space-sm);
+    }
+    .control-item {
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        text-decoration: none;
+        color: var(--color-text-main);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+        transition: all 0.2s ease;
+        background: var(--color-bg-hover);
+    }
+    .control-item:hover {
+        background: var(--color-bg-card);
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    .control-item i { color: var(--color-primary); width: 22px; height: 22px; }
+    .control-item span { font-weight: var(--font-weight-semibold); font-size: var(--font-size-md); }
+    .control-item p { margin: 0; font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: var(--font-weight-regular); }
+
+    /* Schedule Timeline */
+    .timeline { position: relative; padding-left: var(--space-md); }
+    .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--color-border); }
+    
+    .timeline-item { position: relative; margin-bottom: var(--space-md); }
+    .timeline-item::before { content: ''; position: absolute; left: calc(var(--space-md) * -1); top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); border: 2px solid var(--color-bg-card); transform: translateX(-50%); z-index: 2; }
+    
+    .timeline-content { background: var(--color-bg-hover); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); transition: all 0.2s; }
+    .timeline-content:hover { background: var(--color-bg-card); border-color: var(--color-primary); }
+    
+    .time-stamp { font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); color: var(--color-primary); text-transform: uppercase; margin-bottom: var(--space-2xs); display: block; }
+    .class-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-main); margin: 0 0 var(--space-2xs) 0; }
+    .class-meta { font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: var(--font-weight-regular); display: flex; align-items: center; gap: var(--space-xs); }
+
+    .live-badge { 
+        background: rgba(239, 68, 68, 0.1); 
+        color: var(--color-danger); 
+        padding: 0.2rem 0.5rem; 
+        border-radius: var(--radius-full); 
+        font-size: var(--font-size-xs); 
+        font-weight: var(--font-weight-bold); 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.25rem;
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-layout { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="dashboard-container">
+    {% include 'components/hero_banner.html' with title="Professor "|add:user.username category="ACADEMIC COMMAND CENTER" subtitle="Welcome back. You have "|add:scheduled_meetings|add:" active sessions today." action_url="/meetings/classroom/create/" action_label="Create New Room" action_icon="plus-circle" %}
+
+    <div class="stats-grid">
+        {% include 'components/stat_card.html' with icon="book-open" label="Total Courses" value=total_meetings bg_color="rgba(79, 70, 229, 0.1)" icon_color="var(--color-primary)" %}
+        {% include 'components/stat_card.html' with icon="radio" label="Live Classes" value=live_meetings value_id="liveMeetingsCount" bg_color="rgba(239, 68, 68, 0.1)" icon_color="var(--color-danger)" %}
+        {% include 'components/stat_card.html' with icon="users" label="Total Students" value=total_students bg_color="rgba(16, 185, 129, 0.1)" icon_color="var(--color-success)" %}
+    </div>
+
+    <div class="dashboard-layout">
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title"><i data-lucide="layout-grid"></i> Control Center</h2>
+            </div>
+            <div class="control-grid">
+                <a href="{% url 'teacher_classrooms' %}" class="control-item">
+                    <i data-lucide="door-open"></i>
+                    <span>Classrooms</span>
+                    <p>Manage lecture halls and student rosters.</p>
+                </a>
+                <a href="{% url 'teacher_meetings' %}" class="control-item">
+                    <i data-lucide="video"></i>
+                    <span>Session Hub</span>
+                    <p>Start, stop, and schedule live meetings.</p>
+                </a>
+                <a href="{% url 'project_list' %}" class="control-item">
+                    <i data-lucide="film"></i>
+                    <span>Video Editor</span>
+                    <p>Trim, merge and annotate lecture recordings.</p>
+                </a>
+                <a href="{% url 'inbox' %}" class="control-item">
+                    <i data-lucide="message-circle"></i>
+                    <span>Communications</span>
+                    <p>Messaging with students and colleagues.</p>
+                </a>
+                <a href="{% url 'profile_view' user.username %}" class="control-item">
+                    <i data-lucide="settings"></i>
+                    <span>Account Settings</span>
+                    <p>Manage your identity and security settings.</p>
+                </a>
+                {% if user.is_superuser %}
+                <a href="{% url 'admin_panel' %}" class="control-item">
+                    <i data-lucide="shield"></i>
+                    <span>System Admin</span>
+                    <p>Configure institution-wide security protocols.</p>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title"><i data-lucide="calendar"></i> Today's Schedule</h2>
+            </div>
+            <div class="timeline">
+                {% for meeting in today_meetings %}
+                <div class="timeline-item">
+                    <span class="time-stamp">{{ meeting.scheduled_time|date:"h:i A" }}
+                        {% if meeting.status == 'live' %}
+                        <span class="live-badge"><i data-lucide="circle" style="width:8px;fill:currentColor;"></i> LIVE</span>
+                        {% endif %}
+                    </span>
+                    <div class="timeline-content">
+                        <h4 class="class-title">{{ meeting.title }}</h4>
+                        <div class="class-meta">
+                            <i data-lucide="map-pin" style="width:14px;"></i>
+                            {% if meeting.classroom %}{{ meeting.classroom.name }}{% else %}Online Session{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="timeline-item">
+                    <div class="timeline-content" style="text-align:center;">
+                        <h4 class="class-title">No Classes Scheduled</h4>
+                        <div class="class-meta">Enjoy your academic break!</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'teacher_meetings' %}" style="display:block; width:100%; padding:0.65rem; margin-top:var(--space-md); border-radius:var(--radius-md); border:1px dashed var(--color-border); background:none; color:var(--color-text-muted); font-weight:var(--font-weight-semibold); font-size:var(--font-size-xs); cursor:pointer; text-decoration:none; text-align:center;">View Academic Calendar</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+    });
+</script>
+{% endblock %}

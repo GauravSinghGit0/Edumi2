@@ -57,6 +57,10 @@
                     <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
                     <span class="sidebar-nav-text">My Classrooms</span>
                 </a>
+                <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'digital_library' or '/library/' in request.path %}active{% endif %}">
+                    <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
+                    <span class="sidebar-nav-text">Digital Library</span>
+                </a>
                 <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_meetings' or '/meetings/teacher/' in request.path %}active{% endif %}">
                     <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
                     <span class="sidebar-nav-text">Meetings</span>
@@ -86,6 +90,7 @@
         {% if nav_type == 'topbar' %}
             <a href="{% url 'student_dashboard' %}">Dashboard</a>
             <a href="{% url 'student_classrooms' %}">Classrooms</a>
+            <a href="{% url 'digital_library' %}">Library</a>
             <a href="{% url 'student_meetings' %}">Meetings</a>
             <a href="{% url 'inbox' %}">Inbox</a>
         {% else %}
@@ -96,8 +101,12 @@
                     <span class="sidebar-nav-text">Home</span>
                 </a>
                 <a href="{% url 'student_classrooms' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_classrooms' or '/classroom/student/' in request.path or '/classrooms/' in request.path %}active{% endif %}">
-                    <span class="sidebar-nav-icon"><i data-lucide="book-open"></i></span>
+                    <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
                     <span class="sidebar-nav-text">Classrooms</span>
+                </a>
+                <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'digital_library' or '/library/' in request.path %}active{% endif %}">
+                    <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
+                    <span class="sidebar-nav-text">Digital Library</span>
                 </a>
                 <a href="{% url 'student_meetings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_meetings' or '/meetings/student/' in request.path %}active{% endif %}">
                     <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
@@ -107,7 +116,7 @@
                     <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
                     <span class="sidebar-nav-text">Live / Videos</span>
                 </a>
-                <a href="{% url 'face_setup' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'face_setup' or '/face-setup/' in request.path or '/attendance/' in request.path %}active{% endif %}">
+                <a href="{% url 'face_setup' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'face_setup' or '/attendance/face/' in request.path or '/face-setup/' in request.path %}active{% endif %}">
                     <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
                     <span class="sidebar-nav-text">Face Identity</span>
                 </a>

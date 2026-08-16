@@ -1,0 +1,52 @@
+<!-- ══════════════ TAB 3: PEOPLE & CLASS ROSTER ══════════════ -->
+<div id="tabContentPeople" class="tab-content-panel" style="display: none;">
+    <div style="display: grid; grid-template-columns: {% if is_teacher %}1fr 1fr{% else %}1fr{% endif %}; gap: 2rem;">
+        <!-- Pending Requests (Teacher Only) -->
+        {% if is_teacher %}
+        <div class="section-card">
+            <h2 class="section-title"><i data-lucide="inbox"></i> Pending Join Requests</h2>
+            <div class="student-list">
+                {% for membership in pending_requests %}
+                <div class="student-item" data-id="{{ membership.id }}" style="flex-direction: column; align-items: stretch; gap: 0.75rem; background: #fffbeb;">
+                    <div class="student-meta">
+                        <img src="{% if membership.student.userprofile %}{{ membership.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=f59e0b&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=f59e0b&color=fff'">
+                        <div>
+                            <p style="margin:0; font-size: 0.875rem; font-weight: 700; color: #78350f;">{% if membership.student.userprofile %}{{ membership.student.userprofile.get_display_name }}{% else %}{{ membership.student.get_full_name|default:membership.student.username }}{% endif %}</p>
+                            <p style="margin:0; font-size: 0.75rem; color: #92400e;">{{ membership.requested_at|timesince }} ago</p>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <button onclick="approveRequest({{ membership.id }})" class="btn-sm btn-approve">Approve</button>
+                        <button onclick="denyRequest({{ membership.id }})" class="btn-sm btn-deny">Deny</button>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="text-align: center; color: var(--stream-text-muted); font-size: 0.875rem; margin: 2rem 0;">No pending requests</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Enrolled Students Roster -->
+        <div class="section-card">
+            <h2 class="section-title"><i data-lucide="users-2"></i> Enrolled Students ({{ approved_students|length }})</h2>
+            <div class="student-list" style="max-height: 500px; overflow-y: auto;">
+                {% for membership in approved_students %}
+                <div class="student-item">
+                    <div class="student-meta">
+                        <img src="{% if membership.student.userprofile %}{{ membership.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff'">
+                        <span>{% if membership.student.userprofile %}{{ membership.student.userprofile.get_display_name }}{% else %}{{ membership.student.get_full_name|default:membership.student.username }}{% endif %}</span>
+                    </div>
+                    {% if is_teacher %}
+                    <button onclick="removeStudent({{ membership.id }})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;" title="Remove student">
+                        <i data-lucide="user-minus" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p style="text-align: center; color: var(--stream-text-muted); font-size: 0.875rem;">No students enrolled yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>

@@ -50,6 +50,9 @@
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Profile Page Styles */
+@import url('design-tokens.css');
+
 /* Dark Mode Variables */
 body.dark-mode {
   --p-bg: #0f172a;

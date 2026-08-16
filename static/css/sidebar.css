@@ -1,11 +1,14 @@
 /* Modern Sidebar Navigation */
+@import url('design-tokens.css');
+
 html {
     scrollbar-gutter: stable;
 }
 
 :root {
-    --sidebar-width: 260px;
-    --topbar-height: 60px;
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 64px;
+    --topbar-height: 54px;
 }
 
 * {
@@ -15,9 +18,9 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-main);
-    color: var(--text-main);
+    font-family: var(--font-family-base);
+    background: var(--color-bg-app);
+    color: var(--color-text-main);
     overflow-x: hidden;
 }
 
@@ -708,6 +711,40 @@ body {
         display: none;
     }
 }
+
+/* ── Responsive Sidebar Breakpoint Overrides ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .sidebar {
+        width: var(--sidebar-collapsed-width);
+    }
+    .sidebar-nav-text,
+    .sidebar-nav-title,
+    .sidebar-nav-badge {
+        display: none !important;
+    }
+    .sidebar-nav-item {
+        justify-content: center;
+        padding: 10px 0;
+    }
+    .main-content {
+        margin-left: var(--sidebar-collapsed-width) !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .sidebar {
+        width: var(--sidebar-width);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease-in-out;
+    }
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: 0 !important;
+    }
+}
+
 
 /* Media queries handle standard transitions */
 

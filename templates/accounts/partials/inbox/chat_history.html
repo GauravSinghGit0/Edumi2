@@ -1,0 +1,45 @@
+<!-- Chat Messages History -->
+<div class="messages-chat-history" id="messagesContainer">
+  {% if messages %}
+    {% for message in messages %}
+    {% if message.show_date_separator %}
+    <div class="chat-date-separator"><span>{{ message.date_label }}</span></div>
+    {% endif %}
+    <div class="chat-msg-row {% if message.sender == user %}sent{% else %}recv{% endif %}" id="msg-{{ message.id }}">
+      <div class="chat-msg-bubble-wrap">
+        <div class="chat-msg-bubble">
+          {% if message.image %}
+          <img src="{{ message.image.url }}" class="chat-msg-attachment-image" alt="Image" onclick="openImageModal(this.src)">
+          {% endif %}
+          {% if message.file %}
+          <a href="{{ message.file.url }}" download class="chat-msg-attachment-file">
+            <span class="attachment-file-icon">📎</span>
+            <span class="attachment-file-name">{{ message.file.name }}</span>
+            <svg class="attachment-download-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          </a>
+          {% endif %}
+          {% if message.content %}<span>{{ message.content }}</span>{% endif %}
+          <span class="chat-msg-time">{{ message.created_at|date:"g:i A" }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="chat-empty-box">
+      <div class="chat-empty-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>
+      </div>
+      <h3>No messages yet</h3>
+      <p>Say hello to {{ other_user.userprofile.display_name|default:other_user.username }}!</p>
+    </div>
+  {% endif %}
+
+  <!-- Typing Indicator -->
+  <div class="chat-typing-row" id="typingIndicator">
+    <div class="chat-typing-dots">
+      <div class="chat-typing-dot"></div>
+      <div class="chat-typing-dot"></div>
+      <div class="chat-typing-dot"></div>
+    </div>
+  </div>
+</div>

@@ -44,3 +44,14 @@ from .attendance_history_views import (
     classroom_attendance_history,
     classroom_attendance_detail,
 )
+from .material_views import (
+    classroom_materials_view,
+    upload_study_material,
+    create_material_unit,
+    delete_study_material,
+    toggle_material_bookmark,
+    download_study_material,
+    material_detail_api,
+    digital_library_view,
+)
+

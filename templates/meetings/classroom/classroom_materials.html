@@ -1,0 +1,173 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ classroom.title }} — Study Materials & Digital Library{% endblock %}
+{% block title %}Study Materials — {{ classroom.title }} — EduMi{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/study_materials.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="materials-hub-container">
+    <!-- Header Banner -->
+    <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 1.25rem; padding: 2rem 2.5rem; color: white; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem;">
+                <a href="{% url 'classroom_detail' classroom.id %}" style="color: white; text-decoration: underline;">{{ classroom.title }}</a> / DIGITAL LIBRARY
+            </div>
+            <h1 style="margin: 0 0 0.5rem 0; font-size: 1.875rem; font-weight: 800;">Study Materials & Resources</h1>
+            <p style="margin: 0; color: rgba(255,255,255,0.8); font-size: 0.875rem;">
+                Browse lecture notes, slides, reference textbooks, and video recordings indexed for this course.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <a href="{% url 'classroom_detail' classroom.id %}" class="btn-hero-action" style="background: rgba(255,255,255,0.15); color: white; padding: 0.65rem 1.25rem; border: 1px solid rgba(255,255,255,0.25); text-decoration: none; border-radius: 0.75rem; font-weight: 700; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                Back to Class
+            </a>
+            {% if is_teacher %}
+            <button onclick="openCreateUnitModal()" class="btn-add-unit" type="button" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25);">
+                <i data-lucide="folder-plus" style="width: 16px; height: 16px;"></i>
+                New Unit
+            </button>
+            <button onclick="openUploadModal()" class="btn-add-material" type="button" style="background: #10b981;">
+                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
+                Upload Resource
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <div class="materials-toolbar">
+        <form method="GET" action="{% url 'classroom_materials' classroom.id %}" class="materials-search-wrap">
+            <i data-lucide="search" class="materials-search-icon"></i>
+            <input type="text" name="q" value="{{ current_query }}" class="materials-search-input" placeholder="Search by title, keywords, or topics…">
+            {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+            {% if current_unit %}<input type="hidden" name="unit" value="{{ current_unit }}">{% endif %}
+        </form>
+
+        <div class="materials-filter-pills">
+            <a href="{% url 'classroom_materials' classroom.id %}" class="filter-pill {% if not current_type %}active{% endif %}">
+                All Formats
+            </a>
+            <a href="{% url 'classroom_materials' classroom.id %}?type=document{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'document' %}active{% endif %}">
+                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i> PDFs / Docs
+            </a>
+            <a href="{% url 'classroom_materials' classroom.id %}?type=slides{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'slides' %}active{% endif %}">
+                <i data-lucide="presentation" style="width: 14px; height: 14px;"></i> Slides
+            </a>
+            <a href="{% url 'classroom_materials' classroom.id %}?type=notes{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'notes' %}active{% endif %}">
+                <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Notes
+            </a>
+            <a href="{% url 'classroom_materials' classroom.id %}?type=video{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'video' %}active{% endif %}">
+                <i data-lucide="video" style="width: 14px; height: 14px;"></i> Videos
+            </a>
+            <a href="{% url 'classroom_materials' classroom.id %}?type=book{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'book' %}active{% endif %}">
+                <i data-lucide="bookmark" style="width: 14px; height: 14px;"></i> e-Books
+            </a>
+        </div>
+    </div>
+
+    <!-- Materials Grid / Units List -->
+    {% if materials %}
+        <div class="materials-grid">
+            {% for mat in materials %}
+            <div class="material-card" id="mat-card-{{ mat.id }}">
+                <div>
+                    <div class="mat-card-top">
+                        <div class="mat-type-icon-box" style="background: {{ mat.get_badge_color }}15; color: {{ mat.get_badge_color }};">
+                            <i data-lucide="{{ mat.get_icon_name }}" style="width: 22px; height: 22px;"></i>
+                        </div>
+                        <div class="mat-card-meta">
+                            <h4 class="mat-title" title="{{ mat.title }}">{{ mat.title }}</h4>
+                            <div class="mat-subtitle">
+                                <span style="text-transform: uppercase; font-weight: 750; font-size: 0.6875rem; color: {{ mat.get_badge_color }};">{{ mat.material_type }}</span>
+                                {% if mat.unit %}<span style="color: var(--mat-primary); font-weight: 600;">• {{ mat.unit.title|truncatechars:18 }}</span>{% endif %}
+                                {% if mat.get_file_size_formatted %}<span>• {{ mat.get_file_size_formatted }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if mat.description %}
+                    <p class="mat-desc">{{ mat.description }}</p>
+                    {% endif %}
+
+                    {% if mat.rag_indexed %}
+                    <div style="margin-bottom: 0.75rem;">
+                        <span class="mat-rag-badge">
+                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                            RAG Vector Indexed · {{ mat.chunks.count }} Chunks
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mat-card-footer">
+                    <div class="mat-footer-stats">
+                        <span><i data-lucide="download" style="width: 12px; height: 12px;"></i> {{ mat.download_count }}</span>
+                        <span><i data-lucide="eye" style="width: 12px; height: 12px;"></i> {{ mat.view_count }}</span>
+                    </div>
+
+                    <div class="mat-card-actions">
+                        <button onclick="toggleBookmark(this, {{ mat.id }})" class="mat-btn-bookmark {% if mat.is_bookmarked %}bookmarked{% endif %}" title="Bookmark">
+                            <i data-lucide="bookmark" style="width: 16px; height: 16px;"></i>
+                        </button>
+
+                        <button onclick="openMaterialDetailModal({{ mat.id }})" class="mat-btn-action" title="View AI Summary & Chunks">
+                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                            Details
+                        </button>
+
+                        {% if mat.file %}
+                        <a href="{% url 'download_study_material' mat.id %}" class="mat-btn-action" style="background: var(--mat-primary); color: white; border-color: var(--mat-primary);">
+                            <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                            Download
+                        </a>
+                        {% elif mat.external_url %}
+                        <a href="{{ mat.external_url }}" target="_blank" rel="noopener" class="mat-btn-action" style="background: #10b981; color: white; border-color: #10b981;">
+                            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                            Open Link
+                        </a>
+                        {% endif %}
+
+                        {% if is_teacher %}
+                        <button onclick="deleteMaterial({{ mat.id }})" class="mat-btn-action" style="color: #ef4444;" title="Delete">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="unit-section-box" style="text-align: center; padding: 4rem 2rem;">
+            <i data-lucide="file-question" style="width: 54px; height: 54px; color: #cbd5e1; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--mat-text-main);">No materials found</h3>
+            <p style="color: var(--mat-text-muted); font-size: 0.875rem; margin: 0 auto 1.5rem; max-width: 420px;">
+                {% if current_query %}
+                No resources matching "<strong>{{ current_query }}</strong>". Try clearing your search or filter.
+                {% else %}
+                No study materials uploaded for this classroom yet.
+                {% endif %}
+            </p>
+            {% if is_teacher %}
+            <button onclick="openUploadModal()" class="btn-add-material" type="button">
+                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
+                Upload Resource
+            </button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Include Modals Partial -->
+{% include 'meetings/partials/materials/material_modals.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/study_materials.js' %}"></script>
+{% endblock %}

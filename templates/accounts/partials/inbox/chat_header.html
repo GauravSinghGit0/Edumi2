@@ -1,0 +1,47 @@
+<!-- Chat Header -->
+<div class="messages-chat-header">
+  <div class="chat-header-user-info">
+    <a href="{% url 'inbox' %}" class="header-icon-btn back-btn" title="Back to inbox">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/></svg>
+    </a>
+    <div class="chat-header-avatar-container">
+      {% if conversation.classroom %}
+        <div class="chat-header-avatar" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; border-radius: 50%;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+        </div>
+      {% else %}
+        <img src="{{ other_user.userprofile.get_profile_picture_url }}"
+             alt="{{ other_user.username }}"
+             class="chat-header-avatar"
+             onerror="this.src='https://ui-avatars.com/api/?name={{ other_user.username }}&background=667eea&color=fff'">
+        {% if other_user.is_active %}<span class="chat-header-online-dot"></span>{% endif %}
+      {% endif %}
+    </div>
+    <div class="chat-header-text">
+      <h2 class="chat-header-name">
+        {{ conversation.display_title }}
+      </h2>
+      <span class="chat-header-status">
+        {% if conversation.classroom %}
+          <span style="background: rgba(99, 102, 241, 0.15); color: #6366f1; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">Classroom Chat</span> · {{ conversation.participants.count }} members
+        {% else %}
+          @{{ other_user.username }} · 
+          {% if other_user.userprofile.user_type == 'teacher' %}Teacher{% else %}Student{% endif %}
+          {% if other_user.is_active %} · <span class="chat-header-status-indicator">Active now</span>{% endif %}
+        {% endif %}
+      </span>
+    </div>
+  </div>
+  
+  <div class="chat-header-actions">
+    {% if conversation.classroom %}
+    <a href="{% url 'classroom_detail' conversation.classroom.id %}" class="header-icon-btn" title="Go to Classroom">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+    </a>
+    {% elif other_user %}
+    <a href="{% url 'profile_view' other_user.username %}" class="header-icon-btn" title="View Profile">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+    </a>
+    {% endif %}
+  </div>
+</div>

@@ -1,21 +1,230 @@
-{% extends 'layouts/base.html' %}
-{% block title %}Error — EduMi{% endblock %}
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ error_title|default:"System Alert" }} | EduMi{% endblock %}
+
 {% block content %}
-<div style="max-width:520px; margin:80px auto; text-align:center; padding:0 20px;">
-    <div style="width:72px; height:72px; background:rgba(239,68,68,.12); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="36"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+<style>
+    .error-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ambient-glow-amber {
+        position: absolute;
+        top: 20%;
+        left: 25%;
+        width: 380px;
+        height: 380px;
+        background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 70%);
+        border-radius: 50%;
+        filter: blur(40px);
+        animation: floatGlow 8s ease-in-out infinite alternate;
+        pointer-events: none;
+    }
+
+    .ambient-glow-indigo {
+        position: absolute;
+        bottom: 20%;
+        right: 25%;
+        width: 380px;
+        height: 380px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        filter: blur(40px);
+        animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+        pointer-events: none;
+    }
+
+    @keyframes floatGlow {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(25px, -20px) scale(1.08); }
+    }
+
+    .error-card-glass {
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 2rem;
+        padding: 3.5rem 3rem;
+        max-width: 580px;
+        width: 100%;
+        text-align: center;
+        position: relative;
+        z-index: 10;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark-mode .error-card-glass {
+        background: rgba(30, 41, 59, 0.88);
+        border-color: rgba(51, 65, 85, 0.8);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    }
+
+    .error-icon-box {
+        width: 80px;
+        height: 80px;
+        border-radius: 1.5rem;
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.75rem;
+        box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.2);
+    }
+
+    body.dark-mode .error-icon-box {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    .error-heading {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.875rem;
+        letter-spacing: -0.02em;
+    }
+
+    body.dark-mode .error-heading {
+        color: #f8fafc;
+    }
+
+    .error-description {
+        color: #64748b;
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0 auto 2.25rem;
+        max-width: 440px;
+    }
+
+    body.dark-mode .error-description {
+        color: #94a3b8;
+    }
+
+    .error-btn-group {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-error-amber {
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        padding: 0.875rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 750;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.35);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-error-amber:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -5px rgba(79, 70, 229, 0.45);
+        color: white;
+    }
+
+    .btn-error-secondary {
+        background: rgba(241, 245, 249, 0.8);
+        color: #334155;
+        padding: 0.875rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 750;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        border: 1px solid #cbd5e1;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    body.dark-mode .btn-error-secondary {
+        background: rgba(51, 65, 85, 0.6);
+        color: #e2e8f0;
+        border-color: #475569;
+    }
+
+    .btn-error-secondary:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: translateY(-2px);
+    }
+
+    body.dark-mode .btn-error-secondary:hover {
+        background: #475569;
+        color: #ffffff;
+    }
+
+    @media (max-width: 640px) {
+        .error-card-glass { padding: 2.5rem 1.5rem; }
+        .error-heading { font-size: 1.5rem; }
+        .error-description { font-size: 0.9375rem; }
+    }
+</style>
+
+<div class="error-wrapper">
+    <div class="ambient-glow-amber"></div>
+    <div class="ambient-glow-indigo"></div>
+
+    <div class="error-card-glass">
+        <div class="error-icon-box">
+            <i data-lucide="shield-alert" style="width: 40px; height: 40px;"></i>
+        </div>
+        
+        <h1 class="error-heading">{{ error_title|default:"Access Denied" }}</h1>
+        
+        <p class="error-description">
+            {{ error_message|default:message|default:"You do not have permission to access this resource or perform this operation." }}
+        </p>
+
+        <div class="error-btn-group">
+            {% if retry %}
+            <button onclick="location.reload()" class="btn-error-amber" type="button">
+                <i data-lucide="rotate-cw" style="width: 18px; height: 18px;"></i>
+                <span>Retry Action</span>
+            </button>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn-error-amber">
+                <i data-lucide="home" style="width: 18px; height: 18px;"></i>
+                <span>Return to Dashboard</span>
+            </a>
+            {% endif %}
+
+            {% if back_url %}
+            <a href="{{ back_url }}" class="btn-error-secondary">
+                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                <span>Go Back</span>
+            </a>
+            {% else %}
+            <button onclick="history.back()" class="btn-error-secondary" type="button">
+                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                <span>Go Back</span>
+            </button>
+            {% endif %}
+        </div>
     </div>
-    <h2 style="margin:0 0 12px; font-size:1.4rem; font-weight:800;">{{ error_title|default:"Access Denied" }}</h2>
-    <p style="opacity:.65; margin:0 0 28px; line-height:1.6;">{{ error_message|default:message|default:"You do not have permission to view this page." }}</p>
-    {% if retry %}
-    <button onclick="location.reload()" style="display:inline-flex; align-items:center; gap:8px; padding:12px 28px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; text-decoration:none; border-radius:12px; font-weight:600; border:none; cursor:pointer; margin-right:10px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-        Retry
-    </button>
-    {% endif %}
-    <a href="{% url 'login' %}" style="display:inline-flex; align-items:center; gap:8px; padding:12px 28px; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; text-decoration:none; border-radius:12px; font-weight:600;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Return Home
-    </a>
 </div>
+
+<script>
+    if (window.lucide) lucide.createIcons();
+</script>
 {% endblock %}

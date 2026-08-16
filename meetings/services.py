@@ -1,9 +1,7 @@
-"""
-Service layer for Meetings app.
-Contains business logic for classroom and meeting management.
-"""
-from .models import ClassroomMembership
+from datetime import date, timedelta
 from django.db.models import Count, Q
+from .models import ClassroomMembership
+
 
 def get_classroom_detail_context(classroom, user):
     """Get context for classroom detail view based on user role."""
@@ -23,6 +21,39 @@ def get_classroom_detail_context(classroom, user):
         'active_meeting': classroom.get_active_meeting(),
     }
     
+    # Get or create group conversation and fetch messages
+    conversation = classroom.get_or_create_conversation()
+    messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    prev_date = None
+    for msg in messages_list:
+        msg_date = msg.created_at.date()
+        if msg_date != prev_date:
+            msg.show_date_separator = True
+            if msg_date == today:
+                msg.date_label = 'Today'
+            elif msg_date == yesterday:
+                msg.date_label = 'Yesterday'
+            else:
+                msg.date_label = msg.created_at.strftime('%B %d, %Y')
+            prev_date = msg_date
+        else:
+            msg.show_date_separator = False
+
+    # Fetch study materials and units for tab
+    units = classroom.material_units.all().prefetch_related('materials')
+    materials = list(classroom.study_materials.filter(is_published=True).select_related('unit', 'uploaded_by').order_by('-created_at'))
+    
+    context.update({
+        'conversation': conversation,
+        'classroom_messages': messages_list,
+        'material_units': units,
+        'study_materials': materials,
+        'study_materials_count': len(materials),
+    })
+
     if is_teacher:
         approved_students = classroom.get_approved_memberships()
         att_total_count = approved_students.count()

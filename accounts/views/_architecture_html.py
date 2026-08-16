@@ -36,7 +36,7 @@ ARCHITECTURE_HTML = """
     </style>
 </head>
 <body>
-    <a href="/accounts/admin-panel/" class="back-btn">\u2190 Back to Admin Panel</a>
+    <a href="/admin-panel/" class="back-btn">\u2190 Back to Admin Panel</a>
     <div class="header">
         <h1>\U0001f3d7\ufe0f EduMi Platform - System Architecture</h1>
         <p>Complete Backend Architecture Visualization</p>

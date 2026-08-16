@@ -104,7 +104,7 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                         response['Retry-After'] = str(retry_after)
                         return response
                     
-                    target_template = template_name or 'accounts/register.html'
+                    target_template = template_name or 'accounts/auth/register.html'
                     try:
                         response = render(request, target_template, {
                             'error': msg,

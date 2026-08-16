@@ -49,3 +49,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'type': 'meeting_started',
             'data': event['data']
         }))
+
+    async def identity_updated(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'identity_updated',
+            'data': event['data']
+        }))

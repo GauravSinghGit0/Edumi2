@@ -1,6 +1,4 @@
-"""
-Messaging views: inbox list, conversation detail, start conversation, send message.
-"""
+from datetime import datetime, date, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
@@ -11,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 
 from accounts.messaging_models import Conversation, Message
+from accounts.notification_utils import notify_new_message
 
 User = get_user_model()
 
@@ -18,15 +17,12 @@ User = get_user_model()
 def format_conversation_timestamp(dt):
     if not dt:
         return ""
-    from django.utils import timezone
-    from datetime import timedelta
     
     try:
         local_dt = timezone.localtime(dt)
         now = timezone.localtime(timezone.now())
     except ValueError:
         local_dt = dt
-        from datetime import datetime
         now = datetime.now()
         
     diff = now - local_dt
@@ -61,6 +57,8 @@ def inbox(request):
     )
     for conv in conversations:
         conv.other_user = conv.get_other_user(request.user)
+        conv.display_title = conv.get_display_title(request.user)
+        conv.is_classroom = conv.is_classroom_chat()
         conv.last_msg = conv.get_last_message()
         conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         if conv.last_msg:
@@ -76,7 +74,7 @@ def inbox(request):
             models.Q(userprofile__display_name__icontains=search_query)
         ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
 
-    return render(request, 'accounts/inbox.html', {
+    return render(request, 'accounts/messaging/inbox.html', {
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
@@ -92,9 +90,10 @@ def conversation_detail(request, conversation_id):
         return redirect('inbox')
     conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
     other_user = conversation.get_other_user(request.user)
-    messages_list = list(conversation.messages.all().select_related('sender').order_by('created_at'))
+    conversation.display_title = conversation.get_display_title(request.user)
+    conversation.is_classroom = conversation.is_classroom_chat()
+    messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
 
-    from datetime import date, timedelta
     today = date.today()
     yesterday = today - timedelta(days=1)
     prev_date = None
@@ -119,6 +118,8 @@ def conversation_detail(request, conversation_id):
     )
     for conv in conversations:
         conv.other_user = conv.get_other_user(request.user)
+        conv.display_title = conv.get_display_title(request.user)
+        conv.is_classroom = conv.is_classroom_chat()
         conv.last_msg = conv.get_last_message()
         conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         if conv.last_msg:
@@ -134,7 +135,7 @@ def conversation_detail(request, conversation_id):
             models.Q(userprofile__display_name__icontains=search_query)
         ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
 
-    return render(request, 'accounts/inbox.html', {
+    return render(request, 'accounts/messaging/inbox.html', {
         'conversation': conversation,
         'other_user': other_user,
         'messages': messages_list,
@@ -210,18 +211,38 @@ def send_message(request, conversation_id):
         file=generic_file,
     )
 
-
-
-    from accounts.notification_utils import notify_new_message
-    other_user = conversation.get_other_user(request.user)
     local_created_at = timezone.localtime(message.created_at)
-    if other_user:
+    profile = getattr(message.sender, 'userprofile', None)
+    sender_display_name = getattr(profile, 'display_name', '') or message.sender.get_full_name() or message.sender.username
+    
+    is_classroom_teacher = bool(conversation.classroom and conversation.classroom.teacher_id == message.sender_id)
+    is_teacher_profile = bool(profile and profile.user_type == 'teacher') or message.sender.is_superuser
+    sender_role = 'Teacher' if (is_classroom_teacher or is_teacher_profile) else 'Student'
+    
+    if profile and hasattr(profile, 'get_profile_picture_url'):
+        sender_pfp = profile.get_profile_picture_url()
+    else:
+        sender_pfp = f"https://ui-avatars.com/api/?name={message.sender.username}&background=6366f1&color=fff"
+
+    image_url = message.image.url if message.image else None
+    file_url = message.file.url if message.file else None
+    file_name = message.file.name.split('/')[-1] if message.file else None
+
+    # Notify all other participants in the conversation (1-on-1 and classroom group chats)
+    for participant in conversation.participants.exclude(id=request.user.id):
         notify_new_message(
             request.user,
-            other_user,
+            participant,
             conversation_id,
-            content=content,
-            created_at=local_created_at.strftime('%I:%M %p')
+            content=content or ("Sent an attachment" if (image_file or generic_file) else "New message"),
+            created_at=local_created_at.strftime('%I:%M %p'),
+            sender_name=sender_display_name,
+            sender_role=sender_role,
+            sender_pfp=sender_pfp,
+            message_id=message.id,
+            image_url=image_url,
+            file_url=file_url,
+            file_name=file_name
         )
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -229,10 +250,15 @@ def send_message(request, conversation_id):
             'status': 'success',
             'message_id': message.id,
             'content': message.content,
-            'image_url': message.image.url if message.image else None,
-            'file_url': message.file.url if message.file else None,
+            'image_url': image_url,
+            'file_url': file_url,
+            'file_name': file_name,
             'sender': message.sender.username,
+            'sender_name': sender_display_name,
+            'sender_role': sender_role,
+            'sender_pfp': sender_pfp,
             'created_at': local_created_at.strftime('%I:%M %p'),
+            'created_date': local_created_at.strftime('%b %d, %Y'),
         })
     return redirect('conversation_detail', conversation_id=conversation_id)
 

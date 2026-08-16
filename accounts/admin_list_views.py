@@ -18,7 +18,7 @@ def admin_all_users(request):
     
     users = User.objects.all().select_related('userprofile').order_by('-date_joined')
     
-    return render(request, 'accounts/admin_all_users.html', {
+    return render(request, 'accounts/admin/admin_all_users.html', {
         'users': users,
         'total_count': users.count()
     })
@@ -31,7 +31,7 @@ def admin_all_students(request):
     
     students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('-date_joined')
     
-    return render(request, 'accounts/admin_all_students.html', {
+    return render(request, 'accounts/admin/admin_all_students.html', {
         'students': students,
         'total_count': students.count()
     })
@@ -44,7 +44,7 @@ def admin_all_teachers(request):
     
     teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('-date_joined')
     
-    return render(request, 'accounts/admin_all_teachers.html', {
+    return render(request, 'accounts/admin/admin_all_teachers.html', {
         'teachers': teachers,
         'total_count': teachers.count()
     })
@@ -57,7 +57,7 @@ def admin_all_meetings(request):
     
     meetings = Meeting.objects.filter(classroom__isnull=True).select_related('teacher', 'classroom').order_by('-created_at')
     
-    return render(request, 'accounts/admin_all_meetings.html', {
+    return render(request, 'accounts/admin/admin_all_meetings.html', {
         'meetings': meetings,
         'total_count': meetings.count()
     })
@@ -70,7 +70,7 @@ def admin_live_meetings(request):
     
     meetings = Meeting.objects.filter(status='live', classroom__isnull=True).select_related('teacher', 'classroom').order_by('-created_at')
     
-    return render(request, 'accounts/admin_live_meetings.html', {
+    return render(request, 'accounts/admin/admin_live_meetings.html', {
         'meetings': meetings,
         'total_count': meetings.count()
     })

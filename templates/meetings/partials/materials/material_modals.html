@@ -1,0 +1,169 @@
+<!-- ══════════════ MODALS: STUDY MATERIALS & DIGITAL LIBRARY ══════════════ -->
+
+<!-- 1. Upload Material Modal -->
+<div class="materials-modal-backdrop" id="uploadMaterialModal" onclick="if(event.target === this) closeUploadModal()">
+    <div class="materials-modal-card">
+        <div class="modal-header-row">
+            <h3><i data-lucide="upload-cloud" style="width: 20px; height: 20px; color: var(--mat-primary); vertical-align: text-bottom;"></i> Add Study Resource</h3>
+            <button class="modal-close-btn" onclick="closeUploadModal()" type="button">&times;</button>
+        </div>
+
+        <form id="uploadMaterialForm" action="{% url 'upload_study_material' classroom.id %}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="modal-form-group">
+                <label class="modal-label">Resource Title *</label>
+                <input type="text" name="title" id="matTitleInput" required class="modal-input" placeholder="e.g. Chapter 4: Neural Networks Lecture Slides">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="modal-form-group">
+                    <label class="modal-label">Curriculum Unit</label>
+                    <select name="unit_id" id="matUnitSelect" class="modal-select">
+                        <option value="">-- General / No Unit --</option>
+                        {% for unit in material_units %}
+                        <option value="{{ unit.id }}">{{ unit.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="modal-form-group">
+                    <label class="modal-label">Material Type</label>
+                    <select name="material_type" id="matTypeSelect" class="modal-select">
+                        <option value="document">Document / PDF / Doc</option>
+                        <option value="slides">Presentation / Slides</option>
+                        <option value="notes">Lecture Notes / Markdown</option>
+                        <option value="video">Video / Lecture Recording</option>
+                        <option value="link">External Web Link</option>
+                        <option value="book">e-Book / Reference Book</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Description / Summary</label>
+                <textarea name="description" class="modal-textarea" rows="2" placeholder="Brief context or learning objectives..."></textarea>
+            </div>
+
+            <!-- Drag and Drop File Upload Area -->
+            <div class="modal-form-group">
+                <label class="modal-label">Attach File (PDF, DOCX, PPTX, MP4, etc.)</label>
+                <div class="modal-dropzone" id="matDropzone">
+                    <i data-lucide="cloud-upload" style="width: 36px; height: 36px; color: var(--mat-primary); margin-bottom: 0.5rem;"></i>
+                    <p style="margin: 0 0 0.25rem 0; font-size: 0.875rem; font-weight: 700; color: var(--mat-text-main);">Click to browse or drag and drop</p>
+                    <p style="margin: 0; font-size: 0.75rem; color: var(--mat-text-muted);" id="matSelectedFileName">Supports documents, presentations, videos, and books</p>
+                    <input type="file" id="matFileInput" name="file" style="display: none;">
+                </div>
+            </div>
+
+            <!-- Upload Progress Bar (Industry Grade Streaming Feedback) -->
+            <div id="uploadProgressContainer" style="display: none; margin-bottom: 1.25rem; background: var(--mat-hover-bg); border: 1px solid var(--mat-border); border-radius: 0.75rem; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; font-weight: 750; color: var(--mat-text-main); margin-bottom: 0.4rem;">
+                    <span id="uploadStageText">Uploading media file...</span>
+                    <span id="uploadPercentText" style="color: var(--mat-primary);">0%</span>
+                </div>
+                <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 9999px; overflow: hidden;">
+                    <div id="uploadProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #10b981); transition: width 0.15s ease;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--mat-text-muted); margin-top: 0.35rem;">
+                    <span id="uploadTransferRate">Calculating upload speed...</span>
+                    <span id="uploadSizeInfo"></span>
+                </div>
+            </div>
+
+            <!-- External Link -->
+            <div class="modal-form-group">
+                <label class="modal-label">Or External URL / Video Link</label>
+                <input type="url" name="external_url" class="modal-input" placeholder="https://youtube.com/... or https://arxiv.org/...">
+            </div>
+
+            <!-- Text Content for Notes -->
+            <div class="modal-form-group">
+                <label class="modal-label">Rich Notes / Text Content (Optional)</label>
+                <textarea name="content_text" class="modal-textarea" rows="3" placeholder="Paste formulas, code snippets, or notes here..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="button" onclick="closeUploadModal()" class="btn-add-unit" id="btnCancelUpload">Cancel</button>
+                <button type="submit" id="btnSubmitUpload" class="btn-add-material">Upload Resource</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Create Unit Modal -->
+<div class="materials-modal-backdrop" id="createUnitModal" onclick="if(event.target === this) closeCreateUnitModal()">
+    <div class="materials-modal-card">
+        <div class="modal-header-row">
+            <h3><i data-lucide="folder-plus" style="width: 20px; height: 20px; color: var(--mat-primary); vertical-align: text-bottom;"></i> Add Curriculum Unit</h3>
+            <button class="modal-close-btn" onclick="closeCreateUnitModal()" type="button">&times;</button>
+        </div>
+
+        <form id="createUnitForm" action="{% url 'create_material_unit' classroom.id %}" method="POST">
+            {% csrf_token %}
+            <div class="modal-form-group">
+                <label class="modal-label">Unit / Module Title *</label>
+                <input type="text" name="title" required class="modal-input" placeholder="e.g. Unit 3: Advanced Optimization & Gradient Descent">
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Description (Optional)</label>
+                <textarea name="description" class="modal-textarea" rows="3" placeholder="Topics covered in this curriculum unit..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="button" onclick="closeCreateUnitModal()" class="btn-add-unit">Cancel</button>
+                <button type="submit" class="btn-add-material">Create Unit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. Material Detail & Interactive Preview / RAG Modal -->
+<div class="materials-modal-backdrop" id="materialDetailModal" onclick="if(event.target === this) closeMaterialDetailModal()">
+    <div class="materials-modal-card" style="max-width: 720px;">
+        <div class="modal-header-row">
+            <h3 id="matDetailTitle">Resource Details</h3>
+            <button class="modal-close-btn" onclick="closeMaterialDetailModal()" type="button">&times;</button>
+        </div>
+
+        <!-- Embedded Video Player & PDF Viewer -->
+        <div id="matDetailMediaPreview" style="display: none; margin-bottom: 1.25rem; border-radius: 0.875rem; overflow: hidden; background: #0f172a; position: relative;">
+            <video id="matDetailVideoPlayer" controls playsinline preload="metadata" style="width: 100%; max-height: 380px; display: none;"></video>
+            <iframe id="matDetailPdfViewer" style="width: 100%; height: 420px; border: none; display: none;"></iframe>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; font-size: 0.8125rem; color: var(--mat-text-muted);">
+            <div><strong style="color: var(--mat-text-main);">Type:</strong> <span id="matDetailType">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">By:</strong> <span id="matDetailAuthor">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">Date:</strong> <span id="matDetailDate">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">Size:</strong> <span id="matDetailSize">-</span></div>
+        </div>
+
+        <!-- AI Summary & RAG Metadata Box -->
+        <div class="rag-summary-box">
+            <div class="rag-summary-title">
+                <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                AI Conceptual Summary (RAG Ready)
+            </div>
+            <p class="rag-summary-text" id="matDetailAiSummary">Loading...</p>
+        </div>
+
+        <!-- Chunks for Vector Search -->
+        <h4 style="font-size: 0.875rem; font-weight: 800; color: var(--mat-text-main); margin: 0 0 0.5rem 0;">
+            Segmented RAG Vector Chunks
+        </h4>
+        <div class="rag-chunks-list" id="matDetailChunksList"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--mat-border); padding-top: 1rem;">
+            <button type="button" onclick="closeMaterialDetailModal()" class="btn-add-unit">Close</button>
+            <a href="#" id="matDetailDownloadBtn" class="btn-add-material" style="display: none;">
+                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                Download Resource
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Notification Toast Box -->
+<div id="matToastContainer" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none;"></div>

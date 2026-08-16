@@ -1,0 +1,51 @@
+<!-- Classroom Hero Banner -->
+<div class="classroom-hero">
+    <div class="hero-content">
+        <div class="hero-top-row">
+            <div class="hero-text">
+                <span style="font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem;">
+                    CLASSROOM HUB
+                </span>
+                <h1>{{ classroom.title }}</h1>
+                <div class="hero-badges">
+                    <div class="badge-glass"><i data-lucide="hash" style="width: 15px; height: 15px;"></i> {{ classroom.class_code }}</div>
+                    <div class="badge-glass"><i data-lucide="users" style="width: 15px; height: 15px;"></i> {{ classroom.get_approved_students.count }} Enrolled</div>
+                    {% if is_teacher %}
+                    <div class="badge-glass" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.4);"><i data-lucide="shield" style="width: 15px; height: 15px;"></i> Instructor Mode</div>
+                    {% else %}
+                    <div class="badge-glass"><i data-lucide="user-check" style="width: 15px; height: 15px;"></i> Student Member</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if is_teacher %}
+            <a href="{% url 'start_classroom_meeting' classroom.id %}" class="btn-hero-action">
+                <i data-lucide="video" style="width: 18px; height: 18px;"></i>
+                <span>Start Live Session</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Quick Action Links -->
+        <div class="hero-nav-pills">
+            <a href="{% url 'classroom_assignments' classroom.id %}" class="hero-pill-link">
+                <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                Assignments
+            </a>
+            <a href="{% url 'classroom_quizzes' classroom.id %}" class="hero-pill-link">
+                <i data-lucide="clipboard-list" style="width: 16px; height: 16px;"></i>
+                Quizzes
+            </a>
+            {% if is_teacher %}
+            <a href="{% url 'classroom_attendance_overview' classroom.id %}" class="hero-pill-link">
+                <i data-lucide="calendar-check" style="width: 16px; height: 16px;"></i>
+                Attendance
+            </a>
+            <a href="{% url 'classroom_attendance_detail' classroom.id %}" class="hero-pill-link">
+                <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
+                Meeting Logs
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

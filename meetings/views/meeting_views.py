@@ -51,13 +51,13 @@ def create_meeting(request):
 
         if not title:
             messages.error(request, 'Meeting title cannot be empty.')
-            return render(request, 'meetings/create_meeting.html')
+            return render(request, 'meetings/live/create_meeting.html')
 
         if Meeting.objects.filter(
             teacher=request.user, title__iexact=title, classroom__isnull=True
         ).exclude(status__in=['ended', 'cancelled']).exists():
             messages.error(request, f'You already have a meeting named "{title}".')
-            return render(request, 'meetings/create_meeting.html')
+            return render(request, 'meetings/live/create_meeting.html')
 
         # Parse scheduled_time or default to now
         if scheduled_time_str:
@@ -82,7 +82,7 @@ def create_meeting(request):
         )
         return redirect('teacher_meetings')
 
-    return render(request, 'meetings/create_meeting.html')
+    return render(request, 'meetings/live/create_meeting.html')
 
 
 @login_required
@@ -101,7 +101,7 @@ def teacher_meetings(request):
 
     sleeping_meetings = meetings.filter(status='live', sleep_status='sleeping')
     active_meetings = meetings.exclude(sleep_status='sleeping')
-    return render(request, 'meetings/teacher_meetings.html', {
+    return render(request, 'meetings/live/teacher_meetings.html', {
         'meetings': active_meetings,
         'sleeping_meetings': sleeping_meetings,
         'is_admin': request.user.is_superuser,
@@ -123,7 +123,7 @@ def student_meetings(request):
         status__in=['scheduled', 'live'],
         meeting_type='classroom',
     ).exclude(meeting_code__startswith='CAM_').select_related('teacher', 'classroom')
-    return render(request, 'meetings/student_meetings.html', {'meetings': meetings})
+    return render(request, 'meetings/live/student_meetings.html', {'meetings': meetings})
 
 
 @login_required
@@ -225,7 +225,7 @@ def join_meeting(request, meeting_code):
         'student_can_view_screenshare': meeting.student_can_view_screenshare,
         'host_joined_at_ms': host_joined_at_ms,
     }
-    return render(request, 'meetings/meeting_room.html', context)
+    return render(request, 'meetings/live/meeting_room.html', context)
 
 
 @login_required
@@ -236,7 +236,7 @@ def pre_join(request, meeting_code):
         return redirect('join_meeting', meeting_code=meeting_code)
     face_registered = StudentFaceProfile.objects.filter(student=request.user).exists()
     profile = getattr(request.user, 'userprofile', None)
-    return render(request, 'meetings/pre_join.html', {
+    return render(request, 'meetings/live/pre_join.html', {
         'meeting': meeting, 'profile': profile, 'face_registered': face_registered,
     })
 
@@ -394,7 +394,7 @@ def meeting_attendance(request, meeting_code):
 
     live_count = sum(1 for p in participants if p.is_active)
 
-    return render(request, 'meetings/attendance_report.html', {
+    return render(request, 'meetings/attendance/attendance_report.html', {
         'meeting': meeting, 'participants': participants, 'participant_data': participant_data,
         'live_count': live_count,
     })
@@ -411,7 +411,7 @@ def meeting_summary(request, meeting_code):
             messages.error(request, 'You do not have permission to view this summary')
             return redirect('student_meetings')
     summary = MeetingSummary.objects.filter(meeting=meeting).first()
-    return render(request, 'meetings/meeting_summary.html', {'meeting': meeting, 'summary': summary})
+    return render(request, 'meetings/live/meeting_summary.html', {'meeting': meeting, 'summary': summary})
 
 
 @login_required

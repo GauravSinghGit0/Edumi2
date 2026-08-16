@@ -25,16 +25,34 @@ def send_ws_notification(recipient_id, data):
             f"WebSocket notification failed for user {recipient_id}: {e}"
         )
 
-def notify_new_message(sender, recipient, conversation_id, content="New message received", created_at=None):
-    """Send notification when a new message is sent"""
+def notify_new_message(sender, recipient, conversation_id, content="New message received", created_at=None,
+                       sender_name=None, sender_role=None, sender_pfp=None, message_id=None,
+                       image_url=None, file_url=None, file_name=None):
+    """Send notification when a new message is sent with full centralized profile identity."""
     if sender != recipient:  # Don't notify yourself
         Notification.create_message_notification(recipient, sender, conversation_id)
         
+        profile = getattr(sender, 'userprofile', None)
+        if not sender_name:
+            sender_name = (profile.get_display_name() if profile else sender.get_full_name()) or sender.username
+        if not sender_pfp:
+            sender_pfp = profile.get_profile_picture_url() if profile else f"https://ui-avatars.com/api/?name={sender.username}&background=6366f1&color=fff"
+        if not sender_role:
+            is_teacher = bool((profile and profile.user_type == 'teacher') or sender.is_superuser)
+            sender_role = 'Teacher' if is_teacher else 'Student'
+
         payload = {
             "type": "new_message",
+            "message_id": message_id,
             "sender": sender.username,
+            "sender_name": sender_name,
+            "sender_role": sender_role,
+            "sender_pfp": sender_pfp,
             "conversation_id": conversation_id,
-            "message": content
+            "message": content,
+            "image_url": image_url,
+            "file_url": file_url,
+            "file_name": file_name,
         }
         if created_at is not None:
             payload["created_at"] = created_at

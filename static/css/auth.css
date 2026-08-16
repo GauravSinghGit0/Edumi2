@@ -1,4 +1,6 @@
 /* Authentication Pages - Split Screen Design */
+@import url('design-tokens.css');
+
 .auth-split-container {
     min-height: 100vh;
     display: flex;

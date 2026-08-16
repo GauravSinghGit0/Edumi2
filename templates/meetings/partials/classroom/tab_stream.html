@@ -1,0 +1,171 @@
+<!-- ══════════════ TAB 1: STREAM & GROUP CHAT ══════════════ -->
+<div id="tabContentStream" class="tab-content-panel">
+    <div class="stream-layout">
+        <!-- Left Stream Feed & Composer -->
+        <div class="stream-main-col">
+            
+            <!-- Google Classroom Post Composer -->
+            <div class="stream-composer-card" style="position: relative;">
+                <div class="composer-header-row">
+                    <img src="{% if user.userprofile %}{{ user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff{% endif %}" 
+                         alt="{{ user.username }}" 
+                         class="composer-user-avatar"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff'">
+                    <div class="composer-user-info">
+                        <span class="composer-user-name">{% if user.userprofile %}{{ user.userprofile.get_display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</span>
+                        <span class="composer-user-role">{% if is_teacher %}Instructor{% else %}Student Member{% endif %}</span>
+                    </div>
+                </div>
+
+                <form id="classroomStreamForm" action="{% url 'send_message' conversation.id %}" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <textarea name="content" id="streamContentInput" class="stream-textarea" placeholder="Announce something or share study updates with your class..."></textarea>
+                    
+                    <!-- Hidden File Inputs -->
+                    <input type="file" id="streamImageInput" name="image" accept="image/*" style="display: none;">
+                    <input type="file" id="streamFileInput" name="file" style="display: none;">
+
+                    <!-- Attachment Previews -->
+                    <div class="stream-preview-strip" id="streamPreviewStrip" style="display: none;"></div>
+
+                    <!-- Composer Toolbar -->
+                    <div class="composer-toolbar">
+                        <div class="composer-tools">
+                            <button type="button" class="tool-btn" onclick="document.getElementById('streamImageInput').click();" title="Attach Image">
+                                <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                <span>Photo</span>
+                            </button>
+                            <button type="button" class="tool-btn" onclick="document.getElementById('streamFileInput').click();" title="Attach File / Document">
+                                <i data-lucide="paperclip" style="width: 15px; height: 15px;"></i>
+                                <span>File</span>
+                            </button>
+                            <button type="button" class="tool-btn" onclick="toggleStreamEmojiPicker();" title="Insert Emoji">
+                                <span>😀</span>
+                                <span>Emoji</span>
+                            </button>
+                        </div>
+
+                        <button type="submit" id="btnStreamSubmit" class="btn-post-update" disabled>
+                            <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                            <span>Post Update</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Emoji Grid Modal -->
+                <div class="stream-emoji-picker" id="streamEmojiPicker">
+                    <div class="stream-emoji-grid" id="streamEmojiGrid"></div>
+                </div>
+            </div>
+
+            <!-- Discussion & Message Stream -->
+            <div class="stream-feed" id="streamFeedContainer">
+                {% if classroom_messages %}
+                    {% for msg in classroom_messages %}
+                        {% if msg.show_date_separator %}
+                        <div class="stream-date-separator">
+                            <span>{{ msg.date_label }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="stream-post-card" id="post-{{ msg.id }}">
+                            <div class="post-header">
+                                <div class="post-author-meta">
+                                    <img src="{% if msg.sender.userprofile %}{{ msg.sender.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ msg.sender.get_full_name|default:msg.sender.username|urlencode }}&background=6366f1&color=fff{% endif %}" 
+                                         alt="{{ msg.sender.username }}" 
+                                         class="post-avatar"
+                                         onerror="this.src='https://ui-avatars.com/api/?name={{ msg.sender.get_full_name|default:msg.sender.username|urlencode }}&background=6366f1&color=fff'">
+                                    <div>
+                                        <div class="post-author-name">
+                                            <span>{% if msg.sender.userprofile %}{{ msg.sender.userprofile.get_display_name }}{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %}</span>
+                                            {% if msg.sender == classroom.teacher or msg.sender.userprofile.user_type == 'teacher' or msg.sender.is_superuser %}
+                                            <span class="role-badge-teacher">Teacher</span>
+                                            {% else %}
+                                            <span class="role-badge-student">Student</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="post-time">{{ msg.created_at|date:"g:i A" }} · {{ msg.created_at|date:"M d, Y" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if msg.content %}
+                            <div class="post-body-text">{{ msg.content }}</div>
+                            {% endif %}
+
+                            {% if msg.image %}
+                            <img src="{{ msg.image.url }}" alt="Attachment" class="post-image-attachment" onclick="openStreamLightbox(this.src)">
+                            {% endif %}
+
+                            {% if msg.file %}
+                            <a href="{{ msg.file.url }}" download class="post-file-card">
+                                <div class="post-file-info">
+                                    <i data-lucide="file-text" style="width: 20px; height: 20px; color: var(--stream-primary); flex-shrink:0;"></i>
+                                    <span class="post-file-name">{{ msg.file.name }}</span>
+                                </div>
+                                <i data-lucide="download" style="width: 16px; height: 16px; color: var(--stream-text-muted);"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="stream-post-card" id="streamEmptyBox" style="text-align: center; padding: 3.5rem 2rem;">
+                        <i data-lucide="messages-square" style="width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 1rem;"></i>
+                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 800; color: var(--stream-text-main);">Welcome to the Classroom Stream!</h3>
+                        <p style="color: var(--stream-text-muted); font-size: 0.875rem; margin: 0; max-width: 420px; margin: 0 auto;">
+                            This is the central discussion space for <strong>{{ classroom.title }}</strong>. Post announcements, ask questions, or share study materials.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Sidebar Widget Cards -->
+        <div class="stream-side-cards">
+            <!-- Classroom Code Card -->
+            <div class="info-card">
+                <h3 class="info-card-title"><i data-lucide="key" style="width: 18px; height: 18px; color: var(--stream-primary);"></i> Classroom Code</h3>
+                <p style="font-size: 0.8125rem; color: var(--stream-text-muted); margin: 0 0 0.875rem 0;">Share this code with students to join this class.</p>
+                <div class="code-box-display">
+                    <span class="code-value">{{ classroom.class_code }}</span>
+                    <button class="btn-copy-code" onclick="copyClassCode('{{ classroom.class_code }}')">
+                        <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Instructor Card -->
+            <div class="info-card">
+                <h3 class="info-card-title"><i data-lucide="user" style="width: 18px; height: 18px; color: var(--stream-primary);"></i> Instructor</h3>
+                <div style="display: flex; align-items: center; gap: 0.875rem;">
+                    <img src="{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=4f46e5&color=fff{% endif %}" 
+                         alt="{{ classroom.teacher.username }}" 
+                         style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=4f46e5&color=fff'">
+                    <div>
+                        <div style="font-weight: 750; font-size: 0.9375rem; color: var(--stream-text-main);">
+                            {% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--stream-text-muted);">{{ classroom.teacher.email }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats Card -->
+            <div class="info-card">
+                <h3 class="info-card-title"><i data-lucide="activity" style="width: 18px; height: 18px; color: var(--stream-primary);"></i> Class Overview</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div style="background: var(--stream-hover-bg); padding: 0.875rem; border-radius: 0.75rem; border: 1px solid var(--stream-border); text-align: center;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: var(--stream-primary);">{{ classroom.get_approved_students.count }}</div>
+                        <div style="font-size: 0.75rem; color: var(--stream-text-muted); font-weight: 600;">Students</div>
+                    </div>
+                    <div style="background: var(--stream-hover-bg); padding: 0.875rem; border-radius: 0.75rem; border: 1px solid var(--stream-border); text-align: center;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{{ meetings|length }}</div>
+                        <div style="font-size: 0.75rem; color: var(--stream-text-muted); font-weight: 600;">Sessions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

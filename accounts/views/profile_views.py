@@ -167,7 +167,7 @@ def profile_view(request, username=None):
     achievements = profile.achievements.all() if profile else []
     identity = profile.get_identity_dict() if profile else {}
 
-    return render(request, 'accounts/profile.html', {
+    return render(request, 'accounts/profile/profile.html', {
         'profile_user': profile_user,
         'profile': profile,
         'identity': identity,
@@ -199,7 +199,7 @@ def edit_profile(request):
         messages.success(request, 'Profile updated successfully!')
         return redirect('profile_view', username=request.user.username)
 
-    return render(request, 'accounts/edit_profile.html', {
+    return render(request, 'accounts/profile/edit_profile.html', {
         'profile': profile,
         'identity': profile.get_identity_dict()
     })
@@ -210,7 +210,7 @@ def directory(request):
     """View all teachers and students in a searchable directory."""
     teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('username')
     students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('username')
-    return render(request, 'accounts/directory.html', {'teachers': teachers, 'students': students})
+    return render(request, 'accounts/messaging/directory.html', {'teachers': teachers, 'students': students})
 
 
 @login_required
@@ -238,6 +238,6 @@ def search_users(request):
 
         results = users[:20]
 
-    return render(request, 'accounts/search_results.html', {
+    return render(request, 'accounts/messaging/search_results.html', {
         'query': query, 'user_type': user_type, 'results': results,
     })

@@ -36,7 +36,7 @@ def admin_panel(request):
     all_cameras = Camera.objects.all().order_by('-created_at')
     recent_users = User.objects.all().select_related('userprofile').order_by('-date_joined')[:10]
 
-    return render(request, 'accounts/admin_panel.html', {
+    return render(request, 'accounts/admin/admin_panel.html', {
         **stats,
         'all_users': all_users, 'students': students, 'teachers': teachers,
         'all_meetings': all_meetings, 'live_meetings': live_meetings,
@@ -50,7 +50,7 @@ def user_management(request):
     if not request.user.is_superuser:
         return redirect('login')
     users = User.objects.all().select_related('userprofile').order_by('-date_joined')
-    return render(request, 'accounts/user_management.html', {'users': users})
+    return render(request, 'accounts/admin/user_management.html', {'users': users})
 
 
 @login_required
@@ -76,7 +76,7 @@ def admin_edit_user(request, user_id):
         except Exception as e:
             messages.error(request, f"Error updating user: {e}")
 
-    return render(request, 'accounts/admin_edit_user.html', {
+    return render(request, 'accounts/admin/admin_edit_user.html', {
         'target_user': target_user,
         'profile': profile,
     })

@@ -1,0 +1,98 @@
+<!-- ══════════════ TAB 2: SESSIONS & TIMELINE ══════════════ -->
+<div id="tabContentSessions" class="tab-content-panel" style="display: none;">
+    <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 class="section-title" style="margin: 0;"><i data-lucide="calendar"></i> Session Timeline & Meetings</h2>
+            {% if is_teacher %}
+            <a href="{% url 'start_classroom_meeting' classroom.id %}" class="btn-hero-action" style="padding: 0.5rem 1rem; font-size: 0.8125rem;">
+                <i data-lucide="video" style="width: 15px; height: 15px;"></i>
+                Start New Meeting
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="meeting-timeline">
+            {% for meeting in meetings %}
+            <div class="meeting-item {% if meeting.status == 'live' %}live{% elif meeting.status == 'ended' %}ended{% endif %}" id="meeting-item-{{ meeting.id }}">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1.125rem; font-weight: 800; color: var(--stream-text-main);">{{ meeting.title }}</h4>
+                        <p style="margin:0; font-size: 0.8125rem; color: var(--stream-text-muted);">
+                            {{ meeting.scheduled_time|default:meeting.created_at|date:"M d, Y • g:i A" }}
+                        </p>
+                    </div>
+                    <span style="font-size: 0.6875rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; background: {% if meeting.status == 'live' %}#ef4444{% elif meeting.status == 'scheduled' %}#4f46e5{% else %}#e2e8f0{% endif %}; color: {% if meeting.status == 'live' or meeting.status == 'scheduled' %}white{% else %}#475569{% endif %}; text-transform: uppercase;">
+                        {{ meeting.get_status_display }}
+                    </span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; gap: 1rem; font-size: 0.75rem; font-weight: 600; color: var(--stream-text-muted);">
+                        <span><i data-lucide="clock" style="width: 14px; height: 14px; vertical-align: text-bottom;"></i> {{ meeting.duration_minutes }}m</span>
+                        <span><i data-lucide="users" style="width: 14px; height: 14px; vertical-align: text-bottom;"></i> {{ meeting.participants.count }} Joined</span>
+                        {% if is_teacher and meeting.att_present %}
+                        <span style="color: #059669;"><i data-lucide="user-check" style="width: 14px; height: 14px; vertical-align: text-bottom;"></i> {{ meeting.att_present }} Present</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="meeting-actions-row">
+                        {% if meeting.status == 'live' %}
+                            <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-meeting-action btn-meeting-live">
+                                <i data-lucide="video" style="width: 14px; height: 14px;"></i>
+                                Enter Room
+                            </a>
+                            {% if is_teacher %}
+                            <button onclick="endClassroomMeeting({{ meeting.id }})" type="button" class="btn-meeting-action btn-meeting-end" title="End live meeting">
+                                <i data-lucide="phone-off" style="width: 14px; height: 14px;"></i>
+                                End Session
+                            </button>
+                            <button onclick="deleteClassroomMeeting({{ meeting.id }})" type="button" class="btn-meeting-action btn-meeting-delete" title="Delete meeting">
+                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                            </button>
+                            {% endif %}
+                        {% elif meeting.status == 'scheduled' %}
+                            {% if is_teacher %}
+                            <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-meeting-action" style="background: #4f46e5; color: white;">
+                                <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+                                Start Session
+                            </a>
+                            <button onclick="deleteClassroomMeeting({{ meeting.id }})" type="button" class="btn-meeting-action btn-meeting-delete" title="Delete / Cancel">
+                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                            </button>
+                            {% else %}
+                            <span style="font-size: 0.8125rem; font-weight: 600; color: var(--stream-text-muted);">Starts soon</span>
+                            {% endif %}
+                        {% elif meeting.status == 'ended' %}
+                            <a href="{% url 'meeting_summary' meeting.meeting_code %}" class="btn-meeting-action btn-meeting-summary">
+                                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                                Summary
+                            </a>
+                            {% if is_teacher %}
+                            <a href="{% url 'meeting_attendance' meeting.meeting_code %}" class="btn-meeting-action btn-meeting-att">
+                                <i data-lucide="clipboard-check" style="width: 14px; height: 14px;"></i>
+                                Attendance
+                            </a>
+                            <button onclick="deleteClassroomMeeting({{ meeting.id }})" type="button" class="btn-meeting-action btn-meeting-delete" title="Delete record from timeline">
+                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 3.5rem 0;">
+                <i data-lucide="calendar-off" style="width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 1rem;"></i>
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 700; color: var(--stream-text-main);">No Meetings Recorded</h4>
+                <p style="color: var(--stream-text-muted); font-size: 0.875rem; margin: 0 auto; max-width: 380px;">
+                    {% if is_teacher %}
+                    Schedule or launch live classroom meetings with automated facial attendance and AI summarization.
+                    {% else %}
+                    No sessions scheduled or held for this class yet.
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -14,7 +14,7 @@ def notifications_list(request):
     notifications = Notification.objects.filter(recipient=request.user)[:50]
     unread_count = Notification.get_unread_count(request.user)
     
-    return render(request, 'accounts/notifications.html', {
+    return render(request, 'accounts/messaging/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count
     })

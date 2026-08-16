@@ -1,22 +1,24 @@
-import threading
-from django.utils import timezone
-from django.utils.deprecation import MiddlewareMixin
+"""
+accounts/middleware.py
+Centralized Identity Middleware.
+Attaches the canonical Single Source of Truth `request.identity` dictionary to every incoming HTTP request.
+"""
 
-class LastSeenMiddleware(MiddlewareMixin):
-    """Update the authenticated user's `last_seen` timestamp on each request.
-    This runs early in the request/response cycle and saves the timestamp
-    without blocking the response. A tiny lock guards concurrent saves.
+from accounts.identity import IdentityService
+
+
+class CentralizedIdentityMiddleware:
     """
-    _lock = threading.Lock()
+    Middleware that populates `request.identity` as the canonical SSOT identity dictionary.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
 
-    def process_view(self, request, view_func, view_args, view_kwargs):
-        if request.user.is_authenticated:
-            try:
-                profile = request.user.userprofile
-                with self._lock:
-                    profile.last_seen = timezone.now()
-                    profile.save(update_fields=["last_seen"])
-            except Exception:
-                # Silently ignore if profile does not exist
-                pass
-        return None
+    def __call__(self, request):
+        if hasattr(request, 'user'):
+            request.identity = IdentityService.get_identity(request.user)
+        else:
+            request.identity = IdentityService.get_identity(None)
+
+        response = self.get_response(request)
+        return response

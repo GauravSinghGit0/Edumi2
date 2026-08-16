@@ -1,0 +1,15 @@
+<!-- Active Live Session Alert -->
+{% if active_meeting %}
+<div class="live-session-banner">
+    <div class="live-info">
+        <div class="live-indicator"></div>
+        <div>
+            <h3 style="margin:0; font-size: 1.125rem; font-weight: 800; color: #991b1b;">{{ active_meeting.title }}</h3>
+            <p style="margin:0; font-size: 0.875rem; color: #b91c1c;">The live classroom session has started. Join now to participate.</p>
+        </div>
+    </div>
+    <a href="{% url 'join_meeting' active_meeting.meeting_code %}" class="btn-hero-action" style="background: #ef4444; padding: 0.75rem 1.5rem; font-size: 0.9375rem;">
+        Join Now
+    </a>
+</div>
+{% endif %}

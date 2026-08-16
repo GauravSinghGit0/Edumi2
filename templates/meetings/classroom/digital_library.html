@@ -1,0 +1,196 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Digital Library{% endblock %}
+{% block title %}Digital Library — EduMi{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/study_materials.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="materials-hub-container">
+    <!-- Header Banner -->
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); border-radius: 1.5rem; padding: 2.5rem 3rem; color: white; margin-bottom: 2rem; position: relative; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.3);">
+        <div style="position: relative; z-index: 10;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                CENTRALIZED REPOSITORY & AI VECTOR STORE
+            </div>
+            <h1 style="margin: 0 0 0.75rem 0; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.025em;">
+                Global Digital Library
+            </h1>
+            <p style="margin: 0; color: rgba(255,255,255,0.85); font-size: 0.95rem; max-width: 680px; line-height: 1.6;">
+                Access textbooks, lecture slides, study notes, and research resources across all your enrolled classes, all indexed for semantic retrieval and conceptual queries.
+            </p>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="materials-toolbar">
+        <form method="GET" action="{% url 'digital_library' %}" class="materials-search-wrap">
+            <i data-lucide="search" class="materials-search-icon"></i>
+            <input type="text" name="q" value="{{ current_query }}" class="materials-search-input" placeholder="Search across all subjects, notes, and topics…">
+            {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+            {% if current_classroom %}<input type="hidden" name="classroom" value="{{ current_classroom }}">{% endif %}
+            {% if bookmarks_only %}<input type="hidden" name="bookmarked" value="true">{% endif %}
+        </form>
+
+        <div class="materials-filter-pills">
+            <a href="{% url 'digital_library' %}" class="filter-pill {% if not current_type and not bookmarks_only %}active{% endif %}">
+                All Formats
+            </a>
+            <a href="{% url 'digital_library' %}?type=document{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'document' %}active{% endif %}">
+                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i> PDFs
+            </a>
+            <a href="{% url 'digital_library' %}?type=slides{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'slides' %}active{% endif %}">
+                <i data-lucide="presentation" style="width: 14px; height: 14px;"></i> Slides
+            </a>
+            <a href="{% url 'digital_library' %}?type=notes{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'notes' %}active{% endif %}">
+                <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Notes
+            </a>
+            <a href="{% url 'digital_library' %}?type=video{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'video' %}active{% endif %}">
+                <i data-lucide="video" style="width: 14px; height: 14px;"></i> Videos
+            </a>
+            <a href="{% url 'digital_library' %}?bookmarked=true{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if bookmarks_only %}active{% endif %}">
+                <i data-lucide="bookmark" style="width: 14px; height: 14px;"></i> Bookmarked
+            </a>
+        </div>
+    </div>
+
+    <!-- Classroom Filter Pills -->
+    {% if classrooms %}
+    <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+        <a href="{% url 'digital_library' %}{% if current_type %}?type={{ current_type }}{% endif %}" class="badge-glass" style="color: var(--mat-text-main); background: {% if not current_classroom %}var(--mat-primary); color: white;{% else %}var(--mat-bg-card);{% endif %} border: 1px solid var(--mat-border); text-decoration: none; cursor: pointer;">
+            All Classes ({{ total_count }})
+        </a>
+        {% for c in classrooms %}
+        <a href="{% url 'digital_library' %}?classroom={{ c.id }}{% if current_type %}&type={{ current_type }}{% endif %}" class="badge-glass" style="color: var(--mat-text-main); background: {% if current_classroom == c.id|stringformat:'i' %}var(--mat-primary); color: white;{% else %}var(--mat-bg-card);{% endif %} border: 1px solid var(--mat-border); text-decoration: none; cursor: pointer;">
+            {{ c.title }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Materials Grid -->
+    {% if materials %}
+        <div class="materials-grid">
+            {% for mat in materials %}
+            <div class="material-card" id="mat-card-{{ mat.id }}">
+                <div>
+                    <div class="mat-card-top">
+                        <div class="mat-type-icon-box" style="background: {{ mat.get_badge_color }}15; color: {{ mat.get_badge_color }};">
+                            <i data-lucide="{{ mat.get_icon_name }}" style="width: 22px; height: 22px;"></i>
+                        </div>
+                        <div class="mat-card-meta">
+                            <h4 class="mat-title" title="{{ mat.title }}">{{ mat.title }}</h4>
+                            <div class="mat-subtitle">
+                                <span style="color: var(--mat-primary); font-weight: 700;">{{ mat.classroom.title|truncatechars:18 }}</span>
+                                {% if mat.get_file_size_formatted %}<span>• {{ mat.get_file_size_formatted }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if mat.description %}
+                    <p class="mat-desc">{{ mat.description }}</p>
+                    {% endif %}
+
+                    {% if mat.rag_indexed %}
+                    <div style="margin-bottom: 0.75rem;">
+                        <span class="mat-rag-badge">
+                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                            RAG Vector Indexed · {{ mat.chunks.count }} Chunks
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mat-card-footer">
+                    <div class="mat-footer-stats">
+                        <span><i data-lucide="download" style="width: 12px; height: 12px;"></i> {{ mat.download_count }}</span>
+                        <span><i data-lucide="eye" style="width: 12px; height: 12px;"></i> {{ mat.view_count }}</span>
+                    </div>
+
+                    <div class="mat-card-actions">
+                        <button onclick="toggleBookmark(this, {{ mat.id }})" class="mat-btn-bookmark {% if mat.is_bookmarked %}bookmarked{% endif %}" title="Bookmark">
+                            <i data-lucide="bookmark" style="width: 16px; height: 16px;"></i>
+                        </button>
+
+                        <button onclick="openMaterialDetailModal({{ mat.id }})" class="mat-btn-action" title="View details">
+                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                            Details
+                        </button>
+
+                        {% if mat.file %}
+                        <a href="{% url 'download_study_material' mat.id %}" class="mat-btn-action" style="background: var(--mat-primary); color: white; border-color: var(--mat-primary);">
+                            <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                            Get
+                        </a>
+                        {% elif mat.external_url %}
+                        <a href="{{ mat.external_url }}" target="_blank" rel="noopener" class="mat-btn-action" style="background: #10b981; color: white; border-color: #10b981;">
+                            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+                            Link
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="unit-section-box" style="text-align: center; padding: 4rem 2rem;">
+            <i data-lucide="library" style="width: 54px; height: 54px; color: #cbd5e1; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--mat-text-main);">No digital materials found</h3>
+            <p style="color: var(--mat-text-muted); font-size: 0.875rem; margin: 0 auto; max-width: 420px;">
+                {% if current_query %}
+                No results found for "<strong>{{ current_query }}</strong>".
+                {% else %}
+                No learning resources are currently published across your classes.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Material Detail Modal -->
+<div class="materials-modal-backdrop" id="materialDetailModal" onclick="if(event.target === this) closeMaterialDetailModal()">
+    <div class="materials-modal-card" style="max-width: 640px;">
+        <div class="modal-header-row">
+            <h3 id="matDetailTitle">Resource Details</h3>
+            <button class="modal-close-btn" onclick="closeMaterialDetailModal()" type="button">&times;</button>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; font-size: 0.8125rem; color: var(--mat-text-muted);">
+            <div><strong style="color: var(--mat-text-main);">Type:</strong> <span id="matDetailType">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">By:</strong> <span id="matDetailAuthor">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">Date:</strong> <span id="matDetailDate">-</span></div>
+            <div><strong style="color: var(--mat-text-main);">Size:</strong> <span id="matDetailSize">-</span></div>
+        </div>
+
+        <div class="rag-summary-box">
+            <div class="rag-summary-title">
+                <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                AI Conceptual Summary (RAG Ready)
+            </div>
+            <p class="rag-summary-text" id="matDetailAiSummary">Loading...</p>
+        </div>
+
+        <h4 style="font-size: 0.875rem; font-weight: 800; color: var(--mat-text-main); margin: 0 0 0.5rem 0;">
+            Segmented RAG Vector Chunks
+        </h4>
+        <div class="rag-chunks-list" id="matDetailChunksList"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--mat-border); padding-top: 1rem;">
+            <button type="button" onclick="closeMaterialDetailModal()" class="btn-add-unit">Close</button>
+            <a href="#" id="matDetailDownloadBtn" class="btn-add-material" style="display: none;">
+                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                Download Resource
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/study_materials.js' %}"></script>
+{% endblock %}

@@ -412,7 +412,7 @@ async def _generate_frames(streamer, camera, full_url, quality, camera_id):
 def mobile_mic(request, camera_id):
     """Dedicated page for using a mobile phone as a wireless microphone"""
     camera = get_object_or_404(Camera, id=camera_id)
-    return render(request, 'cameras/mobile_mic.html', {
+    return render(request, 'cameras/control_room/mobile_mic.html', {
         'camera': camera,
         'user': request.user
     })
@@ -423,7 +423,7 @@ def teacher_camera_dashboard(request):
     """Dashboard for teachers to see assigned cameras (RTSP and Mobile)"""
     from mobile_cameras.models import MobileCamera, MobileCameraPermission
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher':
-        return redirect('dashboard')
+        return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     # Get RTSP cameras
     camera_ids = CameraPermission.objects.filter(teacher=request.user).values_list('camera_id', flat=True)
@@ -443,7 +443,7 @@ def teacher_camera_dashboard(request):
     # Get recent recordings by this teacher
     recent_recordings = CameraRecording.objects.filter(teacher=request.user).order_by('-created_at')[:5]
 
-    return render(request, 'cameras/teacher_dashboard.html', {
+    return render(request, 'cameras/control_room/teacher_dashboard.html', {
         'cameras': all_cameras,
         'recent_recordings': recent_recordings
     })
@@ -456,7 +456,7 @@ def teacher_control_room(request, camera_id):
 
     # Check permission
     if not camera.has_permission(request.user):
-        return redirect('dashboard')
+        return redirect('teacher_camera_dashboard')
 
     # We NO LONGER mark camera as live here.
     # It will be marked live only when the teacher explicitly clicks "Start Live Stream"
@@ -502,7 +502,7 @@ def teacher_control_room(request, camera_id):
         'recording_start_time': recording_start_time.isoformat() if recording_start_time else None,
         'camera_feed_base': camera_feed_base,
     }
-    return render(request, 'cameras/teacher_control_room.html', context)
+    return render(request, 'cameras/control_room/teacher_control_room.html', context)
 
 
 @login_required
@@ -649,7 +649,7 @@ def student_lecture_list(request):
     # Get list of teachers for filtering
     teachers = User.objects.filter(userprofile__user_type='teacher')
 
-    return render(request, 'cameras/student_lecture_list.html', {
+    return render(request, 'cameras/recordings/student_lecture_list.html', {
         'live_sessions': filtered_live,
         'recordings': recordings,
         'teachers': teachers,
@@ -673,7 +673,7 @@ def watch_live(request, camera_id):
         'camera': camera,
         'teacher': camera.live_teacher if hasattr(camera, 'live_teacher') else None,
     }
-    return render(request, 'cameras/watch_live.html', context)
+    return render(request, 'cameras/control_room/watch_live.html', context)
 
 
 @login_required

@@ -47,7 +47,7 @@ def admin_dashboard(request):
         return redirect("login")
     cameras  = Camera.objects.all().order_by("-created_at")
     teachers = User.objects.filter(userprofile__user_type="teacher")
-    return render(request, "cameras/admin_dashboard.html", {"cameras": cameras, "teachers": teachers})
+    return render(request, "cameras/control_room/admin_dashboard.html", {"cameras": cameras, "teachers": teachers})
 
 
 # ===========================================================================

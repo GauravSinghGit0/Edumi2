@@ -15,7 +15,7 @@ User = get_user_model()
 def admin_content_manager(request):
     """Admin view to manage all videos and meetings"""
     if not request.user.is_superuser:
-        return redirect('dashboard')
+        return redirect('home')
 
     # Get all recordings
     recordings = CameraRecording.objects.all().select_related('teacher', 'camera').order_by('-created_at')
@@ -23,7 +23,7 @@ def admin_content_manager(request):
     # Get all meetings
     meetings = Meeting.objects.all().select_related('teacher', 'classroom').order_by('-scheduled_time')
 
-    return render(request, 'cameras/admin_content_manager.html', {
+    return render(request, 'cameras/control_room/admin_content_manager.html', {
         'recordings': recordings,
         'meetings': meetings
     })
@@ -125,5 +125,5 @@ def manage_permissions(request, camera_id):
         'authorized_teachers': authorized_teachers,
         'unauthorized_teachers': unauthorized_teachers,
     }
-    return render(request, 'cameras/manage_permissions.html', context)
+    return render(request, 'cameras/control_room/manage_permissions.html', context)
 

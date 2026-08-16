@@ -1,0 +1,165 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Student Hub | EduMi{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-container {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .critical-alert { 
+        background: var(--color-bg-card); 
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-left: 5px solid var(--color-danger); 
+        padding: var(--space-md) var(--space-lg); 
+        border-radius: var(--radius-lg); 
+        margin-bottom: var(--space-lg); 
+        display: flex; 
+        align-items: center; 
+        gap: var(--space-md); 
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--color-danger);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .alert-content { flex: 1; }
+    .alert-content h3 { margin: 0; font-size: var(--font-size-md); font-weight: var(--font-weight-bold); color: #991b1b; }
+    .alert-content p { margin: 0.2rem 0 0; font-size: var(--font-size-xs); color: #b91c1c; font-weight: var(--font-weight-regular); }
+    
+    .btn-alert {
+        background: var(--color-danger);
+        color: white;
+        padding: 0 var(--space-md);
+        height: var(--btn-height-sm);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        font-weight: var(--font-weight-semibold);
+        font-size: var(--font-size-xs);
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    .btn-alert:hover { background: var(--color-danger-hover); color: white; }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+    }
+
+    /* Quick Access Grid */
+    .section-title {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-main);
+        margin-bottom: var(--space-md);
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+    .section-title i { color: var(--color-primary); }
+    
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--space-md);
+    }
+    .action-card { 
+        background: var(--color-bg-card); 
+        border: 1px solid var(--color-border); 
+        border-radius: var(--radius-lg); 
+        padding: var(--space-lg) var(--space-md); 
+        text-align: center; 
+        text-decoration: none; 
+        color: var(--color-text-main); 
+        transition: all 0.2s ease; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        gap: var(--space-xs);
+        box-shadow: var(--shadow-sm);
+    }
+    .action-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+    .action-card i { color: var(--color-primary); width: 32px; height: 32px; }
+    .action-card p { font-weight: var(--font-weight-semibold); font-size: var(--font-size-md); margin: 0; }
+    .action-card span { font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: var(--font-weight-regular); }
+</style>
+
+<div class="dashboard-container">
+    {% include 'components/hero_banner.html' with title="Academic Hub: "|add:profile.get_display_name category="STUDENT PORTAL" subtitle="Ready for today's lectures? You have "|add:available_meetings|add:" scheduled sessions." %}
+    
+    <!-- Face ID Alert -->
+    {% if not face_registered %}
+    <div class="critical-alert">
+        <div class="alert-icon"><i data-lucide="shield-alert"></i></div>
+        <div class="alert-content">
+            <h3>Identity Verification Required</h3>
+            <p>Mandatory Face ID registration is required before participating in live academic sessions.</p>
+        </div>
+        <a href="{% url 'face_setup' %}" class="btn-alert">Register Identity</a>
+    </div>
+    {% endif %}
+    
+    <!-- Real-time Stats -->
+    <div class="stats-grid">
+        {% include 'components/stat_card.html' with icon="calendar" label="Today's Sessions" value=available_meetings value_id="availableMeetingsCount" bg_color="rgba(79, 70, 229, 0.1)" icon_color="var(--color-primary)" %}
+        {% include 'components/stat_card.html' with icon="check-circle-2" label="Completed Total" value=attended_meetings bg_color="rgba(16, 185, 129, 0.1)" icon_color="var(--color-success)" %}
+        {% include 'components/stat_card.html' with icon="award" label="Academic Status" value="Verified" bg_color="rgba(245, 158, 11, 0.1)" icon_color="var(--color-warning)" %}
+    </div>
+    
+    <!-- Quick Access -->
+    <h2 class="section-title"><i data-lucide="zap"></i> Quick Access</h2>
+    <div class="action-grid">
+        <a href="{% url 'video_list' %}" class="action-card">
+            <i data-lucide="video"></i>
+            <p>Video Library</p>
+            <span>Browse recorded lectures</span>
+        </a>
+        <a href="{% url 'student_classrooms' %}" class="action-card">
+            <i data-lucide="layout"></i>
+            <p>Course Library</p>
+            <span>View your classrooms</span>
+        </a>
+        <a href="{% url 'inbox' %}" class="action-card">
+            <i data-lucide="message-square"></i>
+            <p>Student Inbox</p>
+            <span>Professor communications</span>
+        </a>
+        <a href="{% url 'profile_view' user.username %}" class="action-card">
+            <i data-lucide="user"></i>
+            <p>My Identity</p>
+            <span>Profile & Achievements</span>
+        </a>
+        <a href="{% url 'face_setup' %}" class="action-card">
+            <i data-lucide="fingerprint"></i>
+            <p>Bio Security</p>
+            <span>Face ID Management</span>
+        </a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+    });
+</script>
+{% endblock %}

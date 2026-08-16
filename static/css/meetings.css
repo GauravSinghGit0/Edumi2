@@ -1,4 +1,5 @@
 /* Meeting List Styles */
+@import url('design-tokens.css');
 .meetings-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));

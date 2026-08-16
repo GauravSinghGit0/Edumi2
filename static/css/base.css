@@ -1,4 +1,6 @@
 /* Base Styles & Variables */
+@import url('design-tokens.css');
+
 * {
     margin: 0;
     padding: 0;

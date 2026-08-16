@@ -56,3 +56,22 @@ def generate_meeting_summary(meeting_id):
         return f"Meeting {meeting_id} not found."
     except Exception as e:
         return f"Error generating summary: {str(e)}"
+
+
+@shared_task
+def process_study_material_rag(material_id):
+    """
+    Asynchronous RAG indexing background task for Celery.
+    Processes documents, video metadata, notes, and segments into vector embeddings.
+    """
+    from .models import StudyMaterial
+    from .views.material_views import auto_chunk_and_index_rag
+    try:
+        material = StudyMaterial.objects.get(id=material_id)
+        auto_chunk_and_index_rag(material)
+        return f"Material {material_id} indexed for RAG."
+    except StudyMaterial.DoesNotExist:
+        return f"Material {material_id} not found."
+    except Exception as e:
+        return f"Error processing RAG for material {material_id}: {str(e)}"
+

@@ -12,7 +12,7 @@ def teacher_dashboard(request):
         return redirect('login')
     from accounts.services import get_teacher_stats
     context = get_teacher_stats(request.user)
-    return render(request, 'accounts/teacher_dashboard.html', context)
+    return render(request, 'accounts/dashboard/teacher_dashboard.html', context)
 
 
 @login_required
@@ -25,4 +25,4 @@ def student_dashboard(request):
     context = get_student_stats(request.user)
     context['profile_completion'] = get_profile_completion(request.user)
     context['profile'] = profile
-    return render(request, 'accounts/student_dashboard.html', context)
+    return render(request, 'accounts/dashboard/student_dashboard.html', context)

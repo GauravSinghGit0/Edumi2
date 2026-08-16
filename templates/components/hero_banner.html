@@ -1,0 +1,32 @@
+<!-- Reusable Hero Banner Component -->
+<div class="hero-banner-component">
+    <div class="hero-banner-content">
+        <div class="hero-banner-text">
+            {% if category %}
+            <span class="hero-banner-category">{{ category }}</span>
+            {% endif %}
+            <h1 class="hero-banner-title">{{ title }}</h1>
+            {% if subtitle %}
+            <p class="hero-banner-subtitle">{{ subtitle }}</p>
+            {% endif %}
+            
+            {% if badges %}
+            <div class="hero-banner-badges">
+                {% for badge in badges %}
+                <span class="hero-banner-badge">
+                    {% if badge.icon %}<i data-lucide="{{ badge.icon }}"></i>{% endif %}
+                    {{ badge.label }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if action_url %}
+        <a href="{{ action_url }}" class="hero-banner-btn">
+            {% if action_icon %}<i data-lucide="{{ action_icon }}"></i>{% endif %}
+            <span>{{ action_label|default:'Action' }}</span>
+        </a>
+        {% endif %}
+    </div>
+</div>

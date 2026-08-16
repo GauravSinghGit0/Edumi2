@@ -13,7 +13,7 @@ from meetings.models import Classroom, Meeting
 def classroom_attendance_history(request):
     """Day-wise and class-wise list of all meetings held across teacher's classrooms."""
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher':
-        return redirect('dashboard')
+        return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     classrooms = Classroom.objects.filter(teacher=request.user)
     meetings = Meeting.objects.filter(classroom__in=classrooms).order_by('-scheduled_time')
@@ -23,7 +23,7 @@ def classroom_attendance_history(request):
         date_str = meeting.scheduled_time.strftime('%Y-%m-%d')
         history[date_str].append(meeting)
 
-    return render(request, 'meetings/attendance_history.html', {
+    return render(request, 'meetings/attendance/attendance_history.html', {
         'history': dict(history),
         'classrooms': classrooms,
     })
@@ -34,7 +34,7 @@ def classroom_attendance_detail(request, classroom_id):
     """Attendance summary for a specific classroom grouped by day."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if classroom.teacher != request.user and not request.user.is_superuser:
-        return redirect('dashboard')
+        return redirect('student_classrooms' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     meetings = Meeting.objects.filter(classroom=classroom).order_by('-scheduled_time')
     meetings_by_day = defaultdict(list)
@@ -47,7 +47,7 @@ def classroom_attendance_detail(request, classroom_id):
         for day in sorted(meetings_by_day.keys(), reverse=True)
     ]
 
-    return render(request, 'meetings/classroom_attendance_detail.html', {
+    return render(request, 'meetings/attendance/classroom_attendance_detail.html', {
         'classroom': classroom,
         'grouped_meetings': grouped_meetings,
         'page_title': f'Meeting History — {classroom.title}',

@@ -1,0 +1,10 @@
+<!-- Reusable Stat Card Component -->
+<div class="stat-card-component" {% if link %}onclick="window.location.href='{{ link }}'" style="cursor: pointer;"{% endif %}>
+    <div class="stat-card-icon-box" style="background: {{ bg_color|default:'var(--color-primary-bg)' }}; color: {{ icon_color|default:'var(--color-primary)' }};">
+        <i data-lucide="{{ icon|default:'activity' }}"></i>
+    </div>
+    <div class="stat-card-details">
+        <p class="stat-card-label">{{ label }}</p>
+        <p class="stat-card-value" {% if value_id %}id="{{ value_id }}"{% endif %}>{{ value }}</p>
+    </div>
+</div>

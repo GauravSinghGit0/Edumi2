@@ -52,6 +52,9 @@ def create_classroom(request):
             teacher=request.user,
             description=description
         )
+        # Initialize classroom group conversation
+        classroom.get_or_create_conversation()
+
         # Clear any stored form data
         if 'classroom_form_data' in request.session:
             del request.session['classroom_form_data']
@@ -62,7 +65,7 @@ def create_classroom(request):
     form_data = request.session.get('classroom_form_data', {})
     if 'classroom_form_data' in request.session:
         del request.session['classroom_form_data']
-    return render(request, 'meetings/create_classroom.html', {'form_data': form_data})
+    return render(request, 'meetings/classroom/create_classroom.html', {'form_data': form_data})
 
 
 @login_required
@@ -71,7 +74,7 @@ def teacher_classrooms(request):
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher':
         return redirect('login')
     classrooms = Classroom.objects.filter(teacher=request.user, is_active=True)
-    return render(request, 'meetings/teacher_classrooms.html', {'classrooms': classrooms})
+    return render(request, 'meetings/classroom/teacher_classrooms.html', {'classrooms': classrooms})
 
 
 @login_required
@@ -83,7 +86,7 @@ def classroom_detail(request, classroom_id):
     if ctx is None:
         messages.error(request, 'You do not have access to this classroom')
         return redirect('student_classrooms')
-    return render(request, 'meetings/classroom_detail.html', ctx)
+    return render(request, 'meetings/classroom/classroom_detail.html', ctx)
 
 
 @login_required
@@ -136,7 +139,7 @@ def join_classroom_request(request):
     form_data = request.session.get('join_classroom_form_data', {})
     if 'join_classroom_form_data' in request.session:
         del request.session['join_classroom_form_data']
-    return render(request, 'meetings/join_classroom.html', {'form_data': form_data})
+    return render(request, 'meetings/classroom/join_classroom.html', {'form_data': form_data})
 
 
 @login_required
@@ -152,7 +155,7 @@ def student_classrooms(request):
         student=request.user, status='pending'
     ).select_related('classroom')
 
-    return render(request, 'meetings/student_classrooms.html', {
+    return render(request, 'meetings/classroom/student_classrooms.html', {
         'approved_memberships': approved_memberships,
         'pending_memberships': pending_memberships,
     })
@@ -169,6 +172,11 @@ def approve_join_request(request, membership_id):
     membership.approved_at = timezone.now()
     membership.approved_by = request.user
     membership.save()
+    
+    # Sync student to classroom conversation
+    conv = membership.classroom.get_or_create_conversation()
+    conv.participants.add(membership.student)
+
     notify_classroom_request_approved(membership.student, membership.classroom, request.user)
     notify_student_joined_classroom(membership.student, membership.classroom)
     return JsonResponse({'status': 'success', 'message': f'{membership.student.username} approved'})
@@ -196,6 +204,11 @@ def remove_student(request, membership_id):
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
     membership.status = 'removed'
     membership.save()
+    
+    # Remove student from classroom conversation
+    conv = membership.classroom.get_or_create_conversation()
+    conv.participants.remove(membership.student)
+
     notify_student_removed_from_classroom(membership.student, membership.classroom)
     return JsonResponse({'status': 'success', 'message': f'{membership.student.username} removed from classroom'})
 
@@ -231,6 +244,11 @@ def leave_classroom(request, classroom_id):
         return redirect('student_classrooms')
     membership.status = 'left'
     membership.save()
+    
+    # Remove student from classroom conversation
+    conv = classroom.get_or_create_conversation()
+    conv.participants.remove(request.user)
+
     messages.success(request, f'You have left "{classroom.title}"')
     return redirect('student_classrooms')
 
@@ -257,13 +275,13 @@ def start_classroom_meeting(request, classroom_id):
 
         if not title:
             messages.error(request, 'Meeting title cannot be empty.')
-            return render(request, 'meetings/start_classroom_meeting.html', {'classroom': classroom})
+            return render(request, 'meetings/live/start_classroom_meeting.html', {'classroom': classroom})
 
         if Meeting.objects.filter(
             classroom=classroom, title__iexact=title
         ).exclude(status__in=['ended', 'cancelled']).exists():
             messages.error(request, f'A meeting named "{title}" already exists in this classroom.')
-            return render(request, 'meetings/start_classroom_meeting.html', {'classroom': classroom})
+            return render(request, 'meetings/live/start_classroom_meeting.html', {'classroom': classroom})
 
         meeting = Meeting.objects.create(
             classroom=classroom,
@@ -282,7 +300,7 @@ def start_classroom_meeting(request, classroom_id):
         messages.success(request, 'Meeting started successfully!')
         return redirect('join_meeting', meeting_code=meeting.meeting_code)
 
-    return render(request, 'meetings/start_classroom_meeting.html', {'classroom': classroom})
+    return render(request, 'meetings/live/start_classroom_meeting.html', {'classroom': classroom})
 
 
 @login_required

@@ -1,0 +1,79 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ classroom.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/classroom_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/study_materials.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="classroom-detail-container"
+     data-classroom-id="{{ classroom.id }}"
+     data-conversation-id="{{ conversation.id|default:'' }}"
+     data-username="{{ user.username }}">
+    
+    <!-- Hero Banner Partial -->
+    {% include 'meetings/partials/classroom/hero.html' %}
+
+    <!-- Active Meeting Banner Partial -->
+    {% include 'meetings/partials/classroom/active_meeting_banner.html' %}
+
+    <!-- Classroom Tabs Switcher -->
+    <div class="classroom-tabs-bar">
+        <button class="classroom-tab-btn active" onclick="switchClassroomTab('stream')" id="tabBtnStream">
+            <i data-lucide="message-square" style="width: 18px; height: 18px;"></i>
+            Stream & Chat
+            <span class="tab-badge" id="streamCountBadge" style="display: none;">New</span>
+        </button>
+        <button class="classroom-tab-btn" onclick="switchClassroomTab('materials')" id="tabBtnMaterials">
+            <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
+            Study Materials & Library
+            {% if study_materials_count and study_materials_count > 0 %}
+            <span class="tab-badge" id="materialsCountBadge" data-count="{{ study_materials_count }}">{{ study_materials_count }}</span>
+            {% endif %}
+        </button>
+        <button class="classroom-tab-btn" onclick="switchClassroomTab('sessions')" id="tabBtnSessions">
+            <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+            Sessions & Timeline
+            {% if meetings and meetings|length > 0 %}
+            <span class="tab-badge" id="sessionsCountBadge" data-count="{{ meetings|length }}">{{ meetings|length }}</span>
+            {% endif %}
+        </button>
+        <button class="classroom-tab-btn" onclick="switchClassroomTab('people')" id="tabBtnPeople">
+            <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+            Class Roster
+            {% if is_teacher and pending_requests and pending_requests.count > 0 %}
+            <span class="tab-badge permanent-badge" style="background: #fee2e2; color: #ef4444;">{{ pending_requests.count }} Pending</span>
+            {% endif %}
+        </button>
+    </div>
+
+    <!-- Tab 1: Stream & Group Chat -->
+    {% include 'meetings/partials/classroom/tab_stream.html' %}
+
+    <!-- Tab 2: Study Materials & Digital Library -->
+    {% include 'meetings/partials/materials/tab_materials.html' %}
+
+    <!-- Tab 3: Sessions & Timeline -->
+    {% include 'meetings/partials/classroom/tab_sessions.html' %}
+
+    <!-- Tab 4: People & Class Roster -->
+    {% include 'meetings/partials/classroom/tab_people.html' %}
+</div>
+
+<!-- Modals for Materials -->
+{% include 'meetings/partials/materials/material_modals.html' %}
+
+<!-- Lightbox Image Modal -->
+<div class="stream-lightbox" id="streamLightbox" onclick="closeStreamLightbox()">
+    <button class="stream-lightbox-close" onclick="closeStreamLightbox()">×</button>
+    <img id="streamLightboxImg" src="" alt="Full view" onclick="event.stopPropagation()">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/classroom_detail.js' %}"></script>
+<script src="{% static 'js/study_materials.js' %}"></script>
+{% endblock %}

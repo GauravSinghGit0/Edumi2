@@ -1,162 +1,309 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}404 - Page Not Found{% endblock %}
+{% block page_title %}404 - Page Not Found | EduMi{% endblock %}
 
 {% block content %}
 <style>
-    .error-container {
-        min-height: 80vh;
+    .error-wrapper {
+        min-height: 82vh;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 2rem;
-        background: radial-gradient(circle at center, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+        padding: 3rem 1.5rem;
+        position: relative;
+        overflow: hidden;
     }
 
-    .error-code {
-        font-size: clamp(8rem, 20vw, 15rem);
-        font-weight: 900;
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        line-height: 1;
-        margin-bottom: -2rem;
-        opacity: 0.15;
-        user-select: none;
+    /* Ambient Background Glows */
+    .ambient-glow-1 {
+        position: absolute;
+        top: 15%;
+        left: 20%;
+        width: 380px;
+        height: 380px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        filter: blur(40px);
+        animation: floatGlow 8s ease-in-out infinite alternate;
+        pointer-events: none;
     }
 
-    .error-card {
-        background: white;
+    .ambient-glow-2 {
+        position: absolute;
+        bottom: 15%;
+        right: 20%;
+        width: 420px;
+        height: 420px;
+        background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0) 70%);
+        border-radius: 50%;
+        filter: blur(50px);
+        animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+        pointer-events: none;
+    }
+
+    @keyframes floatGlow {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, -25px) scale(1.1); }
+    }
+
+    .error-card-glass {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
         border-radius: 2rem;
-        padding: 3rem 2rem;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-        border: 1px solid #f1f5f9;
-        max-width: 550px;
+        padding: 3.5rem 3rem;
+        max-width: 640px;
         width: 100%;
         text-align: center;
         position: relative;
         z-index: 10;
-        backdrop-filter: blur(10px);
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .error-icon {
-        width: 100px;
-        height: 100px;
-        background: #f8fafc;
-        border-radius: 2rem;
-        display: flex;
+    body.dark-mode .error-card-glass {
+        background: rgba(30, 41, 59, 0.85);
+        border-color: rgba(51, 65, 85, 0.8);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.15);
+    }
+
+    .error-code-badge {
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        margin: 0 auto 2rem;
-        transform: rotate(-5deg);
-        transition: transform 0.3s ease;
-    }
-
-    .error-card:hover .error-icon {
-        transform: rotate(0deg) scale(1.05);
-    }
-
-    .error-icon svg {
-        width: 48px;
-        height: 48px;
+        gap: 0.5rem;
+        padding: 0.4rem 1.25rem;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 9999px;
         color: #4f46e5;
+        font-size: 0.875rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 1.5rem;
     }
 
-    .error-title {
-        font-size: 2rem;
+    body.dark-mode .error-code-badge {
+        background: rgba(99, 102, 241, 0.2);
+        color: #818cf8;
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .error-big-number {
+        font-size: clamp(5rem, 12vw, 8.5rem);
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        background: linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #9333ea 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        user-select: none;
+    }
+
+    body.dark-mode .error-big-number {
+        background: linear-gradient(135deg, #818cf8 0%, #a855f7 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .error-heading {
+        font-size: 1.875rem;
         font-weight: 800;
         color: #0f172a;
-        margin-bottom: 1rem;
+        margin-bottom: 0.875rem;
+        letter-spacing: -0.02em;
     }
 
-    .error-message {
+    body.dark-mode .error-heading {
+        color: #f8fafc;
+    }
+
+    .error-description {
         color: #64748b;
-        font-size: 1.1rem;
+        font-size: 1rem;
         line-height: 1.6;
-        margin-bottom: 2.5rem;
+        margin: 0 auto 2.25rem;
+        max-width: 480px;
     }
 
-    .error-actions {
+    body.dark-mode .error-description {
+        color: #94a3b8;
+    }
+
+    .error-btn-group {
         display: flex;
         gap: 1rem;
         justify-content: center;
         flex-wrap: wrap;
+        margin-bottom: 2.5rem;
     }
 
-    .btn-error {
-        padding: 0.875rem 2rem;
+    .btn-error-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: white;
+        padding: 0.875rem 1.75rem;
         border-radius: 1rem;
-        font-weight: 700;
-        font-size: 1rem;
-        transition: all 0.2s;
+        font-weight: 750;
+        font-size: 0.9375rem;
+        text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.65rem;
+        box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.35);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
         cursor: pointer;
-        text-decoration: none;
     }
 
-    .btn-home {
-        background: #4f46e5;
+    .btn-error-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -5px rgba(79, 70, 229, 0.45);
         color: white;
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
 
-    .btn-home:hover {
-        background: #4338ca;
+    .btn-error-secondary {
+        background: rgba(241, 245, 249, 0.8);
+        color: #334155;
+        padding: 0.875rem 1.75rem;
+        border-radius: 1rem;
+        font-weight: 750;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        border: 1px solid #cbd5e1;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    body.dark-mode .btn-error-secondary {
+        background: rgba(51, 65, 85, 0.6);
+        color: #e2e8f0;
+        border-color: #475569;
+    }
+
+    .btn-error-secondary:hover {
+        background: #e2e8f0;
+        color: #0f172a;
         transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4);
     }
 
-    .btn-back {
-        background: white;
-        color: #1e293b;
-        border: 2px solid #e2e8f0;
+    body.dark-mode .btn-error-secondary:hover {
+        background: #475569;
+        color: #ffffff;
     }
 
-    .btn-back:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
+    /* Quick Links Grid */
+    .quick-links-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        margin-bottom: 1rem;
+    }
+
+    .quick-links-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .quick-link-item {
+        padding: 0.75rem 0.875rem;
+        background: rgba(248, 250, 252, 0.8);
+        border: 1px solid #e2e8f0;
+        border-radius: 0.875rem;
+        color: #475569;
+        text-decoration: none;
+        font-size: 0.8125rem;
+        font-weight: 650;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    body.dark-mode .quick-link-item {
+        background: rgba(15, 23, 42, 0.5);
+        border-color: #334155;
+        color: #cbd5e1;
+    }
+
+    .quick-link-item:hover {
+        background: #ffffff;
+        border-color: #818cf8;
+        color: #4f46e5;
         transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+    }
+
+    body.dark-mode .quick-link-item:hover {
+        background: #1e293b;
+        border-color: #6366f1;
+        color: #a5b4fc;
     }
 
     @media (max-width: 640px) {
-        .error-card {
-            padding: 2rem 1.5rem;
-        }
-        .error-title {
-            font-size: 1.5rem;
-        }
-        .error-message {
-            font-size: 1rem;
-        }
+        .error-card-glass { padding: 2.5rem 1.5rem; }
+        .error-heading { font-size: 1.5rem; }
+        .error-description { font-size: 0.9375rem; }
+        .quick-links-grid { grid-template-columns: 1fr 1fr; }
     }
 </style>
 
-<div class="error-container">
-    <div class="error-code">404</div>
-    <div class="error-card">
-        <div class="error-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+<div class="error-wrapper">
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <div class="error-card-glass">
+        <div class="error-code-badge">
+            <i data-lucide="compass" style="width: 16px; height: 16px;"></i>
+            Status 404
         </div>
-        <h1 class="error-title">Page Not Found</h1>
-        <p class="error-message">
-            We couldn't find the page you're looking for. It might have been moved, deleted, or you might have mistyped the address.
+        
+        <div class="error-big-number">404</div>
+        <h1 class="error-heading">Page Not Found</h1>
+        
+        <p class="error-description">
+            The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
         </p>
-        <div class="error-actions">
-            <a href="{% url 'login' %}" class="btn-error btn-home">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                Return Home
+
+        <div class="error-btn-group">
+            <a href="{% url 'login' %}" class="btn-error-primary">
+                <i data-lucide="home" style="width: 18px; height: 18px;"></i>
+                <span>Back to Dashboard</span>
             </a>
-            <button onclick="history.back()" class="btn-error btn-back">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                Go Back
+            <button onclick="history.back()" class="btn-error-secondary" type="button">
+                <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                <span>Go Back</span>
             </button>
+        </div>
+
+        <div class="quick-links-title">Quick Navigation</div>
+        <div class="quick-links-grid">
+            <a href="{% url 'login' %}" class="quick-link-item">
+                <i data-lucide="layout-dashboard" style="width: 15px; height: 15px;"></i>
+                <span>Home</span>
+            </a>
+            <a href="{% url 'inbox' %}" class="quick-link-item">
+                <i data-lucide="message-square" style="width: 15px; height: 15px;"></i>
+                <span>Messages</span>
+            </a>
+            <a href="{% url 'digital_library' %}" class="quick-link-item">
+                <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                <span>Library</span>
+            </a>
         </div>
     </div>
 </div>
+
+<script>
+    if (window.lucide) lucide.createIcons();
+</script>
 {% endblock %}

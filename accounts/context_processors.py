@@ -20,3 +20,9 @@ def face_registered(request):
         return {'face_registered': profile is not None}
     except Exception:
         return {'face_registered': False}
+
+def user_identity(request):
+    """Expose the SSOT user identity to all templates without double resolution."""
+    return {
+        'user_identity': getattr(request, 'identity', None)
+    }

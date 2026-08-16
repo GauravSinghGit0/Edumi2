@@ -107,7 +107,7 @@ def upload_video(request):
     if request.user.userprofile.user_type == 'teacher':
         cameras = cameras.filter(camerapermission__teacher=request.user)
     
-    return render(request, 'cameras/upload_video.html', {'cameras': cameras})
+    return render(request, 'cameras/recordings/upload_video.html', {'cameras': cameras})
 
 
 @login_required

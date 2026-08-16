@@ -91,7 +91,7 @@ def upload_video(request):
     logger.info("Upload video view called!")
     logger.info(f"Method: {request.method}")
     if not (request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher')):
-        return redirect('dashboard')
+        return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     if request.method == 'POST':
         logger.info("POST request received!")
@@ -178,7 +178,7 @@ def upload_video(request):
             return JsonResponse({'status': 'error', 'message': f'Error: {str(e)}'})
 
     cameras = Camera.objects.all() if request.user.is_superuser else Camera.objects.filter(camerapermission__teacher=request.user)
-    return render(request, 'cameras/upload_video.html', {'cameras': cameras})
+    return render(request, 'cameras/recordings/upload_video.html', {'cameras': cameras})
 
 
 @csrf_exempt
@@ -334,17 +334,17 @@ def recordings_folder(request):
         'folders': processed_folders,
         'total_count': recordings.count(),
     }
-    return render(request, 'cameras/recordings_folder.html', context)
+    return render(request, 'cameras/recordings/recordings_folder.html', context)
 
 
 @login_required
 def manage_recordings(request):
     """View for teachers to manage their recordings and uploads"""
     if not (request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher')):
-        return redirect('dashboard')
+        return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     recordings = CameraRecording.objects.filter(teacher=request.user).order_by('-created_at')
-    return render(request, 'cameras/manage_recordings.html', {'recordings': recordings})
+    return render(request, 'cameras/recordings/manage_recordings.html', {'recordings': recordings})
 
 
 @login_required
@@ -379,7 +379,7 @@ def edit_recording(request, recording_id):
 
     recording = get_object_or_404(CameraRecording, id=recording_id)
     if not (request.user.is_superuser or recording.teacher == request.user):
-        return redirect('dashboard')
+        return redirect('manage_recordings')
 
     project_title = f"Edit - {recording.title}"
     
@@ -521,7 +521,7 @@ def watch_recording(request, recording_id):
     if recording.is_chunked:
         context['playlist_url'] = reverse('recording_playlist', args=[recording.id])
 
-    return render(request, 'cameras/watch_recording.html', context)
+    return render(request, 'cameras/recordings/watch_recording.html', context)
 
 
 @login_required
@@ -586,7 +586,7 @@ def teacher_profile(request, teacher_id):
     live_cameras = Camera.objects.filter(live_teacher=teacher, is_live=True)
     recordings = CameraRecording.objects.filter(teacher=teacher, is_published=True).order_by('-created_at')
 
-    return render(request, 'cameras/teacher_profile.html', {
+    return render(request, 'cameras/control_room/teacher_profile.html', {
         'target_teacher': teacher,
         'live_cameras': live_cameras,
         'recordings': recordings
@@ -669,7 +669,7 @@ def like_recording(request, recording_id):
 def recording_analytics(request):
     """YouTube Studio-like Analytics dashboard for teachers."""
     if not (request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher')):
-        return redirect('dashboard')
+        return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
         
     # Get all recordings by this teacher
     recordings = CameraRecording.objects.filter(teacher=request.user)
@@ -699,5 +699,5 @@ def recording_analytics(request):
         'chart_data': chart_data,
         'recordings': recordings,
     }
-    return render(request, 'cameras/recording_analytics.html', context)
+    return render(request, 'cameras/recordings/recording_analytics.html', context)
 

@@ -51,7 +51,7 @@ def login_view(request):
         password = request.POST.get('password', '')
 
         if not username_or_email or not password:
-            return render(request, 'accounts/login.html', {
+            return render(request, 'accounts/auth/login.html', {
                 'error': 'Please enter both username/email and password.',
                 'entered_username': username_or_email,
             }, status=422)
@@ -96,7 +96,7 @@ def login_view(request):
             if not profile.is_verified:
                 request.session['unverified_email'] = user.email
                 request.session['unverified_username'] = user.username
-                return render(request, 'accounts/login.html', {
+                return render(request, 'accounts/auth/login.html', {
                     'error': 'Your email address has not been verified yet.',
                     'unverified_error': True,
                     'unverified_email': user.email,
@@ -105,7 +105,7 @@ def login_view(request):
 
             # Check if user is active
             if not user.is_active:
-                return render(request, 'accounts/login.html', {
+                return render(request, 'accounts/auth/login.html', {
                     'error': 'This account has been disabled. Please contact support.',
                     'entered_username': username_or_email,
                 }, status=403)
@@ -120,12 +120,12 @@ def login_view(request):
                 return redirect('student_dashboard')
             return redirect('home')
 
-        return render(request, 'accounts/login.html', {
+        return render(request, 'accounts/auth/login.html', {
             'error': 'Invalid username/email or password.',
             'entered_username': username_or_email,
         }, status=422)
 
-    return render(request, 'accounts/login.html')
+    return render(request, 'accounts/auth/login.html')
 
 
 @ratelimit(action='register')
@@ -162,7 +162,7 @@ def register(request):
                     'message': 'Please fix the errors below.'
                 }, status=422)
 
-            return render(request, 'accounts/register.html', {
+            return render(request, 'accounts/auth/register.html', {
                 'errors': serializer.errors,
                 'form_data': data,
             }, status=422)
@@ -194,12 +194,12 @@ def register(request):
         except Exception as e:
             logger.error(f"Registration exception for user data {data.get('username')}: {e}")
             error_dict = {'non_field_errors': [f'Registration failed: {str(e)}']}
-            return render(request, 'accounts/register.html', {
+            return render(request, 'accounts/auth/register.html', {
                 'errors': error_dict,
                 'form_data': data,
             }, status=422)
 
-    return render(request, 'accounts/register.html')
+    return render(request, 'accounts/auth/register.html')
 
 
 def verify_email_sent_view(request):
@@ -220,7 +220,7 @@ def verify_email_sent_view(request):
         except Exception:
             pass
 
-    return render(request, 'accounts/verify_email_sent.html', {
+    return render(request, 'accounts/auth/verify_email_sent.html', {
         'email': email,
         'username': username,
     })
@@ -254,7 +254,7 @@ def verify_email(request):
 
     else:
         if request.method == 'GET':
-            return render(request, 'accounts/verify_email_sent.html', {
+            return render(request, 'accounts/auth/verify_email_sent.html', {
                 'email': email,
             })
         error_message = "Please enter the 6-digit verification code sent to your email."
@@ -299,7 +299,7 @@ def verify_email(request):
         }, status=400)
 
     # Keep user on the interactive OTP verification page with error feedback and OTP inputs intact
-    return render(request, 'accounts/verify_email_sent.html', {
+    return render(request, 'accounts/auth/verify_email_sent.html', {
         'error': error_message,
         'email': email,
     }, status=400)
@@ -393,13 +393,13 @@ def check_availability(request):
 
 def home(request):
     """Public home/landing page."""
-    return render(request, 'accounts/home.html')
+    return render(request, 'accounts/dashboard/home.html')
 
 
 @login_required
 def settings_view(request):
     """Settings page."""
-    return render(request, 'accounts/settings.html')
+    return render(request, 'accounts/profile/settings.html')
 
 
 def error_404(request, exception):

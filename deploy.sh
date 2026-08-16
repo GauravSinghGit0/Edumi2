@@ -159,7 +159,9 @@ if [ "$DB_HOST" == "127.0.0.1" ] || [ "$DB_HOST" == "localhost" ]; then
         sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -d $DB_NAME -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -d $DB_NAME -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $DB_USER;" 2>/dev/null || true
-        log "Local PostgreSQL database ready with full table & sequence permissions."
+        sudo -u postgres psql -c "ALTER SYSTEM SET max_connections = '300';" 2>/dev/null || true
+        sudo -u postgres psql -c "SELECT pg_reload_conf();" 2>/dev/null || true
+        log "Local PostgreSQL database ready with max_connections=300 & full permissions."
     fi
 else
     info "Using Remote PostgreSQL Database Host: $DB_HOST"
@@ -432,6 +434,8 @@ WorkingDirectory=${APP_DIR}
 ExecStart=${cmd}
 Restart=always
 RestartSec=5
+LimitNOFILE=65535
+LimitNPROC=65535
 EnvironmentFile=${APP_DIR}/.env
 StandardOutput=journal
 StandardError=journal
@@ -496,6 +500,8 @@ step "STEP 10: Nginx Reverse Proxy Setup"
 # ------------------------------------------------------------------------------
 if [ "$IS_ROOT" = true ]; then
     info "Configuring Nginx web server..."
+    # Ensure Nginx handles high worker connections
+    sed -i 's/worker_connections [0-9]*/worker_connections 4096/' /etc/nginx/nginx.conf 2>/dev/null || true
 
     cat > /etc/nginx/sites-available/edumi <<EOF
 upstream edumi_backend {

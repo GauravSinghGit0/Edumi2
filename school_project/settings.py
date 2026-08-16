@@ -177,6 +177,7 @@ MIDDLEWARE += [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.CentralizedIdentityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -208,6 +209,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.timestamp',
                 'accounts.context_processors.face_registered',
+                'accounts.context_processors.user_identity',
             ],
         },
     },
@@ -247,7 +249,7 @@ if _database_url and _is_db_reachable(_database_url):
         import dj_database_url
         db_config = dj_database_url.config(
             default=_database_url,
-            conn_max_age=0,
+            conn_max_age=60,
             conn_health_checks=True,
         )
         if 'sslmode' in _database_url:

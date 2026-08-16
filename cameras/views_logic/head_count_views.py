@@ -61,7 +61,7 @@ def head_count_dashboard(request):
         'active_sessions': active_sessions,
         'recent_logs': recent_logs,
     }
-    return render(request, 'cameras/head_count_dashboard.html', context)
+    return render(request, 'cameras/headcount/head_count_dashboard.html', context)
 
 
 @login_required
@@ -173,7 +173,7 @@ def head_count_logs(request):
         'classrooms': classrooms,
         'filter_params': request.GET,
     }
-    return render(request, 'cameras/head_count_logs.html', context)
+    return render(request, 'cameras/headcount/head_count_logs.html', context)
 
 
 @login_required
@@ -184,7 +184,7 @@ def head_count_log_detail(request, log_id):
     context = {
         'log': log,
     }
-    return render(request, 'cameras/head_count_log_detail.html', context)
+    return render(request, 'cameras/headcount/head_count_log_detail.html', context)
 
 
 @login_required
@@ -208,7 +208,7 @@ def head_count_session_history(request):
     context = {
         'sessions': sessions[:50],
     }
-    return render(request, 'cameras/head_count_sessions.html', context)
+    return render(request, 'cameras/headcount/head_count_sessions.html', context)
 
 
 @login_required
@@ -294,7 +294,7 @@ def head_count_report(request):
         'classrooms': classrooms,
         'filter_params': request.GET,
     }
-    return render(request, 'cameras/head_count_report.html', context)
+    return render(request, 'cameras/headcount/head_count_report.html', context)
 
 
 @login_required

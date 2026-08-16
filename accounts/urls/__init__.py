@@ -16,4 +16,5 @@ urlpatterns = [
     path('', include('accounts.urls.admin_urls')),
     path('', include('accounts.urls.messaging_urls')),
     path('', include('accounts.urls.notification_urls')),
+    path('api/identity/', include('accounts.urls.identity_urls')),
 ]
