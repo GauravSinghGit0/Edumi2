@@ -1,5 +1,7 @@
 // Eye following cursor animation
 document.addEventListener('DOMContentLoaded', function() {
+    // If auth page is handling its own character eyes, skip generic global listener
+    if (document.querySelector('.auth-split-container')) return;
     const pupils = document.querySelectorAll('.pupil');
     
     document.addEventListener('mousemove', function(e) {

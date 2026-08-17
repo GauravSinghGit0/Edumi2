@@ -14,7 +14,7 @@
         <div class="auth-info">
             <h2>Complete Educational Platform</h2>
             <div class="feature-list">
-                <div class="feature-item" onclick="openFeatureSlider('user-management')">
+                <div class="feature-item">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -28,7 +28,7 @@
                     </div>
                 </div>
 
-                <div class="feature-item" onclick="openFeatureSlider('video-conferencing')">
+                <div class="feature-item">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
@@ -40,7 +40,7 @@
                     </div>
                 </div>
 
-                <div class="feature-item" onclick="openFeatureSlider('camera-monitoring')">
+                <div class="feature-item">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
@@ -53,7 +53,7 @@
                     </div>
                 </div>
 
-                <div class="feature-item" onclick="openFeatureSlider('realtime-updates')">
+                <div class="feature-item">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -65,7 +65,7 @@
                         <p>WebSocket-powered live updates for meetings, chat, and notifications</p>
                     </div>
                 </div>
-                <div class="feature-item" onclick="openFeatureSlider('classroom-management')">
+                <div class="feature-item">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -132,23 +132,19 @@
     <!-- Right Side - Login Form -->
     <div class="auth-right-panel">
         <div class="auth-form-container">
-            <div class="auth-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-            </div>
 
-            <h1>Welcome back!</h1>
-            <p class="auth-subtitle">Please enter your details</p>
+            <div class="auth-header" style="text-align: center;">
+                <h1>Welcome back!</h1>
+                <p class="auth-subtitle">Sign in to continue to your account</p>
+            </div>
 
             <form method="post" class="auth-form">
                 {% csrf_token %}
 
                 <div class="form-field">
                     <label>Username or Email</label>
-                    <input type="text" name="username" required placeholder="Enter your username or email" value="{{ entered_username|default:'' }}" autofocus>
+                    <input type="text" name="username" required placeholder="Enter your username or email"
+                        value="{{ entered_username|default:'' }}" autofocus>
                 </div>
 
                 <div class="form-field">
@@ -175,15 +171,18 @@
                 </div>
 
                 {% if unverified_error %}
-                <div class="error-alert" style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
+                <div class="error-alert"
+                    style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
                     <div style="font-weight: 700; margin-bottom: 4px;">Email Verification Required</div>
                     <div>{{ error }}</div>
                     <div style="margin-top: 10px;">
-                        <button type="button" id="loginResendBtn" onclick="resendLoginVerification('{{ unverified_email }}')"
-                                style="background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                        <button type="button" id="loginResendBtn"
+                            onclick="resendLoginVerification('{{ unverified_email }}')"
+                            style="background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
                             Resend verification email
                         </button>
-                        <a href="{% url 'verify_email' %}" style="margin-left: 8px; font-size: 0.8rem; color: #b45309; text-decoration: underline;">
+                        <a href="{% url 'verify_email' %}"
+                            style="margin-left: 8px; font-size: 0.8rem; color: #b45309; text-decoration: underline;">
                             Enter code
                         </a>
                     </div>
@@ -203,218 +202,7 @@
     </div>
 </div>
 
-<!-- Feature Detail Slider -->
-<div class="feature-slider" id="featureSlider">
-    <div class="feature-slider-overlay" onclick="closeFeatureSlider()"></div>
-    <div class="feature-slider-content">
-        <button class="feature-slider-close" onclick="closeFeatureSlider()">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </button>
-
-        <div class="feature-detail" id="user-management">
-            <div class="feature-detail-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-            </div>
-            <h2>User Management</h2>
-            <p class="feature-detail-subtitle">Complete control over your educational institution's users</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>Role-Based Access Control:</strong> Separate dashboards and permissions for
-                        administrators, teachers, and students</li>
-                    <li><strong>User Profiles:</strong> Comprehensive profile management with photos, contact
-                        information, and academic details</li>
-                    <li><strong>Bulk Operations:</strong> Add, edit, or remove multiple users efficiently</li>
-                    <li><strong>Activity Tracking:</strong> Monitor user login history and platform engagement</li>
-                    <li><strong>Custom Permissions:</strong> Fine-grained control over what each user can access</li>
-                </ul>
-                <h3>Benefits:</h3>
-                <ul>
-                    <li>Streamlined onboarding process for new students and teachers</li>
-                    <li>Enhanced security with role-based restrictions</li>
-                    <li>Easy management of large user bases</li>
-                    <li>Detailed user analytics and reporting</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="feature-detail" id="video-conferencing">
-            <div class="feature-detail-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-                    <polyline points="17 2 12 7 7 2"></polyline>
-                </svg>
-            </div>
-            <h2>Video Conferencing</h2>
-            <p class="feature-detail-subtitle">Professional-grade virtual classrooms powered by WebRTC</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>HD Video & Audio:</strong> Crystal-clear communication with adaptive bitrate streaming
-                    </li>
-                    <li><strong>Screen Sharing:</strong> Share presentations, documents, and applications in real-time
-                    </li>
-                    <li><strong>Interactive Chat:</strong> Text messaging with file sharing during meetings</li>
-                    <li><strong>Recording:</strong> Record sessions for later review and archival</li>
-                    <li><strong>Participant Management:</strong> Mute, remove, or grant permissions to participants</li>
-                    <li><strong>Virtual Backgrounds:</strong> Professional appearance with customizable backgrounds</li>
-                </ul>
-                <h3>Benefits:</h3>
-                <ul>
-                    <li>No third-party software required - works directly in browser</li>
-                    <li>Supports unlimited participants</li>
-                    <li>Low latency for real-time interaction</li>
-                    <li>Works on desktop and mobile devices</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="feature-detail" id="camera-monitoring">
-            <div class="feature-detail-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                </svg>
-            </div>
-            <h2>Live Camera Monitoring</h2>
-            <p class="feature-detail-subtitle">Advanced security and monitoring system</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>RTSP Camera Support:</strong> Connect professional IP cameras with RTSP protocol</li>
-                    <li><strong>Mobile Camera Integration:</strong> Use smartphones as security cameras</li>
-                    <li><strong>Multi-Camera View:</strong> Monitor multiple locations simultaneously</li>
-                    <li><strong>Permission-Based Access:</strong> Control who can view specific cameras</li>
-                    <li><strong>Live Streaming:</strong> Real-time video feeds with minimal delay</li>
-                    <li><strong>Camera Management:</strong> Add, configure, and organize cameras easily</li>
-                </ul>
-                <h3>Benefits:</h3>
-                <ul>
-                    <li>Enhanced campus security and monitoring</li>
-                    <li>Remote supervision of classrooms and facilities</li>
-                    <li>Flexible camera options (professional or mobile)</li>
-                    <li>Secure access with granular permissions</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="feature-detail" id="realtime-updates">
-            <div class="feature-detail-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                </svg>
-            </div>
-            <h2>Real-time Updates</h2>
-            <p class="feature-detail-subtitle">Instant notifications and live data synchronization</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>WebSocket Technology:</strong> Bi-directional real-time communication</li>
-                    <li><strong>Live Notifications:</strong> Instant alerts for meetings, messages, and updates</li>
-                    <li><strong>Presence Indicators:</strong> See who's online in real-time</li>
-                    <li><strong>Auto-Sync:</strong> Data updates automatically across all devices</li>
-                    <li><strong>Meeting Status:</strong> Live updates on meeting participants and status</li>
-                    <li><strong>Chat Delivery:</strong> Instant message delivery with read receipts</li>
-                </ul>
-                <h3>Benefits:</h3>
-                <ul>
-                    <li>No page refresh needed - everything updates live</li>
-                    <li>Improved collaboration with instant communication</li>
-                    <li>Better user experience with immediate feedback</li>
-                    <li>Reduced server load with efficient WebSocket connections</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="feature-detail" id="classroom-management">
-            <div class="feature-detail-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-            </div>
-            <h2>Classroom Management</h2>
-            <p class="feature-detail-subtitle">Complete virtual classroom organization system</p>
-            <div class="feature-detail-content">
-                <h3>Key Features:</h3>
-                <ul>
-                    <li><strong>Virtual Classrooms:</strong> Create and manage multiple classrooms with unique codes
-                    </li>
-                    <li><strong>Student Enrollment:</strong> Approval-based enrollment system for controlled access</li>
-                    <li><strong>Attendance Tracking:</strong> Automatic attendance recording for all sessions</li>
-                    <li><strong>Class Scheduling:</strong> Schedule recurring or one-time class sessions</li>
-                    <li><strong>Student Management:</strong> Add, remove, and manage student rosters</li>
-                    <li><strong>Class Resources:</strong> Share materials, assignments, and announcements</li>
-                </ul>
-                <h3>Benefits:</h3>
-                <ul>
-                    <li>Organized structure for online learning</li>
-                    <li>Easy student enrollment and management</li>
-                    <li>Automated attendance and participation tracking</li>
-                    <li>Centralized communication with class members</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
 <script>
-    // Feature Slider Functions
-    function openFeatureSlider(featureId) {
-        const slider = document.getElementById('featureSlider');
-        const allDetails = document.querySelectorAll('.feature-detail');
-        const targetDetail = document.getElementById(featureId);
-
-        // Hide all feature details
-        allDetails.forEach(detail => detail.classList.remove('active'));
-
-        // Show target feature detail
-        if (targetDetail) {
-            targetDetail.classList.add('active');
-        }
-
-        // Show slider
-        slider.classList.remove('closing');
-        slider.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeFeatureSlider() {
-        const slider = document.getElementById('featureSlider');
-        slider.classList.add('closing');
-
-        // Wait for animation to complete before hiding
-        setTimeout(() => {
-            slider.classList.remove('active', 'closing');
-            document.body.style.overflow = '';
-        }, 300);
-    }
-
-    // Close slider on Escape key
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            closeFeatureSlider();
-        }
-    });
-
     // Eyes follow cursor with constrained pupil movement
     document.addEventListener('DOMContentLoaded', function () {
         const container = document.querySelector('.auth-split-container');
@@ -504,39 +292,39 @@
                 'X-CSRFToken': csrftoken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: new URLSearchParams({'email': email})
+            body: new URLSearchParams({ 'email': email })
         })
-        .then(r => r.json())
-        .then(d => {
-            status.style.display = 'block';
-            if (d.ok) {
-                status.style.color = '#065f46';
-                status.innerText = d.message || 'Verification link sent!';
-                let countdown = 60;
-                const timer = setInterval(() => {
-                    countdown--;
-                    if (countdown > 0) {
-                        btn.innerText = `Resend in ${countdown}s`;
-                    } else {
-                        clearInterval(timer);
-                        btn.disabled = false;
-                        btn.innerText = 'Resend verification email';
-                    }
-                }, 1000);
-            } else {
+            .then(r => r.json())
+            .then(d => {
+                status.style.display = 'block';
+                if (d.ok) {
+                    status.style.color = '#065f46';
+                    status.innerText = d.message || 'Verification link sent!';
+                    let countdown = 60;
+                    const timer = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            btn.innerText = `Resend in ${countdown}s`;
+                        } else {
+                            clearInterval(timer);
+                            btn.disabled = false;
+                            btn.innerText = 'Resend verification email';
+                        }
+                    }, 1000);
+                } else {
+                    status.style.color = '#dc2626';
+                    status.innerText = d.error || 'Failed to resend.';
+                    btn.disabled = false;
+                    btn.innerText = 'Resend verification email';
+                }
+            })
+            .catch(e => {
+                status.style.display = 'block';
                 status.style.color = '#dc2626';
-                status.innerText = d.error || 'Failed to resend.';
+                status.innerText = 'Network error. Please try again.';
                 btn.disabled = false;
                 btn.innerText = 'Resend verification email';
-            }
-        })
-        .catch(e => {
-            status.style.display = 'block';
-            status.style.color = '#dc2626';
-            status.innerText = 'Network error. Please try again.';
-            btn.disabled = false;
-            btn.innerText = 'Resend verification email';
-        });
+            });
     }
 </script>
 {% endblock %}
