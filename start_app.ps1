@@ -163,9 +163,8 @@ if ((Test-Path $LkExePath) -and (Test-Path $LkConfigPath)) {
     $lkYaml = Get-Content $LkConfigPath -Raw
     $needsUpdate = $false
     if ($lkYaml -notmatch 'rtc:') { $needsUpdate = $true }
-    if ($lkYaml -notmatch 'stun_servers:') { $needsUpdate = $true }
-    if ($lkYaml -match 'bind_addresses:\s*\r?\n\s*-\s*""') { $needsUpdate = $true }
-    if ($lkYaml -notmatch 'bind_addresses:') { $needsUpdate = $true }
+    if ($lkYaml -notmatch 'stun.l.google.com') { $needsUpdate = $true }
+    if ($lkYaml -match 'node_ip:\s*"127\.0\.0\.1"') { $needsUpdate = $true }
     if ($needsUpdate) {
         try {
             $LK_KEY    = "devkey"
@@ -179,9 +178,7 @@ if ((Test-Path $LkExePath) -and (Test-Path $LkConfigPath)) {
             if (-not $LAN_IP) { $LAN_IP = "127.0.0.1" }
 
             # Use a SINGLE-QUOTED here-string (@' ... '@) so PowerShell does NOT try
-            # to parse '$LK_KEY: $LK_SECRET' as a $Drive:Variable reference (that's
-            # what caused the ParserError).  Variable placeholders are escaped as
-            # __TOKEN__ and replaced after the string is created.
+            # to parse '$LK_KEY: $LK_SECRET' as a $Drive:Variable reference.
             $newYamlTpl = @'
 # ==============================================================================
 # LiveKit SFU Server Configuration (Windows - auto-updated by start_app.ps1)
@@ -194,8 +191,9 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: "127.0.0.1"
-  stun_servers: []
+  stun_servers:
+    - "stun.l.google.com:19302"
+    - "stun1.l.google.com:19302"
 
 keys:
   __LK_KEY_LINE__
@@ -210,7 +208,7 @@ logging:
             $lkKeyLine = '  {0}: {1}' -f $LK_KEY, $LK_SECRET
             $newYaml = $newYamlTpl.Replace('__LK_KEY_LINE__', $lkKeyLine)
             Set-Content -Path $LkConfigPath -Value $newYaml -Encoding UTF8
-            Write-Host ("  -> LiveKit config updated (bind=0.0.0.0, LAN IP={0})" -f $LAN_IP) -ForegroundColor Gray
+            Write-Host ("  -> LiveKit config updated (bind=0.0.0.0, STUN enabled, LAN IP={0})" -f $LAN_IP) -ForegroundColor Gray
         } catch {
             Write-Host "  -> [WARN] Could not auto-update livekit.yaml: $_" -ForegroundColor Yellow
         }
@@ -259,9 +257,13 @@ $BGProcesses = New-Object System.Collections.ArrayList
 
 if (Test-Path $LkExePath) {
     $LkLog = Join-Path $LogsDir "livekit.log"
+    $LkArgs = @("--config", $LkConfigPath)
+    if ($LAN_IP -and $LAN_IP -ne "127.0.0.1") {
+        $LkArgs += @("--node-ip", $LAN_IP)
+    }
     $LkProc = Start-BackgroundProcess `
         -FilePath    $LkExePath `
-        -ArgumentList @("--config", $LkConfigPath) `
+        -ArgumentList $LkArgs `
         -LogFile     $LkLog `
         -ServiceName "LiveKit SFU Server" `
         -VerifyPort  7880

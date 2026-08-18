@@ -5,8 +5,9 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: "127.0.0.1"
-  stun_servers: []
+  stun_servers:
+    - "stun.l.google.com:19302"
+    - "stun1.l.google.com:19302"
 
 keys:
   edumi_livekit_key_2026: edumi_livekit_sec_32chars_key_2026_prod
@@ -17,4 +18,5 @@ room:
 
 logging:
   level: info
+
 

@@ -58,6 +58,17 @@ import subprocess
 
 _lk_process_handles = []
 
+def get_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
+
 def ensure_livekit_running():
     # Check if port 7880 is already listening
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -72,7 +83,8 @@ def ensure_livekit_running():
     config_path = BASE_DIR / "config" / "livekit.yaml"
 
     if lk_exe.exists() and config_path.exists():
-        print(f"[INFO] Auto-starting LiveKit SFU server on port 7880...")
+        lan_ip = get_lan_ip()
+        print(f"[INFO] Auto-starting LiveKit SFU server on port 7880 (Dynamic Node IP: {lan_ip})...")
         try:
             log_dir = BASE_DIR / "logs"
             log_dir.mkdir(exist_ok=True)
@@ -82,8 +94,12 @@ def ensure_livekit_running():
             _lk_process_handles = [out_file, err_file]
 
             creation_flag = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0
+            cmd = [str(lk_exe), "--config", str(config_path)]
+            if lan_ip and lan_ip != '127.0.0.1':
+                cmd.extend(["--node-ip", lan_ip])
+
             proc = subprocess.Popen(
-                [str(lk_exe), "--config", str(config_path)],
+                cmd,
                 stdout=out_file,
                 stderr=err_file,
                 creationflags=creation_flag

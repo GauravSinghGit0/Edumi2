@@ -1232,6 +1232,27 @@ async function init() {
         await window.room.connect(url, token);
         console.log('Connected to LiveKit room:', window.room.name);
 
+        // Auto-resume AudioContext or bind user gesture unlock
+        try {
+            await window.room.startAudio();
+        } catch (audioContextErr) {
+            console.warn('AudioContext autoplay restricted by browser, listening for user gesture to activate audio.');
+        }
+
+        const resumeAudioOnGesture = async () => {
+            if (window.room && window.room.canPlaybackAudio === false) {
+                try {
+                    await window.room.startAudio();
+                    console.log('LiveKit AudioContext activated via user gesture.');
+                } catch (e) {
+                    console.warn('startAudio attempt on gesture:', e);
+                }
+            }
+        };
+        ['click', 'touchstart', 'keydown'].forEach(evtType => {
+            document.addEventListener(evtType, resumeAudioOnGesture, { passive: true });
+        });
+
         // Initialize Video Quality Manager & Auto Bitrate Monitor
         if (window.VideoQualityManager) {
             const container = document.getElementById('unifiedQualityControl') || document.getElementById('qualityWidgetContainer');
