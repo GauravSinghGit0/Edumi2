@@ -636,6 +636,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <script>
+    window.REEL_PROJECT_ID = "{{ project.pk }}";
+    window.REEL_CHUNKED_UPLOAD_URL = "{% url 'chunked_upload' %}";
     window.REEL_STATUS_URL = "{% url 'project_status' project.pk %}";
     window.REEL_PROJECT_STATUS = "{{ project.status }}";
     window.REEL_UPLOAD_ASSET_URL = "{% url 'upload_asset' project.pk %}";
@@ -661,6 +663,34 @@
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
+
+    // Client-side high performance SVG waveform visualizer
+    window.generateWaveformSvg = function(width, height, seed) {
+        const barWidth = 3;
+        const barGap = 2;
+        const totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
+        const halfHeight = height / 2;
+        let paths = [];
+
+        // Pseudo-random consistent audio waveform generator
+        let s = (seed || 12345) % 2147483647;
+        function rnd() {
+            s = (s * 16807) % 2147483647;
+            return (s - 1) / 2147483646;
+        }
+
+        for (let i = 0; i < totalBars; i++) {
+            const x = i * (barWidth + barGap);
+            // Mix sine wave with random peaks for realistic audio envelope
+            const envelope = 0.3 + 0.7 * Math.abs(Math.sin(i / 15.0) * Math.cos(i / 35.0));
+            const randomFactor = 0.2 + 0.8 * rnd();
+            const barH = Math.max(4, Math.min(height - 4, (halfHeight * 1.6) * envelope * randomFactor));
+            const y = halfHeight - (barH / 2);
+            paths.push(`<rect x="${x}" y="${y.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1.5" fill="currentColor" opacity="0.6"/>`);
+        }
+
+        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="color: var(--ve-primary, #6366f1); display: block;">${paths.join('')}</svg>`;
+    };
 
     document.addEventListener("DOMContentLoaded", function () {
         var video = document.getElementById('main-video');

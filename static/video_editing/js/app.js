@@ -205,8 +205,38 @@
   }
 
   // ---- AJAX Asset Upload (+ Add File) --------------------------------
+  // ---- AJAX Asset Upload (+ Add File) --------------------------------
   const triggerUploadBtn = document.getElementById("btn-trigger-upload-asset");
   const assetFileInput = document.getElementById("asset-file-input");
+
+  // Client-side quick duration extractor
+  function extractMediaDuration(file) {
+    return new Promise((resolve) => {
+      const isAudio = file.type.startsWith("audio/");
+      const isVideo = file.type.startsWith("video/");
+      if (!isAudio && !isVideo) return resolve(0);
+
+      const el = document.createElement(isVideo ? "video" : "audio");
+      el.preload = "metadata";
+      const blobUrl = URL.createObjectURL(file);
+      el.src = blobUrl;
+      const t = setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        resolve(0);
+      }, 3000);
+      el.onloadedmetadata = () => {
+        clearTimeout(t);
+        const dur = el.duration || 0;
+        URL.revokeObjectURL(blobUrl);
+        resolve(dur);
+      };
+      el.onerror = () => {
+        clearTimeout(t);
+        URL.revokeObjectURL(blobUrl);
+        resolve(0);
+      };
+    });
+  }
 
   if (triggerUploadBtn && assetFileInput) {
     triggerUploadBtn.addEventListener("click", (e) => {
@@ -219,8 +249,7 @@
       if (!files || files.length === 0) return;
 
       const file = files[0];
-      const formData = new FormData();
-      formData.append("video_file", file);
+      const clientDur = await extractMediaDuration(file);
 
       // Disable Add File button and update its state
       if (triggerUploadBtn) {
@@ -242,7 +271,7 @@
           <i data-lucide="loader" class="animate-spin" style="width:18px;height:18px;color:var(--ve-primary); flex-shrink:0;"></i>
           <div style="flex:1; min-width:0;">
             <p style="margin:0; font-size:12px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${file.name}</p>
-            <p style="margin:0; font-size:10px; color:var(--ve-text-muted);">Uploading asset...</p>
+            <p id="asset-upload-status-text" style="margin:0; font-size:10px; color:var(--ve-text-muted);">Uploading asset...</p>
           </div>
         `;
         assetsGrid.insertBefore(uploadIndicator, assetsGrid.firstChild);
@@ -250,39 +279,68 @@
       }
 
       try {
-        const uploadUrl =
-          window.REEL_UPLOAD_ASSET_URL ||
-          window.location.pathname + "upload-asset/";
         const csrf =
           window.REEL_CSRF_TOKEN ||
           document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+        const uploadUrl =
+          window.REEL_UPLOAD_ASSET_URL ||
+          window.location.pathname + "upload-asset/";
 
-        let response = null;
         let data = null;
-        let attempts = 0;
-        const maxRetries = 5;
 
-        while (attempts < maxRetries) {
-          try {
-            if (attempts > 0) {
-              await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * Math.pow(1.5, attempts - 1), 8000)));
-            }
-            response = await fetch(uploadUrl, {
+        // If file > 10MB and chunked upload URL is available, use fast parallel chunks
+        if (file.size > 10 * 1024 * 1024 && window.REEL_CHUNKED_UPLOAD_URL && window.REEL_PROJECT_ID) {
+          const chunkSize = 10 * 1024 * 1024;
+          const totalChunks = Math.ceil(file.size / chunkSize);
+          const uploadId = Date.now().toString() + Math.random().toString(36).substring(7);
+          const statusText = document.getElementById("asset-upload-status-text");
+
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append("chunk", chunk);
+            formData.append("filename", file.name);
+            formData.append("chunkIndex", i);
+            formData.append("totalChunks", totalChunks);
+            formData.append("uploadId", uploadId);
+            formData.append("targetType", "asset");
+            formData.append("projectId", window.REEL_PROJECT_ID);
+            formData.append("clientDuration", clientDur);
+
+            const res = await fetch(window.REEL_CHUNKED_UPLOAD_URL, {
               method: "POST",
-              headers: {
-                "X-CSRFToken": csrf,
-              },
+              headers: { "X-CSRFToken": csrf },
               body: formData,
             });
-            if (response.ok) {
-              data = await response.json();
-              break;
+
+            if (res.ok) {
+              const resData = await res.json();
+              if (resData.asset) {
+                data = resData;
+              }
             }
-            attempts++;
-          } catch (err) {
-            attempts++;
-            console.warn(`Asset upload retry ${attempts}/${maxRetries}...`, err);
-            if (attempts >= maxRetries) throw err;
+
+            const percent = Math.round(((i + 1) / totalChunks) * 100);
+            if (statusText) statusText.textContent = `Uploading ${percent}%...`;
+          }
+        } else {
+          // Standard fast upload with client metadata attached
+          const formData = new FormData();
+          formData.append("video_file", file);
+          formData.append("clientDuration", clientDur);
+
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": csrf,
+            },
+            body: formData,
+          });
+          if (response.ok) {
+            data = await response.json();
           }
         }
 

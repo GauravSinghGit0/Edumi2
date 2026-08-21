@@ -48,6 +48,57 @@ def format_conversation_timestamp(dt):
     return local_dt.strftime("%d/%m/%Y")
 
 
+def get_user_contacts(user):
+    """
+    Get all relevant contacts for this user:
+    1. Joined/taught classrooms (with their conversation IDs).
+    2. Classmates and Teachers from those classrooms.
+    3. General active directory users for 1-on-1 private messaging.
+    """
+    from meetings.models import Classroom, ClassroomMembership
+    
+    # 1. Classrooms
+    if hasattr(user, 'userprofile') and user.userprofile.user_type == 'teacher':
+        teacher_classrooms = Classroom.objects.filter(teacher=user, is_active=True)
+        enrolled_classrooms = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True)
+        classrooms_qs = (teacher_classrooms | enrolled_classrooms).distinct().select_related('teacher')
+    else:
+        classrooms_qs = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True).select_related('teacher')
+
+    classroom_list = []
+    for c in classrooms_qs:
+        conv = getattr(c, 'conversation', None)
+        if not conv:
+            conv = c.get_or_create_conversation()
+        classroom_list.append({
+            'id': c.id,
+            'title': c.title,
+            'class_code': c.class_code,
+            'teacher': c.teacher,
+            'conversation_id': conv.id if conv else None,
+            'member_count': c.get_approved_students().count() + 1,
+        })
+
+    # 2. Get students and teachers in those classrooms
+    classroom_ids = [c['id'] for c in classroom_list]
+    classroom_student_ids = ClassroomMembership.objects.filter(classroom_id__in=classroom_ids, status='approved').values_list('student_id', flat=True)
+    classroom_teacher_ids = classrooms_qs.values_list('teacher_id', flat=True)
+    contact_user_ids = set(classroom_student_ids).union(set(classroom_teacher_ids))
+    contact_user_ids.discard(user.id)
+
+    # Classmates and Teachers
+    network_users = User.objects.filter(id__in=contact_user_ids, is_active=True).select_related('userprofile')
+    
+    # Other users across school
+    other_users = User.objects.filter(is_active=True).exclude(id=user.id).exclude(id__in=contact_user_ids).select_related('userprofile')[:20]
+
+    return {
+        'joined_classrooms': classroom_list,
+        'network_users': network_users,
+        'other_users': other_users,
+    }
+
+
 @login_required
 def inbox(request):
     """View all conversations with optional user search."""
@@ -74,10 +125,15 @@ def inbox(request):
             models.Q(userprofile__display_name__icontains=search_query)
         ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
 
+    contacts_data = get_user_contacts(request.user)
+
     return render(request, 'accounts/messaging/inbox.html', {
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
+        'joined_classrooms': contacts_data['joined_classrooms'],
+        'network_users': contacts_data['network_users'],
+        'other_users': contacts_data['other_users'],
     })
 
 
@@ -135,6 +191,8 @@ def conversation_detail(request, conversation_id):
             models.Q(userprofile__display_name__icontains=search_query)
         ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
 
+    contacts_data = get_user_contacts(request.user)
+
     return render(request, 'accounts/messaging/inbox.html', {
         'conversation': conversation,
         'other_user': other_user,
@@ -142,20 +200,33 @@ def conversation_detail(request, conversation_id):
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
+        'joined_classrooms': contacts_data['joined_classrooms'],
+        'network_users': contacts_data['network_users'],
+        'other_users': contacts_data['other_users'],
     })
 
 
 @login_required
 def start_conversation(request, username):
-    """Start a new (or resume existing) conversation with another user."""
+    """Start a new (or resume existing) 1-on-1 private direct conversation with another user."""
     other_user = get_object_or_404(User, username=username)
     if other_user == request.user:
         messages.error(request, 'You cannot message yourself')
         return redirect('inbox')
-    existing_conv = Conversation.objects.filter(participants=request.user).filter(participants=other_user).first()
+    
+    # Strictly search for 1-on-1 direct conversations (where classroom is NULL)
+    existing_conv = Conversation.objects.filter(
+        classroom__isnull=True,
+        participants=request.user
+    ).filter(
+        participants=other_user
+    ).first()
+    
     if existing_conv:
         return redirect('conversation_detail', conversation_id=existing_conv.id)
-    conversation = Conversation.objects.create()
+    
+    # Create brand new 1-on-1 private direct conversation
+    conversation = Conversation.objects.create(classroom=None)
     conversation.participants.add(request.user, other_user)
     return redirect('conversation_detail', conversation_id=conversation.id)
 
@@ -282,7 +353,7 @@ def search_users_ajax(request):
     now = timezone.now()
     online_delta = timezone.timedelta(minutes=5)
     for u in matching_users:
-        has_conv = Conversation.objects.filter(participants=request.user).filter(participants=u).exists()
+        has_conv = Conversation.objects.filter(classroom__isnull=True, participants=request.user).filter(participants=u).exists()
         profile = getattr(u, 'userprofile', None)
         # Determine display name safely
         if profile:

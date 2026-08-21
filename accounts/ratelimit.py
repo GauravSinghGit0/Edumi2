@@ -91,7 +91,7 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                     is_ajax = (
                         request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
                         'application/json' in request.headers.get('Accept', '') or
-                        'application/json' in request.content_type
+                        'application/json' in (request.content_type or '')
                     )
                     
                     if is_ajax:
@@ -104,12 +104,20 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                         response['Retry-After'] = str(retry_after)
                         return response
                     
-                    target_template = template_name or 'accounts/auth/register.html'
+                    if template_name:
+                        target_template = template_name
+                    elif 'login' in request.path or request.path == '/':
+                        target_template = 'accounts/auth/login.html'
+                    elif 'password' in request.path or 'forgot' in request.path:
+                        target_template = 'accounts/auth/password_reset_request.html'
+                    else:
+                        target_template = 'accounts/auth/register.html'
+
                     try:
                         response = render(request, target_template, {
                             'error': msg,
                             'rate_limited': True,
-                            'retry_after': retry_after,
+                            'retry_after': retry_after
                         }, status=429)
                         response['Retry-After'] = str(retry_after)
                         return response

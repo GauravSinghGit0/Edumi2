@@ -2,6 +2,8 @@ import os
 import uuid
 import json
 import re
+import shutil
+import threading
 
 from django.conf import settings
 from django.contrib import messages
@@ -55,8 +57,9 @@ def serve_media_ranges(request, path):
         with open(fn, 'rb') as f:
             f.seek(offset)
             remaining = length
+            # Use 512KB chunks for high throughput and reduced Python context switching
             while remaining > 0:
-                chunk_size = min(remaining, 65536)
+                chunk_size = min(remaining, 524288)
                 data = f.read(chunk_size)
                 if not data:
                     break
@@ -887,20 +890,33 @@ def upload_asset(request, pk):
         return JsonResponse({"error": err_msg}, status=400)
 
     clean_name = sanitize_filename(video_file.name)
+    
+    # Check if frontend provided client-extracted duration
+    client_duration = 0.0
+    try:
+        if request.POST.get("clientDuration"):
+            client_duration = float(request.POST.get("clientDuration"))
+    except (ValueError, TypeError):
+        client_duration = 0.0
+
     asset = ProjectAsset.objects.create(
         project=project,
         file=video_file,
         title=clean_name,
         filename=clean_name,
-        asset_type=asset_type
+        asset_type=asset_type,
+        duration_seconds=client_duration if client_duration > 0 else None
     )
 
-    try:
-        meta = ffmpeg_utils.get_metadata(asset.file.path)
-        asset.duration_seconds = meta.get("duration", 0.0)
-        asset.save(update_fields=["duration_seconds"])
-    except Exception:
-        pass
+    # If client did not provide duration or for images, extract in background thread without blocking response
+    if not asset.duration_seconds and asset_type in ("video", "audio"):
+        def _async_asset_metadata(asset_id, file_path):
+            try:
+                meta = ffmpeg_utils.get_metadata(file_path)
+                ProjectAsset.objects.filter(id=asset_id).update(duration_seconds=meta.get("duration", 0.0))
+            except Exception:
+                pass
+        threading.Thread(target=_async_asset_metadata, args=(asset.id, asset.file.path), daemon=True).start()
 
     return JsonResponse({
         "success": True,
@@ -908,7 +924,7 @@ def upload_asset(request, pk):
             "id": asset.id,
             "url": asset.file.url,
             "title": asset.display_title,
-            "duration": asset.display_duration
+            "duration": asset.display_duration or "0:00"
         }
     })
 
@@ -1012,9 +1028,16 @@ def export_timeline(request, pk):
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files import File
 
+_upload_assembly_lock = threading.Lock()
+
 @csrf_exempt
 @login_required
 def chunked_upload_view(request):
+    """
+    High-throughput parallel chunked upload receiver.
+    Supports concurrent chunk streams, client metadata pre-extraction,
+    and asynchronous background proxy generation.
+    """
     if request.method == 'POST':
         chunk = request.FILES.get('chunk')
         filename = request.POST.get('filename')
@@ -1022,79 +1045,181 @@ def chunked_upload_view(request):
         total_chunks = int(request.POST.get('totalChunks', 1))
         upload_id = request.POST.get('uploadId')
         
+        target_type = request.POST.get('targetType', 'project')
+        project_id = request.POST.get('projectId')
+        
+        client_duration = float(request.POST.get('clientDuration') or 0.0)
+        client_width = int(request.POST.get('clientWidth') or 1920)
+        client_height = int(request.POST.get('clientHeight') or 1080)
+        
         if not all([chunk, filename, upload_id]):
             return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
             
-        import os
+        clean_filename = sanitize_filename(filename)
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
         os.makedirs(temp_dir, exist_ok=True)
         
+        # Write chunk with atomic temp file to avoid partial reads across worker threads
         chunk_path = os.path.join(temp_dir, f'chunk_{chunk_index}')
-        with open(chunk_path, 'wb+') as f:
-            for data in chunk.chunks():
+        chunk_tmp_path = os.path.join(temp_dir, f'chunk_{chunk_index}.tmp')
+        
+        with open(chunk_tmp_path, 'wb') as f:
+            for data in chunk.chunks(chunk_size=1048576):
                 f.write(data)
-                
-        if chunk_index == total_chunks - 1:
-            # Final chunk received, assemble file
-            final_file_path = os.path.join(temp_dir, filename)
-            with open(final_file_path, 'wb+') as final_file:
-                for i in range(total_chunks):
-                    part_path = os.path.join(temp_dir, f'chunk_{i}')
-                    with open(part_path, 'rb') as part:
-                        final_file.write(part.read())
-                    os.remove(part_path)
-                    
-            # Create VideoProject
-            project = VideoProject.objects.create(
-                owner=request.user,
-                title=filename
-            )
-            with open(final_file_path, 'rb') as final_file:
-                project.original_file.save(filename, File(final_file))
-                
-            # Extract metadata and initialize clips_json synchronously so editor works immediately
+        
+        if os.path.exists(chunk_path):
             try:
-                meta = ffmpeg_utils.get_metadata(project.original_file.path)
-                project.duration_seconds = meta.get("duration", 0.0)
-                project.width = meta.get("width", 1920)
-                project.height = meta.get("height", 1080)
-                project.has_audio = meta.get("has_audio", True)
-                project.status = "ready"
-                orig_filename = os.path.basename(project.original_file.name)
-                project.clips_json = json.dumps([{"title": orig_filename, "duration": meta.get("duration", 0.0)}])
-            except Exception as e:
-                project.status = "ready"
-                project.clips_json = json.dumps([{"title": filename, "duration": 0.0}])
-
-            project.proxy_status = 'pending'
-            project.save()
-
-            # Record upload operation
-            try:
-                EditOperation.objects.create(
-                    project=project,
-                    operation_type="upload",
-                    description=f"Uploaded {filename}",
-                )
-            except Exception:
-                pass
-
-            os.remove(final_file_path)
-            try:
-                os.rmdir(temp_dir)
+                os.remove(chunk_path)
             except OSError:
                 pass
-            
-            # Start HLS proxy generation asynchronously without blocking HTTP response
+        os.replace(chunk_tmp_path, chunk_path)
+        
+        # Check if all chunks have arrived
+        all_chunks_present = all(
+            os.path.exists(os.path.join(temp_dir, f'chunk_{i}'))
+            for i in range(total_chunks)
+        )
+        
+        if all_chunks_present:
+            # Synchronize final assembly across multiple worker processes & threads
+            lock_path = os.path.join(temp_dir, '.assembling.lock')
+            acquired_lock = False
             try:
-                from .tasks import generate_hls_proxy
-                generate_hls_proxy.delay(project.id)
-            except Exception:
-                pass
-            
-            return JsonResponse({'success': True, 'project_id': project.id})
-            
-        return JsonResponse({'success': True, 'message': 'Chunk received'})
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                acquired_lock = True
+            except (FileExistsError, OSError):
+                acquired_lock = False
+
+            if not acquired_lock:
+                # Companion worker thread/process is already assembling the file
+                return JsonResponse({'success': True, 'message': 'Assembly in progress by worker'})
+
+            with _upload_assembly_lock:
+                final_file_path = os.path.join(temp_dir, clean_filename)
+                with open(final_file_path, 'wb') as final_file:
+                    for i in range(total_chunks):
+                        part_path = os.path.join(temp_dir, f'chunk_{i}')
+                        if os.path.exists(part_path):
+                            with open(part_path, 'rb') as part:
+                                shutil.copyfileobj(part, final_file, length=1048576)
+                            try:
+                                os.remove(part_path)
+                            except OSError:
+                                pass
+                
+                # Check target type: 'asset' vs 'project'
+                if target_type == 'asset' and project_id:
+                    try:
+                        proj = VideoProject.objects.get(pk=project_id, owner=request.user)
+                        ext = get_file_extension(clean_filename)
+                        asset_type = "video"
+                        if ext in ALLOWED_AUDIO_EXTENSIONS:
+                            asset_type = "audio"
+                        elif ext in ALLOWED_IMAGE_EXTENSIONS:
+                            asset_type = "image"
+                            
+                        asset = ProjectAsset.objects.create(
+                            project=proj,
+                            title=clean_filename,
+                            filename=clean_filename,
+                            asset_type=asset_type,
+                            duration_seconds=client_duration if client_duration > 0 else None
+                        )
+                        with open(final_file_path, 'rb') as final_file:
+                            asset.file.save(clean_filename, File(final_file))
+                            
+                        # Probe metadata asynchronously if not client-provided
+                        if not asset.duration_seconds and asset_type in ("video", "audio"):
+                            def _async_asset_meta(asset_id, file_path):
+                                try:
+                                    meta = ffmpeg_utils.get_metadata(file_path)
+                                    ProjectAsset.objects.filter(id=asset_id).update(duration_seconds=meta.get("duration", 0.0))
+                                except Exception:
+                                    pass
+                            threading.Thread(target=_async_asset_meta, args=(asset.id, asset.file.path), daemon=True).start()
+                            
+                        os.remove(final_file_path)
+                        try:
+                            os.rmdir(temp_dir)
+                        except OSError:
+                            pass
+                            
+                        return JsonResponse({
+                            'success': True,
+                            'asset': {
+                                'id': asset.id,
+                                'url': asset.file.url,
+                                'title': asset.display_title,
+                                'duration': asset.display_duration or "0:00"
+                            }
+                        })
+                    except Exception as e:
+                        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+                
+                # Default: Create new VideoProject
+                project = VideoProject.objects.create(
+                    owner=request.user,
+                    title=clean_filename
+                )
+                with open(final_file_path, 'rb') as final_file:
+                    project.original_file.save(clean_filename, File(final_file))
+                    
+                # Initialize metadata immediately from client values so editor opens in < 0.01s
+                orig_filename = os.path.basename(project.original_file.name)
+                project.duration_seconds = client_duration if client_duration > 0 else None
+                project.width = client_width
+                project.height = client_height
+                project.has_audio = True
+                project.status = "ready"
+                project.clips_json = json.dumps([{"title": orig_filename, "duration": client_duration}])
+                project.proxy_status = 'pending'
+                project.save()
+                
+                # Record upload edit operation
+                try:
+                    EditOperation.objects.create(
+                        project=project,
+                        operation_type="upload",
+                        description=f"Uploaded {clean_filename}",
+                    )
+                except Exception:
+                    pass
+
+                # Cleanup temp files
+                try:
+                    if os.path.exists(final_file_path):
+                        os.remove(final_file_path)
+                    os.rmdir(temp_dir)
+                except OSError:
+                    pass
+                    
+                # Dispatch background tasks for ffprobe verification & HLS proxy generation
+                try:
+                    from .tasks import extract_metadata_and_proxies_task, generate_hls_proxy
+                    extract_metadata_and_proxies_task.delay(project.id)
+                    generate_hls_proxy.delay(project.id)
+                except Exception:
+                    # Fallback to daemon background thread if Celery is not active
+                    def _async_bg_probe(proj_id, fpath):
+                        try:
+                            meta = ffmpeg_utils.get_metadata(fpath)
+                            p = VideoProject.objects.get(id=proj_id)
+                            p.duration_seconds = meta.get("duration", p.duration_seconds or 0.0)
+                            p.width = meta.get("width", p.width or 1920)
+                            p.height = meta.get("height", p.height or 1080)
+                            p.has_audio = meta.get("has_audio", True)
+                            if not p.clips_json or p.clips_json == "[]":
+                                p.clips_json = json.dumps([{"title": os.path.basename(p.original_file.name), "duration": p.duration_seconds}])
+                            p.save(update_fields=["duration_seconds", "width", "height", "has_audio", "clips_json"])
+                        except Exception:
+                            pass
+                    threading.Thread(target=_async_bg_probe, args=(project.id, project.original_file.path), daemon=True).start()
+
+                res_data = {'success': True, 'project_id': project.id}
+                return JsonResponse(res_data)
+                
+        return JsonResponse({'success': True, 'message': 'Chunk received', 'chunkIndex': chunk_index})
         
     return JsonResponse({'success': False}, status=405)
 

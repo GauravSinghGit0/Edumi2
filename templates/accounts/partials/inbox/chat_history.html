@@ -7,6 +7,19 @@
     {% endif %}
     <div class="chat-msg-row {% if message.sender == user %}sent{% else %}recv{% endif %}" id="msg-{{ message.id }}">
       <div class="chat-msg-bubble-wrap">
+        {% if conversation.classroom and message.sender != user %}
+        <div class="chat-msg-sender-header">
+          <img src="{% if message.sender.userprofile %}{{ message.sender.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ message.sender.username }}&background=6366f1&color=fff{% endif %}" class="sender-avatar-micro" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ message.sender.username }}&background=6366f1&color=fff'">
+          <span class="sender-name-label">
+            {% if message.sender.userprofile %}{{ message.sender.userprofile.get_display_name }}{% else %}{{ message.sender.get_full_name|default:message.sender.username }}{% endif %}
+          </span>
+          {% if conversation.classroom.teacher_id == message.sender_id or message.sender.userprofile.user_type == 'teacher' or message.sender.is_superuser %}
+            <span class="sender-role-tag teacher">Teacher</span>
+          {% else %}
+            <span class="sender-role-tag student">Student</span>
+          {% endif %}
+        </div>
+        {% endif %}
         <div class="chat-msg-bubble">
           {% if message.image %}
           <img src="{{ message.image.url }}" class="chat-msg-attachment-image" alt="Image" onclick="openImageModal(this.src)">

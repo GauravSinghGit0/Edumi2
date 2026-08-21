@@ -133,3 +133,36 @@ def generate_hls_proxy(project_id):
             project.save(update_fields=["proxy_status"])
         except Exception:
             pass
+
+@shared_task
+def cleanup_stale_temp_uploads(max_age_hours=24):
+    """
+    Periodic maintenance task: Cleans up abandoned chunk uploads in temp_uploads older than max_age_hours.
+    Prevents storage disk exhaustion when users abandon uploads halfway.
+    """
+    import os
+    import time
+    import shutil
+    from django.conf import settings
+
+    temp_root = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+    if not os.path.exists(temp_root):
+        return 0
+
+    now = time.time()
+    cutoff = now - (max_age_hours * 3600)
+    cleaned_count = 0
+
+    for item in os.listdir(temp_root):
+        item_path = os.path.join(temp_root, item)
+        try:
+            if os.path.isdir(item_path):
+                mtime = os.path.getmtime(item_path)
+                if mtime < cutoff:
+                    shutil.rmtree(item_path, ignore_errors=True)
+                    cleaned_count += 1
+        except Exception as e:
+            logger.warning(f"Error cleaning stale upload {item_path}: {e}")
+
+    logger.info(f"Cleaned up {cleaned_count} stale upload directories.")
+    return cleaned_count

@@ -27,21 +27,49 @@
         </div>
         {% endif %}
 
-        <!-- Enrolled Students Roster -->
+        <!-- Enrolled Students & Instructor Roster -->
         <div class="section-card">
+            <!-- Instructor Card -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--stream-border, #e2e8f0);">
+                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--stream-text-muted, #64748b); letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+                    Course Instructor
+                </div>
+                <div class="student-item" style="background: rgba(99, 102, 241, 0.04); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 0.875rem;">
+                    <div class="student-meta">
+                        <img src="{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ classroom.teacher.username }}&background=6366f1&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ classroom.teacher.username }}&background=6366f1&color=fff'">
+                        <div>
+                            <span style="font-weight: 700;">{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}</span>
+                            <span style="display: block; font-size: 0.75rem; color: #6366f1; font-weight: 600;">Instructor (@{{ classroom.teacher.username }})</span>
+                        </div>
+                    </div>
+                    {% if user != classroom.teacher %}
+                    <a href="{% url 'start_conversation' classroom.teacher.username %}" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none; background: #4f46e5; color: white; border-radius: 0.5rem; font-weight: 600; padding: 0.4rem 0.85rem; font-size: 0.75rem;" title="Message Instructor Privately">
+                        <i data-lucide="message-square" style="width: 14px; height: 14px;"></i> Message Privately
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
             <h2 class="section-title"><i data-lucide="users-2"></i> Enrolled Students ({{ approved_students|length }})</h2>
-            <div class="student-list" style="max-height: 500px; overflow-y: auto;">
+            <div class="student-list" style="max-height: 450px; overflow-y: auto;">
                 {% for membership in approved_students %}
                 <div class="student-item">
                     <div class="student-meta">
                         <img src="{% if membership.student.userprofile %}{{ membership.student.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ membership.student.get_full_name|default:membership.student.username|urlencode }}&background=6366f1&color=fff'">
                         <span>{% if membership.student.userprofile %}{{ membership.student.userprofile.get_display_name }}{% else %}{{ membership.student.get_full_name|default:membership.student.username }}{% endif %}</span>
                     </div>
-                    {% if is_teacher %}
-                    <button onclick="removeStudent({{ membership.id }})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;" title="Remove student">
-                        <i data-lucide="user-minus" style="width: 16px; height: 16px;"></i>
-                    </button>
-                    {% endif %}
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        {% if user != membership.student %}
+                        <a href="{% url 'start_conversation' membership.student.username %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; background: #e0e7ff; color: #4338ca; border-radius: 0.5rem; font-weight: 600; padding: 0.35rem 0.75rem; font-size: 0.75rem;" title="Message privately">
+                            <i data-lucide="message-square" style="width: 14px; height: 14px;"></i> Direct Chat
+                        </a>
+                        {% endif %}
+                        {% if is_teacher %}
+                        <button onclick="removeStudent({{ membership.id }})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;" title="Remove student">
+                            <i data-lucide="user-minus" style="width: 16px; height: 16px;"></i>
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
                 {% empty %}
                 <p style="text-align: center; color: var(--stream-text-muted); font-size: 0.875rem;">No students enrolled yet.</p>

@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.core.files.base import ContentFile
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 
 from accounts.models import UserProfile
 from accounts.serializers import RegistrationSerializer, USERNAME_REGEX
@@ -24,17 +25,22 @@ from accounts.email_tokens import (
     send_verification_email,
     verify_email_token,
     verify_email_otp,
+    send_password_reset_email,
+    verify_password_reset_token,
+    verify_password_reset_otp,
 )
 from accounts.ratelimit import ratelimit
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 logger = logging.getLogger('accounts')
 
 
+@ratelimit(action='login', limit=15, period=300)
 def login_view(request):
     """
-    Login page — authenticates user, enforces email verification for non-superusers,
-    and redirects to appropriate dashboard on success.
+    Login page — authenticates user with rate limiting and single-pass auth lookup,
+    enforces email verification for non-superusers, and redirects to appropriate dashboard.
     """
     if request.user.is_authenticated:
         if request.user.is_superuser:
@@ -56,18 +62,27 @@ def login_view(request):
                 'entered_username': username_or_email,
             }, status=422)
 
-        # 1. Try to authenticate with username first
-        user = authenticate(request, username=username_or_email, password=password)
-
-        # 2. If that fails, try looking up user by email
-        if user is None:
+        # High-performance single-pass authentication
+        user = None
+        if '@' in username_or_email:
+            # If user entered an email, resolve username first to avoid double password-hashing cost
             try:
-                user_qs = User.objects.filter(email__iexact=username_or_email)
-                if user_qs.count() == 1:
-                    user_obj = user_qs.first()
+                user_obj = User.objects.filter(email__iexact=username_or_email).first()
+                if user_obj:
                     user = authenticate(request, username=user_obj.username, password=password)
             except Exception as e:
                 logger.error(f"Error checking email login: {e}")
+        else:
+            # Username login
+            user = authenticate(request, username=username_or_email, password=password)
+            if user is None:
+                # Fallback email check if username wasn't found
+                try:
+                    user_obj = User.objects.filter(email__iexact=username_or_email).first()
+                    if user_obj:
+                        user = authenticate(request, username=user_obj.username, password=password)
+                except Exception as e:
+                    logger.error(f"Error checking fallback email login: {e}")
 
         if user is not None:
             # Superusers always bypass email verification and are guaranteed verified status
@@ -352,7 +367,7 @@ def check_availability(request):
     """
     Real-time endpoint for debounced username and email availability checks on blur/type.
     GET /accounts/check-availability/?field=username&value=alice
-    Returns JSON: {"available": bool, "valid_format": bool, "message": str}
+    Cached for 30 seconds to minimize database query pressure.
     """
     field = request.GET.get('field') or request.POST.get('field', '')
     value = (request.GET.get('value') or request.POST.get('value', '')).strip()
@@ -362,6 +377,14 @@ def check_availability(request):
 
     if not value:
         return JsonResponse({'available': False, 'valid_format': False, 'message': f'{field.capitalize()} is required.'})
+
+    cache_key = f"avail:{field}:{value.lower()}"
+    try:
+        cached_res = cache.get(cache_key)
+        if cached_res is not None:
+            return JsonResponse(cached_res)
+    except Exception:
+        pass
 
     if field == 'username':
         if len(value) < 3:
@@ -375,8 +398,9 @@ def check_availability(request):
 
         exists = User.objects.filter(username__iexact=value).exists()
         if exists:
-            return JsonResponse({'available': False, 'valid_format': True, 'message': f'Username "{value}" is already taken.'})
-        return JsonResponse({'available': True, 'valid_format': True, 'message': 'Username is available!'})
+            result = {'available': False, 'valid_format': True, 'message': f'Username "{value}" is already taken.'}
+        else:
+            result = {'available': True, 'valid_format': True, 'message': 'Username is available!'}
 
     elif field == 'email':
         clean_email = value.lower()
@@ -387,8 +411,16 @@ def check_availability(request):
 
         exists = User.objects.filter(email__iexact=clean_email).exists()
         if exists:
-            return JsonResponse({'available': False, 'valid_format': True, 'message': 'An account with this email address already exists.'})
-        return JsonResponse({'available': True, 'valid_format': True, 'message': 'Email address is available!'})
+            result = {'available': False, 'valid_format': True, 'message': 'An account with this email address already exists.'}
+        else:
+            result = {'available': True, 'valid_format': True, 'message': 'Email address is available!'}
+
+    try:
+        cache.set(cache_key, result, 30)
+    except Exception:
+        pass
+
+    return JsonResponse(result)
 
 
 def home(request):
@@ -436,3 +468,154 @@ def save_emoji_avatar(request):
     profile.avatar_url = ''
     profile.save()
     return JsonResponse({'ok': True, 'url': profile.profile_picture.url})
+
+
+# ==============================================================================
+# PASSWORD RESET VIEWS
+# ==============================================================================
+
+@ratelimit(action='login')
+def password_reset_request(request):
+    """
+    Step 1: User enters username or email to request password reset instructions.
+    Dispatches a reset link + 6-digit OTP to the user's email.
+    """
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    if request.method == 'POST':
+        identifier = request.POST.get('username_or_email', '').strip()
+        if not identifier:
+            return render(request, 'accounts/auth/password_reset_request.html', {
+                'error': 'Please enter your username or email address.',
+            }, status=400)
+
+        # Look up user by email (case-insensitive) or username
+        user = None
+        if '@' in identifier:
+            user = User.objects.filter(email__iexact=identifier).first()
+        else:
+            user = User.objects.filter(username__iexact=identifier).first()
+            if not user:
+                user = User.objects.filter(email__iexact=identifier).first()
+
+        if user and user.email:
+            send_password_reset_email(request, user)
+            return render(request, 'accounts/auth/password_reset_done.html', {
+                'email': user.email,
+            })
+        else:
+            # Show friendly done message to prevent user enumeration
+            return render(request, 'accounts/auth/password_reset_done.html', {
+                'email': identifier,
+            })
+
+    return render(request, 'accounts/auth/password_reset_request.html')
+
+
+def password_reset_done(request):
+    """Information page stating reset email has been dispatched."""
+    return render(request, 'accounts/auth/password_reset_done.html')
+
+
+def password_reset_confirm(request):
+    """
+    Step 2: User sets their new password using either signed token from email link OR 6-digit OTP.
+    """
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    token = request.GET.get('token', '').strip() or request.POST.get('token', '').strip()
+    token_verified = False
+    verified_user = None
+
+    if token:
+        user, err = verify_password_reset_token(token)
+        if user:
+            token_verified = True
+            verified_user = user
+        elif request.method == 'GET':
+            return render(request, 'accounts/auth/password_reset_confirm.html', {
+                'token': token,
+                'error': err,
+                'token_verified': False,
+            })
+
+    if request.method == 'POST':
+        new_password1 = request.POST.get('new_password1', '')
+        new_password2 = request.POST.get('new_password2', '')
+
+        # Resolve user via token or OTP
+        if token_verified and verified_user:
+            user = verified_user
+        elif token:
+            user, err = verify_password_reset_token(token)
+            if not user:
+                return render(request, 'accounts/auth/password_reset_confirm.html', {
+                    'token': token,
+                    'error': err,
+                    'token_verified': False,
+                }, status=400)
+        else:
+            email_or_username = request.POST.get('email_or_username', '').strip()
+            otp_code = request.POST.get('otp_code', '').strip()
+            user, err = verify_password_reset_otp(email_or_username, otp_code)
+            if not user:
+                return render(request, 'accounts/auth/password_reset_confirm.html', {
+                    'error': err,
+                    'email_or_username': email_or_username,
+                    'otp_code': otp_code,
+                    'token_verified': False,
+                }, status=400)
+
+        # Validate new passwords
+        if not new_password1 or len(new_password1) < 8:
+            return render(request, 'accounts/auth/password_reset_confirm.html', {
+                'token': token,
+                'token_verified': token_verified,
+                'user_obj': user,
+                'error': 'Password must be at least 8 characters long.',
+            }, status=400)
+
+        if new_password1 != new_password2:
+            return render(request, 'accounts/auth/password_reset_confirm.html', {
+                'token': token,
+                'token_verified': token_verified,
+                'user_obj': user,
+                'error': 'Passwords do not match. Please re-enter your password.',
+            }, status=400)
+
+        try:
+            validate_password(new_password1, user=user)
+        except ValidationError as e:
+            return render(request, 'accounts/auth/password_reset_confirm.html', {
+                'token': token,
+                'token_verified': token_verified,
+                'user_obj': user,
+                'error': e.messages[0],
+            }, status=400)
+
+        # Update password
+        user.set_password(new_password1)
+        user.save()
+
+        # If user was unverified, password reset via their verified email also activates their account
+        if hasattr(user, 'userprofile') and not user.userprofile.is_verified:
+            user.userprofile.verify_email()
+
+        messages.success(request, "Your password has been reset successfully! Please log in with your new password.")
+        return redirect('login')
+
+    email_param = request.GET.get('email', '')
+    return render(request, 'accounts/auth/password_reset_confirm.html', {
+        'token': token,
+        'token_verified': token_verified,
+        'user_obj': verified_user,
+        'email_or_username': email_param,
+    })
+
+
+def password_reset_complete(request):
+    """Success confirmation page after password reset."""
+    return redirect('login')
+

@@ -167,7 +167,7 @@
                         <input type="checkbox" name="remember">
                         <span>Remember for 30 days</span>
                     </label>
-                    <a href="#" class="forgot-link">Forgot password?</a>
+                    <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>
                 </div>
 
                 {% if unverified_error %}

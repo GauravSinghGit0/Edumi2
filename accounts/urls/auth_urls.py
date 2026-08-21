@@ -13,8 +13,17 @@ urlpatterns = [
     path('resend-verification/',          views.resend_verification_email,  name='resend_verification'),
     path('check-availability/',           views.check_availability,         name='check_availability'),
     path('accounts/check-availability/',  views.check_availability,         name='check_availability_scoped'),
+    
+    # Password Reset Flow
+    path('password-reset/',               views.password_reset_request,     name='password_reset'),
+    path('forgot-password/',              views.password_reset_request,     name='forgot_password'),
+    path('password-reset/done/',          views.password_reset_done,        name='password_reset_done'),
+    path('password-reset/confirm/',       views.password_reset_confirm,     name='password_reset_confirm'),
+    path('password-reset/complete/',      views.password_reset_complete,    name='password_reset_complete'),
+
     path('home/',                         views.home,                       name='home'),
     path('settings/',                     views.settings_view,              name='settings'),
     path('accounts/dismiss-welcome/',     views.dismiss_welcome,            name='dismiss_welcome'),
     path('accounts/save-emoji-avatar/',   views.save_emoji_avatar,          name='save_emoji_avatar'),
 ]
+

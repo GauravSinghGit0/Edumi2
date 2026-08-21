@@ -38,6 +38,53 @@ function highlightText(text, query) {
   }).join('');
 }
 
+function openNewChatModal() {
+  const modal = document.getElementById('newChatModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    const input = document.getElementById('newChatSearchInput');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 50);
+      filterNewChatModal('');
+    }
+  }
+}
+
+function closeNewChatModal() {
+  const modal = document.getElementById('newChatModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function switchNewChatTab(tab, btn) {
+  document.querySelectorAll('.new-chat-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const peopleSec = document.getElementById('newChatPeopleSection');
+  const groupsSec = document.getElementById('newChatGroupsSection');
+  if (tab === 'people') {
+    if (peopleSec) peopleSec.style.display = 'block';
+    if (groupsSec) groupsSec.style.display = 'none';
+  } else {
+    if (peopleSec) peopleSec.style.display = 'none';
+    if (groupsSec) groupsSec.style.display = 'block';
+  }
+}
+
+function filterNewChatModal(query) {
+  const q = query.trim().toLowerCase();
+  const items = document.querySelectorAll('.new-chat-contact-item');
+  items.forEach(item => {
+    const searchText = (item.getAttribute('data-search-text') || '').toLowerCase();
+    if (!q || searchText.includes(q)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
 function applyFilters() {
   const activeTab = document.querySelector('.sidebar-tab.active');
   const tabFilter = activeTab ? activeTab.getAttribute('data-tab') : 'all';
@@ -51,14 +98,14 @@ function applyFilters() {
   items.forEach(item => {
     // 1. Check tab match
     let matchesTab = false;
+    const isGroup = (item.getAttribute('data-is-group') === 'true');
     if (tabFilter === 'all') {
       matchesTab = true;
+    } else if (tabFilter === 'groups') {
+      matchesTab = isGroup;
     } else if (tabFilter === 'unread') {
       const badge = item.querySelector('.unread-count-pill');
       matchesTab = (badge && parseInt(badge.textContent.trim()) > 0);
-    } else if (tabFilter === 'groups') {
-      const participants = parseInt(item.dataset.participants || '0', 10);
-      matchesTab = (participants > 2);
     }
 
     // 2. Check search match

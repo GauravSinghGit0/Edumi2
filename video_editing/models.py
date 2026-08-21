@@ -74,6 +74,10 @@ class VideoProject(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["owner", "-updated_at"]),
+            models.Index(fields=["status"]),
+        ]
 
     @property
     def display_title(self):
@@ -152,6 +156,9 @@ class ProjectAsset(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["project", "-updated_at"]),
+        ]
 
     @property
     def display_title(self):
@@ -222,6 +229,10 @@ class EditOperation(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["project", "active", "-created_at"]),
+        ]
 
     def __str__(self):
         return f"{self.get_operation_type_display()} on {self.project.title}"
+

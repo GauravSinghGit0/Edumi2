@@ -105,8 +105,6 @@
 
     const openBtn    = document.getElementById('open-upload-modal');
     const openBtnE   = document.getElementById('open-upload-modal-empty');
-    
-    const form       = document.getElementById('upload-form');
     const input      = document.querySelector('#upload-form input[type="file"]');
     
     let isUploading = false;
@@ -119,13 +117,45 @@
         }
     });
 
-    // Helper to send a chunk with automatic retries on tab throttle / network glitches
-    async function sendChunkWithRetry(url, formData, maxRetries = 5, initialDelay = 1000) {
+    // Extract duration, width, height directly in browser in 0.05 seconds
+    function extractClientMetadata(file) {
+        return new Promise((resolve) => {
+            const vid = document.createElement('video');
+            vid.preload = 'metadata';
+            const blobUrl = URL.createObjectURL(file);
+            vid.src = blobUrl;
+            
+            const timer = setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+                resolve({ duration: 0, width: 1920, height: 1080 });
+            }, 3000);
+
+            vid.onloadedmetadata = function () {
+                clearTimeout(timer);
+                const meta = {
+                    duration: vid.duration || 0,
+                    width: vid.videoWidth || 1920,
+                    height: vid.videoHeight || 1080
+                };
+                URL.revokeObjectURL(blobUrl);
+                resolve(meta);
+            };
+
+            vid.onerror = function () {
+                clearTimeout(timer);
+                URL.revokeObjectURL(blobUrl);
+                resolve({ duration: 0, width: 1920, height: 1080 });
+            };
+        });
+    }
+
+    // Resilient chunk sender with exponential backoff
+    async function sendChunkWithRetry(url, formData, maxRetries = 4, initialDelay = 800) {
         let attempts = 0;
         while (attempts < maxRetries) {
             try {
                 if (attempts > 0) {
-                    await new Promise(resolve => setTimeout(resolve, Math.min(initialDelay * Math.pow(1.5, attempts - 1), 8000)));
+                    await new Promise(r => setTimeout(r, Math.min(initialDelay * Math.pow(1.5, attempts - 1), 6000)));
                 }
                 const response = await fetch(url, {
                     method: 'POST',
@@ -140,16 +170,31 @@
                 attempts++;
             } catch (err) {
                 attempts++;
-                console.warn(`Chunk upload retry ${attempts}/${maxRetries}...`, err);
-                if (attempts >= maxRetries) {
-                    throw err;
-                }
+                console.warn(`Chunk retry ${attempts}/${maxRetries}...`, err);
+                if (attempts >= maxRetries) throw err;
             }
         }
-        throw new Error('Chunk upload failed after maximum retries');
+        throw new Error('Chunk upload failed after retries');
     }
-    
-    // Instead of a modal, click directly triggers the file input
+
+    // Parallel Worker Pool (Concurrency = 3-4 streams)
+    async function parallelUpload(chunks, concurrency, uploadFn) {
+        const results = [];
+        let index = 0;
+
+        const workers = Array.from({ length: Math.min(concurrency, chunks.length) }, async () => {
+            while (index < chunks.length) {
+                const currentIndex = index++;
+                const item = chunks[currentIndex];
+                const res = await uploadFn(item, currentIndex);
+                results[currentIndex] = res;
+            }
+        });
+
+        await Promise.all(workers);
+        return results;
+    }
+
     function triggerFileInput() {
         if (input) input.click();
     }
@@ -157,68 +202,95 @@
     if (openBtn)  openBtn.addEventListener('click', triggerFileInput);
     if (openBtnE) openBtnE.addEventListener('click', triggerFileInput);
     
-    // Auto-submit the form as soon as a file is selected
     if (input) {
         input.addEventListener('change', async () => {
-            if (input.files.length > 0) {
-                const file = input.files[0];
-                const chunkSize = 5 * 1024 * 1024; // 5MB
-                const totalChunks = Math.ceil(file.size / chunkSize);
-                const uploadId = Date.now().toString() + Math.random().toString(36).substring(7);
-                
-                isUploading = true;
+            if (!input.files || input.files.length === 0) return;
+            
+            const file = input.files[0];
+            isUploading = true;
 
-                if (openBtn) {
-                    openBtn.disabled = true;
-                    openBtn.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Uploading 0%';
-                }
-                if (openBtnE) {
-                    openBtnE.disabled = true;
-                    openBtnE.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Uploading 0%';
-                }
+            const updateBtn = (html) => {
+                if (openBtn) { openBtn.disabled = true; openBtn.innerHTML = html; }
+                if (openBtnE) { openBtnE.disabled = true; openBtnE.innerHTML = html; }
                 if (typeof lucide !== 'undefined') lucide.createIcons();
+            };
 
-                let completed = false;
-                for (let i = 0; i < totalChunks; i++) {
-                    const start = i * chunkSize;
-                    const end = Math.min(start + chunkSize, file.size);
-                    const chunk = file.slice(start, end);
-                    
+            updateBtn('<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Preparing...');
+
+            // Step 1: Instant client metadata probe
+            const meta = await extractClientMetadata(file);
+
+            // Step 2: Adaptive Chunk Sizing
+            // 8MB for <50MB, 16MB for <500MB, 25MB for larger
+            let chunkSize = 8 * 1024 * 1024;
+            if (file.size > 500 * 1024 * 1024) {
+                chunkSize = 25 * 1024 * 1024;
+            } else if (file.size > 50 * 1024 * 1024) {
+                chunkSize = 16 * 1024 * 1024;
+            }
+
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            const uploadId = Date.now().toString() + Math.random().toString(36).substring(7);
+            const CONCURRENCY = Math.min(4, Math.max(2, totalChunks));
+
+            const chunkList = [];
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * chunkSize;
+                const end = Math.min(start + chunkSize, file.size);
+                chunkList.push({ index: i, start, end, chunk: file.slice(start, end) });
+            }
+
+            let completedChunks = 0;
+            let uploadedBytes = 0;
+            const startTime = Date.now();
+            let finalProjectId = null;
+
+            try {
+                await parallelUpload(chunkList, CONCURRENCY, async (item) => {
                     const formData = new FormData();
-                    formData.append('chunk', chunk);
+                    formData.append('chunk', item.chunk);
                     formData.append('filename', file.name);
-                    formData.append('chunkIndex', i);
+                    formData.append('chunkIndex', item.index);
                     formData.append('totalChunks', totalChunks);
                     formData.append('uploadId', uploadId);
-                    
-                    try {
-                        const data = await sendChunkWithRetry("{% url 'chunked_upload' %}", formData);
-                        
-                        const percent = Math.round(((i + 1) / totalChunks) * 100);
-                        if (openBtn) openBtn.innerHTML = `<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Uploading ${percent}%`;
-                        if (openBtnE) openBtnE.innerHTML = `<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Uploading ${percent}%`;
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                        
-                        if (data.project_id) {
-                            completed = true;
-                            isUploading = false;
-                            const baseUrl = "{% url 'project_list' %}".replace(/\/+$/, '');
-                            window.location.href = `${baseUrl}/project/${data.project_id}/`;
-                            break;
-                        }
-                    } catch (err) {
-                        console.error("Chunked upload error:", err);
-                        isUploading = false;
-                        alert("Upload connection interrupted. Please try uploading again.");
-                        if (openBtn) { openBtn.disabled = false; openBtn.innerHTML = '<i data-lucide="upload" style="width:15px;height:15px;"></i> Upload Video'; }
-                        if (openBtnE) { openBtnE.disabled = false; openBtnE.innerHTML = '<i data-lucide="upload" style="width:15px;height:15px;"></i> Upload your first video'; }
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                        break;
+                    formData.append('clientDuration', meta.duration);
+                    formData.append('clientWidth', meta.width);
+                    formData.append('clientHeight', meta.height);
+
+                    const data = await sendChunkWithRetry("{% url 'chunked_upload' %}", formData);
+
+                    completedChunks++;
+                    uploadedBytes += (item.end - item.start);
+
+                    const percent = Math.round((completedChunks / totalChunks) * 100);
+                    const elapsedSec = Math.max(0.1, (Date.now() - startTime) / 1000);
+                    const speedMBps = ((uploadedBytes / (1024 * 1024)) / elapsedSec).toFixed(1);
+
+                    updateBtn(`<i data-lucide="loader" style="width:15px;height:15px;" class="lucide-spin"></i> Uploading ${percent}% <span style="font-size:11px;opacity:0.85;margin-left:4px;">(${speedMBps} MB/s)</span>`);
+
+                    if (data && data.project_id) {
+                        finalProjectId = data.project_id;
                     }
+                    return data;
+                });
+
+                isUploading = false;
+                updateBtn('<i data-lucide="check" style="width:15px;height:15px;"></i> Loading Editor...');
+
+                if (finalProjectId) {
+                    const baseUrl = "{% url 'project_list' %}".replace(/\/+$/, '');
+                    window.location.href = `${baseUrl}/project/${finalProjectId}/`;
+                } else {
+                    window.location.reload();
                 }
-                if (!completed) {
-                    isUploading = false;
-                }
+
+            } catch (err) {
+                console.error("Parallel upload error:", err);
+                isUploading = false;
+                alert("Upload connection interrupted. Please try again.");
+                if (openBtn) { openBtn.disabled = false; openBtn.innerHTML = '<i data-lucide="upload" style="width:15px;height:15px;"></i> Upload Video'; }
+                if (openBtnE) { openBtnE.disabled = false; openBtnE.innerHTML = '<i data-lucide="upload" style="width:15px;height:15px;"></i> Upload your first video'; }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         });
     }
@@ -229,10 +301,9 @@
 })();
 </script>
 <style>
-    /* Hide the modal elements since we are bypassing them */
     .ve-modal-backdrop { display: none !important; }
     #upload-form { display: none; }
-    .lucide-spin { animation: spin 2s linear infinite; }
+    .lucide-spin { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
 {% endblock %}

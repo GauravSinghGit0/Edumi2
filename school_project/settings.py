@@ -356,7 +356,24 @@ else:
 # ==============================================================================
 IS_TESTING = 'test' in sys.argv or 'pytest' in sys.modules
 
-if REDIS_URL and not DEBUG and not IS_TESTING:
+def _is_redis_reachable(redis_url):
+    if not redis_url:
+        return False
+    try:
+        import urllib.parse
+        import socket
+        parsed = urllib.parse.urlparse(redis_url)
+        host = parsed.hostname or '127.0.0.1'
+        port = parsed.port or 6379
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.5)
+        res = s.connect_ex((host, port))
+        s.close()
+        return res == 0
+    except Exception:
+        return False
+
+if REDIS_URL and _is_redis_reachable(REDIS_URL) and not IS_TESTING:
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -372,17 +389,20 @@ if REDIS_URL and not DEBUG and not IS_TESTING:
             'TIMEOUT': 300,  # 5 minutes default TTL
         }
     }
-    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-    SESSION_CACHE_ALIAS = 'default'
 else:
-    # Dev: use local memory cache
+    # Dev / offline fallback: use local memory cache
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'edumi-local-cache',
         }
     }
-    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+# Scalable & Resilient Sessions: Reads cached in Redis/LocMem, backed by DB persistence
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'default'
+
+
 
 
 # ==============================================================================
@@ -420,7 +440,7 @@ EMAIL_BACKEND = env('EMAIL_BACKEND', _default_email_backend)
 
 # Token & OTP Lifespans
 EMAIL_VERIFICATION_TOKEN_LIFETIME = int(env('EMAIL_VERIFICATION_TOKEN_LIFETIME', '86400'))  # 24 hours
-EMAIL_OTP_LIFETIME = int(env('EMAIL_OTP_LIFETIME', '900'))  # 15 minutes (in seconds)
+EMAIL_OTP_LIFETIME = int(env('EMAIL_OTP_LIFETIME', '300'))  # 5 minutes (in seconds)
 REGISTRATION_RATE_LIMIT = int(env('REGISTRATION_RATE_LIMIT', '10'))  # 10 attempts per hour
 REGISTRATION_RATE_PERIOD = int(env('REGISTRATION_RATE_PERIOD', '3600'))
 

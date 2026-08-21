@@ -69,7 +69,7 @@ def generate_and_store_otp(user):
     # 1. Generate secure random 6-digit code (100000 - 999999)
     otp = f"{secrets.randbelow(900000) + 100000}"
     otp_hash = hashlib.sha256(otp.encode('utf-8')).hexdigest()
-    ttl = getattr(settings, 'EMAIL_OTP_LIFETIME', 900)  # 15 minutes default
+    ttl = getattr(settings, 'EMAIL_OTP_LIFETIME', 300)  # 5 minutes default
     expires_at = timezone.now() + timedelta(seconds=ttl)
 
     try:
@@ -203,7 +203,7 @@ def send_verification_email(request, user):
         'verification_url': verification_url,
         'otp_code': otp,
         'token': token,
-        'otp_expiry_minutes': int(getattr(settings, 'EMAIL_OTP_LIFETIME', 900) / 60),
+        'otp_expiry_minutes': int(getattr(settings, 'EMAIL_OTP_LIFETIME', 300) / 60),
         'support_email': getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@edumi.com'),
     }
 
@@ -249,20 +249,297 @@ The EduMi Team
     from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [user.email]
 
+    return _dispatch_email_async(
+        subject=subject,
+        text_content=text_content,
+        from_email=from_email,
+        recipient_list=recipient_list,
+        html_content=html_content
+    )
+
+
+def _dispatch_email_async(subject, text_content, from_email, recipient_list, html_content=None):
+    """
+    Dispatches email asynchronously via Celery worker, with instant non-blocking fallback to daemon thread.
+    Ensures HTTP request threads return immediately without waiting on SMTP network latency.
+    """
     try:
-        send_mail(
+        from accounts.tasks import send_email_async_task
+        send_email_async_task.delay(
             subject=subject,
-            message=text_content.strip(),
+            text_content=text_content,
             from_email=from_email,
             recipient_list=recipient_list,
-            html_message=html_content,
-            fail_silently=False,
+            html_content=html_content
         )
-        logger.info(f"Verification email sent successfully to {user.email}")
         return True
+    except Exception as exc:
+        logger.debug(f"Could not enqueue email to Celery ({exc}). Dispatching via background daemon thread.")
+        import threading
+        def _send():
+            try:
+                send_mail(
+                    subject=subject,
+                    message=text_content.strip() if text_content else '',
+                    from_email=from_email or settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=recipient_list,
+                    html_message=html_content,
+                    fail_silently=False,
+                )
+                logger.info(f"Background email dispatched successfully to {recipient_list}")
+            except Exception as e:
+                logger.error(f"Threaded email dispatch failed for {recipient_list}: {e}")
+
+        t = threading.Thread(target=_send, daemon=True)
+        t.start()
+        return True
+
+
+# ==============================================================================
+# PASSWORD RESET SERVICES
+# ==============================================================================
+
+RESET_SIGNER_SALT = 'edumi-password-reset-v1'
+
+
+def generate_password_reset_token(user):
+    """
+    Generate a tamper-proof timestamped signature string containing user.id,
+    a hash snippet of their current password, and their email.
+    If the password is changed, the token automatically becomes invalid.
+    """
+    signer = TimestampSigner(salt=RESET_SIGNER_SALT)
+    # Include password hash snippet so changing password invalidates all existing reset tokens
+    pw_snippet = user.password[:12] if user.password else "nopassword"
+    payload = f"{user.id}:{pw_snippet}:{user.email}"
+    return signer.sign(payload)
+
+
+def verify_password_reset_token(token, max_age=3600):
+    """
+    Verify a signed password reset token. Default max age: 1 hour (3600 seconds).
+    Returns (user, None) on success or (None, error_string) on failure.
+    """
+    if not token:
+        return None, "Missing password reset token."
+
+    signer = TimestampSigner(salt=RESET_SIGNER_SALT)
+    try:
+        unsigned = signer.unsign(token, max_age=max_age)
+        parts = unsigned.split(':', 2)
+        if len(parts) != 3:
+            return None, "Malformed password reset token."
+            
+        user_id_str, pw_snippet, email = parts
+        user = User.objects.get(id=int(user_id_str), email__iexact=email)
+        
+        # Verify that the password hasn't already been changed since token was issued
+        current_pw_snippet = user.password[:12] if user.password else "nopassword"
+        if not constant_time_compare(pw_snippet, current_pw_snippet):
+            return None, "This password reset link has already been used. Please request a new one."
+
+        return user, None
+    except SignatureExpired:
+        return None, "Password reset link has expired. Please request a new one."
+    except (BadSignature, ValueError, User.DoesNotExist):
+        return None, "Invalid or corrupted password reset link."
     except Exception as e:
-        logger.error(f"Failed to send verification email to {user.email}: {e}")
-        # Return True in debug/local if mail server is offline to prevent crashing signup flow
-        if settings.DEBUG:
-            return True
-        return False
+        logger.error(f"Unexpected error verifying password reset token: {e}")
+        return None, "Password reset verification failed."
+
+
+def generate_and_store_password_reset_otp(user):
+    """
+    Generate a 6-digit numeric OTP for password reset.
+    Stores in database (EmailVerificationOTP) and cache with a 15-minute expiration.
+    Returns the raw 6-digit OTP string.
+    """
+    from accounts.models import EmailVerificationOTP
+
+    otp = f"{secrets.randbelow(900000) + 100000}"
+    otp_hash = hashlib.sha256(otp.encode('utf-8')).hexdigest()
+    ttl = getattr(settings, 'EMAIL_OTP_LIFETIME', 300)  # 5 minutes
+    expires_at = timezone.now() + timedelta(seconds=ttl)
+
+    try:
+        EmailVerificationOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+        EmailVerificationOTP.objects.create(
+            user=user,
+            otp_hash=otp_hash,
+            expires_at=expires_at,
+            is_used=False,
+            attempts=0
+        )
+    except Exception as e:
+        logger.error(f"Error saving password reset OTP to database: {e}")
+
+    try:
+        cache_key = f"password_reset_otp_{user.id}"
+        cache.set(cache_key, {
+            'otp': otp,
+            'otp_hash': otp_hash,
+            'email': user.email,
+            'pw_snippet': user.password[:12] if user.password else "nopassword",
+            'attempts': 0
+        }, ttl)
+    except Exception as e:
+        logger.warning(f"Error saving password reset OTP to cache: {e}")
+
+    return otp
+
+
+def verify_password_reset_otp(user_or_email, otp_code):
+    """
+    Verify a 6-digit OTP for password reset with database and cache lookups.
+    Returns (user, error_message).
+    """
+    from accounts.models import EmailVerificationOTP
+
+    if not otp_code or not str(otp_code).strip().isdigit():
+        return None, "Please enter a valid 6-digit code."
+
+    clean_otp = str(otp_code).strip()
+    input_hash = hashlib.sha256(clean_otp.encode('utf-8')).hexdigest()
+
+    # Resolve user
+    if isinstance(user_or_email, User):
+        user = user_or_email
+    else:
+        email_str = str(user_or_email or '').strip().lower()
+        if not email_str:
+            return None, "Please provide your email address."
+        try:
+            # Match by email or username
+            if '@' in email_str:
+                user = User.objects.get(email__iexact=email_str)
+            else:
+                user = User.objects.get(username__iexact=email_str)
+        except User.DoesNotExist:
+            return None, "No account associated with that email or username."
+
+    # 1. Database-backed check
+    now = timezone.now()
+    otp_record = EmailVerificationOTP.objects.filter(
+        user=user,
+        is_used=False,
+        expires_at__gte=now
+    ).order_by('-created_at').first()
+
+    if otp_record:
+        if otp_record.attempts >= 5:
+            otp_record.is_used = True
+            otp_record.save(update_fields=['is_used'])
+            return None, "Too many failed attempts. Code invalidated. Please request a new one."
+
+        if constant_time_compare(input_hash, otp_record.otp_hash):
+            otp_record.is_used = True
+            otp_record.save(update_fields=['is_used'])
+            try:
+                cache.delete(f"password_reset_otp_{user.id}")
+            except Exception:
+                pass
+            return user, None
+        else:
+            otp_record.attempts += 1
+            otp_record.save(update_fields=['attempts'])
+            remaining = max(0, 5 - otp_record.attempts)
+            return None, f"Incorrect reset code. ({remaining} attempt{'s' if remaining != 1 else ''} remaining)"
+
+    # 2. Fallback to Cache lookup
+    try:
+        cache_key = f"password_reset_otp_{user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            expected_hash = cached_data.get('otp_hash', '')
+            expected_otp = cached_data.get('otp', '')
+            matches = False
+            if expected_hash:
+                matches = constant_time_compare(input_hash, expected_hash)
+            elif expected_otp:
+                matches = constant_time_compare(clean_otp, expected_otp)
+
+            if matches:
+                cache.delete(cache_key)
+                return user, None
+            else:
+                return None, "Incorrect reset code. Please check and try again."
+    except Exception as e:
+        logger.warning(f"Cache lookup failed for password reset OTP: {e}")
+
+    return None, "Reset code has expired or is invalid. Please request a new one."
+
+
+def send_password_reset_email(request, user):
+    """
+    Generate password reset token & OTP and send branded reset email.
+    """
+    token = generate_password_reset_token(user)
+    otp = generate_and_store_password_reset_otp(user)
+
+    if request:
+        base_url = request.build_absolute_uri('/')[:-1]
+    else:
+        base_url = getattr(settings, 'DEFAULT_DOMAIN', 'http://localhost:8002')
+
+    reset_url = f"{base_url}/password-reset/confirm/?token={token}"
+
+    context = {
+        'user': user,
+        'reset_url': reset_url,
+        'otp_code': otp,
+        'token': token,
+        'expiry_minutes': int(getattr(settings, 'EMAIL_OTP_LIFETIME', 300) / 60),
+        'support_email': getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@edumi.com'),
+    }
+
+    subject = "Reset your EduMi password"
+
+    try:
+        html_content = render_to_string('accounts/emails/password_reset_email.html', context)
+    except Exception as e:
+        logger.warning(f"Could not load password_reset_email.html: {e}. Falling back to default layout.")
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: #4f46e5;">Reset Your EduMi Password</h2>
+            <p>Hello {user.username},</p>
+            <p>We received a request to reset your EduMi account password. Click the button below to choose a new password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_url}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+            </div>
+            <p style="text-align: center; color: #666;">Or enter this 6-digit reset code:</p>
+            <div style="text-align: center; margin: 15px 0;">
+                <span style="font-size: 28px; letter-spacing: 6px; font-weight: bold; background: #f3f4f6; padding: 8px 16px; border-radius: 6px; color: #111;">{otp}</span>
+            </div>
+            <p style="font-size: 12px; color: #888; margin-top: 30px;">If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+        </div>
+        """
+
+    text_content = f"""
+Hello {user.username},
+
+We received a request to reset your password for your EduMi account.
+
+To reset your password, click the link below:
+{reset_url}
+
+Or use your 6-digit reset code: {otp}
+(This code expires in {context['expiry_minutes']} minutes).
+
+If you did not request this, please ignore this email.
+
+Best regards,
+The EduMi Team
+"""
+
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [user.email]
+
+    return _dispatch_email_async(
+        subject=subject,
+        text_content=text_content,
+        from_email=from_email,
+        recipient_list=recipient_list,
+        html_content=html_content
+    )
+
+
