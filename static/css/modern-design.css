@@ -106,36 +106,29 @@ body {
     margin: 2px 0 0 0;
 }
 
-/* Stat Cards */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(clamp(240px, 20vw, 320px), 1fr));
-    gap: clamp(12px, 2vw, 20px);
-    margin-bottom: clamp(12px, 2vw, 24px);
-}
-
+/* Stat Cards - Updated to use responsive tokens */
 .stat-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    padding: 14px;
-    border: 1px solid var(--border-color);
+    background: var(--bg-card, var(--color-bg-card));
+    border-radius: var(--radius, var(--radius-md));
+    padding: var(--space-md);
+    border: 1px solid var(--border-color, var(--color-border));
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-sm);
     transition: all 0.2s;
     cursor: pointer;
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary);
 }
 
 .stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius);
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -490,18 +483,11 @@ body {
 
 /* Medium Screens / Tablets (iPad sized) */
 @media (max-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        /* Force 2 columns on tablet */
-    }
+    /* Tablet-specific overrides can go here */
 }
 
 /* Mobile Screens */
 @media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
     .action-buttons {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;

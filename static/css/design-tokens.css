@@ -1,4 +1,8 @@
-/* static/css/design-tokens.css - Centralized Design System Tokens */
+/* static/css/design-tokens.css - Centralized Design System Tokens with Responsive System */
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE BASE - Mobile First Approach
+   ══════════════════════════════════════════════════════════════ */
 :root {
     /* ── Typography & Weights ── */
     --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -7,49 +11,50 @@
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
 
-    /* ── Typography Scale ── */
-    --font-size-xs: 0.75rem;    /* 12px - Micro text, badges */
-    --font-size-sm: 0.84375rem; /* 13.5px - Subtitles, table rows */
-    --font-size-md: 0.9375rem;  /* 15px - Body text, inputs */
-    --font-size-lg: 1.0625rem;  /* 17px - Card headers, subheadings */
-    --font-size-xl: 1.25rem;    /* 20px - Section titles */
-    --font-size-2xl: 1.5rem;    /* 24px - Page titles, stat values */
-    --font-size-3xl: 1.75rem;   /* 28px - Hero headings */
+    /* ── Typography Scale (Mobile Base) ── */
+    --font-size-xs: 0.6875rem;  /* 11px */
+    --font-size-sm: 0.8125rem;  /* 13px */
+    --font-size-md: 0.875rem;   /* 14px */
+    --font-size-lg: 0.9375rem;  /* 15px */
+    --font-size-xl: 1.125rem;   /* 18px */
+    --font-size-2xl: 1.375rem;  /* 22px */
+    --font-size-3xl: 1.625rem;  /* 26px */
 
-    /* ── Spacing Scale ── */
+    /* ── Spacing Scale (Mobile Base) ── */
     --space-2xs: 0.25rem;  /* 4px */
     --space-xs: 0.5rem;    /* 8px */
-    --space-sm: 0.75rem;   /* 12px */
-    --space-md: 1rem;      /* 16px */
-    --space-lg: 1.5rem;    /* 24px */
-    --space-xl: 2rem;      /* 32px */
-    --space-2xl: 2.5rem;   /* 40px */
+    --space-sm: 0.625rem;  /* 10px */
+    --space-md: 0.875rem;  /* 14px */
+    --space-lg: 1.25rem;   /* 20px */
+    --space-xl: 1.75rem;   /* 28px */
+    --space-2xl: 2.25rem;  /* 36px */
 
     /* ── Layout & Component Dimensions ── */
-    --container-max-width: 1360px;
+    --container-max-width: 100%;
+    --container-padding: 1rem;
     --sidebar-width: 240px;
     --sidebar-collapsed-width: 64px;
-    --topbar-height: 54px;
+    --topbar-height: 56px;
     
-    --btn-height-sm: 34px;
-    --btn-height-md: 40px;
-    --btn-height-lg: 46px;
-    --input-height-md: 40px;
+    --btn-height-sm: 32px;
+    --btn-height-md: 38px;
+    --btn-height-lg: 44px;
+    --input-height-md: 38px;
 
     /* ── Border Radius Scale ── */
     --radius-sm: 0.375rem;  /* 6px */
-    --radius-md: 0.625rem;  /* 10px */
-    --radius-lg: 0.875rem;  /* 14px */
-    --radius-xl: 1.25rem;   /* 20px */
+    --radius-md: 0.5rem;    /* 8px */
+    --radius-lg: 0.75rem;   /* 12px */
+    --radius-xl: 1rem;      /* 16px */
     --radius-full: 9999px;
 
     /* ── Colors (Light Mode Default) ── */
-    --color-primary: #4f46e5;
-    --color-primary-hover: #4338ca;
+    --color-primary: #667eea;
+    --color-primary-hover: #5568d3;
     --color-primary-light: #818cf8;
-    --color-primary-bg: rgba(79, 70, 229, 0.08);
+    --color-primary-bg: rgba(102, 126, 234, 0.08);
 
-    --color-secondary: #7c3aed;
+    --color-secondary: #764ba2;
     --color-success: #10b981;
     --color-success-hover: #059669;
     --color-danger: #ef4444;
@@ -73,7 +78,91 @@
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* ── Dark Mode Token Overrides ── */
+/* ══════════════════════════════════════════════════════════════
+   TABLET BREAKPOINT - 768px and above
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (min-width: 768px) {
+    :root {
+        --font-size-xs: 0.75rem;    /* 12px */
+        --font-size-sm: 0.8125rem;  /* 13px */
+        --font-size-md: 0.875rem;   /* 14px */
+        --font-size-lg: 1rem;       /* 16px */
+        --font-size-xl: 1.125rem;   /* 18px */
+        --font-size-2xl: 1.375rem;  /* 22px */
+        --font-size-3xl: 1.625rem;  /* 26px */
+
+        --space-sm: 0.75rem;   /* 12px */
+        --space-md: 1rem;      /* 16px */
+        --space-lg: 1.5rem;    /* 24px */
+        --space-xl: 2rem;      /* 32px */
+        --space-2xl: 2.5rem;   /* 40px */
+
+        --container-padding: 1.5rem;
+        --topbar-height: 60px;
+        --btn-height-sm: 34px;
+        --btn-height-md: 40px;
+        --btn-height-lg: 46px;
+        --input-height-md: 40px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP BREAKPOINT - 1024px and above
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (min-width: 1024px) {
+    :root {
+        --font-size-xs: 0.75rem;    /* 12px */
+        --font-size-sm: 0.8125rem;  /* 13px */
+        --font-size-md: 0.9375rem;  /* 15px */
+        --font-size-lg: 1rem;       /* 16px */
+        --font-size-xl: 1.125rem;   /* 18px */
+        --font-size-2xl: 1.5rem;    /* 24px */
+        --font-size-3xl: 1.75rem;   /* 28px */
+
+        --container-max-width: 1280px;
+        --container-padding: 2rem;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LARGE DESKTOP BREAKPOINT - 1440px and above
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (min-width: 1440px) {
+    :root {
+        --font-size-xs: 0.75rem;    /* 12px */
+        --font-size-sm: 0.84375rem; /* 13.5px */
+        --font-size-md: 0.9375rem;  /* 15px */
+        --font-size-lg: 1.0625rem;  /* 17px */
+        --font-size-xl: 1.25rem;    /* 20px */
+        --font-size-2xl: 1.5rem;    /* 24px */
+        --font-size-3xl: 1.875rem;  /* 30px */
+
+        --container-max-width: 1360px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   XL DESKTOP BREAKPOINT - 1920px and above (Full HD)
+   ══════════════════════════════════════════════════════════════ */
+@media screen and (min-width: 1920px) {
+    :root {
+        --font-size-xs: 0.8125rem;  /* 13px */
+        --font-size-sm: 0.875rem;   /* 14px */
+        --font-size-md: 1rem;       /* 16px */
+        --font-size-lg: 1.125rem;   /* 18px */
+        --font-size-xl: 1.375rem;   /* 22px */
+        --font-size-2xl: 1.75rem;   /* 28px */
+        --font-size-3xl: 2.125rem;  /* 34px */
+
+        --container-max-width: 1600px;
+        --container-padding: 2.5rem;
+        --topbar-height: 64px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE TOKEN OVERRIDES
+   ══════════════════════════════════════════════════════════════ */
 body.dark-mode,
 html.dark-mode {
     --color-bg-app: #0f172a;
@@ -84,7 +173,7 @@ html.dark-mode {
     --color-text-main: #f8fafc;
     --color-text-muted: #94a3b8;
 
-    --color-primary-bg: rgba(99, 102, 241, 0.18);
+    --color-primary-bg: rgba(102, 126, 234, 0.18);
 
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
