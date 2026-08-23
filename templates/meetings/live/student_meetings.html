@@ -25,28 +25,6 @@
     margin: 0;
 }
 
-.no-cameras {
-    background: var(--white);
-    border-radius: clamp(12px, 2vw, 16px);
-    padding: clamp(2rem, 5vh, 4rem) clamp(1.5rem, 3vw, 2rem);
-    text-align: center;
-    border: 2px dashed var(--gray-300);
-}
-
-.no-cameras p {
-    font-size: clamp(0.875rem, 1.6vw, 0.95rem);
-    color: var(--gray-600);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.no-cameras .icon svg {
-    width: clamp(20px, 3vw, 24px);
-    height: clamp(20px, 3vw, 24px);
-    stroke: var(--gray-400);
-}
 
 /* Meeting Actions Buttons - Force Override */
 .meeting-actions {
@@ -182,9 +160,10 @@ a.btn-view:hover {
         {% endfor %}
     </div>
     {% else %}
-    <div class="no-cameras">
-        <p><span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span> No meetings available at the moment</p>
-        <p style="margin-top: 1rem; color: #65676b;">Check back later for scheduled meetings</p>
+    <div class="flat-card" style="text-align: center; padding: 5rem 2rem; display: flex; flex-direction: column; align-items: center;">
+        <i data-lucide="calendar-x" style="width:64px;height:64px;color:var(--color-text-muted);opacity:0.5;margin-bottom:1rem;"></i>
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text-main); margin-bottom: 0.5rem;">No meetings available at the moment</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 0;">Check back later for scheduled meetings</p>
     </div>
     {% endif %}
 </div>

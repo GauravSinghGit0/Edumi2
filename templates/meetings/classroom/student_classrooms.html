@@ -5,12 +5,6 @@
 
 {% block content %}
 <style>
-    .classroom-container { max-width: 1400px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-    .header-text h1 { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; letter-spacing: -0.025em; }
-    .header-text p { font-size: 1rem; color: #64748b; margin: 0; }
-    
     .btn-join-main { 
         background: #4f46e5; 
         color: white; 
@@ -27,16 +21,16 @@
     .btn-join-main:hover { background: #4338ca; transform: translateY(-2px); }
 
     /* Alert / Pending Section */
-    .pending-banner { background: #fffbeb; border: 1px solid #fef3c7; border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem; }
-    .pending-item { background: white; padding: 1rem 1.25rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border: 1px solid #fde68a; }
+    .pending-banner { background: var(--color-bg-subtle, #f8fafc); border: 1px solid var(--color-border, #e2e8f0); border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem; }
+    .pending-item { background: var(--color-bg-card, white); padding: 1rem 1.25rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border: 1px solid var(--color-border, #e2e8f0); }
 
     /* Classroom Grid */
     .classroom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.5rem; }
     .course-card { 
-        background: white; 
+        background: var(--color-bg-card, white); 
         border-radius: 1.25rem; 
         overflow: hidden; 
-        border: 1px solid #e2e8f0; 
+        border: 1px solid var(--color-border, #e2e8f0); 
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
         display: flex; 
         flex-direction: column;
@@ -48,16 +42,16 @@
 
     .course-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
     .course-code { font-size: 0.75rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
-    .course-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.75rem 0; line-height: 1.3; }
-    .course-desc { font-size: 0.875rem; color: #64748b; line-height: 1.5; margin-bottom: 1.5rem; }
+    .course-title { font-size: 1.25rem; font-weight: 800; color: var(--color-text-main, #0f172a); margin: 0 0 0.75rem 0; line-height: 1.3; }
+    .course-desc { font-size: 0.875rem; color: var(--color-text-muted, #64748b); line-height: 1.5; margin-bottom: 1.5rem; }
 
-    .teacher-info { display: flex; align-items: center; gap: 0.75rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
-    .teacher-avatar { width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; object-fit: cover; }
-    .teacher-name { font-size: 0.8125rem; font-weight: 600; color: #1e293b; }
+    .teacher-info { display: flex; align-items: center; gap: 0.75rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-border, #f1f5f9); }
+    .teacher-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-bg-subtle, #f1f5f9); object-fit: cover; }
+    .teacher-name { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-main, #1e293b); }
 
     .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem; }
     .btn-card { padding: 0.75rem; border-radius: 0.6rem; font-size: 0.875rem; font-weight: 700; text-align: center; text-decoration: none; transition: all 0.2s; }
-    .btn-card-outline { border: 1px solid #e2e8f0; color: #475569; }
+    .btn-card-outline { border: 1px solid var(--color-border, #e2e8f0); color: var(--color-text-main, #475569); }
     .btn-card-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
     .btn-card-solid { background: #4f46e5; color: white; border: 1px solid #4f46e5; }
     .btn-card-solid:hover { background: #4338ca; }
@@ -65,16 +59,13 @@
     .btn-card-live:hover { background: #dc2626; }
 
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-    .empty-state { text-align: center; padding: 5rem 2rem; background: white; border-radius: 1.5rem; border: 2px dashed #e2e8f0; }
-    .empty-state i { width: 64px; height: 64px; color: #94a3b8; margin-bottom: 1.5rem; }
 </style>
 
-<div class="classroom-container">
-    <div class="page-header">
-        <div class="header-text">
+<div class="page-container">
+    <div class="page-header-flat">
+        <div>
             <h1>Academic Courses</h1>
-            <p>Access your enrolled classrooms and learning resources.</p>
+            <p style="font-size: 13px; font-weight: 400; color: var(--color-text-muted, var(--gray-600, #4b5563)); margin: 2px 0 0 0;">Access your enrolled classrooms and learning resources.</p>
         </div>
         <a href="{% url 'join_classroom_request' %}" class="btn-join-main">
             <i data-lucide="plus"></i>
@@ -84,17 +75,17 @@
 
     {% if pending_memberships %}
     <div class="pending-banner">
-        <div style="display: flex; align-items: center; gap: 0.75rem; color: #92400e;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--color-text-main, #92400e);">
             <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
             <h3 style="margin: 0; font-size: 1rem; font-weight: 700;">Waiting for Approval</h3>
         </div>
         {% for membership in pending_memberships %}
         <div class="pending-item">
             <div>
-                <span style="font-weight: 800; color: #1e293b;">{{ membership.classroom.title }}</span>
-                <span style="color: #92400e; font-size: 0.8125rem; margin-left: 0.5rem;">({{ membership.classroom.class_code }})</span>
+                <span style="font-weight: 800; color: var(--color-text-main, #1e293b);">{{ membership.classroom.title }}</span>
+                <span style="color: var(--color-text-muted, #92400e); font-size: 0.8125rem; margin-left: 0.5rem;">({{ membership.classroom.class_code }})</span>
             </div>
-            <span style="font-size: 0.75rem; font-weight: 600; color: #b45309;">Sent {{ membership.requested_at|timesince }} ago</span>
+            <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted, #b45309);">Sent {{ membership.requested_at|timesince }} ago</span>
         </div>
         {% endfor %}
     </div>
@@ -138,13 +129,11 @@
     </div>
     {% else %}
         {% if not pending_memberships %}
-        <div class="empty-state">
-            <i data-lucide="book-copy"></i>
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">No Classrooms Found</h2>
-            <p style="color: #64748b; margin-bottom: 2rem;">You haven't joined any classrooms yet. Start your journey by joining a course.</p>
-            <a href="{% url 'join_classroom_request' %}" class="btn-join-main" style="display: inline-flex; width: auto;">
-                Join Your First Classroom
-            </a>
+        <div class="flat-card" style="text-align: center; padding: 5rem 2rem; display: flex; flex-direction: column; align-items: center;">
+            <i data-lucide="copy" style="width:64px;height:64px;color:var(--color-text-muted);opacity:0.5;margin-bottom:1rem;"></i>
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text-main); margin-bottom: 0.5rem;">No Classrooms Found</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: 2rem;">You haven't joined any classrooms yet. Start your journey by joining a course.</p>
+            <a href="{% url 'join_classroom_request' %}" class="btn-join-main" style="display: inline-flex; margin: 0 auto;">Join Your First Classroom</a>
         </div>
         {% endif %}
     {% endif %}

@@ -5,68 +5,30 @@
 {% block page_title %}Live / Videos{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/study_materials.css' %}">
 <style>
-    .lecture-library-container {
-        padding: 2rem;
-        max-width: 1400px;
-        margin: 0 auto;
+    .lecture-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-text-main, #1e293b);
+        margin-bottom: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .search-bar-section {
-        margin-bottom: 2.5rem;
+    .lecture-meta {
         display: flex;
-        gap: 1rem;
         align-items: center;
-        flex-wrap: wrap;
-    }
-    .search-input-group {
-        flex: 1;
-        min-width: 300px;
-        position: relative;
-    }
-    .search-input {
-        width: 100%;
-        padding: 0.875rem 1rem 0.875rem 3rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.75rem;
-        outline: none;
-        font-size: 1rem;
-        background: white;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .search-input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-    .search-icon {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-    }
-    .filter-select {
-        padding: 0.875rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.75rem;
-        outline: none;
-        min-width: 200px;
-        background: white;
-        font-size: 1rem;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        cursor: pointer;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .filter-select:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: var(--color-text-muted, #64748b);
     }
     
     .section-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #1e293b;
-        margin-bottom: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--color-text-main, #1e293b);
+        margin-bottom: 1.25rem;
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -90,75 +52,81 @@
         margin-bottom: 3rem;
     }
     .lecture-card {
-        background: white;
+        background: var(--color-bg-card, white);
         border-radius: 1rem;
         overflow: hidden;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         transition: transform 0.2s, box-shadow 0.2s;
         text-decoration: none;
         color: inherit;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border, #e2e8f0);
     }
     .lecture-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border-color: #6366f1;
     }
+    
     .thumbnail-wrapper {
         position: relative;
-        aspect-ratio: 16/9;
-        background: #0f172a;
+        width: 100%;
+        padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        background: #1e293b;
+        overflow: hidden;
     }
     .thumbnail-wrapper img {
-        width: 100%; height: 100%; object-fit: cover;
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
     }
     .live-badge {
         position: absolute;
-        top: 0.75rem; left: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        background: #ef4444;
-        color: white;
-        font-size: 0.75rem; font-weight: 800;
+        top: 0.75rem; right: 0.75rem;
+        background: #ef4444; color: white;
+        padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 700;
         border-radius: 4px;
+        animation: pulse 2s infinite;
     }
     .duration-badge {
         position: absolute;
-        bottom: 0.5rem; right: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        font-size: 0.75rem;
+        bottom: 0.75rem; right: 0.75rem;
+        background: rgba(0,0,0,0.7); color: white;
+        padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600;
         border-radius: 4px;
     }
     .card-body { padding: 1rem; }
-    .lecture-title {
-        font-weight: 700; font-size: 1rem;
-        color: #1e293b; margin-bottom: 0.5rem;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .lecture-meta {
-        font-size: 0.875rem; color: #64748b;
-        display: flex; flex-direction: column; gap: 0.25rem;
-    }
     .teacher-link:hover { color: #6366f1; text-decoration: underline; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="lecture-library-container">
-    <div class="search-bar-section">
-        <form action="." method="GET" style="display:contents;">
-            <div class="search-input-group">
-                <i data-lucide="search" class="search-icon"></i>
-                <input type="text" name="q" class="search-input" placeholder="Search by title, teacher, or room..." value="{{ query }}">
-            </div>
-            <select name="teacher" class="filter-select" onchange="this.form.submit()">
-                <option value="">All Teachers</option>
-                {% for t in teachers %}
-                <option value="{{ t.id }}" {% if selected_teacher == t.id|stringformat:"s" %}selected{% endif %}>{{ t.username }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" style="display:none;"></button>
+<div class="materials-hub-container">
+    <div style="background: var(--color-bg-card, white); border-radius: clamp(10px, 1.5vw, 12px); padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem); margin-bottom: clamp(1rem, 2vh, 1.5rem); border: 1px solid var(--color-border, #e5e7eb); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: clamp(1.125rem, 2.5vw, 1.375rem); font-weight: 700; color: var(--color-text-main, #111827); margin: 0 0 2px 0;">Live / Videos</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--color-text-muted, #6b7280); margin: 0;">Watch live classes or browse recorded lectures.</p>
+        </div>
+    </div>
+    
+    <div class="materials-toolbar">
+        <form method="get" class="materials-search-wrap">
+            <i data-lucide="search" class="materials-search-icon"></i>
+            <input type="text" name="q" class="materials-search-input" placeholder="Search by title, teacher, or room..." value="{{ query }}">
         </form>
+
+        <div class="materials-filter-pills">
+            <div style="display: flex; align-items: center; background: var(--color-bg-card, white); border: 1px solid var(--color-border, #e5e7eb); padding: 0.5rem 1rem; border-radius: 2rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <i data-lucide="filter" style="width: 14px; height: 14px; color: var(--color-text-muted); margin-right: 0.5rem;"></i>
+                <form method="get" style="margin: 0; display: inline;">
+                    {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+                    <select name="teacher" onchange="this.form.submit()" style="border: none; background: transparent; outline: none; color: var(--color-text-main); font-weight: 600; font-size: 0.8125rem; cursor: pointer;">
+                        <option value="">All Teachers</option>
+                        {% for t in teachers %}
+                        <option value="{{ t.id }}" {% if selected_teacher == t.id|stringformat:"s" %}selected{% endif %}>{{ t.username }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
     </div>
 
     <h2 class="section-title"><span class="live-dot"></span> Live Now</h2>
@@ -178,7 +146,7 @@
             </div>
         </a>
         {% empty %}
-        <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: white; border-radius: 1rem; border: 1px solid #e2e8f0; color: #94a3b8;">
+        <div class="flat-card" style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--color-text-muted, #94a3b8);">
             <i data-lucide="tv" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5; display: inline-block;"></i>
             <p style="margin: 0; font-weight: 500;">No live lectures right now.</p>
         </div>
@@ -210,9 +178,9 @@
             </div>
         </a>
         {% empty %}
-        <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: #94a3b8;">
+        <div class="flat-card" style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--color-text-muted, #94a3b8);">
             <i data-lucide="video-off" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5;"></i>
-            <p>No lectures found matching your search.</p>
+            <p style="margin: 0; font-weight: 500;">No lectures found matching your search.</p>
         </div>
         {% endfor %}
     </div>

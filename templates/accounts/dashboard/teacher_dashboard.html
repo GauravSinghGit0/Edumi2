@@ -143,6 +143,16 @@
                     <span>Communications</span>
                     <p>Messaging with students and colleagues.</p>
                 </a>
+                <a href="{% url 'recording_analytics' %}" class="control-item">
+                    <i data-lucide="bar-chart-2"></i>
+                    <span>Analytics Studio</span>
+                    <p>Monitor metrics and track engagement trends.</p>
+                </a>
+                <a href="{% url 'classroom_attendance_history' %}" class="control-item">
+                    <i data-lucide="clipboard-check"></i>
+                    <span>Attendance Reports</span>
+                    <p>View historical attendance data and analytics.</p>
+                </a>
                 <a href="{% url 'profile_view' user.username %}" class="control-item">
                     <i data-lucide="settings"></i>
                     <span>Account Settings</span>
