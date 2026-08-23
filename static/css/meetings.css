@@ -224,3 +224,28 @@
         grid-template-columns: 1fr;
     }
 }
+/* Meeting Actions Buttons */
+.meeting-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    margin-top: clamp(0.75rem, 1.5vh, 1rem);
+}
+
+.meeting-actions a,
+.meeting-actions button {
+    flex: 1;
+    min-width: clamp(100px, 20vw, 140px);
+    text-align: center;
+    justify-content: center;
+}
+
+@media (max-width: 640px) {
+    .meeting-actions {
+        flex-direction: column;
+    }
+    .meeting-actions a,
+    .meeting-actions button {
+        width: 100%;
+    }
+}

@@ -5,62 +5,37 @@
 
 {% block content %}
 <style>
-    .att-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-
-    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .report-stat-card { background: var(--bg-card); border-radius: 1rem; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
-    .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .stat-icon svg { width: 22px; height: 22px; stroke: white; }
-    .stat-info h3 { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
-    .stat-number { font-size: 1.75rem; font-weight: 800; color: var(--text-main); line-height: 1; }
-
-    .section-card { background: var(--bg-card); border-radius: 1rem; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 1.5rem; }
-    .section-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
-    .section-card-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
-
-    .participant-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); gap: 1rem; transition: background 0.15s; }
+    /* Table styling preserved from original layout */
+    .participant-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--gray-200); gap: 1rem; transition: background 0.15s; }
     .participant-row:last-child { border-bottom: none; }
-    .participant-row:hover { background: var(--hover-bg); }
-    .participant-row-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; padding: 0.75rem 1.5rem; background: var(--gray-50); border-bottom: 1px solid var(--border-color); gap: 1rem; }
-    .participant-row-header span { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .participant-row:hover { background: var(--gray-50); border-radius: 8px; padding-left: 0.5rem; padding-right: 0.5rem; margin-left: -0.5rem; margin-right: -0.5rem; }
+    
+    .participant-row-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; padding: 0.75rem 0; border-bottom: 1px solid var(--gray-200); gap: 1rem; margin-bottom: 0.5rem; }
+    .participant-row-header span { font-size: 0.75rem; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .user-info { display: flex; align-items: center; gap: 0.75rem; }
     .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .user-name { font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
-    .user-meta { font-size: 0.75rem; color: var(--text-muted); }
+    .user-name { font-weight: 600; color: var(--gray-900); font-size: 0.9rem; }
+    .user-meta { font-size: 0.75rem; color: var(--gray-500); }
 
     .badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-    .badge-live { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-    .badge-offline { background: var(--gray-200); color: var(--gray-700); }
-    .badge-join { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-    .badge-leave { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
-    .badge-active { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+    .badge-live { background: rgba(16, 185, 129, 0.1); color: #059669; }
+    .badge-offline { background: var(--gray-100); color: var(--gray-600); }
 
-    .time-val { font-size: 0.875rem; font-weight: 600; color: var(--text-main); font-variant-numeric: tabular-nums; }
+    .time-val { font-size: 0.875rem; font-weight: 600; color: var(--gray-800); font-variant-numeric: tabular-nums; }
     .total-time { font-size: 0.875rem; font-weight: 700; color: var(--primary); }
 
-    .sessions-panel { display: none; background: var(--gray-50); border-top: 1px solid var(--border-color); padding: 1rem 1.5rem 1.25rem; }
+    .sessions-panel { display: none; background: var(--gray-50); border-radius: 8px; padding: 1rem 1.5rem; margin-top: 0.5rem; }
     .sessions-panel.open { display: block; }
-    .sessions-title { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
-    .session-timeline { display: flex; flex-direction: column; gap: 0.5rem; }
-    .session-item { display: grid; grid-template-columns: 24px 1fr 1fr 1fr; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; background: var(--bg-card); border-radius: 0.5rem; border: 1px solid var(--border-color); font-size: 0.8rem; }
-    .session-num { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .session-item.in-progress { border-color: var(--primary); background: var(--hover-bg); }
-    .session-item.in-progress .session-num { background: var(--primary); }
+    .sessions-title { font-size: 0.75rem; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .session-item { display: grid; grid-template-columns: 24px 1fr 1fr 1fr; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; background: var(--white); border-radius: 0.5rem; border: 1px solid var(--gray-200); font-size: 0.8rem; }
+    .session-num { width: 24px; height: 24px; border-radius: 50%; background: var(--gray-200); color: var(--gray-700); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .session-item.in-progress { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+    .session-item.in-progress .session-num { background: var(--primary); color: white; }
     .sess-field { display: flex; flex-direction: column; gap: 0.15rem; }
-    .sess-field label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-    .sess-field span { font-weight: 600; color: var(--text-main); font-variant-numeric: tabular-nums; }
+    .sess-field label { font-size: 0.65rem; color: var(--gray-500); font-weight: 600; text-transform: uppercase; }
+    .sess-field span { font-weight: 600; color: var(--gray-900); font-variant-numeric: tabular-nums; }
     .sess-duration { font-weight: 700; color: var(--primary); }
-
-    .btn-primary { padding: 0.6rem 1.25rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-secondary { padding: 0.6rem 1.25rem; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
-    .btn-secondary:hover { background: var(--hover-bg); }
-    .btn-sm { padding: 0.35rem 0.8rem; background: var(--gray-100); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .btn-sm:hover { background: var(--gray-200); }
-
-    .empty-state { padding: 3rem; text-align: center; color: var(--text-muted); }
-    .empty-state svg { margin: 0 auto 1rem; display: block; opacity: 0.4; }
 
     @media print {
         .att-actions, .btn-sm, .sidebar, .topbar, .sidebar-overlay { display: none !important; }
@@ -78,74 +53,80 @@
     }
 </style>
 
-<div class="dashboard-header mb-4">
-    <div>
-        <h1>Attendance Report</h1>
-        <p>{{ meeting.title }} &mdash; Code: <strong>{{ meeting.meeting_code }}</strong>
-            &mdash; {{ meeting.scheduled_time|date:"d M Y, H:i" }}</p>
+<div class="page-container">
+    <div class="page-header-flat">
+        <div>
+            <h1>Attendance Report</h1>
+            <p>{{ meeting.title }} &mdash; Code: <strong>{{ meeting.meeting_code }}</strong> &mdash; {{ meeting.scheduled_time|date:"d M Y, H:i" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-secondary" style="border-radius: 8px; font-weight: 600; padding: 0.5rem 1rem;">
+                <i data-lucide="printer" style="width: 18px; margin-right: 6px;"></i> Print
+            </button>
+            <a href="javascript:history.back()" class="btn-primary-gradient">
+                <i data-lucide="arrow-left" style="width: 18px; margin-right: 6px;"></i> Back
+            </a>
+        </div>
     </div>
-    <div class="att-actions">
-        <button onclick="window.print()" class="btn-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Print
-        </button>
-        <a href="{% url 'admin_content_manager' %}#meetings" class="btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
-        </a>
-    </div>
-</div>
 
-<!-- Summary Stats -->
-<div class="stats-row">
-    <div class="report-stat-card">
-        <div class="stat-icon" style="background: var(--primary);">
-            <i data-lucide="users" style="color: white; width: 24px; height: 24px;"></i>
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="flat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted font-weight-bold small text-uppercase">Participants</span>
+                    <div class="p-2 bg-primary-soft text-primary-soft rounded-3">
+                        <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                    </div>
+                </div>
+                <h3 class="font-weight-bold text-dark mb-1" style="font-size: 1.75rem;">{{ participants.count }}</h3>
+            </div>
         </div>
-        <div class="stat-info">
-            <h3>Participants</h3>
-            <p class="stat-number">{{ participants.count }}</p>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="flat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted font-weight-bold small text-uppercase">Duration</span>
+                    <div class="p-2 bg-success-soft text-success-soft rounded-3">
+                        <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
+                    </div>
+                </div>
+                <h3 class="font-weight-bold text-dark mb-1" style="font-size: 1.75rem;">{{ meeting.duration_minutes }}m</h3>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="flat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted font-weight-bold small text-uppercase">Status</span>
+                    <div class="p-2 bg-warning-soft text-warning-soft rounded-3">
+                        <i data-lucide="calendar" style="width: 20px; height: 20px;"></i>
+                    </div>
+                </div>
+                <h3 class="font-weight-bold text-dark mb-1" style="font-size: 1.25rem;">
+                    {% if meeting.status == 'live' %}<span class="badge badge-live">&#9679; Live</span>
+                    {% elif meeting.status == 'ended' %}<span class="badge badge-offline">Ended</span>
+                    {% else %}<span class="badge badge-offline">{{ meeting.status|capfirst }}</span>{% endif %}
+                </h3>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="flat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted font-weight-bold small text-uppercase">Currently Live</span>
+                    <div class="p-2 bg-info-soft text-info-soft rounded-3">
+                        <i data-lucide="user-check" style="width: 20px; height: 20px;"></i>
+                    </div>
+                </div>
+                <h3 class="font-weight-bold text-dark mb-1" style="font-size: 1.75rem;">{{ live_count }}</h3>
+            </div>
         </div>
     </div>
-    <div class="report-stat-card">
-        <div class="stat-icon" style="background: var(--success);">
-            <i data-lucide="clock" style="color: white; width: 24px; height: 24px;"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Duration</h3>
-            <p class="stat-number">{{ meeting.duration_minutes }}m</p>
-        </div>
-    </div>
-    <div class="report-stat-card">
-        <div class="stat-icon" style="background: var(--warning);">
-            <i data-lucide="calendar" style="color: white; width: 24px; height: 24px;"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Status</h3>
-            <p class="stat-number" style="font-size: 1.1rem; margin-top: 4px;">
-                {% if meeting.status == 'live' %}<span class="badge badge-live">&#9679; Live</span>
-                {% elif meeting.status == 'ended' %}<span class="badge badge-offline">Ended</span>
-                {% else %}<span class="badge badge-offline">{{ meeting.status|capfirst }}</span>{% endif %}
-            </p>
-        </div>
-    </div>
-    <div class="report-stat-card">
-        <div class="stat-icon" style="background: var(--info);">
-            <i data-lucide="user-check" style="color: white; width: 24px; height: 24px;"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Currently Live</h3>
-            <p class="stat-number">{{ live_count }}</p>
-        </div>
-    </div>
-</div>
 
-<!-- Attendance Table -->
-<div class="section-card">
-    <div class="section-card-header">
-        <h2>Session Details</h2>
-        <button class="btn-sm" id="expandAllBtn" onclick="toggleExpandAll()">Expand All</button>
-    </div>
+    <!-- Attendance Table -->
+    <div class="flat-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="font-weight-bold text-dark m-0" style="font-size: 1.25rem;">Session Details</h4>
+            <button class="btn btn-sm btn-outline-secondary" id="expandAllBtn" onclick="toggleExpandAll()">Expand All</button>
+        </div>
 
     {% if participant_data %}
     <div class="participant-row-header">
@@ -272,6 +253,7 @@
         <p style="font-size: 0.875rem; margin-top: 0.25rem;">Attendance is automatically tracked when students join and leave.</p>
     </div>
     {% endif %}
+</div>
 </div>
 
 <script>

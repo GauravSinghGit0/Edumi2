@@ -5,48 +5,6 @@
 
 {% block extra_css %}
 <style>
-.notifications-container {
-    padding: clamp(1rem, 2vw, 1.5rem);
-}
-
-.notifications-header {
-    background: var(--white);
-    border-radius: clamp(10px, 1.5vw, 12px);
-    padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem);
-    margin-bottom: clamp(1rem, 2vh, 1.5rem);
-    border: 1px solid var(--gray-200);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: clamp(0.75rem, 1.5vw, 1rem);
-}
-
-.notifications-header h1 {
-    font-size: clamp(1.125rem, 2.5vw, 1.375rem);
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-}
-
-.btn-mark-all-read {
-    padding: clamp(0.625rem, 1.2vh, 0.75rem) clamp(1rem, 2vw, 1.25rem);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: clamp(8px, 1.2vw, 10px);
-    font-size: clamp(0.8rem, 1.4vw, 0.875rem);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.btn-mark-all-read:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    color: #ffffff;
-}
 
 .notifications-list {
     display: flex;
@@ -55,18 +13,18 @@
 }
 
 .notification-item {
-    background: var(--white);
+    background: var(--color-bg-card, var(--white));
     border-radius: clamp(10px, 1.5vw, 12px);
     padding: clamp(1rem, 2vw, 1.25rem);
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--color-border, var(--gray-200));
     transition: all 0.2s;
     cursor: pointer;
     position: relative;
 }
 
 .notification-item.unread {
-    background: rgba(102, 126, 234, 0.05);
-    border-color: rgba(102, 126, 234, 0.2);
+    background: var(--color-primary-bg, rgba(102, 126, 234, 0.05));
+    border-color: var(--color-primary-border, rgba(102, 126, 234, 0.2));
 }
 
 .notification-item:hover {
@@ -120,19 +78,19 @@
 .notification-title {
     font-size: clamp(0.875rem, 1.6vw, 0.95rem);
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--color-text-main, var(--gray-900));
     margin-bottom: clamp(0.25rem, 0.5vh, 0.375rem);
 }
 
 .notification-message {
     font-size: clamp(0.8rem, 1.4vw, 0.85rem);
-    color: var(--gray-600);
+    color: var(--color-text-muted, var(--gray-600));
     line-height: 1.5;
 }
 
 .notification-time {
     font-size: clamp(0.7rem, 1.2vw, 0.75rem);
-    color: var(--gray-500);
+    color: var(--color-text-muted, var(--gray-500));
     margin-top: clamp(0.375rem, 0.8vh, 0.5rem);
 }
 
@@ -182,18 +140,48 @@
     font-size: clamp(0.875rem, 1.6vw, 0.95rem);
     color: var(--gray-600);
 }
+
+.notification-context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem;
+    z-index: 9999;
+    display: none;
+    min-width: 160px;
+    border: 1px solid var(--gray-200);
+}
+.notification-context-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    color: var(--danger, #ef4444);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.notification-context-menu button:hover {
+    background: var(--danger-bg, #fef2f2);
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="notifications-container">
-    <div class="notifications-header">
+<div class="page-container">
+    <div class="page-header-flat">
         <div>
-            <h1>Notifications {% if unread_count > 0 %}<span style="color: #667eea;">({{ unread_count }})</span>{% endif %}</h1>
-            <p style="font-size: 13px; font-weight: 400; color: var(--gray-600, #4b5563); margin: 2px 0 0 0;">View your latest alerts, messages, and updates.</p>
+            <h1>Notifications {% if unread_count > 0 %}<span style="color: var(--color-primary, #667eea);">({{ unread_count }})</span>{% endif %}</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--color-text-muted, var(--gray-600, #4b5563)); margin: 2px 0 0 0;">View your latest alerts, messages, and updates.</p>
         </div>
         {% if notifications %}
-        <button onclick="markAllAsRead()" class="btn-mark-all-read">Mark All as Read</button>
+        <button onclick="markAllAsRead()" class="btn-primary-gradient">Mark All as Read</button>
         {% endif %}
     </div>
     
@@ -201,6 +189,7 @@
     <div class="notifications-list">
         {% for notification in notifications %}
         <div class="notification-item {% if not notification.is_read %}unread{% endif %}" 
+             data-id="{{ notification.id }}"
              onclick="handleNotificationClick({{ notification.id }}, '{{ notification.link|default:'' }}')">
             {% if not notification.is_read %}
             <span class="unread-badge"></span>
@@ -253,6 +242,14 @@
     {% endif %}
 </div>
 
+<!-- Custom Context Menu for Deletion -->
+<div class="notification-context-menu" id="notificationContextMenu">
+    <button onclick="confirmDeleteNotification()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+        Delete
+    </button>
+</div>
+
 <script>
 function handleNotificationClick(notificationId, link) {
     // Mark as read
@@ -283,6 +280,74 @@ function markAllAsRead() {
     }).then(() => {
         location.reload();
     });
+}
+
+let activeDeleteId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const contextMenu = document.getElementById('notificationContextMenu');
+    const items = document.querySelectorAll('.notification-item');
+    
+    items.forEach(item => {
+        const id = item.getAttribute('data-id');
+        
+        // Handle right click
+        item.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e, id);
+        });
+        
+        // Handle double click
+        item.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e, id);
+        });
+    });
+    
+    // Hide context menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (contextMenu && contextMenu.style.display === 'block') {
+            contextMenu.style.display = 'none';
+        }
+    });
+    
+    function showContextMenu(e, id) {
+        activeDeleteId = id;
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY}px`;
+    }
+});
+
+function confirmDeleteNotification() {
+    if (!activeDeleteId) return;
+    
+    fetch(`/notifications/delete/${activeDeleteId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    }).then(response => response.json())
+      .then(data => {
+          if (data.status === 'success') {
+              const item = document.querySelector(`.notification-item[data-id="${activeDeleteId}"]`);
+              if (item) {
+                  item.style.transition = 'opacity 0.3s, transform 0.3s';
+                  item.style.opacity = '0';
+                  item.style.transform = 'scale(0.95)';
+                  setTimeout(() => {
+                      item.remove();
+                      // Check if empty
+                      if(document.querySelectorAll('.notification-item').length === 0) {
+                          location.reload();
+                      }
+                  }, 300);
+              }
+          }
+      });
 }
 </script>
 {% endblock %}

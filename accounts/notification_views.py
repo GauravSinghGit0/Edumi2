@@ -107,3 +107,11 @@ def send_broadcast(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def delete_notification(request, notification_id):
+    """Delete a single notification"""
+    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+    notification.delete()
+    return JsonResponse({'status': 'success'})

@@ -255,8 +255,9 @@
                         badge.style.display = 'none';
                     }
 
-                    if (data.notifications && data.notifications.length > 0) {
-                        list.innerHTML = data.notifications.map(n => `
+                    const unreadNotifications = data.notifications ? data.notifications.filter(n => !n.is_read) : [];
+                    if (unreadNotifications.length > 0) {
+                        list.innerHTML = unreadNotifications.map(n => `
                             <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="handleNotificationClick(event, '${n.link || '#'}', ${n.id})">
                                 <div class="notification-item-content">
                                     <h4 class="notification-item-title">${n.title}</h4>
@@ -267,7 +268,24 @@
                             </div>
                         `).join('');
                     } else {
-                        list.innerHTML = '<div class="notification-empty">No new notifications</div>';
+                        list.innerHTML = '<div class="notification-empty" style="display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;"><i data-lucide="bell-off" style="width:32px;height:32px;margin-bottom:1rem;color:var(--text-muted);opacity:0.5;"></i><span style="font-weight:500;">No new notifications</span></div>';
+                    }
+
+                    // Update lucide icons in dynamically added HTML
+                    if (window.lucide) {
+                        lucide.createIcons();
+                    }
+
+                    // Disable "Mark all read" button if there are no unread notifications
+                    const markAllBtn = document.querySelector('.mark-all-read-btn');
+                    if (markAllBtn) {
+                        if (data.unread_count > 0) {
+                            markAllBtn.disabled = false;
+                            markAllBtn.classList.remove('disabled');
+                        } else {
+                            markAllBtn.disabled = true;
+                            markAllBtn.classList.add('disabled');
+                        }
                     }
                 })
                 .catch(error => {
@@ -335,6 +353,16 @@
             const btn = document.getElementById('notificationBtn');
             if (dropdown && !dropdown.contains(event.target) && !btn.contains(event.target)) {
                 dropdown.classList.remove('show');
+            }
+        });
+
+        // Close dropdown on Escape key
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                const dropdown = document.getElementById('notificationDropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
             }
         });
 

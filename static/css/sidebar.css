@@ -425,18 +425,32 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
 
 .notification-dropdown {
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 16px);
     right: 0;
     width: 340px;
     max-width: 90vw;
     background: var(--bg-card, var(--color-bg-card));
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
     border: 1px solid var(--border-color, var(--color-border));
     display: none;
     flex-direction: column;
     z-index: 1000;
-    overflow: hidden;
+    overflow: visible;
+}
+
+.notification-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    right: 18px;
+    width: 14px;
+    height: 14px;
+    background: var(--notification-header-bg, var(--color-bg-hover));
+    transform: rotate(45deg);
+    border-top: 1px solid var(--border-color, var(--color-border));
+    border-left: 1px solid var(--border-color, var(--color-border));
+    z-index: 1001;
 }
 
 .notification-dropdown.show {
@@ -451,6 +465,9 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
     justify-content: space-between;
     align-items: center;
     background: var(--notification-header-bg, var(--color-bg-hover));
+    border-radius: 12px 12px 0 0;
+    position: relative;
+    z-index: 1002;
 }
 
 .notification-dropdown-header h3 {
@@ -470,8 +487,15 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
     font-weight: var(--font-weight-semibold);
 }
 
-.mark-all-read-btn:hover {
+.mark-all-read-btn:hover:not(:disabled):not(.disabled) {
     text-decoration: underline;
+}
+
+.mark-all-read-btn:disabled, .mark-all-read-btn.disabled {
+    color: var(--text-muted, var(--color-text-muted));
+    cursor: not-allowed;
+    text-decoration: none;
+    opacity: 0.5;
 }
 
 .notification-dropdown-list {
@@ -546,21 +570,32 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
 }
 
 .notification-dropdown-footer {
-    padding: var(--space-sm);
+    padding: var(--space-md);
     text-align: center;
     border-top: 1px solid var(--border-color, var(--color-border));
-    background: var(--notification-header-bg, var(--color-bg-hover));
+    background: var(--bg-card, var(--color-bg-card));
+    border-radius: 0 0 12px 12px;
 }
 
 .notification-dropdown-footer a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    color: var(--color-primary);
+    background: var(--color-primary-bg, rgba(99, 102, 241, 0.08));
+    border-radius: 8px;
     font-size: var(--font-size-sm);
-    color: var(--text-main, var(--color-text-main));
-    font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-bold);
     text-decoration: none;
+    transition: all 0.2s ease;
 }
 
 .notification-dropdown-footer a:hover {
-    color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
 }
 
 @keyframes dropdownFade {

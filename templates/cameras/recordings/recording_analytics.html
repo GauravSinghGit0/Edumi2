@@ -3,15 +3,17 @@
 
 {% block title %}Analytics Studio - Edumi{% endblock %}
 
+
+
 {% block content %}
-<div class="container-fluid py-4" style="background: #f8fafc; min-height: 100vh;">
+<div class="page-container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-flat">
         <div>
-            <h2 class="font-weight-bold mb-1 text-dark" style="font-size: 1.75rem; letter-spacing: -0.02em;">Analytics Studio</h2>
-            <p class="text-muted small mb-0">Track performance, views, and engagement metrics for your lectures.</p>
+            <h1>Analytics Studio</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--gray-600, #4b5563); margin: 2px 0 0 0;">Track performance, views, and engagement metrics for your lectures.</p>
         </div>
-        <a href="{% url 'manage_recordings' %}" class="btn btn-outline-primary d-flex align-items-center gap-2">
+        <a href="{% url 'manage_recordings' %}" class="btn-primary-gradient">
             <i data-lucide="arrow-left" style="width: 18px;"></i>
             Back to Lectures
         </a>
@@ -20,10 +22,10 @@
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            <div class="flat-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <span class="text-muted font-weight-bold small text-uppercase">Channel Views</span>
-                    <div class="p-2 bg-indigo-50 text-indigo rounded-3" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5;">
+                    <div class="p-2 bg-primary-soft text-primary-soft rounded-3">
                         <i data-lucide="eye" style="width: 24px; height: 24px;"></i>
                     </div>
                 </div>
@@ -35,10 +37,10 @@
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            <div class="flat-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <span class="text-muted font-weight-bold small text-uppercase">Likes & Feedback</span>
-                    <div class="p-2 bg-emerald-50 text-emerald rounded-3" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
+                    <div class="p-2 bg-success-soft text-success-soft rounded-3">
                         <i data-lucide="thumbs-up" style="width: 24px; height: 24px;"></i>
                     </div>
                 </div>
@@ -50,10 +52,10 @@
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            <div class="flat-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <span class="text-muted font-weight-bold small text-uppercase">Total Uploads</span>
-                    <div class="p-2 bg-blue-50 text-blue rounded-3" style="background: rgba(59, 130, 246, 0.1); color: #2563eb;">
+                    <div class="p-2 bg-info-soft text-info-soft rounded-3">
                         <i data-lucide="video" style="width: 24px; height: 24px;"></i>
                     </div>
                 </div>
@@ -69,7 +71,7 @@
     <div class="row g-4">
         <!-- Views Breakdown & Analytics Chart -->
         <div class="col-12 col-lg-8">
-            <div class="card border-0 shadow-sm p-4 bg-white mb-4" style="border-radius: 16px;">
+            <div class="flat-card mb-4">
                 <h4 class="font-weight-bold text-dark mb-4" style="font-size: 1.25rem;">Performance Share</h4>
                 <div class="d-flex flex-column gap-4">
                     {% for item in chart_data %}
@@ -95,7 +97,7 @@
 
         <!-- Top Performing Videos Sidebar -->
         <div class="col-12 col-lg-4">
-            <div class="card border-0 shadow-sm p-4 bg-white" style="border-radius: 16px;">
+            <div class="flat-card">
                 <h4 class="font-weight-bold text-dark mb-3" style="font-size: 1.25rem;">Top Lectures</h4>
                 <p class="text-muted small mb-4">Your most viewed recordings ranked by engagement.</p>
                 <div class="d-flex flex-column gap-3">
