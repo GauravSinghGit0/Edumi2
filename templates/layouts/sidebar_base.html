@@ -131,6 +131,14 @@
         // Also reset on initial page load
         document.addEventListener('DOMContentLoaded', resetSidebarState);
 
+        // Clean up body overflow locks before caching or visiting new pages
+        document.addEventListener('turbo:before-visit', () => {
+            document.body.style.overflow = '';
+        });
+        document.addEventListener('turbo:before-cache', () => {
+            document.body.style.overflow = '';
+        });
+
         document.addEventListener('turbo:frame-missing', (event) => {
             event.preventDefault();
             // Do a full page visit instead of ignoring the response
@@ -211,15 +219,7 @@
             }
         });
 
-        // Search functionality
-        function handleSearch(event) {
-            if (event.key === 'Enter') {
-                const query = event.target.value.trim();
-                if (query) {
-                    window.location.href = `/search/?q=${encodeURIComponent(query)}`;
-                }
-            }
-        }
+
 
         // Notification Dropdown Toggle
         function toggleNotifications(event) {

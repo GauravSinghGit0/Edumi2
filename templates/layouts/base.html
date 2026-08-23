@@ -36,10 +36,11 @@
 
 <body>
     <script>
-        // Apply theme immediately to body before any parsing to prevent FOUC
+        // Apply theme immediately to document root and body to avoid light-mode flash
         (function() {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
                 document.body.classList.add('dark-mode');
             }
         })();

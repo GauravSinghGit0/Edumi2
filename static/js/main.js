@@ -128,3 +128,20 @@ if (typeof document.addEventListener === 'function') {
     document.addEventListener('turbo:load', initAlertDismissal);
 }
 
+// Global Hotwired Turbo resets to prevent scrolling lock-ups, lingering backdrops, and state leaks
+function globalTurboReset() {
+    document.body.style.overflow = '';
+    document.body.classList.remove('modal-open');
+    document.body.classList.remove('messages-layout-active');
+    
+    // Clean up any bootstrap modal backdrops that may linger after navigation
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+}
+
+if (typeof document.addEventListener === 'function') {
+    document.addEventListener('turbo:before-visit', globalTurboReset);
+    document.addEventListener('turbo:before-cache', globalTurboReset);
+    document.addEventListener('turbo:load', globalTurboReset);
+}
+

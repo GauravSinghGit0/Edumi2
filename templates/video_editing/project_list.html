@@ -2,14 +2,15 @@
 {% block page_title %}Video Editor{% endblock %}
 
 {% block ve_content %}
-<div class="ve-page">
+<div class="ved-container">
 
-    <div class="ve-page-head">
+    <!-- Page Header — matches Meetings page pattern -->
+    <div class="ved-page-header">
         <div>
-            <h1 class="ve-page-title">Video Editor</h1>
-            <p class="ve-page-sub">Upload, trim, merge and annotate your lecture recordings.</p>
+            <h1>Video Editor</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--gray-600, #4b5563); margin: 2px 0 0 0;">Upload, trim, merge, and annotate your lecture recordings.</p>
         </div>
-        <button type="button" class="ve-btn ve-btn-primary" id="open-upload-modal">
+        <button type="button" class="ved-btn ved-btn-primary" id="open-upload-modal">
             <i data-lucide="upload" style="width:15px;height:15px;"></i>
             Upload Video
         </button>
@@ -43,13 +44,23 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="ve-empty-state">
-        <div class="ve-empty-icon">
-            <i data-lucide="film" style="width:40px;height:40px;color:var(--primary);"></i>
+    <!-- Empty state — matches Meetings empty state pattern -->
+    <div class="ved-empty-state">
+        <div class="ved-empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="2" y1="7" x2="7" y2="7"></line>
+                <line x1="2" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="22" y2="17"></line>
+                <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
         </div>
         <h2>No projects yet</h2>
         <p>Upload a video to start trimming, muting, adding text overlays, and merging clips.</p>
-        <button type="button" class="ve-btn ve-btn-primary" id="open-upload-modal-empty">
+        <button type="button" class="ved-btn ved-btn-primary" id="open-upload-modal-empty">
             <i data-lucide="upload" style="width:15px;height:15px;"></i>
             Upload your first video
         </button>
@@ -305,5 +316,140 @@
     #upload-form { display: none; }
     .lucide-spin { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* === Video Editor page — matches Meetings page UI === */
+    .ved-container {
+        padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    /* Header — identical to .meetings-header */
+    .ved-page-header {
+        background: var(--white);
+        border-radius: clamp(10px, 1.5vw, 12px);
+        padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem);
+        margin-bottom: clamp(1rem, 2vh, 1.5rem);
+        border: 1px solid var(--gray-200, #e5e7eb);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: clamp(0.75rem, 1.5vw, 1rem);
+    }
+
+    .ved-page-header h1 {
+        font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+        font-weight: 700;
+        color: var(--gray-900, #111827);
+        margin: 0;
+    }
+
+    /* Button — identical to .btn-schedule */
+    .ved-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: clamp(0.625rem, 1.2vh, 0.75rem) clamp(1rem, 2vw, 1.25rem);
+        border-radius: clamp(8px, 1.2vw, 10px);
+        font-size: clamp(0.8rem, 1.4vw, 0.875rem);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .ved-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .ved-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: #fff;
+    }
+
+    .ved-btn-primary:disabled {
+        opacity: 0.65;
+        transform: none;
+        cursor: not-allowed;
+    }
+
+    /* Empty state — identical to .empty-state in meetings */
+    .ved-empty-state {
+        background: var(--white);
+        border-radius: clamp(12px, 2vw, 16px);
+        padding: clamp(2rem, 5vh, 4rem) clamp(1.5rem, 3vw, 2rem);
+        text-align: center;
+        border: 2px dashed var(--gray-300, #d1d5db);
+    }
+
+    .ved-empty-icon {
+        width: clamp(60px, 10vw, 80px);
+        height: clamp(60px, 10vw, 80px);
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto clamp(1rem, 2vh, 1.5rem);
+    }
+
+    .ved-empty-icon svg {
+        width: clamp(30px, 5vw, 38px);
+        height: clamp(30px, 5vw, 38px);
+        stroke: var(--gray-400, #9ca3af);
+    }
+
+    .ved-empty-state h2 {
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        font-weight: 700;
+        color: var(--gray-900, #111827);
+        margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
+    }
+
+    .ved-empty-state p {
+        font-size: clamp(0.875rem, 1.6vw, 0.95rem);
+        color: var(--gray-600, #4b5563);
+        margin-bottom: clamp(1.25rem, 2vh, 1.5rem);
+    }
+
+    /* Project grid still uses ve-* classes from editor.css */
+    .ved-container .ve-project-grid {
+        /* inherits from editor.css ve-project-grid */
+    }
+
+    /* Dark mode */
+    body.dark-mode .ved-page-header {
+        background: var(--bg-card);
+        border-color: var(--border-color);
+    }
+    body.dark-mode .ved-page-header h1 {
+        color: var(--text-main);
+    }
+    body.dark-mode .ved-empty-state {
+        background: var(--bg-card);
+        border-color: var(--border-color);
+    }
+    body.dark-mode .ved-empty-state h2 {
+        color: var(--text-main);
+    }
+    body.dark-mode .ved-empty-state p {
+        color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+        .ved-page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .ved-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
 </style>
+
 {% endblock %}

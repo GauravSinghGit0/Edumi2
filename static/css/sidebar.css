@@ -105,13 +105,13 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
 }
 
 .sidebar-nav-title {
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-muted, var(--color-text-muted));
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-main, #334155);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     padding: 0 var(--space-sm);
-    margin-bottom: var(--space-xs);
+    margin-bottom: var(--space-sm);
     white-space: nowrap;
 }
 

@@ -257,7 +257,10 @@ button.btn-freeze:hover {
 {% block content %}
 <div class="meetings-container">
     <div class="meetings-header">
-        <h1>{% if is_admin %}All Meetings{% else %}My Meetings{% endif %}</h1>
+        <div>
+            <h1>{% if is_admin %}All Meetings{% else %}My Meetings{% endif %}</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--gray-600, #4b5563); margin: 2px 0 0 0;">{% if is_admin %}Monitor all scheduled and live meetings across the platform.{% else %}Schedule, manage, and join your virtual class sessions.{% endif %}</p>
+        </div>
         {% if not is_admin %}
         <a href="{% url 'create_meeting' %}" class="btn-schedule">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">

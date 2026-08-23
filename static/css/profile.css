@@ -167,7 +167,7 @@ body.dark-mode {
 .profile-container {
   max-width: 1140px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: clamp(1rem, 2vw, 1.5rem);
   width: 100%;
   box-sizing: border-box;
 }
@@ -684,6 +684,10 @@ body.dark-mode {
   margin-bottom: 24px;
   overflow: visible;
   transition: var(--transition);
+}
+
+.profile-card .card-header {
+  margin: 0;
 }
 
 .profile-card:hover {

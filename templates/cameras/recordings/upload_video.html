@@ -4,270 +4,407 @@
 {% block title %}Upload Lecture - Edumi{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0" style="border-radius: 16px;">
-                <div class="card-header bg-white upload-header-override border-0">
-                    <h3 class="font-weight-bold">Upload Your Lecture</h3>
-                    <p class="text-muted">Share your knowledge with students around the world.</p>
-                </div>
-                <div class="card-body px-5 pb-5">
-                    <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        <!-- Step 1: Video File Selection -->
-                        <div id="step1">
-                            <div class="upload-zone mb-4" id="dropZone">
-                                <input type="file" name="video" class="upload-input" id="videoInput" accept="video/*" required>
-                                <div id="uploadPlaceholder">
-                                    <div class="upload-icon-wrapper text-primary">
-                                        <i data-lucide="upload-cloud" style="width: 44px; height: 44px;"></i>
-                                    </div>
-                                    <h5 class="font-weight-bold mb-1">Select video file to upload</h5>
-                                    <p class="text-muted small mb-3">Your videos will be private until you publish them.</p>
-                                    <button type="button" class="btn btn-primary px-4 py-2 font-weight-bold" style="border-radius: 8px;">Select File</button>
-                                </div>
-                                <div id="fileInfo" class="d-none">
-                                    <div class="upload-icon-wrapper text-success">
-                                        <i data-lucide="check-circle" style="width: 44px; height: 44px;"></i>
-                                    </div>
-                                    <h5 id="fileName" class="font-weight-bold mb-1"></h5>
-                                    <p id="fileSize" class="text-muted small mb-3"></p>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnChangeFile">Change File</button>
-                                </div>
-                            </div>
-                        </div>
+<div class="uv-container">
 
-                        <!-- Step 2: Details (Visible after file selection) -->
-                        <div id="step2" class="d-none">
-                            <hr class="my-4 opacity-10">
-                            
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="mb-4">
-                                        <label class="form-label font-weight-bold">Title (required)</label>
-                                        <input type="text" name="title" class="form-control form-control-lg" placeholder="Add a title that describes your video" required>
-                                    </div>
-
-                                    <div class="mb-4">
-                                        <label class="form-label font-weight-bold">Description</label>
-                                        <textarea name="description" class="form-control" rows="5" placeholder="Tell viewers about your video"></textarea>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <div class="mb-4">
-                                        <label class="form-label font-weight-bold">Thumbnail</label>
-                                        <p class="text-muted small">Select or upload a picture that shows what's in your video.</p>
-                                        <div class="thumbnail-selector" id="thumbSelector">
-                                            <input type="file" name="thumbnail" id="thumbInput" accept="image/*" class="d-none">
-                                            <div id="thumbPreviewWrapper" class="w-100 aspect-ratio-16-9 bg-light rounded d-flex flex-column align-items-center justify-content-center border overflow-hidden">
-                                                <i data-lucide="image-plus" class="text-muted mb-2"></i>
-                                                <span class="text-muted small">Upload thumbnail</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-4">
-                                        <label class="form-label font-weight-bold">Link to Camera</label>
-                                        <select name="camera" class="form-select">
-                                            <option value="">Not linked to a camera</option>
-                                            {% for camera in cameras %}
-                                            <option value="{{ camera.id }}">{{ camera.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="uploadProgress" class="d-none mb-4">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="small font-weight-bold">Uploading and Processing...</span>
-                                    <span class="small text-muted" id="progressPercent">0%</span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width: 0%;"></div>
-                                </div>
-                                <p class="text-center mt-2 small text-muted">Don't close this tab until upload is complete.</p>
-                            </div>
-
-                            <div class="d-flex justify-content-end gap-3 pt-3">
-                                <button type="button" class="btn btn-light px-4" id="btnCancelUpload">Cancel</button>
-                                <button type="submit" class="btn btn-primary px-5 font-weight-bold" id="submitBtn">Continue to Editor</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Page Header — matches Meetings header pattern -->
+    <div class="uv-page-header">
+        <div>
+            <h1>Upload Lecture</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--gray-600, #4b5563); margin: 2px 0 0 0;">Share your knowledge and lecture recordings with students.</p>
         </div>
     </div>
+
+    <!-- Upload Card -->
+    <div class="uv-card">
+        <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Step 1: Video File Selection -->
+            <div id="step1">
+                <div class="uv-drop-zone" id="dropZone">
+                    <input type="file" name="video" class="uv-file-input" id="videoInput" accept="video/*" required>
+                    <div id="uploadPlaceholder">
+                        <div class="uv-icon-circle">
+                            <i data-lucide="upload-cloud" style="width:32px;height:32px;"></i>
+                        </div>
+                        <h5>Select video file to upload</h5>
+                        <p>Your videos will be private until you publish them.</p>
+                        <button type="button" class="uv-btn uv-btn-primary">Select File</button>
+                    </div>
+                    <div id="fileInfo" class="d-none">
+                        <div class="uv-icon-circle uv-icon-success">
+                            <i data-lucide="check-circle" style="width:32px;height:32px;"></i>
+                        </div>
+                        <h5 id="fileName"></h5>
+                        <p id="fileSize" class="uv-muted"></p>
+                        <button type="button" class="uv-btn uv-btn-ghost" id="btnChangeFile">Change File</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Details (Visible after file selection) -->
+            <div id="step2" class="d-none">
+                <hr class="uv-divider">
+
+                <div class="uv-form-grid">
+                    <!-- Left: Title + Description -->
+                    <div class="uv-col-main">
+                        <div class="uv-field">
+                            <label class="uv-label">Title <span class="uv-required">(required)</span></label>
+                            <input type="text" name="title" class="uv-input uv-input-lg"
+                                placeholder="Add a title that describes your video" required>
+                        </div>
+                        <div class="uv-field">
+                            <label class="uv-label">Description</label>
+                            <textarea name="description" class="uv-input uv-textarea" rows="5"
+                                placeholder="Tell viewers about your video"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Right: Thumbnail + Camera -->
+                    <div class="uv-col-side">
+                        <div class="uv-field">
+                            <label class="uv-label">Thumbnail</label>
+                            <p class="uv-muted uv-hint">Select or upload a picture that shows what's in your video.</p>
+                            <div class="uv-thumb-selector" id="thumbSelector">
+                                <input type="file" name="thumbnail" id="thumbInput" accept="image/*" class="d-none">
+                                <div id="thumbPreviewWrapper" class="uv-thumb-preview">
+                                    <i data-lucide="image-plus" style="width:20px;height:20px;" class="uv-muted"></i>
+                                    <span class="uv-muted" style="font-size:12px;margin-top:6px;">Upload thumbnail</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="uv-field">
+                            <label class="uv-label">Link to Camera</label>
+                            <select name="camera" class="uv-input uv-select">
+                                <option value="">Not linked to a camera</option>
+                                {% for camera in cameras %}
+                                <option value="{{ camera.id }}">{{ camera.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div id="uploadProgress" class="d-none uv-progress-wrap">
+                    <div class="uv-progress-header">
+                        <span>Uploading and Processing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="uv-progress-bar-track">
+                        <div class="uv-progress-bar-fill" id="progressBar" style="width:0%;"></div>
+                    </div>
+                    <p class="uv-muted" style="text-align:center;font-size:12px;margin-top:8px;">Don't close this tab until upload is complete.</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="uv-actions">
+                    <button type="button" class="uv-btn uv-btn-ghost" id="btnCancelUpload">Cancel</button>
+                    <button type="submit" class="uv-btn uv-btn-primary" id="submitBtn">Continue to Editor</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
 </div>
 
 <style>
-    /* Card Header Flex Override */
-    .card-header.upload-header-override {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        padding: 30px 24px 20px 24px !important;
-        border-bottom: none !important;
-    }
-    
-    .card-header.upload-header-override h3 {
-        color: var(--text-main) !important;
-        font-weight: 700;
-        margin-bottom: 6px !important;
-    }
-    
-    .card-header.upload-header-override p {
-        color: var(--text-muted) !important;
-        margin: 0 !important;
-        font-size: 14px;
-    }
+/* ===== Upload Video Page matching Meetings page UI ===== */
 
-    /* Upload Zone */
-    .upload-zone {
-        border: 2px dashed var(--border-color);
-        border-radius: 16px;
-        padding: 60px 20px;
-        transition: all 0.25s ease;
-        background: var(--bg-body);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        position: relative;
-    }
-    
-    .upload-zone:hover, .upload-zone.dragover {
-        border-color: var(--primary);
-        background: var(--hover-bg);
-    }
-    
-    .upload-input {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
-        opacity: 0;
-        cursor: pointer;
-        z-index: 10;
-    }
-    
-    #uploadPlaceholder, #fileInfo {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        width: 100%;
-    }
-    
-    .upload-icon-wrapper {
-        background: var(--hover-bg);
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        margin-bottom: 20px;
-        border: 1px solid var(--border-color);
-        transition: all 0.25s ease;
-    }
-    
-    .upload-zone:hover .upload-icon-wrapper {
-        border-color: var(--primary);
-        color: var(--primary) !important;
-        transform: translateY(-4px);
-    }
+.uv-container {
+    padding: clamp(1rem, 2vw, 1.5rem);
+}
 
-    /* Thumbnail Selector */
-    .thumbnail-selector {
-        cursor: pointer;
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    
-    .thumbnail-selector:hover {
-        transform: scale(1.01);
-    }
-    
-    #thumbPreviewWrapper {
-        aspect-ratio: 16/9;
-        background: var(--hover-bg);
-        border: 1px dashed var(--border-color);
-        border-radius: 8px;
-        transition: border-color 0.2s ease;
-    }
-    
-    .thumbnail-selector:hover #thumbPreviewWrapper {
-        border-color: var(--primary);
-    }
-    
-    #thumbPreviewWrapper img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+.uv-page-header {
+    background: var(--white);
+    border-radius: clamp(10px, 1.5vw, 12px);
+    padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem);
+    margin-bottom: clamp(1rem, 2vh, 1.5rem);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+}
 
-    /* Input & Form Styling */
-    .form-control, .form-select {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border-color);
-        color: var(--text-main);
-        border-radius: 8px;
-        font-size: 14px;
-        padding: 10px 14px;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        background-color: var(--bg-card);
-        border-color: var(--primary);
-        color: var(--text-main);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-    }
-    
-    .form-control-lg {
-        font-size: 16px;
-        padding: 12px 16px;
-        font-weight: 500;
-    }
-    
-    .form-label {
-        color: var(--text-main);
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-    
-    /* Dark Mode Settings override */
-    body.dark-mode .card {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border-color) !important;
-    }
-    
-    body.dark-mode .bg-white {
-        background-color: var(--bg-card) !important;
-    }
+.uv-page-header h1 {
+    font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+    font-weight: 700;
+    color: var(--gray-900, #111827);
+    margin: 0;
+}
 
-    /* Progress bar */
-    .progress {
-        background-color: var(--border-color);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-bar {
-        background-color: var(--primary);
-    }
+.uv-card {
+    background: var(--white);
+    border-radius: clamp(12px, 2vw, 16px);
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    border: 2px dashed var(--gray-300, #d1d5db);
+}
+
+.uv-drop-zone {
+    border: 2px dashed var(--gray-300, #d1d5db);
+    border-radius: 12px;
+    padding: 56px 20px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-body, #f9fafb);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.uv-drop-zone:hover,
+.uv-drop-zone.dragover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.04);
+}
+
+.uv-file-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#uploadPlaceholder,
+#fileInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+}
+
+.uv-drop-zone h5 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900, #111827);
+    margin: 0 0 6px;
+}
+
+.uv-drop-zone p {
+    font-size: 13px;
+    color: var(--gray-500, #6b7280);
+    margin: 0 0 16px;
+}
+
+.uv-icon-circle {
+    width: clamp(60px, 10vw, 72px);
+    height: clamp(60px, 10vw, 72px);
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--gray-500, #6b7280);
+    transition: all 0.2s ease;
+}
+
+.uv-drop-zone:hover .uv-icon-circle {
+    background: linear-gradient(135deg, rgba(102,126,234,0.12) 0%, rgba(118,75,162,0.12) 100%);
+    color: #667eea;
+    transform: translateY(-3px);
+}
+
+.uv-icon-success {
+    background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(22,163,74,0.12) 100%) !important;
+    color: #16a34a !important;
+}
+
+.uv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: clamp(0.625rem, 1.2vh, 0.75rem) clamp(1rem, 2vw, 1.25rem);
+    border-radius: clamp(8px, 1.2vw, 10px);
+    font-size: clamp(0.8rem, 1.4vw, 0.875rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.uv-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.uv-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    color: #fff;
+}
+
+.uv-btn-primary:disabled {
+    opacity: 0.65;
+    transform: none;
+    cursor: not-allowed;
+}
+
+.uv-btn-ghost {
+    background: var(--gray-100, #f3f4f6);
+    color: var(--gray-700, #374151);
+    border: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.uv-btn-ghost:hover {
+    background: var(--gray-200, #e5e7eb);
+    transform: translateY(-1px);
+}
+
+.uv-divider {
+    border: none;
+    border-top: 1px solid var(--gray-200, #e5e7eb);
+    margin: 28px 0;
+}
+
+.uv-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 28px;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .uv-form-grid { grid-template-columns: 1fr; }
+}
+
+.uv-field { margin-bottom: 20px; }
+
+.uv-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700, #374151);
+    margin-bottom: 6px;
+}
+
+.uv-required {
+    color: var(--gray-500, #6b7280);
+    font-weight: 400;
+}
+
+.uv-muted { color: var(--gray-500, #6b7280); }
+.uv-hint { font-size: 12px; margin-bottom: 8px; margin-top: 2px; }
+
+.uv-input {
+    width: 100%;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    color: var(--gray-900, #111827);
+    border-radius: 8px;
+    font-size: 14px;
+    padding: 10px 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.uv-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.uv-input-lg {
+    font-size: 16px;
+    padding: 12px 16px;
+    font-weight: 500;
+}
+
+.uv-textarea { resize: vertical; min-height: 130px; }
+
+.uv-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+.uv-thumb-selector {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.uv-thumb-selector:hover { transform: scale(1.01); }
+
+.uv-thumb-preview {
+    aspect-ratio: 16/9;
+    background: var(--gray-50, #f9fafb);
+    border: 1px dashed var(--gray-300, #d1d5db);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.uv-thumb-selector:hover .uv-thumb-preview { border-color: #667eea; }
+
+.uv-thumb-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+.uv-progress-wrap { margin-bottom: 24px; }
+
+.uv-progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700, #374151);
+    margin-bottom: 8px;
+}
+
+.uv-progress-bar-track {
+    height: 8px;
+    background: var(--gray-200, #e5e7eb);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.uv-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.uv-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 12px;
+}
+
+/* Dark mode overrides */
+body.dark-mode .uv-page-header { background: var(--bg-card); border-color: var(--border-color); }
+body.dark-mode .uv-page-header h1 { color: var(--text-main); }
+body.dark-mode .uv-card { background: var(--bg-card); border-color: var(--border-color); }
+body.dark-mode .uv-drop-zone { background: var(--bg-body); border-color: var(--border-color); }
+body.dark-mode .uv-drop-zone h5 { color: var(--text-main); }
+body.dark-mode .uv-input { background: var(--bg-card); border-color: var(--border-color); color: var(--text-main); }
+body.dark-mode .uv-label { color: var(--text-main); }
+body.dark-mode .uv-btn-ghost { background: var(--bg-card); color: var(--text-main); border-color: var(--border-color); }
 </style>
 
 <script>
-(function() {
+(function () {
     const videoInput = document.getElementById('videoInput');
     const thumbInput = document.getElementById('thumbInput');
     const dropZone = document.getElementById('dropZone');
@@ -277,7 +414,6 @@
     const fileNameDisplay = document.getElementById('fileName');
     const fileSizeDisplay = document.getElementById('fileSize');
 
-    // Drag and drop handling
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
     });
@@ -304,7 +440,7 @@
         handleFiles(files[0]);
     }
 
-    videoInput.addEventListener('change', function(e) {
+    videoInput.addEventListener('change', function (e) {
         handleFiles(this.files[0]);
     });
 
@@ -316,11 +452,7 @@
             fileNameDisplay.textContent = file.name;
             fileSizeDisplay.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
             if (window.lucide) lucide.createIcons();
-            
-            // Scroll to details
-            setTimeout(() => {
-                step2.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
+            setTimeout(() => { step2.scrollIntoView({ behavior: 'smooth' }); }, 100);
         }
     }
 
@@ -331,36 +463,26 @@
         fileInfo.classList.add('d-none');
         step2.classList.add('d-none');
         document.getElementById('thumbPreviewWrapper').innerHTML = `
-            <i data-lucide="image-plus" class="text-muted mb-2"></i>
-            <span class="text-muted small">Upload thumbnail</span>
+            <i data-lucide="image-plus" style="width:20px;height:20px;" class="uv-muted"></i>
+            <span class="uv-muted" style="font-size:12px;margin-top:6px;">Upload thumbnail</span>
         `;
         if (window.lucide) lucide.createIcons();
     }
 
-    // Programmatic event listeners to fix global scope reference bugs
     const btnChangeFile = document.getElementById('btnChangeFile');
-    if (btnChangeFile) {
-        btnChangeFile.addEventListener('click', resetUpload);
-    }
+    if (btnChangeFile) btnChangeFile.addEventListener('click', resetUpload);
     const btnCancelUpload = document.getElementById('btnCancelUpload');
-    if (btnCancelUpload) {
-        btnCancelUpload.addEventListener('click', resetUpload);
-    }
+    if (btnCancelUpload) btnCancelUpload.addEventListener('click', resetUpload);
     const thumbSelector = document.getElementById('thumbSelector');
-    if (thumbSelector) {
-        thumbSelector.addEventListener('click', () => {
-            thumbInput.click();
-        });
-    }
+    if (thumbSelector) thumbSelector.addEventListener('click', () => thumbInput.click());
 
-    // Thumbnail preview
-    thumbInput.addEventListener('change', function(e) {
+    thumbInput.addEventListener('change', function (e) {
         const file = this.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = function (event) {
                 document.getElementById('thumbPreviewWrapper').innerHTML = `<img src="${event.target.result}">`;
-            }
+            };
             reader.readAsDataURL(file);
         }
     });
@@ -381,37 +503,26 @@
                 if (attempts > 0) {
                     await new Promise(resolve => setTimeout(resolve, Math.min(initialDelay * Math.pow(1.5, attempts - 1), 8000)));
                 }
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch(url, { method: 'POST', body: formData });
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.status === 'success' || data.success !== false) {
-                        return data;
-                    }
+                    if (data.status === 'success' || data.success !== false) return data;
                 }
                 attempts++;
             } catch (err) {
                 attempts++;
                 console.warn(`Chunk upload retry ${attempts}/${maxRetries}...`, err);
-                if (attempts >= maxRetries) {
-                    throw err;
-                }
+                if (attempts >= maxRetries) throw err;
             }
         }
         throw new Error('Chunk upload failed after maximum retries');
     }
 
-    // Form submission with progress & chunk retry resilience
-    document.getElementById('lectureUploadForm').addEventListener('submit', async function(e) {
+    document.getElementById('lectureUploadForm').addEventListener('submit', async function (e) {
         e.preventDefault();
-        
+
         const videoFile = videoInput.files[0];
-        if (!videoFile) {
-            alert('Please select a video file.');
-            return;
-        }
+        if (!videoFile) { alert('Please select a video file.'); return; }
 
         const title = this.querySelector('[name="title"]')?.value || 'Untitled Lecture';
         const description = this.querySelector('[name="description"]')?.value || '';
@@ -427,7 +538,7 @@
         progressDiv.classList.remove('d-none');
         isUploading = true;
 
-        const chunkSize = 5 * 1024 * 1024; // 5MB
+        const chunkSize = 5 * 1024 * 1024;
         const totalChunks = Math.ceil(videoFile.size / chunkSize);
         const uploadId = Date.now().toString() + Math.random().toString(36).substring(7);
 
@@ -446,9 +557,7 @@
                 formData.append('title', title);
                 formData.append('description', description);
                 if (camera) formData.append('camera', camera);
-                if (thumbFile && i === totalChunks - 1) {
-                    formData.append('thumbnail', thumbFile);
-                }
+                if (thumbFile && i === totalChunks - 1) formData.append('thumbnail', thumbFile);
 
                 const data = await sendChunkWithRetry('{% url "camera_chunked_upload" %}', formData);
 

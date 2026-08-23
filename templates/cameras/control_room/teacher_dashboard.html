@@ -4,12 +4,7 @@
 {% block extra_css %}
 <style>
     .teacher-dash-container {
-        padding: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .dash-header {
-        margin-bottom: 2.5rem;
+        padding: clamp(1rem, 2vw, 1.5rem);
     }
     .camera-grid {
         display: grid;
@@ -96,9 +91,11 @@
 
 {% block content %}
 <div class="teacher-dash-container">
-    <div class="dash-header">
-        <h1 style="font-size: 2rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">Your Classroom Cameras</h1>
-        <p style="color: #64748b;">Manage your assigned cameras and start live lectures.</p>
+    <div class="page-header-bar">
+        <div>
+            <h1>Your Classroom Cameras</h1>
+            <p>Manage your assigned cameras and start live lectures.</p>
+        </div>
     </div>
 
     <div class="camera-grid">

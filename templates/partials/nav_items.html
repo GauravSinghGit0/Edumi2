@@ -131,9 +131,20 @@
                 <span class="sidebar-nav-icon"><i data-lucide="message-square"></i></span>
                 <span class="sidebar-nav-text">Messages</span>
             </a>
+            <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'notifications_list' or '/notifications/' in request.path %}active{% endif %}">
+                <span class="sidebar-nav-icon"><i data-lucide="bell"></i></span>
+                <span class="sidebar-nav-text">Notifications</span>
+            </a>
+        </div>
+        <div class="sidebar-nav-section">
+            <div class="sidebar-nav-title">Account</div>
             <a href="{% url 'profile_view' user.username %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'profile_view' or '/profile/' in request.path %}active{% endif %}">
                 <span class="sidebar-nav-icon"><i data-lucide="user"></i></span>
                 <span class="sidebar-nav-text">Profile</span>
+            </a>
+            <a href="{% url 'settings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'settings' or '/settings/' in request.path %}active{% endif %}">
+                <span class="sidebar-nav-icon"><i data-lucide="settings"></i></span>
+                <span class="sidebar-nav-text">Settings</span>
             </a>
         </div>
     {% endif %}

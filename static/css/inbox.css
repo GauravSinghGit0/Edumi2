@@ -155,7 +155,7 @@ body.dark-mode .messages-shell {
   transition: stroke 0.2s;
 }
 
-.search-field {
+.search-input-pill .search-field {
   width: 100%;
   padding: 10px 16px 10px 40px;
   border: 1px solid var(--msg-border);
@@ -168,13 +168,13 @@ body.dark-mode .messages-shell {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.search-field:focus {
+.search-input-pill .search-field:focus {
   background: var(--msg-bg-card);
   border-color: var(--msg-accent);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
-.search-field:focus + .search-pill-icon {
+.search-input-pill .search-field:focus + .search-pill-icon {
   stroke: var(--msg-accent);
 }
 

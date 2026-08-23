@@ -4,25 +4,25 @@
 {% block title %}Manage Lectures - Edumi{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-section">
+    <div class="page-header-bar">
         <div>
-            <h2 class="font-weight-bold mb-1">My Lectures</h2>
-            <p class="text-muted small mb-0">Manage your recorded sessions and uploaded videos.</p>
+            <h1>My Lectures</h1>
+            <p>Manage your recorded sessions and uploaded videos.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'recording_analytics' %}" class="btn btn-outline-primary d-flex align-items-center gap-2">
-                <i data-lucide="bar-chart-2" style="width: 20px;"></i>
+        <div class="page-header-actions">
+            <a href="{% url 'recording_analytics' %}" class="btn-page-action-outline">
+                <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
                 Analytics Studio
             </a>
-            <a href="{% url 'camera_upload_video' %}" class="btn btn-primary d-flex align-items-center gap-2">
-                <i data-lucide="upload-cloud" style="width: 20px;"></i>
+            <a href="{% url 'camera_upload_video' %}" class="btn-page-action">
+                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
                 Upload New
             </a>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 12px;">
+    <div style="background: var(--white); border-radius: clamp(10px, 1.5vw, 12px); border: 1px solid var(--gray-200); overflow: hidden;">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
@@ -500,5 +500,6 @@
         border-top: 1px solid var(--border-color);
         margin: 6px 0;
     }
+
 </style>
 {% endblock %}

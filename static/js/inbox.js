@@ -1,6 +1,11 @@
 /* static/js/inbox.js - Client controller for Messaging & Inbox */
 
 function enableMessagesLayout() {
+  const hasShell = document.querySelector('.messages-shell');
+  if (!hasShell) {
+    document.body.classList.remove('messages-layout-active');
+    return;
+  }
   document.body.classList.add('messages-layout-active');
   scrollToBottom(false);
 }

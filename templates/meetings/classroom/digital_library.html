@@ -10,21 +10,14 @@
 
 {% block content %}
 <div class="materials-hub-container">
-    <!-- Header Banner -->
-    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); border-radius: 1.5rem; padding: 2.5rem 3rem; color: white; margin-bottom: 2rem; position: relative; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.3);">
-        <div style="position: relative; z-index: 10;">
-            <div style="font-size: 0.75rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-                CENTRALIZED REPOSITORY & AI VECTOR STORE
-            </div>
-            <h1 style="margin: 0 0 0.75rem 0; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.025em;">
-                Global Digital Library
-            </h1>
-            <p style="margin: 0; color: rgba(255,255,255,0.85); font-size: 0.95rem; max-width: 680px; line-height: 1.6;">
-                Access textbooks, lecture slides, study notes, and research resources across all your enrolled classes, all indexed for semantic retrieval and conceptual queries.
-            </p>
+    <!-- Page Header — matches Meetings page pattern -->
+    <div style="background: var(--white); border-radius: clamp(10px, 1.5vw, 12px); padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem); margin-bottom: clamp(1rem, 2vh, 1.5rem); border: 1px solid var(--gray-200, #e5e7eb); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: clamp(1.125rem, 2.5vw, 1.375rem); font-weight: 700; color: var(--gray-900, #111827); margin: 0 0 2px 0;">Digital Library</h1>
+            <p style="font-size: 13px; font-weight: 400; color: var(--gray-500, #6b7280); margin: 0;">Browse textbooks, slides, notes, and videos across all your enrolled classes.</p>
         </div>
     </div>
+
 
     <!-- Search & Filter Controls -->
     <div class="materials-toolbar">
