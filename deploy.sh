@@ -293,18 +293,33 @@ ENV_FILE="$APP_DIR/.env"
 info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)..."
 
 # Preserve existing secrets if they exist
-EXISTING_SECRET=$(grep '^SECRET_KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
-EXISTING_FACE=$(grep '^FACE_ENCRYPTION_KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+EXISTING_SECRET=$(grep '^SECRET_KEY=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+EXISTING_FACE=$(grep '^FACE_ENCRYPTION_KEY=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 
 # Preserve existing SMTP configurations
-EXISTING_EMAIL_BACKEND=$(grep '^EMAIL_BACKEND=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "django.core.mail.backends.smtp.EmailBackend")
-EXISTING_EMAIL_HOST=$(grep '^EMAIL_HOST=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
-EXISTING_EMAIL_PORT=$(grep '^EMAIL_PORT=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
-EXISTING_EMAIL_USE_TLS=$(grep '^EMAIL_USE_TLS=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "True")
-EXISTING_EMAIL_USE_SSL=$(grep '^EMAIL_USE_SSL=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "False")
-EXISTING_EMAIL_HOST_USER=$(grep '^EMAIL_HOST_USER=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
-EXISTING_EMAIL_HOST_PASSWORD=$(grep '^EMAIL_HOST_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
-EXISTING_DEFAULT_FROM_EMAIL=$(grep '^DEFAULT_FROM_EMAIL=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+EXISTING_EMAIL_BACKEND=$(grep '^EMAIL_BACKEND=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_BACKEND" ] && EXISTING_EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend"
+
+EXISTING_EMAIL_HOST=$(grep '^EMAIL_HOST=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_HOST" ] && EXISTING_EMAIL_HOST="smtp.gmail.com"
+
+EXISTING_EMAIL_PORT=$(grep '^EMAIL_PORT=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_PORT" ] && EXISTING_EMAIL_PORT="587"
+
+EXISTING_EMAIL_USE_TLS=$(grep '^EMAIL_USE_TLS=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_USE_TLS" ] && EXISTING_EMAIL_USE_TLS="True"
+
+EXISTING_EMAIL_USE_SSL=$(grep '^EMAIL_USE_SSL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_USE_SSL" ] && EXISTING_EMAIL_USE_SSL="False"
+
+EXISTING_EMAIL_HOST_USER=$(grep '^EMAIL_HOST_USER=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_HOST_USER" ] && EXISTING_EMAIL_HOST_USER="YOUR_EMAIL@gmail.com"
+
+EXISTING_EMAIL_HOST_PASSWORD=$(grep '^EMAIL_HOST_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_EMAIL_HOST_PASSWORD" ] && EXISTING_EMAIL_HOST_PASSWORD="YOUR_APP_PASSWORD"
+
+EXISTING_DEFAULT_FROM_EMAIL=$(grep '^DEFAULT_FROM_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+[ -z "$EXISTING_DEFAULT_FROM_EMAIL" ] && EXISTING_DEFAULT_FROM_EMAIL="EduMi Support <YOUR_EMAIL@gmail.com>"
 
 if [ -n "$EXISTING_SECRET" ]; then
     SECRET_KEY=$EXISTING_SECRET
