@@ -116,14 +116,14 @@ def login_view(request):
                     'unverified_error': True,
                     'unverified_email': user.email,
                     'entered_username': username_or_email,
-                }, status=403)
+                }, status=422)
 
             # Check if user is active
             if not user.is_active:
                 return render(request, 'accounts/auth/login.html', {
                     'error': 'This account has been disabled. Please contact support.',
                     'entered_username': username_or_email,
-                }, status=403)
+                }, status=422)
 
             # Validated & Verified -> Log in
             login(request, user)
