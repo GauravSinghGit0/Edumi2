@@ -292,8 +292,31 @@ step "STEP 6: Environment File (.env) Setup (HTTPS Only)"
 ENV_FILE="$APP_DIR/.env"
 info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)..."
 
-SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
-FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
+# Preserve existing secrets if they exist
+EXISTING_SECRET=$(grep '^SECRET_KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+EXISTING_FACE=$(grep '^FACE_ENCRYPTION_KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+
+# Preserve existing SMTP configurations
+EXISTING_EMAIL_BACKEND=$(grep '^EMAIL_BACKEND=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "django.core.mail.backends.smtp.EmailBackend")
+EXISTING_EMAIL_HOST=$(grep '^EMAIL_HOST=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+EXISTING_EMAIL_PORT=$(grep '^EMAIL_PORT=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+EXISTING_EMAIL_USE_TLS=$(grep '^EMAIL_USE_TLS=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "True")
+EXISTING_EMAIL_USE_SSL=$(grep '^EMAIL_USE_SSL=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "False")
+EXISTING_EMAIL_HOST_USER=$(grep '^EMAIL_HOST_USER=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+EXISTING_EMAIL_HOST_PASSWORD=$(grep '^EMAIL_HOST_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+EXISTING_DEFAULT_FROM_EMAIL=$(grep '^DEFAULT_FROM_EMAIL=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f 2- || echo "")
+
+if [ -n "$EXISTING_SECRET" ]; then
+    SECRET_KEY=$EXISTING_SECRET
+else
+    SECRET_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 50 2>/dev/null || $VENV_PYTHON -c "import secrets; print(secrets.token_urlsafe(40))" 2>/dev/null || echo "secret_edumi_$(date +%s)_key")
+fi
+
+if [ -n "$EXISTING_FACE" ]; then
+    FACE_KEY=$EXISTING_FACE
+else
+    FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
+fi
 
 DATABASE_URL_STR="postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
 
@@ -328,6 +351,16 @@ CAMERA_SERVICE_URL=http://127.0.0.1:8008
 
 FFMPEG_BINARY=ffmpeg
 FFPROBE_BINARY=ffprobe
+
+# SMTP Email Configuration
+EMAIL_BACKEND=$EXISTING_EMAIL_BACKEND
+EMAIL_HOST=$EXISTING_EMAIL_HOST
+EMAIL_PORT=$EXISTING_EMAIL_PORT
+EMAIL_USE_TLS=$EXISTING_EMAIL_USE_TLS
+EMAIL_USE_SSL=$EXISTING_EMAIL_USE_SSL
+EMAIL_HOST_USER=$EXISTING_EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD=$EXISTING_EMAIL_HOST_PASSWORD
+DEFAULT_FROM_EMAIL=$EXISTING_DEFAULT_FROM_EMAIL
 EOF
 log ".env updated for HTTPS & $DOMAIN."
 
