@@ -241,11 +241,9 @@ bind_addresses:
 rtc:
   tcp_port: 7881
   udp_port: 7882
-  use_external_ip: true
+  use_external_ip: false
   node_ip: "$LAN_IP"
-  stun_servers:
-    - stun.l.google.com:19302
-    - stun1.l.google.com:19302
+  stun_servers: []
 
 keys:
   $LK_KEY: $LK_SECRET
