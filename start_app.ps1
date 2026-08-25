@@ -190,7 +190,8 @@ bind_addresses:
 rtc:
   tcp_port: 7881
   udp_port: 7882
-  use_external_ip: false
+  use_external_ip: true
+  node_ip: "__LAN_IP__"
   stun_servers:
     - "stun.l.google.com:19302"
     - "stun1.l.google.com:19302"
@@ -206,7 +207,7 @@ logging:
   level: info
 '@
             $lkKeyLine = '  {0}: {1}' -f $LK_KEY, $LK_SECRET
-            $newYaml = $newYamlTpl.Replace('__LK_KEY_LINE__', $lkKeyLine)
+            $newYaml = $newYamlTpl.Replace('__LK_KEY_LINE__', $lkKeyLine).Replace('__LAN_IP__', $LAN_IP)
             Set-Content -Path $LkConfigPath -Value $newYaml -Encoding UTF8
             Write-Host ("  -> LiveKit config updated (bind=0.0.0.0, STUN enabled, LAN IP={0})" -f $LAN_IP) -ForegroundColor Gray
         } catch {
