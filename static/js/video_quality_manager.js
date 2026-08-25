@@ -310,7 +310,7 @@
             }
 
             if (recommendedKey !== this.activePresetKey) {
-                console.log(`[VideoQualityManager] Auto-adjusting video quality: ${this.activePresetKey} → ${recommendedKey} (Bitrate: ${this.formatBitrate(bitrateBps)})`);
+                console.debug(`[VideoQualityManager] Auto-adjusting video quality: ${this.activePresetKey} → ${recommendedKey} (Bitrate: ${this.formatBitrate(bitrateBps)})`);
                 this.activePresetKey = recommendedKey;
 
                 if (this.roomInstance) {

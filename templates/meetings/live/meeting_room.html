@@ -18,42 +18,31 @@
             onload="console.log('LiveKit SDK (v1.15) loaded via Primary CDN')"
             onerror="this.onerror=null; this.src='https://unpkg.com/livekit-client@1.15.11/dist/livekit-client.umd.min.js'; console.warn('Primary CDN failed, trying backup...');">
     </script>
-
     <script>
         // Robust SDK Mapping and Global Initialization
         window.LiveKitBundle = null;
         
         function mapLiveKitSDK() {
-            // 1. Direct check of common global names
-            var bundle = window.LiveKit || window.LiveKitClient || window.livekit || window.livekitClient;
+            // 1. Direct check of all global UMD names
+            var bundle = window.LivekitClient || window.LiveKit || window.LiveKitClient || window.livekit || window.livekitClient;
             
-            // 2. Deep discovery: look for any object on window that has 'Room' and 'Track'
+            // 2. Fallback discovery if needed
             if (!bundle || !bundle.Room) {
-                console.log("Starting deep discovery for LiveKit SDK...");
                 for (var key in window) {
                     if (key.toLowerCase().indexOf('livekit') !== -1 && window[key] && window[key].Room) {
                         bundle = window[key];
-                        console.log("Deep discovery found SDK at window." + key);
                         break;
                     }
                 }
             }
 
             // 3. Structural validation and mapping
-            if (bundle) {
-                // If it's the v2 bundle, symbols like Room, Track are directly on the bundle
-                if (bundle.Room) {
-                    window.LiveKitBundle = bundle;
-                    console.log("LiveKit SDK successfully mapped via Room property.");
-                    return true;
+            if (bundle && bundle.Room) {
+                window.LiveKitBundle = bundle;
+                if (typeof bundle.setLogLevel === 'function') {
+                    try { bundle.setLogLevel('warn'); } catch(_) {}
                 }
-                
-                // Sometimes it's nested (version dependent)
-                if (bundle.LiveKit && bundle.LiveKit.Room) {
-                    window.LiveKitBundle = bundle.LiveKit;
-                    console.log("LiveKit SDK successfully mapped via nested LiveKit property.");
-                    return true;
-                }
+                return true;
             }
             return false;
         }
