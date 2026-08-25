@@ -106,8 +106,9 @@ if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
     ufw allow 8008/tcp 2>/dev/null || true
     ufw allow 7880/tcp 2>/dev/null || true
     ufw allow 7881/tcp 2>/dev/null || true
+    ufw allow 7882/udp 2>/dev/null || true
     ufw allow 50000:50200/udp 2>/dev/null || true
-    info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881 allowed)."
+    info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881, 7882/udp allowed)."
 fi
 
 info "Checking system requirements..."
@@ -131,10 +132,12 @@ if [ "$IS_ROOT" = true ]; then
         info "Configuring UFW firewall rules for HTTP, HTTPS, and LiveKit WebRTC..."
         ufw allow 80/tcp >/dev/null 2>&1 || true
         ufw allow 443/tcp >/dev/null 2>&1 || true
+        ufw allow 8008/tcp >/dev/null 2>&1 || true
         ufw allow 7880/tcp >/dev/null 2>&1 || true
         ufw allow 7881/tcp >/dev/null 2>&1 || true
+        ufw allow 7882/udp >/dev/null 2>&1 || true
         ufw allow 50000:50200/udp >/dev/null 2>&1 || true
-        log "Firewall ports allowed (80, 443, 7880, 7881, 50000-50200/udp)."
+        log "Firewall ports allowed (80, 443, 8008, 7880, 7881, 7882/udp, 50000-50200/udp)."
     fi
 fi
 

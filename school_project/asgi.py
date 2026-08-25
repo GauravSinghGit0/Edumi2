@@ -33,12 +33,14 @@ livekit_patterns = [
     re_path(r'^livekit-proxy/?$', LiveKitProxyConsumer.as_asgi()),
 ]
 
+websocket_urlpatterns = meeting_ws + attendance_ws + account_ws + camera_ws
+
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": URLRouter(
         livekit_patterns + [
             re_path(r'', AuthMiddlewareStack(
-                URLRouter(meeting_ws + attendance_ws + account_ws + camera_ws)
+                URLRouter(websocket_urlpatterns)
             )),
         ]
     ),

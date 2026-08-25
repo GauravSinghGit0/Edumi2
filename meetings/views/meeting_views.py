@@ -388,19 +388,24 @@ def livekit_token(request, meeting_code):
     )
 
     lk_url = settings.LIVEKIT_URL
-    host = request.get_host()  # e.g. "localhost:8002" or "10.7.11.141:8002"
+    host = request.get_host()  # e.g. "eclass.dei.ac.in" or "10.31.51.110" or "localhost:8002"
     host_name = host.split(':')[0]
 
-    # If connected over HTTPS or configured with WSS, route via secure livekit-proxy to prevent mixed content blocking
-    if request.is_secure() or (isinstance(settings.LIVEKIT_URL, str) and settings.LIVEKIT_URL.startswith('wss')):
-        lk_url = f"wss://{host}/livekit-proxy"
+    is_secure = request.is_secure() or request.headers.get('x-forwarded-proto') == 'https' or (isinstance(settings.LIVEKIT_URL, str) and settings.LIVEKIT_URL.startswith('wss'))
+    ws_proto = 'wss' if is_secure else 'ws'
+
+    # If configured with /livekit-proxy/ or accessing behind Nginx standard HTTP/HTTPS ports (80/443 or no custom port):
+    if 'livekit-proxy' in str(settings.LIVEKIT_URL) or is_secure or host_name not in ['localhost', '127.0.0.1']:
+        if 'livekit-proxy' in str(settings.LIVEKIT_URL) or is_secure:
+            lk_url = f"{ws_proto}://{host}/livekit-proxy"
+        elif host_name in ['localhost', '127.0.0.1']:
+            lk_url = "ws://127.0.0.1:7880"
+        else:
+            lk_url = f"{ws_proto}://{host}/livekit-proxy"
     elif host_name in ['localhost', '127.0.0.1']:
         lk_url = "ws://127.0.0.1:7880"
-    elif host_name.startswith('192.168.') or host_name.startswith('10.') or host_name.startswith('172.'):
-        lk_url = f"ws://{host_name}:7880"
-    elif 'livekit-proxy' in lk_url:
-        proto = 'wss' if request.is_secure() else 'ws'
-        lk_url = f"{proto}://{host}/livekit-proxy"
+    else:
+        lk_url = f"{ws_proto}://{host}/livekit-proxy"
 
     return JsonResponse({'token': token, 'url': lk_url})
 

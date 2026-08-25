@@ -208,36 +208,39 @@ def edit_profile(request):
 @login_required
 def directory(request):
     """View all teachers and students in a searchable directory."""
-    teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('username')
-    students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('username')
-    return render(request, 'accounts/messaging/directory.html', {'teachers': teachers, 'students': students})
-
-
-@login_required
-def search_users(request):
-    """Search for teachers and students by name/username/email."""
     query = request.GET.get('q', '').strip()
     user_type = request.GET.get('type', 'all')
-    results = []
+
+    teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('username')
+    students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('username')
 
     if query:
-        users = User.objects.filter(
+        q_filter = (
             models.Q(username__icontains=query) |
             models.Q(first_name__icontains=query) |
             models.Q(last_name__icontains=query) |
             models.Q(email__icontains=query) |
             models.Q(userprofile__display_name__icontains=query)
-        ).select_related('userprofile').distinct()
-
+        )
         if user_type == 'teacher':
-            users = users.filter(userprofile__user_type='teacher')
+            teachers = teachers.filter(q_filter)
+            students = User.objects.none()
         elif user_type == 'student':
-            users = users.filter(userprofile__user_type='student')
+            teachers = User.objects.none()
+            students = students.filter(q_filter)
         else:
-            users = users.filter(userprofile__user_type__in=['teacher', 'student'])
+            teachers = teachers.filter(q_filter)
+            students = students.filter(q_filter)
 
-        results = users[:20]
-
-    return render(request, 'accounts/messaging/search_results.html', {
-        'query': query, 'user_type': user_type, 'results': results,
+    return render(request, 'accounts/messaging/directory.html', {
+        'teachers': teachers,
+        'students': students,
+        'query': query,
+        'user_type': user_type
     })
+
+
+@login_required
+def search_users(request):
+    """Search for teachers and students (alias to directory)."""
+    return directory(request)

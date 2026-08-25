@@ -40,9 +40,13 @@ services:
     ports:
       - "7880:7880"
       - "7881:7881"
+      - "7882:7882/udp"
       - "50000-50200:50000-50200/udp"
     environment:
       LIVEKIT_PORT: "7880"
+    volumes:
+      - ./config/livekit.yaml:/etc/livekit.yaml:ro
+    command: ["--config", "/etc/livekit.yaml"]
 
   # -------------------------------------------------
   # Django web containers – one per logical domain
