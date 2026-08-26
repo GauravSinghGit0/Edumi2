@@ -183,7 +183,7 @@ function initSidebarTabs() {
   });
 }
 
-let searchDebounceTimeout = null;
+var searchDebounceTimeout = null;
 
 function performGlobalUserSearch(query) {
   const container = document.getElementById('globalSearchResultsContainer');

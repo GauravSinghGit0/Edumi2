@@ -119,31 +119,46 @@
     /* Controls Bar */
     .controls-bar {
         background: #ffffff;
-        padding: 0.75rem 1.25rem;
+        padding: 0.65rem 1.15rem;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
         border: 1px solid #e2e8f0;
-        gap: 1rem;
-        flex-wrap: wrap;
+        gap: 0.75rem;
+        flex-wrap: nowrap;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .controls-left, .controls-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
     }
     .btn-ctrl {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.45rem;
-        padding: 0.5rem 0.95rem;
+        height: 38px;
+        padding: 0 0.95rem;
         border-radius: 8px;
         font-size: 0.8125rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
         border: 1px solid transparent;
+        white-space: nowrap;
+        box-sizing: border-box;
+        user-select: none;
     }
     .btn-ctrl-live {
         background: #4f46e5;
         color: #ffffff;
+        border-color: #4338ca;
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
     }
     .btn-ctrl-live:hover {
         background: #4338ca;
@@ -151,12 +166,20 @@
     .btn-ctrl-record {
         background: #ef4444;
         color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
     }
     .btn-ctrl-record:hover {
         background: #dc2626;
     }
     .btn-ctrl-record.recording {
         background: #b91c1c;
+        border-color: #991b1b;
+        animation: recPulse 2s infinite;
+    }
+    @keyframes recPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+        50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
     }
     .rec-dot {
         width: 8px;
@@ -166,84 +189,141 @@
         display: inline-block;
     }
     .btn-ctrl-outline {
-        background: #ffffff;
+        background: #f8fafc;
         border: 1px solid #e2e8f0;
-        color: #1e293b;
+        color: #334155;
     }
     .btn-ctrl-outline:hover {
-        background: #f8fafc;
+        background: #f1f5f9;
         border-color: #cbd5e1;
+        color: #0f172a;
     }
     .btn-ctrl-outline.active {
         background: #ecfdf5 !important;
         color: #059669 !important;
-        border-color: #a7f3d0 !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 1px 2px rgba(16, 185, 129, 0.15);
+    }
+    #selfListenBtn.active {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 1px 2px rgba(59, 130, 246, 0.15);
     }
     .ctrl-zoom-group {
         display: inline-flex;
         align-items: center;
-        gap: 0.65rem;
+        gap: 0.55rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0 0.75rem;
+        height: 38px;
+        box-sizing: border-box;
+        white-space: nowrap;
     }
     .ctrl-label {
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: #475569;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
     .ctrl-slider {
         -webkit-appearance: none;
-        width: 90px;
-        height: 5px;
-        background: #e2e8f0;
-        border-radius: 3px;
+        appearance: none;
+        width: 76px;
+        height: 4px;
+        background: #cbd5e1;
+        border-radius: 9999px;
         outline: none;
         cursor: pointer;
     }
     .ctrl-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
+        appearance: none;
         width: 14px;
         height: 14px;
         background: #6366f1;
         border-radius: 50%;
         cursor: pointer;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+        transition: transform 0.1s ease;
+    }
+    .ctrl-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
     }
     .ctrl-zoom-val {
         font-size: 0.8125rem;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
         min-width: 32px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
     .ctrl-select {
-        background: #ffffff;
+        background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 0.48rem 0.85rem;
+        height: 38px;
+        box-sizing: border-box;
+        padding: 0 2rem 0 0.75rem;
         font-size: 0.8125rem;
         font-weight: 600;
-        color: #1e293b;
+        color: #334155;
         cursor: pointer;
         outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.65rem center;
+        transition: all 0.15s ease;
+        white-space: nowrap;
     }
     .ctrl-select:hover {
+        background-color: #f1f5f9;
         border-color: #cbd5e1;
+        color: #0f172a;
+    }
+    .ctrl-select:focus {
+        border-color: #6366f1;
+        outline: none;
     }
     .btn-ctrl-square {
         width: 38px;
         height: 38px;
+        min-width: 38px;
+        box-sizing: border-box;
         border-radius: 8px;
         border: 1px solid #e2e8f0;
-        background: #ffffff;
+        background: #f8fafc;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         color: #475569;
         transition: all 0.15s ease;
+        user-select: none;
     }
     .btn-ctrl-square:hover {
-        background: #f8fafc;
+        background: #f1f5f9;
         border-color: #cbd5e1;
         color: #0f172a;
+    }
+    @media (max-width: 900px) {
+        .controls-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        .controls-left, .controls-right {
+            justify-content: space-between;
+            width: 100%;
+        }
+        .ctrl-select {
+            flex: 1;
+        }
     }
 
     .side-panel {
@@ -416,7 +496,7 @@
 
         <div class="controls-bar">
             <!-- Left: Actions & Audio -->
-            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+            <div class="controls-left">
                 <button id="streamBtn" class="btn-ctrl btn-ctrl-live" onclick="toggleStreaming()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
                     <span>Live</span>
@@ -436,7 +516,7 @@
             </div>
 
             <!-- Right: Zoom, Quality & Fullscreen -->
-            <div style="display:flex; align-items:center; gap:0.9rem; flex-wrap:wrap;">
+            <div class="controls-right">
                 <!-- Zoom Slider Group -->
                 <div class="ctrl-zoom-group">
                     <span class="ctrl-label">Zoom</span>
@@ -925,11 +1005,11 @@
                 const bufferLength = monitorAnalyzer.frequencyBinCount;
                 const dataArray = new Uint8Array(bufferLength);
                 const canvas = document.getElementById('visualizerCanvas');
-                const canvasCtx = canvas.getContext('2d');
+                const canvasCtx = canvas ? canvas.getContext('2d') : null;
 
                 function drawIdleVisualizer() {
                     const canvas = document.getElementById('visualizerCanvas');
-                    if (!canvas) return;
+                    if (!canvas || !canvasCtx) return;
                     const ctx = canvas.getContext('2d');
                     ctx.fillStyle = '#f1f5f9';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -949,6 +1029,7 @@
                 }
 
                 function drawMonitorVisualizer() {
+                    if (!canvas || !canvasCtx) return;
                     if (audio.muted || !monitorSocket || monitorSocket.readyState !== WebSocket.OPEN) {
                         drawIdleVisualizer();
                         if (audio.muted) return; // Stop loop if muted
@@ -970,7 +1051,9 @@
                         x += barWidth + 1;
                     }
                 }
-                drawMonitorVisualizer();
+                if (canvas && canvasCtx) {
+                    drawMonitorVisualizer();
+                }
 
                 sourceBuffer.addEventListener('updateend', () => {
                     if (queue.length > 0 && !sourceBuffer.updating && monitorMediaSource.readyState === 'open') {
@@ -1089,9 +1172,10 @@
             const bufferLength = analyzer.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             const canvas = document.getElementById('visualizerCanvas');
-            const canvasCtx = canvas.getContext('2d');
+            const canvasCtx = canvas ? canvas.getContext('2d') : null;
             
             function drawVisualizer() {
+                if (!canvas || !canvasCtx) return;
                 visualizerAnimationFrame = requestAnimationFrame(drawVisualizer);
                 analyzer.getByteFrequencyData(dataArray);
                 
@@ -1116,7 +1200,9 @@
                     x += barWidth + 1;
                 }
             }
-            drawVisualizer();
+            if (canvas && canvasCtx) {
+                drawVisualizer();
+            }
 
             // If self-monitoring is enabled, connect to destination
             if (isSelfMonitoring) {

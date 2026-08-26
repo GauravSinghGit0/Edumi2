@@ -114,7 +114,7 @@ function closeStreamLightbox() {
 }
 
 /* ── Emoji Picker Controls ── */
-const STREAM_EMOJIS = ['👍','❤️','🎉','👏','🔥','✨','🚀','📚','💡','💯','🙌','😊','🎓','📝','✅','⭐','🤔','👀','💪','🤩'];
+var STREAM_EMOJIS = ['👍','❤️','🎉','👏','🔥','✨','🚀','📚','💡','💯','🙌','😊','🎓','📝','✅','⭐','🤔','👀','💪','🤩'];
 
 function toggleStreamEmojiPicker() {
     const p = document.getElementById('streamEmojiPicker');
