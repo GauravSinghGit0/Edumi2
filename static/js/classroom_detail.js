@@ -166,6 +166,7 @@ function validateStreamComposer() {
     const hasFile = file && file.files && file.files.length > 0;
     btn.disabled = !(hasText || hasImg || hasFile);
 }
+window.validateStreamComposer = validateStreamComposer;
 
 /* ── Initialize Stream Composer & Dynamic Handlers ── */
 function initClassroomDetail() {
@@ -176,11 +177,14 @@ function initClassroomDetail() {
     const strip = document.getElementById('streamPreviewStrip');
 
     if (ta) {
-        ta.addEventListener('input', () => {
-            ta.style.height = 'auto';
-            ta.style.height = Math.min(ta.scrollHeight, 220) + 'px';
-            validateStreamComposer();
+        ['input', 'keyup', 'change', 'paste'].forEach(evt => {
+            ta.addEventListener(evt, () => {
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(ta.scrollHeight, 220) + 'px';
+                validateStreamComposer();
+            });
         });
+        validateStreamComposer();
     }
 
     if (imgInput) {
@@ -223,7 +227,8 @@ function initClassroomDetail() {
     }
 
     /* ── AJAX Stream Posting ── */
-    if (form) {
+    if (form && !form.dataset.bound) {
+        form.dataset.bound = 'true';
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnStreamSubmit');
@@ -244,7 +249,7 @@ function initClassroomDetail() {
                 if (data.status === 'success') {
                     appendStreamPost(data);
                     form.reset();
-                    if (ta) ta.style.height = '80px';
+                    if (ta) ta.style.height = '60px';
                     if (strip) {
                         strip.innerHTML = '';
                         strip.style.display = 'none';
@@ -266,11 +271,15 @@ function initClassroomDetail() {
         });
     }
 
+    validateStreamComposer();
     if (window.lucide) lucide.createIcons();
 }
 
 document.addEventListener('DOMContentLoaded', initClassroomDetail);
 document.addEventListener('turbo:load', initClassroomDetail);
+if (document.readyState !== 'loading') {
+    initClassroomDetail();
+}
 
 /* ── Append New Message / Post to Stream Feed ── */
 function appendStreamPost(data) {

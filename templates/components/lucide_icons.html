@@ -1,22 +1,17 @@
 <script src="https://unpkg.com/lucide@0.412.0"></script>
 <script>
-    // Robust Lucide initialization
     function initIcons() {
-        try {
-            lucide.createIcons();
-        } catch (e) {
-            console.error("Lucide error:", e);
-            // Fallback for common missing icons
-            const missingIcons = document.querySelectorAll('i[data-lucide="linkedin"]');
-            missingIcons.forEach(icon => {
-                icon.setAttribute('data-lucide', 'external-link');
-            });
-            lucide.createIcons();
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            try {
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Lucide error:", e);
+            }
         }
     }
     
     initIcons();
-    document.addEventListener('turbo:load', () => {
-        initIcons();
-    });
+    document.addEventListener('DOMContentLoaded', initIcons);
+    document.addEventListener('turbo:load', initIcons);
+    document.addEventListener('turbo:render', initIcons);
 </script>

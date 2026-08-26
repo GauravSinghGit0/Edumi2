@@ -14,7 +14,7 @@ User = get_user_model()
 @login_required
 def admin_content_manager(request):
     """Admin view to manage all videos and meetings"""
-    if not request.user.is_superuser:
+    if not is_admin(request.user):
         return redirect('home')
 
     # Get all recordings
@@ -32,7 +32,7 @@ def admin_content_manager(request):
 @login_required
 def delete_recording_admin(request, recording_id):
     """Admin deletes a recording"""
-    if not request.user.is_superuser:
+    if not is_admin(request.user):
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
     recording = get_object_or_404(CameraRecording, id=recording_id)
@@ -50,7 +50,7 @@ def delete_recording_admin(request, recording_id):
 @login_required
 def delete_meeting_admin(request, meeting_id):
     """Admin deletes a meeting"""
-    if not request.user.is_superuser:
+    if not is_admin(request.user):
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
     meeting = get_object_or_404(Meeting, id=meeting_id)

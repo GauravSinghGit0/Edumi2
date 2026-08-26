@@ -57,7 +57,9 @@ class Camera(models.Model):
     
     def has_permission(self, user):
         """Check if user has permission to access this camera"""
-        if user.is_superuser:
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser or getattr(user, 'is_staff', False) or (hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin'):
             return True
         return CameraPermission.objects.filter(camera=self, teacher=user).exists()
     

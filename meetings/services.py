@@ -25,11 +25,14 @@ def get_classroom_detail_context(classroom, user):
     conversation = classroom.get_or_create_conversation()
     messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
 
-    today = date.today()
+    from django.utils import timezone
+    now_local = timezone.localtime(timezone.now())
+    today = now_local.date()
     yesterday = today - timedelta(days=1)
     prev_date = None
     for msg in messages_list:
-        msg_date = msg.created_at.date()
+        local_msg_dt = timezone.localtime(msg.created_at)
+        msg_date = local_msg_dt.date()
         if msg_date != prev_date:
             msg.show_date_separator = True
             if msg_date == today:
@@ -37,7 +40,7 @@ def get_classroom_detail_context(classroom, user):
             elif msg_date == yesterday:
                 msg.date_label = 'Yesterday'
             else:
-                msg.date_label = msg.created_at.strftime('%B %d, %Y')
+                msg.date_label = local_msg_dt.strftime('%B %d, %Y')
             prev_date = msg_date
         else:
             msg.show_date_separator = False

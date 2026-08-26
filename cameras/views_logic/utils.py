@@ -27,8 +27,10 @@ async def get_video_stream(file_path, start, end):
 
 def is_admin(user):
     """Check if user is admin"""
-    if user.is_authenticated:
-        if user.is_superuser:
+    if user and user.is_authenticated:
+        if user.is_superuser or getattr(user, 'is_staff', False):
+            return True
+        if hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin':
             return True
     return False
 
@@ -54,12 +56,18 @@ def test_rtsp_paths(ip, port, username, password):
     """Test common RTSP paths to find the working one"""
     import cv2
     common_paths = [
-        '/live',
-        '/stream',
-        '/h264',
-        '/video',
-        '/cam/realmonitor',
+        '/axis-media/media.amp',
         '/Streaming/Channels/101',
+        '/Streaming/Channels/1',
+        '/cam/realmonitor?channel=1&subtype=0',
+        '/cam/realmonitor',
+        '/live',
+        '/live/ch0',
+        '/h264',
+        '/h264Preview_01_main',
+        '/stream',
+        '/stream1',
+        '/video',
         '/1',
         '/11',
         '/av0_0',
@@ -67,6 +75,7 @@ def test_rtsp_paths(ip, port, username, password):
         '/media/video1',
         '/onvif1',
         '/ch0',
+        '/ch0_0.264',
         '/ch01.264',
         '/',
     ]

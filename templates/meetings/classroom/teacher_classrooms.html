@@ -4,92 +4,111 @@
 {% block page_title %}Teaching Classrooms{% endblock %}
 
 {% block content %}
-<style>
-    /* Classroom Grid */
-    .classroom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 1.5rem; }
-    .teacher-course-card { 
-        background: var(--white); 
-        border-radius: 1.5rem; 
-        overflow: hidden; 
-        border: 1px solid var(--gray-200);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-    }
-    .teacher-course-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); border-color: #667eea; }
-    
-    .card-top { padding: 1.5rem; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); position: relative; }
-    .live-status { position: absolute; top: 1rem; right: 1rem; background: #fef2f2; color: #ef4444; padding: 0.3rem 0.7rem; border-radius: 2rem; font-size: 0.7rem; font-weight: 800; border: 1px solid #fee2e2; animation: pulse 2s infinite; }
-
-    .card-title { font-size: 1.125rem; font-weight: 700; color: var(--gray-900); margin: 0 0 0.25rem 0; }
-    .card-code { font-size: 0.7rem; font-weight: 700; color: #667eea; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.4rem; }
-
-    .card-stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 1rem 1.5rem; }
-    .stat-item { text-align: center; }
-    .stat-val { font-size: 1.125rem; font-weight: 800; color: var(--gray-900); display: block; }
-    .stat-lab { font-size: 0.65rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase; }
-
-    .card-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--gray-200); display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .btn-action { padding: 0.625rem; border-radius: 0.625rem; font-size: 0.8rem; font-weight: 700; text-align: center; text-decoration: none; transition: all 0.2s; }
-    .btn-manage { background: var(--gray-100); color: var(--gray-600); }
-    .btn-manage:hover { background: var(--gray-200); color: var(--gray-800); }
-    .btn-start { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-    .btn-start:hover { opacity: 0.9; transform: translateY(-1px); }
-
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-    .empty-state { text-align: center; padding: clamp(2rem, 5vh, 4rem) clamp(1.5rem, 3vw, 2rem); background: var(--white); border-radius: clamp(12px, 2vw, 16px); border: 2px dashed var(--gray-300); }
-</style>
-
 <div class="page-section">
     <div class="page-header-bar">
         <div>
             <h1>My Classrooms</h1>
-            <p>Manage your classrooms, student requests, and live sessions.</p>
+            <p>Manage your virtual classrooms, student requests, and live sessions.</p>
         </div>
         <a href="{% url 'create_classroom' %}" class="btn-page-action">
-            <i data-lucide="plus-square"></i>
-            Create New Course
+            <i data-lucide="plus-circle"></i>
+            <span>Create New Course</span>
         </a>
     </div>
 
     {% if classrooms %}
-    <div class="classroom-grid">
+    <div class="gclass-grid">
         {% for classroom in classrooms %}
-        <div class="teacher-course-card">
-            <div class="card-top">
-                {% if classroom.has_active_meeting %}
-                <div class="live-status">LIVE SESSION</div>
-                {% endif %}
-                <span class="card-code">{{ classroom.class_code }}</span>
-                <h3 class="card-title">{{ classroom.title }}</h3>
-                <p style="font-size: 0.8rem; color: var(--gray-500); margin: 0;">Created on {{ classroom.created_at|date:"M d, Y" }}</p>
-            </div>
-            
-            <div class="card-stats">
-                <div class="stat-item">
-                    <span class="stat-val">{{ classroom.get_approved_students.count }}</span>
-                    <span class="stat-lab">Students</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-val" style="color: {% if classroom.get_pending_requests.count > 0 %}#f59e0b{% else %}inherit{% endif %}">
-                        {{ classroom.get_pending_requests.count }}
-                    </span>
-                    <span class="stat-lab">Pending</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-val">{{ classroom.meetings.count }}</span>
-                    <span class="stat-lab">Sessions</span>
+        <div class="gclass-card">
+            <!-- Google Classroom Header Banner -->
+            <div class="gclass-header">
+                <div class="gclass-header-top">
+                    <div class="gclass-title-wrap">
+                        <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-title" title="{{ classroom.title }}">
+                            {{ classroom.title }}
+                        </a>
+                        <div class="gclass-subtitle">
+                            <span class="gclass-code-badge" onclick="copyClassCode('{{ classroom.class_code }}', event)" title="Click to copy class code">
+                                <i data-lucide="copy" style="width: 12px; height: 12px;"></i> {{ classroom.class_code }}
+                            </span>
+                            <span class="gclass-sub-text">Created {{ classroom.created_at|date:"M d, Y" }}</span>
+                        </div>
+                    </div>
+
+                    <div class="gclass-header-actions">
+                        {% if classroom.has_active_meeting %}
+                        <span class="gclass-live-badge">
+                            <span class="live-dot"></span> LIVE
+                        </span>
+                        {% endif %}
+
+                        <div class="gclass-dropdown-wrap">
+                            <button type="button" class="gclass-menu-btn" onclick="toggleGClassMenu(this, event)" aria-label="Classroom options">
+                                <i data-lucide="more-vertical"></i>
+                            </button>
+                            <div class="gclass-dropdown-menu">
+                                <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="layout-dashboard"></i> Classroom Stream
+                                </a>
+                                <a href="{% url 'classroom_materials' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="folder"></i> Study Materials
+                                </a>
+                                <a href="{% url 'classroom_detail' classroom.id %}#roster" class="gclass-dropdown-item">
+                                    <i data-lucide="users"></i> Student Roster
+                                </a>
+                                <a href="{% url 'classroom_attendance_detail' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="clipboard-check"></i> Attendance
+                                </a>
+                                <div class="gclass-dropdown-divider"></div>
+                                {% if classroom.has_active_meeting %}
+                                <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="gclass-dropdown-item" style="color: #ef4444; font-weight: 700;">
+                                    <i data-lucide="video" style="color: #ef4444;"></i> Enter Live Session
+                                </a>
+                                {% else %}
+                                <a href="{% url 'start_classroom_meeting' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="video"></i> Start Live Class
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card-footer">
-                <a href="{% url 'classroom_detail' classroom.id %}" class="btn-action btn-manage">Manage</a>
-                {% if classroom.has_active_meeting %}
-                <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="btn-action btn-start">Enter Live</a>
-                {% else %}
-                <a href="{% url 'start_classroom_meeting' classroom.id %}" class="btn-action btn-start">Start Class</a>
-                {% endif %}
+            <!-- Card Body / Stats Row -->
+            <div class="gclass-body">
+                <div class="gclass-stats">
+                    <a href="{% url 'classroom_detail' classroom.id %}#roster" class="gclass-stat-item" title="Enrolled Students">
+                        <span class="gclass-stat-num">{{ classroom.get_approved_students.count }}</span>
+                        <span class="gclass-stat-label">Students</span>
+                    </a>
+                    <a href="{% url 'classroom_detail' classroom.id %}#requests" class="gclass-stat-item {% if classroom.get_pending_requests.count > 0 %}has-pending{% endif %}" title="Pending Requests">
+                        <span class="gclass-stat-num">{{ classroom.get_pending_requests.count }}</span>
+                        <span class="gclass-stat-label">Pending</span>
+                    </a>
+                    <a href="{% url 'classroom_detail' classroom.id %}#sessions" class="gclass-stat-item" title="Meeting Sessions">
+                        <span class="gclass-stat-num">{{ classroom.meetings.count }}</span>
+                        <span class="gclass-stat-label">Sessions</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="gclass-footer">
+                <div class="gclass-footer-btns">
+                    <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-btn-manage">
+                        Manage
+                    </a>
+                    {% if classroom.has_active_meeting %}
+                    <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="gclass-btn-live">
+                        <i data-lucide="video"></i> Enter Live
+                    </a>
+                    {% else %}
+                    <a href="{% url 'start_classroom_meeting' classroom.id %}" class="gclass-btn-start">
+                        <i data-lucide="play"></i> Start Class
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -100,6 +119,7 @@
         <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.5rem;">No Active Classrooms</h2>
         <p style="color: var(--gray-500); margin-bottom: 1.5rem;">You haven't created any virtual classrooms yet. Ready to start teaching?</p>
         <a href="{% url 'create_classroom' %}" class="btn-page-action" style="margin: 0 auto;">
+            <i data-lucide="plus-circle"></i>
             Create Your First Classroom
         </a>
     </div>
@@ -108,7 +128,9 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     });
 </script>
 {% endblock %}

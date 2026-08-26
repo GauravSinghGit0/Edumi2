@@ -81,8 +81,13 @@ def _broadcast_identity_change(user_id):
 
 
 @receiver(post_save, sender=User)
-def on_user_saved(sender, instance, **kwargs):
+def on_user_saved(sender, instance, created, **kwargs):
     """Handler for User model changes."""
+    if created:
+        UserProfile.objects.get_or_create(
+            user=instance,
+            defaults={'user_type': 'admin' if instance.is_superuser else 'student'}
+        )
     user_id = instance.id
     transaction.on_commit(lambda: _broadcast_identity_change(user_id))
 

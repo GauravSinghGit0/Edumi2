@@ -5,51 +5,32 @@
 <style>
     .control-room-container {
         display: grid;
-        grid-template-columns: 1fr 380px;
-        gap: 1.5rem;
-        padding: 1.5rem;
-        height: calc(100vh - 100px);
-        background: #f1f5f9;
+        grid-template-columns: 1fr 340px;
+        gap: 1.25rem;
+        align-items: start;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
     }
     .main-panel {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 0.75rem;
+        min-width: 0;
     }
     .video-monitor {
-        background: #000;
-        border-radius: 1.5rem;
+        background: #000000;
+        border-radius: 12px;
         overflow: hidden;
         position: relative;
-        flex: 1;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
-        border: 4px solid #fff;
-    }
-    .monitor-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        pointer-events: none;
-        z-index: 5;
-    }
-    .rec-indicator {
-        position: absolute;
-        top: 1.5rem;
-        left: 1.5rem;
-        display: none;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+        border: 1px solid #cbd5e1;
+        display: flex;
         align-items: center;
-        gap: 0.5rem;
-        background: transparent; /* Made transparent as requested */
-        padding: 0.5rem 1rem;
-        border-radius: 9999px;
-        color: white;
-        font-weight: 700;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Added shadow for readability on transparent bg */
-    }
-    .rec-indicator.active { display: flex; animation: pulse 2s infinite; }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
+        justify-content: center;
     }
     .video-feed {
         width: 100%;
@@ -57,112 +38,244 @@
         object-fit: contain;
     }
     
-    /* Fullscreen HUD Controls */
-    .fullscreen-controls {
+    /* HUD Overlays */
+    .hud-badge {
         position: absolute;
-        bottom: 2rem;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(15, 23, 42, 0.75);
         backdrop-filter: blur(8px);
-        padding: 0.75rem 1.5rem;
-        border-radius: 1rem;
-        display: none; /* Only visible in fullscreen */
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        display: inline-flex;
         align-items: center;
-        gap: 1rem;
-        z-index: 100;
-        border: 1px solid rgba(255,255,255,0.1);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        gap: 0.45rem;
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.15);
+        user-select: none;
     }
-    .video-monitor:fullscreen .fullscreen-controls {
-        display: flex;
+    .hud-badge-live {
+        top: 1rem;
+        left: 1rem;
+        letter-spacing: 0.05em;
     }
-    .fs-btn {
-        background: transparent;
-        border: none;
-        color: white;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        cursor: pointer;
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ef4444;
+        box-shadow: 0 0 8px #ef4444;
+        display: inline-block;
+        animation: liveBlink 1.5s infinite;
+    }
+    @keyframes liveBlink {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .hud-badge-type {
+        top: 1rem;
+        right: 1rem;
+    }
+    .hud-badge-info {
+        bottom: 1rem;
+        left: 1rem;
+        border-radius: 6px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.8rem;
+        gap: 0.6rem;
+    }
+    .hud-actions {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-weight: 600;
+        z-index: 10;
     }
-    .fs-btn.active { color: #ef4444; }
-    .fs-btn-primary { background: #6366f1; }
-    
-    .action-btn {
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        border: 1px solid #e2e8f0;
-        background: white;
-        cursor: pointer;
-        display: flex;
+    .hud-circle-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #ffffff;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .hud-circle-btn:hover {
+        background: rgba(30, 41, 59, 0.95);
+        transform: scale(1.05);
+        color: #ffffff;
     }
 
+    /* Controls Bar */
     .controls-bar {
-        background: white;
-        padding: 1.25rem;
-        border-radius: 1.25rem;
+        background: #ffffff;
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        border: 1px solid #e2e8f0;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
-    .btn-action {
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.75rem;
-        font-weight: 700;
-        display: flex;
+    .btn-ctrl {
+        display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        border: none;
+        gap: 0.45rem;
+        padding: 0.5rem 0.95rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border: 1px solid transparent;
+    }
+    .btn-ctrl-live {
+        background: #4f46e5;
+        color: #ffffff;
+    }
+    .btn-ctrl-live:hover {
+        background: #4338ca;
+    }
+    .btn-ctrl-record {
+        background: #ef4444;
+        color: #ffffff;
+    }
+    .btn-ctrl-record:hover {
+        background: #dc2626;
+    }
+    .btn-ctrl-record.recording {
+        background: #b91c1c;
+    }
+    .rec-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffffff;
+        display: inline-block;
+    }
+    .btn-ctrl-outline {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #1e293b;
+    }
+    .btn-ctrl-outline:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+    .btn-ctrl-outline.active {
+        background: #ecfdf5 !important;
+        color: #059669 !important;
+        border-color: #a7f3d0 !important;
+    }
+    .ctrl-zoom-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+    .ctrl-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #475569;
+    }
+    .ctrl-slider {
+        -webkit-appearance: none;
+        width: 90px;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        outline: none;
         cursor: pointer;
     }
-    .btn-stream { background: #6366f1; color: white; }
-    .btn-record { background: #ef4444; color: white; }
-    .btn-record.recording { background: #991b1b; }
-    
-    .quality-select {
-        padding: 0.5rem;
-        border-radius: 0.5rem;
+    .ctrl-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #6366f1;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .ctrl-zoom-val {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: #1e293b;
+        min-width: 32px;
+    }
+    .ctrl-select {
+        background: #ffffff;
         border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.48rem 0.85rem;
+        font-size: 0.8125rem;
         font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
         outline: none;
+    }
+    .ctrl-select:hover {
+        border-color: #cbd5e1;
+    }
+    .btn-ctrl-square {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #475569;
+        transition: all 0.15s ease;
+    }
+    .btn-ctrl-square:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
     }
 
     .side-panel {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1rem;
         overflow-y: auto;
     }
     .panel-card {
-        background: white;
-        border-radius: 1.25rem;
-        padding: 1.25rem;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        background: var(--color-bg-card, #ffffff);
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid var(--color-border, #e2e8f0);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .panel-title {
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         font-weight: 800;
         color: #64748b;
         text-transform: uppercase;
-        margin-bottom: 1rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.45rem;
     }
     
     .chat-box {
         flex: 1;
         display: flex;
         flex-direction: column;
-        min-height: 300px;
+        min-height: 280px;
     }
     .chat-messages {
         flex: 1;
@@ -268,71 +381,71 @@
 <div class="control-room-container">
     <div class="main-panel">
         <div class="video-monitor">
-            <div class="monitor-overlay">
-                <div id="recIndicator" class="rec-indicator">
-                    <span style="width:12px; height:12px; background:#ef4444; border-radius:50%;"></span>
-                    REC <span id="recTimer">00:00</span>
-                </div>
+            <!-- Top Left Live Badge -->
+            <div class="hud-badge hud-badge-live">
+                <span class="live-dot"></span> LIVE
             </div>
+
+            <!-- Top Right Camera Type Badge -->
+            <div class="hud-badge hud-badge-type">
+                {{ camera.get_camera_type_display|default:"RTSP Camera" }}
+            </div>
+
+            <!-- Bottom Left Info Overlay -->
+            <div class="hud-badge hud-badge-info">
+                <span>{{ camera.name|default:"Camera Feed" }}</span>
+                <span id="hudLiveTime"></span>
+            </div>
+
+            <!-- Bottom Right Action Buttons -->
+            <div class="hud-actions">
+                <button class="hud-circle-btn" title="Take Snapshot" onclick="captureAreaImage(event)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <button class="hud-circle-btn" id="hudAudioBtn" title="Toggle Audio" onclick="toggleMonitorAudio()">
+                    <svg id="hudAudioIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                </button>
+                <button class="hud-circle-btn" title="Toggle Full Screen" onclick="toggleFullScreen()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                </button>
+            </div>
+
             <img id="mainFeed" src="" class="video-feed" alt="Camera Feed" style="cursor: crosshair;" onclick="setZoomTarget(event)" oncontextmenu="captureAreaImage(event)">
             <audio id="monitorAudio" autoplay muted></audio>
-            
-            <!-- Fullscreen HUD -->
-            <div class="fullscreen-controls">
-                <button class="fs-btn fs-btn-primary" id="fsStreamBtn" onclick="toggleStreaming()">
-                    <i data-lucide="radio"></i> <span>Live</span>
-                </button>
-                <button class="fs-btn" id="fsRecordBtn" onclick="toggleRecording()">
-                    <i data-lucide="circle"></i> <span>Record</span>
-                </button>
-                <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:0 0.5rem;"></div>
-                <button class="fs-btn" onclick="adjustZoom(-0.5)"><i data-lucide="minus-circle"></i></button>
-                <span id="fsZoomDisplay" style="color:white; font-weight:700; font-size:0.875rem; min-width:40px; text-align:center;">1.0x</span>
-                <button class="fs-btn" onclick="adjustZoom(0.5)"><i data-lucide="plus-circle"></i></button>
-                <button class="fs-btn" onclick="resetZoom()"><i data-lucide="refresh-cw"></i></button>
-                <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:0 0.5rem;"></div>
-                <button class="fs-btn" onclick="toggleFullScreen()"><i data-lucide="minimize"></i></button>
-            </div>
         </div>
 
         <div class="controls-bar">
-            <div style="display:flex; gap:0.75rem;">
-                <button id="streamBtn" class="btn-action btn-stream" onclick="toggleStreaming()" style="padding: 0.5rem 1rem;">
-                    <i data-lucide="radio"></i> <span class="btn-text">Live</span>
+            <!-- Left: Actions & Audio -->
+            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                <button id="streamBtn" class="btn-ctrl btn-ctrl-live" onclick="toggleStreaming()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+                    <span>Live</span>
                 </button>
-                <button id="recordBtn" class="btn-action btn-record" onclick="toggleRecording()" style="padding: 0.5rem 1rem;">
-                    <i data-lucide="circle"></i> <span class="btn-text">Record</span>
+                <button id="recordBtn" class="btn-ctrl btn-ctrl-record" onclick="toggleRecording()">
+                    <span class="rec-dot"></span>
+                    <span>Record</span>
+                </button>
+                <button id="monitorBtn" class="btn-ctrl btn-ctrl-outline" title="Toggle IP Camera Audio" onclick="toggleMonitorAudio()">
+                    <svg id="monitorIconSvg" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
+                    <span>Audio</span>
+                </button>
+                <button id="selfListenBtn" class="btn-ctrl btn-ctrl-outline" title="Toggle Mic / Self Listen" onclick="toggleSelfListen()">
+                    <svg id="selfListenIconSvg" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                    <span>Mic</span>
                 </button>
             </div>
 
-            <div style="display:flex; align-items:center; gap:0.75rem; flex:1; justify-content:center;">
-                <!-- Audio Controls Group -->
-                <div style="display:flex; align-items:center; background:#f1f5f9; padding:0.25rem 0.4rem; border-radius:1rem; gap:0.35rem;">
-                    <!-- Combined Mic/Audio Button -->
-                    <button id="monitorBtn" class="icon-btn-round" title="Toggle IP Camera Audio" onclick="toggleMonitorAudio()" style="width:32px; height:32px; background:white;">
-                        <i data-lucide="volume-x" id="monitorIcon" style="width:16px;"></i>
-                    </button>
-                    <button id="selfListenBtn" class="icon-btn-round" title="Toggle Self Listen" onclick="toggleSelfListen()" style="width:32px; height:32px; background:white;">
-                        <i data-lucide="mic" id="selfListenIcon" style="width:16px;"></i>
-                    </button>
-                    </button>
-
-                    <!-- Voice Graph -->
-                    <div style="width:80px; height:24px; background:#e2e8f0; border-radius:0.4rem; position:relative; overflow:hidden;" title="Live Audio Sync">
-                        <canvas id="visualizerCanvas" width="80" height="24" style="display:block;"></canvas>
-                        <div id="micLevel" style="display:none;"><div id="micLevelBar"></div></div>
-                    </div>
-                </div>
-
+            <!-- Right: Zoom, Quality & Fullscreen -->
+            <div style="display:flex; align-items:center; gap:0.9rem; flex-wrap:wrap;">
                 <!-- Zoom Slider Group -->
-                <div style="display:flex; align-items:center; background:#f1f5f9; padding:0.25rem 0.6rem; border-radius:1rem; gap:0.5rem;">
-                    <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="handleZoomSlider(this.value)" style="width:80px; accent-color:#6366f1; cursor:pointer;">
-                    <span id="zoomDisplay" style="font-weight:800; font-size:0.7rem; min-width:28px; color:#475569;">1.0x</span>
+                <div class="ctrl-zoom-group">
+                    <span class="ctrl-label">Zoom</span>
+                    <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" oninput="handleZoomSlider(this.value)" class="ctrl-slider">
+                    <span id="zoomDisplay" class="ctrl-zoom-val">1.0x</span>
                 </div>
-            </div>
 
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <select class="quality-select" id="qualitySelect" style="padding: 0.25rem 0.5rem; font-size:0.75rem; height:32px;">
+                <!-- Quality Select -->
+                <select class="ctrl-select" id="qualitySelect">
                     <option value="auto">Auto (Adaptive)</option>
                     <option value="2K">2K (1440p)</option>
                     <option value="1080p">1080p (Full HD)</option>
@@ -340,8 +453,10 @@
                     <option value="480p">480p (SD)</option>
                     <option value="360p">360p (SD Low)</option>
                 </select>
-                <button class="action-btn" title="Full Screen" onclick="toggleFullScreen()" style="width:32px; height:32px; background:#f8fafc;">
-                    <i data-lucide="maximize" style="width:16px;"></i>
+
+                <!-- Fullscreen Button -->
+                <button class="btn-ctrl-square" title="Full Screen" onclick="toggleFullScreen()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
                 </button>
             </div>
         </div>
@@ -663,95 +778,6 @@
         }
     }
 
-    async function startRecording() {
-        const recordBtn = document.getElementById('recordBtn');
-        const fsRecordBtn = document.getElementById('fsRecordBtn');
-        const recIndicator = document.getElementById('recIndicator');
-        const qualitySelect = document.getElementById('qualitySelect');
-        const micSelect = document.getElementById('micSelect');
-
-        const quality = qualitySelect ? qualitySelect.value : '720p';
-        const audioSource = micSelect ? micSelect.value : 'pc';
-
-        const formData = new FormData();
-        formData.append('quality', quality);
-        formData.append('audio_source', audioSource);
-
-        try {
-            const response = await fetch(`/cameras/start-recording/${window.cameraId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: formData
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                isRecording = true;
-                recStartTime = new Date();
-                if (recordBtn) {
-                    recordBtn.classList.add('recording');
-                    recordBtn.innerHTML = '<i data-lucide="square"></i> Stop Recording';
-                }
-                if (fsRecordBtn) {
-                    fsRecordBtn.classList.add('active');
-                    fsRecordBtn.innerHTML = '<i data-lucide="square"></i> Stop';
-                }
-                if (recIndicator) recIndicator.classList.add('active');
-                recTimerInterval = setInterval(updateRecTimer, 1000);
-                showNotification(data.message || 'Recording started successfully', 'success');
-            } else {
-                showNotification(data.message || 'Failed to start recording', 'error');
-            }
-        } catch (e) {
-            console.error('Error starting recording:', e);
-            showNotification('Error starting recording', 'error');
-        }
-        if (window.lucide) lucide.createIcons();
-    }
-
-    async function stopRecording() {
-        const recordBtn = document.getElementById('recordBtn');
-        const fsRecordBtn = document.getElementById('fsRecordBtn');
-        const recIndicator = document.getElementById('recIndicator');
-
-        try {
-            const response = await fetch(`/cameras/stop-recording/${window.cameraId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                isRecording = false;
-                recStartTime = null;
-                if (recTimerInterval) {
-                    clearInterval(recTimerInterval);
-                    recTimerInterval = null;
-                }
-                const timerEl = document.getElementById('recTimer');
-                if (timerEl) timerEl.innerText = '00:00';
-                if (recordBtn) {
-                    recordBtn.classList.remove('recording');
-                    recordBtn.innerHTML = '<i data-lucide="video"></i> Record';
-                }
-                if (fsRecordBtn) {
-                    fsRecordBtn.classList.remove('active');
-                    fsRecordBtn.innerHTML = '<i data-lucide="video"></i> Rec';
-                }
-                if (recIndicator) recIndicator.classList.remove('active');
-                showNotification('Recording saved successfully!', 'success');
-            } else {
-                showNotification(data.message || 'Failed to stop recording', 'error');
-            }
-        } catch (e) {
-            console.error('Error stopping recording:', e);
-            showNotification('Error stopping recording', 'error');
-        }
-        if (window.lucide) lucide.createIcons();
-    }
-
     // Audio Variables
 
 
@@ -760,16 +786,14 @@
         isSelfMonitoring = !isSelfMonitoring;
         
         if (isSelfMonitoring) {
-            btn.style.color = '#6366f1';
-            btn.style.background = '#e0e7ff';
+            if (btn) btn.classList.add('active');
             if (audioContext && audioStream) {
                 connectLoopback();
             } else {
                 showNotification('Select a microphone first to hear yourself', 'info');
             }
         } else {
-            btn.style.color = '#64748b';
-            btn.style.background = 'white';
+            if (btn) btn.classList.remove('active');
             disconnectLoopback();
         }
     }
@@ -800,8 +824,10 @@
     function toggleMonitorAudio() {
         const audio = document.getElementById('monitorAudio');
         const btn = document.getElementById('monitorBtn');
-        const icon = document.getElementById('monitorIcon');
+        const hudAudioIcon = document.getElementById('hudAudioIcon');
         
+        if (!audio) return;
+
         if (audio.muted) {
             // Force a fresh connection on every toggle to ensure we get a fresh WebM header
             if (monitorSocket) {
@@ -814,11 +840,15 @@
             audio.muted = false;
             audio.play().catch(e => {
                 console.warn("Autoplay blocked. User interaction required.", e);
-                showNotification('Click the speaker button again to start audio', 'warning');
+                showNotification('Click the audio button again to start audio', 'warning');
             });
-            icon.setAttribute('data-lucide', 'volume-2');
-            btn.style.color = '#10b981';
-            btn.style.background = '#dcfce7';
+            if (btn) {
+                btn.classList.add('active');
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg><span>Audio</span>`;
+            }
+            if (hudAudioIcon) {
+                hudAudioIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>`;
+            }
             showNotification('Live IP Camera Audio Active', 'success');
         } else {
             audio.muted = true;
@@ -827,15 +857,12 @@
                 monitorSocket.close();
                 monitorSocket = null;
             }
-            icon.setAttribute('data-lucide', 'volume-x');
-            btn.style.color = '#64748b';
-            btn.style.background = 'white';
-        }
-        if (window.lucide) {
-            try {
-                lucide.createIcons();
-            } catch (err) {
-                console.warn("Lucide icon error:", err.message);
+            if (btn) {
+                btn.classList.remove('active');
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg><span>Audio</span>`;
+            }
+            if (hudAudioIcon) {
+                hudAudioIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>`;
             }
         }
     }
@@ -900,10 +927,30 @@
                 const canvas = document.getElementById('visualizerCanvas');
                 const canvasCtx = canvas.getContext('2d');
 
+                function drawIdleVisualizer() {
+                    const canvas = document.getElementById('visualizerCanvas');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    const bars = [4, 7, 12, 8, 14, 10, 15, 9, 5];
+                    const barWidth = 3;
+                    const gap = 4;
+                    const totalW = bars.length * (barWidth + gap);
+                    let startX = Math.floor((canvas.width - totalW) / 2);
+                    
+                    ctx.fillStyle = '#94a3b8';
+                    bars.forEach(h => {
+                        const y = Math.floor((canvas.height - h) / 2);
+                        ctx.fillRect(startX, y, barWidth, h);
+                        startX += barWidth + gap;
+                    });
+                }
+
                 function drawMonitorVisualizer() {
                     if (audio.muted || !monitorSocket || monitorSocket.readyState !== WebSocket.OPEN) {
-                        canvasCtx.fillStyle = '#f1f5f9';
-                        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                        drawIdleVisualizer();
                         if (audio.muted) return; // Stop loop if muted
                     }
                     visualizerAnimationFrame = requestAnimationFrame(drawMonitorVisualizer);
@@ -1287,12 +1334,13 @@
                 recStartTime = new Date();
                 
                 btn.classList.add('recording');
-                fsBtn.classList.add('active');
+                if (fsBtn) fsBtn.classList.add('active');
                 
-                btn.innerHTML = '<i data-lucide="square"></i> Stop Recording';
-                fsBtn.innerHTML = '<i data-lucide="square"></i> Stop';
+                btn.innerHTML = '<span class="rec-dot"></span><span>Stop</span>';
+                if (fsBtn) fsBtn.innerHTML = '<span class="rec-dot"></span><span>Stop</span>';
                 
-                document.getElementById('recIndicator').classList.add('active');
+                const recIndicator = document.getElementById('recIndicator');
+                if (recIndicator) recIndicator.classList.add('active');
                 
                 recTimerInterval = setInterval(updateRecTimer, 1000);
                 showNotification(data.message, 'success');
@@ -1304,14 +1352,7 @@
             showNotification('Failed to start recording. Server error.', 'error');
         } finally {
             btn.disabled = false;
-            fsBtn.disabled = false;
-            if (window.lucide) {
-                try {
-                    lucide.createIcons();
-                } catch (err) {
-                    console.warn("Lucide icon error:", err.message);
-                }
-            }
+            if (fsBtn) fsBtn.disabled = false;
         }
     }
 
@@ -1321,7 +1362,7 @@
         
         if (btn.disabled) return;
         btn.disabled = true;
-        fsBtn.disabled = true;
+        if (fsBtn) fsBtn.disabled = true;
 
         try {
             const res = await fetch(`/cameras/stop-recording/{{ camera.id }}/`, {
@@ -1359,12 +1400,13 @@
                 }
                 
                 btn.classList.remove('recording');
-                fsBtn.classList.remove('active');
+                if (fsBtn) fsBtn.classList.remove('active');
                 
-                btn.innerHTML = '<i data-lucide="circle"></i> Start Recording';
-                fsBtn.innerHTML = '<i data-lucide="circle"></i> Record';
+                btn.innerHTML = '<span class="rec-dot"></span><span>Record</span>';
+                if (fsBtn) fsBtn.innerHTML = '<span class="rec-dot"></span><span>Record</span>';
                 
-                document.getElementById('recIndicator').classList.remove('active');
+                const recIndicator = document.getElementById('recIndicator');
+                if (recIndicator) recIndicator.classList.remove('active');
                 
                 // Reset thumbnail file inputs
                 document.getElementById('pubThumbnailFile').value = '';
@@ -1377,12 +1419,13 @@
                 clearInterval(recTimerInterval);
                 
                 btn.classList.remove('recording');
-                fsBtn.classList.remove('active');
+                if (fsBtn) fsBtn.classList.remove('active');
                 
-                btn.innerHTML = '<i data-lucide="circle"></i> Start Recording';
-                fsBtn.innerHTML = '<i data-lucide="circle"></i> Record';
+                btn.innerHTML = '<span class="rec-dot"></span><span>Record</span>';
+                if (fsBtn) fsBtn.innerHTML = '<span class="rec-dot"></span><span>Record</span>';
                 
-                document.getElementById('recIndicator').classList.remove('active');
+                const recIndicator = document.getElementById('recIndicator');
+                if (recIndicator) recIndicator.classList.remove('active');
                 
                 showNotification(data.message, 'error');
             }
@@ -1694,9 +1737,36 @@
     window.sendChatMessage = sendChatMessage;
     window.handleThumbnailSelection = handleThumbnailSelection;
     window.generateThumbnail = generateThumbnail;
-    window.finishPublish = finishPublish;
-    window.closePublishModal = closePublishModal;
-    window.redirectToEditor = redirectToEditor;
+    function updateLiveHudTime() {
+        const hudTime = document.getElementById('hudLiveTime');
+        if (!hudTime) return;
+        const now = new Date();
+        const yr = now.getFullYear();
+        const mo = String(now.getMonth() + 1).padStart(2, '0');
+        const da = String(now.getDate()).padStart(2, '0');
+        const hr = String(now.getHours()).padStart(2, '0');
+        const mi = String(now.getMinutes()).padStart(2, '0');
+        const se = String(now.getSeconds()).padStart(2, '0');
+        hudTime.textContent = `${yr}-${mo}-${da} ${hr}:${mi}:${se}`;
+    }
+    setInterval(updateLiveHudTime, 1000);
+    updateLiveHudTime();
+
+    if (window.lucide) {
+        try {
+            lucide.createIcons();
+        } catch (e) {}
+    }
 })();
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+    }
+});
+document.addEventListener('turbo:load', () => {
+    if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+    }
+});
 </script>
 {% endblock %}

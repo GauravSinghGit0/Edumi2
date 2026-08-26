@@ -150,11 +150,13 @@ def conversation_detail(request, conversation_id):
     conversation.is_classroom = conversation.is_classroom_chat()
     messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
 
-    today = date.today()
+    now_local = timezone.localtime(timezone.now())
+    today = now_local.date()
     yesterday = today - timedelta(days=1)
     prev_date = None
     for msg in messages_list:
-        msg_date = msg.created_at.date()
+        local_msg_dt = timezone.localtime(msg.created_at)
+        msg_date = local_msg_dt.date()
         if msg_date != prev_date:
             msg.show_date_separator = True
             if msg_date == today:
@@ -162,7 +164,7 @@ def conversation_detail(request, conversation_id):
             elif msg_date == yesterday:
                 msg.date_label = 'Yesterday'
             else:
-                msg.date_label = msg.created_at.strftime('%B %d, %Y')
+                msg.date_label = local_msg_dt.strftime('%B %d, %Y')
             prev_date = msg_date
         else:
             msg.show_date_separator = False
@@ -250,7 +252,14 @@ def delete_conversation(request, conversation_id):
 def send_message(request, conversation_id):
     """Send a message (text, image, or file) in a conversation, handling uploads correctly."""
     conversation = get_object_or_404(Conversation, id=conversation_id)
-    if request.user not in conversation.participants.all():
+    if conversation.classroom:
+        is_teacher = (conversation.classroom.teacher_id == request.user.id)
+        is_approved = conversation.classroom.memberships.filter(student=request.user, status='approved').exists()
+        if not (is_teacher or is_approved or request.user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Access denied to classroom stream'}, status=403)
+        if not conversation.participants.filter(id=request.user.id).exists():
+            conversation.participants.add(request.user)
+    elif request.user not in conversation.participants.all():
         return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
 
     content = request.POST.get('content', '').strip()
@@ -331,6 +340,8 @@ def send_message(request, conversation_id):
             'created_at': local_created_at.strftime('%I:%M %p'),
             'created_date': local_created_at.strftime('%b %d, %Y'),
         })
+    if conversation.classroom:
+        return redirect('classroom_detail', classroom_id=conversation.classroom.id)
     return redirect('conversation_detail', conversation_id=conversation_id)
 
 

@@ -121,11 +121,11 @@
               <div class="role-badges-wrap">
                 {% if profile.user_type == 'student' %}
                 <span class="p-badge p-badge-student">{{ profile.grade|default:"Student"|upper }}</span>
-                {% elif profile.user_type == 'teacher' %}
+                {% elif profile.user_type == 'teacher' or profile_user.userprofile.user_type == 'teacher' %}
                 <span class="p-badge p-badge-teacher">TEACHER</span>
                 {% endif %}
 
-                {% if profile_user.is_superuser %}
+                {% if is_admin_role or profile_user.is_superuser %}
                 <span class="p-badge p-badge-admin">
                   <i data-lucide="shield-check"></i> ADMINISTRATOR
                 </span>
@@ -155,28 +155,8 @@
         </div>
       </div>
 
-      {% if is_admin_role %}
-      <!-- Admin Info Strip -->
-      <div class="teacher-info-strip" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-color: #4338ca;">
-        <div class="teacher-info-col">
-          <div class="strip-label" style="color: #a5b4fc;">SYSTEM ROLE</div>
-          <div class="strip-value view-field" style="color: white; font-weight: 700;">Administrator</div>
-        </div>
-        <div class="teacher-info-col">
-          <div class="strip-label" style="color: #a5b4fc;">ACCESS PRIVILEGES</div>
-          <div class="strip-value view-field" style="color: white; font-weight: 600;">Full System & User Control</div>
-        </div>
-        <div class="teacher-info-col">
-          <div class="strip-label" style="color: #a5b4fc;">ADMIN PANEL</div>
-          <div class="strip-value view-field">
-            <a href="{% url 'admin_panel' %}" style="color: #38bdf8; font-weight: 600; text-decoration: none;">
-              Open Admin Dashboard &rarr;
-            </a>
-          </div>
-        </div>
-      </div>
-      {% elif profile.user_type == 'teacher' %}
-      <!-- Teacher Info Strip -->
+      {% if profile.user_type != 'student' %}
+      <!-- Info Strip for Admin & Faculty -->
       <div class="teacher-info-strip">
         <div class="teacher-info-col">
           <div class="strip-label">EMPLOYEE ID</div>
@@ -500,13 +480,13 @@
         </main>
 
         {% else %}
-        <!-- TEACHER MAIN COLUMN -->
+        <!-- TEACHER / ADMIN MAIN COLUMN -->
         <main class="profile-main">
           <!-- Activity Performance Section -->
           <div class="performance-section-wrap">
             <div class="section-label">
               <i data-lucide="bar-chart-2"></i>
-              {% if profile_user.is_superuser %}
+              {% if is_admin_role or profile_user.is_superuser %}
               ADMINISTRATIVE METRICS
               {% else %}
               ACTIVITY PERFORMANCE
@@ -514,7 +494,7 @@
             </div>
 
             <div class="activity-stats-grid">
-              {% if profile_user.is_superuser %}
+              {% if is_admin_role or profile_user.is_superuser %}
               <!-- Admin Stats -->
               <div class="activity-stat-card">
                 <div class="activity-stat-icon-wrap icon-users">
@@ -578,7 +558,7 @@
           <div class="profile-card card-summary">
             <div class="card-header">
               <h2 class="card-title">
-                <i data-lucide="users-2"></i> Professional Summary
+                <i data-lucide="user"></i> Professional Summary
               </h2>
             </div>
             <div class="card-body">
@@ -679,6 +659,7 @@
             </div>
           </div>
 
+          {% if not is_admin_role and not profile_user.is_superuser %}
           <!-- Availability -->
           <div class="profile-card card-availability">
             <div class="card-body">
@@ -707,6 +688,7 @@
               </div>
             </div>
           </div>
+          {% endif %}
         </aside>
         {% endif %}
 
@@ -720,59 +702,66 @@
 
 
 <script>
+(function() {
+  'use strict';
+
   // Edit Mode State
-  let isDirty = false;
+  var isDirty = false;
 
   // Enter Edit Mode
   function enterEditMode() {
     // Snapshot current values for cancel-restore
-    document.querySelectorAll('.editable-input, .editable-textarea, .custom-select-container input[type="hidden"]').forEach(el => {
+    document.querySelectorAll('.editable-input, .editable-textarea, .custom-select-container input[type="hidden"]').forEach(function(el) {
       el.dataset.snap = el.value;
     });
 
-    const avatarEl = document.getElementById('avatarPreview');
+    var avatarEl = document.getElementById('avatarPreview');
     if (avatarEl) avatarEl.dataset.snapSrc = avatarEl.src;
 
-    const coverEl = document.getElementById('coverPreview');
+    var coverEl = document.getElementById('coverPreview');
     if (coverEl) coverEl.dataset.snapSrc = coverEl.src;
 
-    document.querySelector('.profile-page').classList.add('edit-mode');
-    document.getElementById('btn-edit-profile').style.display = 'none';
+    var profilePage = document.querySelector('.profile-page');
+    if (profilePage) profilePage.classList.add('edit-mode');
+
+    var editBtn = document.getElementById('btn-edit-profile');
+    if (editBtn) editBtn.style.display = 'none';
 
     // Mark dirty on any change
-    document.querySelectorAll('.editable-input, .editable-textarea').forEach(el => {
-      el.addEventListener('input', () => {
+    document.querySelectorAll('.editable-input, .editable-textarea').forEach(function(el) {
+      el.addEventListener('input', function() {
         if (!isDirty) {
           isDirty = true;
-          window.onbeforeunload = () => 'You have unsaved changes.';
+          window.onbeforeunload = function() { return 'You have unsaved changes.'; };
         }
       });
     });
   }
 
   // Exit Edit Mode
-  function exitEditMode(discard = false) {
+  function exitEditMode(discard) {
     if (discard) {
       // Restore all fields
-      document.querySelectorAll('.editable-input, .editable-textarea, .custom-select-container input[type="hidden"]').forEach(el => {
+      document.querySelectorAll('.editable-input, .editable-textarea, .custom-select-container input[type="hidden"]').forEach(function(el) {
         if (el.dataset.snap !== undefined) {
           el.value = el.dataset.snap;
           // Sync custom selects on discard
           if (el.name === 'achievement_icon_type[]') {
-            const container = el.closest('.custom-select-container');
+            var container = el.closest('.custom-select-container');
             if (container) {
-              const val = el.value;
-              const option = container.querySelector(`.custom-select-option[data-value="${val}"]`);
+              var val = el.value;
+              var option = container.querySelector('.custom-select-option[data-value="' + val + '"]');
               if (option) {
-                container.querySelectorAll('.custom-select-option').forEach(opt => {
+                container.querySelectorAll('.custom-select-option').forEach(function(opt) {
                   opt.classList.remove('selected');
                 });
                 option.classList.add('selected');
                 
-                const optionText = option.querySelector('span').innerText;
-                const triggerContent = container.querySelector('.selected-option-content');
+                var optionSpan = option.querySelector('span');
+                var optionText = optionSpan ? optionSpan.innerText : '';
+                var triggerContent = container.querySelector('.selected-option-content');
                 if (triggerContent) {
-                  triggerContent.innerHTML = `<i data-lucide="${val}"></i> <span>${optionText}</span>`;
+                  triggerContent.innerHTML = '<i data-lucide="' + val + '"></i> <span>' + optionText + '</span>';
                 }
               }
             }
@@ -780,17 +769,17 @@
         }
       });
       // Restore avatar
-      const avatarEl = document.getElementById('avatarPreview');
-      if (avatarEl?.dataset.snapSrc) {
+      var avatarEl = document.getElementById('avatarPreview');
+      if (avatarEl && avatarEl.dataset.snapSrc) {
         avatarEl.src = avatarEl.dataset.snapSrc;
-        const ac = document.getElementById('avatar_choice');
+        var ac = document.getElementById('avatar_choice');
         if (ac) ac.value = '';
       }
       // Restore cover photo
-      const coverEl = document.getElementById('coverPreview');
-      if (coverEl?.dataset.snapSrc) {
+      var coverEl = document.getElementById('coverPreview');
+      if (coverEl && coverEl.dataset.snapSrc) {
         coverEl.src = coverEl.dataset.snapSrc;
-        const cc = document.getElementById('cover_choice');
+        var cc = document.getElementById('cover_choice');
         if (cc) cc.value = '';
       }
       if (typeof lucide !== 'undefined') {
@@ -800,9 +789,10 @@
       window.onbeforeunload = null;
     }
 
-    document.querySelector('.profile-page').classList.remove('edit-mode');
+    var pageEl = document.querySelector('.profile-page');
+    if (pageEl) pageEl.classList.remove('edit-mode');
 
-    const editBtn = document.getElementById('btn-edit-profile');
+    var editBtn = document.getElementById('btn-edit-profile');
     if (editBtn) {
       editBtn.style.display = 'inline-flex';
     }
@@ -811,12 +801,13 @@
   // Avatar Preview
   function previewAvatar(input) {
     if (input.files && input.files[0]) {
-      const reader = new FileReader();
+      var reader = new FileReader();
       reader.onload = function (e) {
-        document.getElementById('avatarPreview').src = e.target.result;
+        var av = document.getElementById('avatarPreview');
+        if (av) av.src = e.target.result;
         if (!isDirty) {
           isDirty = true;
-          window.onbeforeunload = () => 'You have unsaved changes.';
+          window.onbeforeunload = function() { return 'You have unsaved changes.'; };
         }
       };
       reader.readAsDataURL(input.files[0]);
@@ -826,12 +817,13 @@
   // Cover Photo Preview
   function previewCover(input) {
     if (input.files && input.files[0]) {
-      const reader = new FileReader();
+      var reader = new FileReader();
       reader.onload = function (e) {
-        document.getElementById('coverPreview').src = e.target.result;
+        var cov = document.getElementById('coverPreview');
+        if (cov) cov.src = e.target.result;
         if (!isDirty) {
           isDirty = true;
-          window.onbeforeunload = () => 'You have unsaved changes.';
+          window.onbeforeunload = function() { return 'You have unsaved changes.'; };
         }
       };
       reader.readAsDataURL(input.files[0]);
@@ -840,7 +832,7 @@
 
   // Share Profile
   function shareProfile() {
-    const url = window.location.href;
+    var url = window.location.href;
     if (navigator.share) {
       navigator.share({
         title: document.title,
@@ -853,124 +845,84 @@
   }
 
   // Prevent accidental navigation
-  window.addEventListener('beforeunload', e => {
+  window.addEventListener('beforeunload', function(e) {
     if (isDirty) { e.preventDefault(); e.returnValue = ''; }
   });
 
   // Clean submit
-  const form = document.getElementById('profileForm');
+  var form = document.getElementById('profileForm');
   if (form) {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', function() {
       isDirty = false;
       window.onbeforeunload = null;
     });
   }
 
-  // Keyboard shortcut: Escape = discard
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.querySelector('.profile-page')?.classList.contains('edit-mode')) {
-      if (isDirty) {
-        if (confirm('Discard unsaved changes?')) exitEditMode(true);
-      } else {
-        exitEditMode(false);
-      }
-    }
-  });
-
-  // Delete achievement item from UI
-  function deleteAchievement(itemId) {
-    const el = document.getElementById(itemId);
-    if (el) {
-      if (confirm("Are you sure you want to remove this achievement?")) {
-        el.remove();
-        if (!isDirty) {
-          isDirty = true;
-          window.onbeforeunload = () => 'You have unsaved changes.';
-        }
-      }
-    }
-  }
-
-  // Add blank achievement field block
-  let newAchCounter = 0;
+  // Add Dynamic Achievement Item in Edit Mode
   function addAchievementField() {
-    newAchCounter++;
-    const container = document.getElementById('achievementsList');
+    var container = document.getElementById('achievements-container');
     if (!container) return;
 
-    const itemHtml = `
-    <div class="achievement-edit-item new-item" id="ach-item-new-\${newAchCounter}">
-      <input type="hidden" name="achievement_id[]" value="">
-      
-      <div class="ach-edit-header">
-        <span class="ach-number-label">New Achievement</span>
-        <button type="button" class="btn-delete-ach" onclick="deleteAchievement('ach-item-new-\${newAchCounter}')" title="Delete achievement">
-          <i data-lucide="trash-2"></i> Delete
-        </button>
-      </div>
-
-      <div class="ach-edit-fields-grid">
-        <div class="input-group">
-          <label class="info-label">Title / Role</label>
-          <input type="text" name="achievement_title[]" value="" class="editable-input" placeholder="e.g. Lead AI Developer" required>
-        </div>
-        <div class="input-group">
-          <label class="info-label">Date Range</label>
-          <input type="text" name="achievement_date_str[]" value="" class="editable-input" placeholder="e.g. JUN 2023 – PRESENT">
-        </div>
-      </div>
-
-      <div class="ach-edit-fields-grid" style="margin-top: 12px;">
-        <div class="input-group" style="flex: 2;">
-          <label class="info-label">Description</label>
-          <textarea name="achievement_description[]" rows="2" class="editable-textarea" placeholder="Describe your achievement, responsibilities or impact..."></textarea>
-        </div>
-        <div class="input-group" style="flex: 1;">
-          <label class="info-label">Icon Type</label>
-          <div class="custom-select-container">
-            <div class="custom-select-trigger" onclick="toggleCustomSelect(this)">
-              <div class="selected-option-content">
-                <i data-lucide="award"></i>
-                <span>Award (Honor / Ribbon)</span>
-              </div>
-              <i data-lucide="chevron-down" class="select-chevron"></i>
+    var index = container.children.length;
+    var itemHtml = `
+    <div class="achievement-edit-item" style="border: 1px dashed var(--p-border); padding: 14px; border-radius: var(--radius-md); margin-bottom: 12px; position: relative;">
+      <button type="button" onclick="this.closest('.achievement-edit-item').remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--p-danger); cursor: pointer;" title="Remove">
+        <i data-lucide="trash-2"></i>
+      </button>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px; margin-bottom: 8px;">
+        <!-- Custom Select Icon -->
+        <div class="custom-select-container" style="position: relative;">
+          <input type="hidden" name="achievement_icon_type[]" value="award">
+          <button type="button" class="custom-select-trigger" onclick="toggleCustomSelect(this)" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 12px; border: 1.5px solid var(--p-border); border-radius: var(--radius-sm); background: var(--p-card); cursor: pointer; color: var(--p-text); font-size: 0.85rem; font-weight: 500;">
+            <div class="selected-option-content" style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="award"></i> <span>Award</span>
             </div>
-            <div class="custom-select-options">
-              <div class="custom-select-option selected" data-value="award" onclick="selectCustomOption(this, 'award')">
-                <i data-lucide="award"></i><span>Award (Honor / Ribbon)</span>
-              </div>
-              <div class="custom-select-option" data-value="trophy" onclick="selectCustomOption(this, 'trophy')">
-                <i data-lucide="trophy"></i><span>Trophy (Competition)</span>
-              </div>
-              <div class="custom-select-option" data-value="rocket" onclick="selectCustomOption(this, 'rocket')">
-                <i data-lucide="rocket"></i><span>Project (Rocket)</span>
-              </div>
-              <div class="custom-select-option" data-value="code" onclick="selectCustomOption(this, 'code')">
-                <i data-lucide="code"></i><span>Code (Project / Hackathon)</span>
-              </div>
-              <div class="custom-select-option" data-value="briefcase" onclick="selectCustomOption(this, 'briefcase')">
-                <i data-lucide="briefcase"></i><span>Briefcase (Internship / Job)</span>
-              </div>
-              <div class="custom-select-option" data-value="book" onclick="selectCustomOption(this, 'book')">
-                <i data-lucide="book"></i><span>Book (Academic / Study)</span>
-              </div>
-              <div class="custom-select-option" data-value="heart" onclick="selectCustomOption(this, 'heart')">
-                <i data-lucide="heart"></i><span>Heart (Volunteer / Social)</span>
-              </div>
-              <div class="custom-select-option" data-value="globe" onclick="selectCustomOption(this, 'globe')">
-                <i data-lucide="globe"></i><span>Globe (Publication / Web)</span>
-              </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--p-text-light);"></i>
+          </button>
+          
+          <div class="custom-select-menu" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 100; max-height: 180px; overflow-y: auto; background: var(--p-card); border: 1.5px solid var(--p-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); margin-top: 4px;">
+            <div class="custom-select-option selected" data-value="award" onclick="selectCustomOption(this, 'award')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="award"></i> <span>Award</span>
             </div>
-            <input type="hidden" name="achievement_icon_type[]" value="award">
+            <div class="custom-select-option" data-value="trophy" onclick="selectCustomOption(this, 'trophy')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="trophy"></i> <span>Trophy</span>
+            </div>
+            <div class="custom-select-option" data-value="zap" onclick="selectCustomOption(this, 'zap')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="zap"></i> <span>Hackathon</span>
+            </div>
+            <div class="custom-select-option" data-value="rocket" onclick="selectCustomOption(this, 'rocket')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="rocket"></i> <span>Launch</span>
+            </div>
+            <div class="custom-select-option" data-value="book" onclick="selectCustomOption(this, 'book')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="book"></i> <span>Publication</span>
+            </div>
+            <div class="custom-select-option" data-value="briefcase" onclick="selectCustomOption(this, 'briefcase')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="briefcase"></i> <span>Internship</span>
+            </div>
+            <div class="custom-select-option" data-value="globe" onclick="selectCustomOption(this, 'globe')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="globe"></i> <span>Global</span>
+            </div>
+            <div class="custom-select-option" data-value="code" onclick="selectCustomOption(this, 'code')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="code"></i> <span>Code</span>
+            </div>
+            <div class="custom-select-option" data-value="heart" onclick="selectCustomOption(this, 'heart')" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem;">
+              <i data-lucide="heart"></i> <span>Social</span>
+            </div>
           </div>
         </div>
+
+        <input type="text" name="achievement_title[]" placeholder="Title (e.g. Winner, Smart India Hackathon)" class="editable-input" style="padding: 6px 12px; font-size: 0.85rem;" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px;">
+        <input type="text" name="achievement_date[]" placeholder="Date (e.g. Nov 2024)" class="editable-input" style="padding: 6px 12px; font-size: 0.85rem;">
+        <input type="text" name="achievement_desc[]" placeholder="Short description..." class="editable-input" style="padding: 6px 12px; font-size: 0.85rem;">
       </div>
     </div>
   `;
 
-    const tempDiv = document.createElement('div');
+    var tempDiv = document.createElement('div');
     tempDiv.innerHTML = itemHtml.trim();
-    const child = tempDiv.firstChild;
+    var child = tempDiv.firstChild;
     container.appendChild(child);
 
     if (typeof lucide !== 'undefined') {
@@ -979,17 +931,17 @@
 
     if (!isDirty) {
       isDirty = true;
-      window.onbeforeunload = () => 'You have unsaved changes.';
+      window.onbeforeunload = function() { return 'You have unsaved changes.'; };
     }
   }
 
   // Toggle Custom Select Dropdown
   function toggleCustomSelect(trigger) {
-    const container = trigger.closest('.custom-select-container');
+    var container = trigger.closest('.custom-select-container');
     if (!container) return;
     
     // Close other dropdowns
-    document.querySelectorAll('.custom-select-container.open').forEach(el => {
+    document.querySelectorAll('.custom-select-container.open').forEach(function(el) {
       if (el !== container) {
         el.classList.remove('open');
       }
@@ -1000,11 +952,11 @@
 
   // Handle Custom Select Option Selection
   function selectCustomOption(option, val) {
-    const container = option.closest('.custom-select-container');
+    var container = option.closest('.custom-select-container');
     if (!container) return;
 
-    const trigger = container.querySelector('.custom-select-trigger');
-    const hiddenInput = container.querySelector('input[type="hidden"]');
+    var trigger = container.querySelector('.custom-select-trigger');
+    var hiddenInput = container.querySelector('input[type="hidden"]');
     
     // Update input value
     if (hiddenInput) {
@@ -1012,16 +964,17 @@
     }
 
     // Update selected visual state in menu
-    container.querySelectorAll('.custom-select-option').forEach(opt => {
+    container.querySelectorAll('.custom-select-option').forEach(function(opt) {
       opt.classList.remove('selected');
     });
     option.classList.add('selected');
 
     // Update trigger UI
-    const optionText = option.querySelector('span').innerText;
-    const triggerContent = trigger.querySelector('.selected-option-content');
+    var optionSpan = option.querySelector('span');
+    var optionText = optionSpan ? optionSpan.innerText : '';
+    var triggerContent = trigger ? trigger.querySelector('.selected-option-content') : null;
     if (triggerContent) {
-      triggerContent.innerHTML = `<i data-lucide="${val}"></i> <span>${optionText}</span>`;
+      triggerContent.innerHTML = '<i data-lucide="' + val + '"></i> <span>' + optionText + '</span>';
     }
 
     // Initialize the newly added icon
@@ -1032,7 +985,7 @@
     // Mark page as dirty since a selection change happened
     if (!isDirty) {
       isDirty = true;
-      window.onbeforeunload = () => 'You have unsaved changes.';
+      window.onbeforeunload = function() { return 'You have unsaved changes.'; };
     }
 
     // Close dropdown
@@ -1040,20 +993,33 @@
   }
 
   // Close dropdowns when clicking outside
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', function(e) {
     if (!e.target.closest('.custom-select-container')) {
-      document.querySelectorAll('.custom-select-container.open').forEach(el => {
+      document.querySelectorAll('.custom-select-container.open').forEach(function(el) {
         el.classList.remove('open');
       });
     }
   });
 
-  // Initialize Lucide icons
-  document.addEventListener('DOMContentLoaded', () => {
+  // Expose methods to window for inline onclick attributes
+  window.enterEditMode = enterEditMode;
+  window.exitEditMode = exitEditMode;
+  window.previewAvatar = previewAvatar;
+  window.previewCover = previewCover;
+  window.shareProfile = shareProfile;
+  window.addAchievementField = addAchievementField;
+  window.toggleCustomSelect = toggleCustomSelect;
+  window.selectCustomOption = selectCustomOption;
+
+  // Initialize Lucide icons on DOMContentLoaded & Turbo load
+  function initIcons() {
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
-  });
+  }
+  document.addEventListener('DOMContentLoaded', initIcons);
+  document.addEventListener('turbo:load', initIcons);
+})();
 </script>
 
 {% endblock %}

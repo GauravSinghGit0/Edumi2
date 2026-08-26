@@ -118,40 +118,55 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
 .sidebar-nav-item {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-sm);
-    padding-left: calc(var(--space-sm) + 3px); /* Reserve space for active indicator */
-    margin: 2px 0;
-    border-radius: var(--radius-md);
+    gap: var(--space-sm, 8px);
+    padding: var(--space-sm, 8px) var(--space-sm, 10px);
+    padding-left: calc(var(--space-sm, 10px) + 3px); /* Reserve space for active indicator */
+    margin: 2px 6px;
+    border-radius: var(--radius-md, 8px);
     text-decoration: none;
-    color: var(--text-muted, var(--color-text-muted));
-    font-size: var(--font-size-md);
-    font-weight: var(--font-weight-medium);
+    color: var(--color-text-muted, #64748b);
+    font-size: var(--font-size-md, 14px);
+    font-weight: 500;
     position: relative;
     transition: background-color 0.15s ease, color 0.15s ease;
     min-height: 40px; /* Prevent height fluctuation */
 }
 
 .sidebar-nav-item:hover {
-    background: var(--hover-bg, var(--color-bg-hover));
-    color: var(--text-main, var(--color-text-main));
+    background: var(--color-bg-hover, #f1f5f9) !important;
+    color: var(--color-primary, #6366f1) !important;
+}
+
+.sidebar-nav-item:hover .sidebar-nav-icon,
+.sidebar-nav-item:hover .sidebar-nav-text,
+.sidebar-nav-item:hover .sidebar-nav-icon svg {
+    color: var(--color-primary, #6366f1) !important;
+    stroke: var(--color-primary, #6366f1) !important;
 }
 
 .sidebar-nav-item.active {
-    background: var(--color-primary-bg);
-    color: var(--color-primary);
+    background: var(--color-primary-bg, rgba(99, 102, 241, 0.1)) !important;
+    color: var(--color-primary, #6366f1) !important;
+    font-weight: 600;
+}
+
+.sidebar-nav-item.active .sidebar-nav-icon,
+.sidebar-nav-item.active .sidebar-nav-text,
+.sidebar-nav-item.active .sidebar-nav-icon svg {
+    color: var(--color-primary, #6366f1) !important;
+    stroke: var(--color-primary, #6366f1) !important;
 }
 
 .sidebar-nav-item.active::before {
     content: '';
     position: absolute;
-    left: 0;
+    left: -6px;
     top: 50%;
     transform: translateY(-50%);
     width: 3px;
     height: 20px;
-    background: var(--color-primary);
-    border-radius: 0 2px 2px 0;
+    background: var(--color-primary, #6366f1);
+    border-radius: 0 3px 3px 0;
 }
 
 .sidebar-nav-icon {
@@ -161,12 +176,14 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: inherit;
 }
 
 .sidebar-nav-icon svg {
     width: 20px;
     height: 20px;
     stroke: currentColor;
+    fill: none;
 }
 
 .sidebar-nav-text {
@@ -174,7 +191,8 @@ body.dark-mode .sidebar::-webkit-scrollbar-track {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 0; /* Allow text to shrink */
+    min-width: 0;
+    color: inherit;
 }
 
 .sidebar-nav-badge {

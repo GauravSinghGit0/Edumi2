@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/classroom-card.css' %}">
     {% endcompress %}
     {% block extra_css %}{% endblock %}
 
@@ -675,6 +676,7 @@
     <script>window.location.href = "{% url 'login' %}";</script>
     {% endif %}
     <script src="{% static 'js/identity_sync.js' %}?v={{ timestamp }}"></script>
+    <script src="{% static 'js/classroom-card.js' %}"></script>
     {% block extra_js %}{% endblock %}
     {% include 'components/lucide_icons.html' %}
 </body>

@@ -13,7 +13,9 @@ logger = logging.getLogger('mobile_cameras')
 
 def is_admin(user):
     """Return True if the user is a superuser/admin."""
-    return user.is_authenticated and user.is_superuser
+    if not (user and user.is_authenticated):
+        return False
+    return user.is_superuser or getattr(user, 'is_staff', False) or (hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin')
 
 
 def can_view_mobile_camera(user, mobile_camera):

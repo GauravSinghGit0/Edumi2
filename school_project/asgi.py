@@ -37,12 +37,10 @@ websocket_urlpatterns = meeting_ws + attendance_ws + account_ws + camera_ws
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": URLRouter(
-        livekit_patterns + [
-            re_path(r'', AuthMiddlewareStack(
-                URLRouter(websocket_urlpatterns)
-            )),
-        ]
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            livekit_patterns + websocket_urlpatterns
+        )
     ),
 })
 

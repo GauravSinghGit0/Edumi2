@@ -4,122 +4,113 @@
 {% block page_title %}My Classrooms{% endblock %}
 
 {% block content %}
-<style>
-    .btn-join-main { 
-        background: #4f46e5; 
-        color: white; 
-        padding: 0.875rem 1.75rem; 
-        border-radius: 0.75rem; 
-        text-decoration: none; 
-        font-weight: 700; 
-        display: flex; 
-        align-items: center; 
-        gap: 0.75rem; 
-        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
-        transition: all 0.2s;
-    }
-    .btn-join-main:hover { background: #4338ca; transform: translateY(-2px); }
-
-    /* Alert / Pending Section */
-    .pending-banner { background: var(--color-bg-subtle, #f8fafc); border: 1px solid var(--color-border, #e2e8f0); border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem; }
-    .pending-item { background: var(--color-bg-card, white); padding: 1rem 1.25rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border: 1px solid var(--color-border, #e2e8f0); }
-
-    /* Classroom Grid */
-    .classroom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.5rem; }
-    .course-card { 
-        background: var(--color-bg-card, white); 
-        border-radius: 1.25rem; 
-        overflow: hidden; 
-        border: 1px solid var(--color-border, #e2e8f0); 
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        display: flex; 
-        flex-direction: column;
-    }
-    .course-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border-color: #4f46e5; }
-    
-    .course-banner { height: 100px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); position: relative; }
-    .live-tag { position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; padding: 0.4rem 0.8rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); animation: pulse 2s infinite; }
-
-    .course-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
-    .course-code { font-size: 0.75rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
-    .course-title { font-size: 1.25rem; font-weight: 800; color: var(--color-text-main, #0f172a); margin: 0 0 0.75rem 0; line-height: 1.3; }
-    .course-desc { font-size: 0.875rem; color: var(--color-text-muted, #64748b); line-height: 1.5; margin-bottom: 1.5rem; }
-
-    .teacher-info { display: flex; align-items: center; gap: 0.75rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-border, #f1f5f9); }
-    .teacher-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-bg-subtle, #f1f5f9); object-fit: cover; }
-    .teacher-name { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-main, #1e293b); }
-
-    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem; }
-    .btn-card { padding: 0.75rem; border-radius: 0.6rem; font-size: 0.875rem; font-weight: 700; text-align: center; text-decoration: none; transition: all 0.2s; }
-    .btn-card-outline { border: 1px solid var(--color-border, #e2e8f0); color: var(--color-text-main, #475569); }
-    .btn-card-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .btn-card-solid { background: #4f46e5; color: white; border: 1px solid #4f46e5; }
-    .btn-card-solid:hover { background: #4338ca; }
-    .btn-card-live { background: #ef4444; color: white; border: 1px solid #ef4444; }
-    .btn-card-live:hover { background: #dc2626; }
-
-    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-</style>
-
-<div class="page-container">
-    <div class="page-header-flat">
+<div class="page-section">
+    <div class="page-header-bar">
         <div>
             <h1>Academic Courses</h1>
-            <p style="font-size: 13px; font-weight: 400; color: var(--color-text-muted, var(--gray-600, #4b5563)); margin: 2px 0 0 0;">Access your enrolled classrooms and learning resources.</p>
+            <p>Access your enrolled classrooms, study materials, and live lectures.</p>
         </div>
-        <a href="{% url 'join_classroom_request' %}" class="btn-join-main">
-            <i data-lucide="plus"></i>
+        <a href="{% url 'join_classroom_request' %}" class="btn-page-action">
+            <i data-lucide="plus-circle"></i>
             <span>Join Classroom</span>
         </a>
     </div>
 
     {% if pending_memberships %}
-    <div class="pending-banner">
-        <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--color-text-main, #92400e);">
+    <div class="pending-banner" style="background: var(--color-bg-hover, #f8fafc); border: 1px solid var(--color-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; color: #f59e0b; margin-bottom: 0.75rem;">
             <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
-            <h3 style="margin: 0; font-size: 1rem; font-weight: 700;">Waiting for Approval</h3>
+            <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--color-text-main);">Pending Approval Requests</h3>
         </div>
-        {% for membership in pending_memberships %}
-        <div class="pending-item">
-            <div>
-                <span style="font-weight: 800; color: var(--color-text-main, #1e293b);">{{ membership.classroom.title }}</span>
-                <span style="color: var(--color-text-muted, #92400e); font-size: 0.8125rem; margin-left: 0.5rem;">({{ membership.classroom.class_code }})</span>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for membership in pending_memberships %}
+            <div style="background: var(--color-bg-card, white); padding: 0.85rem 1.15rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--color-border, #e2e8f0);">
+                <div>
+                    <span style="font-weight: 700; color: var(--color-text-main);">{{ membership.classroom.title }}</span>
+                    <span style="color: var(--color-text-muted); font-size: 0.8125rem; margin-left: 0.5rem; font-weight: 600;">(Code: {{ membership.classroom.class_code }})</span>
+                </div>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #d97706; background: rgba(245, 158, 11, 0.1); padding: 0.25rem 0.65rem; border-radius: 9999px;">Requested {{ membership.requested_at|timesince }} ago</span>
             </div>
-            <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted, #b45309);">Sent {{ membership.requested_at|timesince }} ago</span>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% endif %}
 
     {% if approved_memberships %}
-    <div class="classroom-grid">
+    <div class="gclass-grid">
         {% for membership in approved_memberships %}
         {% with classroom=membership.classroom %}
-        <div class="course-card">
-            <div class="course-banner">
-                {% if classroom.has_active_meeting %}
-                <div class="live-tag">
-                    <span style="width: 8px; height: 8px; background: white; border-radius: 50%;"></span>
-                    LIVE NOW
-                </div>
-                {% endif %}
-            </div>
-            <div class="course-body">
-                <span class="course-code">{{ classroom.class_code }}</span>
-                <h3 class="course-title">{{ classroom.title }}</h3>
-                <p class="course-desc">{{ classroom.description|default:"No description provided for this course."|truncatewords:20 }}</p>
-                
-                <div class="teacher-info">
-                    <img src="{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=6366f1&color=fff{% endif %}" class="teacher-avatar" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ classroom.teacher.get_full_name|default:classroom.teacher.username|urlencode }}&background=6366f1&color=fff'">
-                    <span class="teacher-name">{% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}</span>
-                </div>
+        <div class="gclass-card">
+            <!-- Google Classroom Header Banner -->
+            <div class="gclass-header">
+                <div class="gclass-header-top">
+                    <div class="gclass-title-wrap">
+                        <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-title" title="{{ classroom.title }}">
+                            {{ classroom.title }}
+                        </a>
+                        <div class="gclass-subtitle">
+                            <span class="gclass-code-badge" onclick="copyClassCode('{{ classroom.class_code }}', event)" title="Click to copy class code">
+                                <i data-lucide="copy" style="width: 12px; height: 12px;"></i> {{ classroom.class_code }}
+                            </span>
+                            <span class="gclass-sub-text">
+                                {% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
 
-                <div class="card-actions">
-                    <a href="{% url 'classroom_detail' classroom.id %}" class="btn-card btn-card-outline">Dashboard</a>
+                    <div class="gclass-header-actions">
+                        {% if classroom.has_active_meeting %}
+                        <span class="gclass-live-badge">
+                            <span class="live-dot"></span> LIVE
+                        </span>
+                        {% endif %}
+
+                        <div class="gclass-dropdown-wrap">
+                            <button type="button" class="gclass-menu-btn" onclick="toggleGClassMenu(this, event)" aria-label="Classroom options">
+                                <i data-lucide="more-vertical"></i>
+                            </button>
+                            <div class="gclass-dropdown-menu">
+                                <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="layout-dashboard"></i> Classroom Stream
+                                </a>
+                                <a href="{% url 'classroom_materials' classroom.id %}" class="gclass-dropdown-item">
+                                    <i data-lucide="folder"></i> Study Materials
+                                </a>
+                                <div class="gclass-dropdown-divider"></div>
+                                {% if classroom.has_active_meeting %}
+                                <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="gclass-dropdown-item" style="color: #ef4444; font-weight: 700;">
+                                    <i data-lucide="video" style="color: #ef4444;"></i> Join Live Meeting
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'leave_classroom' classroom.id %}" class="gclass-dropdown-item text-danger" onclick="return confirm('Are you sure you want to unenroll from this classroom?')">
+                                    <i data-lucide="log-out"></i> Leave Classroom
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="gclass-body">
+                <div class="gclass-student-info">
+                    <p class="gclass-desc">
+                        {{ classroom.description|default:"Access class announcements, study notes, and join interactive live sessions."|truncatechars:90 }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="gclass-footer">
+                <div class="gclass-footer-btns">
                     {% if classroom.has_active_meeting %}
-                    <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="btn-card btn-card-live">Join Meeting</a>
+                    <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="gclass-btn-live">
+                        <i data-lucide="video"></i> Join Live
+                    </a>
                     {% else %}
-                    <button class="btn-card btn-card-outline" disabled style="opacity: 0.5; cursor: not-allowed;">No Session</button>
+                    <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-btn-open">
+                        Open
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -129,11 +120,14 @@
     </div>
     {% else %}
         {% if not pending_memberships %}
-        <div class="flat-card" style="text-align: center; padding: 5rem 2rem; display: flex; flex-direction: column; align-items: center;">
-            <i data-lucide="copy" style="width:64px;height:64px;color:var(--color-text-muted);opacity:0.5;margin-bottom:1rem;"></i>
-            <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text-main); margin-bottom: 0.5rem;">No Classrooms Found</h2>
-            <p style="color: var(--color-text-muted); margin-bottom: 2rem;">You haven't joined any classrooms yet. Start your journey by joining a course.</p>
-            <a href="{% url 'join_classroom_request' %}" class="btn-join-main" style="display: inline-flex; margin: 0 auto;">Join Your First Classroom</a>
+        <div class="empty-state" style="text-align: center; padding: clamp(2rem, 5vh, 4rem) clamp(1.5rem, 3vw, 2rem); background: var(--color-bg-card, white); border-radius: clamp(12px, 2vw, 16px); border: 2px dashed var(--color-border, #cbd5e1);">
+            <i data-lucide="graduation-cap" style="width: 48px; height: 48px; color: var(--color-text-muted); opacity: 0.7; margin-bottom: 1.25rem;"></i>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 0.5rem;">No Enrolled Classrooms</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">You haven't joined any virtual classrooms yet. Enter a class code to join your first course.</p>
+            <a href="{% url 'join_classroom_request' %}" class="btn-page-action" style="margin: 0 auto;">
+                <i data-lucide="plus-circle"></i>
+                Join a Classroom
+            </a>
         </div>
         {% endif %}
     {% endif %}
@@ -141,7 +135,9 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     });
 </script>
 {% endblock %}

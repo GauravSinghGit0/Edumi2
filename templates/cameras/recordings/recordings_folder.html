@@ -4,51 +4,114 @@
 {% block extra_css %}
 <style>
     .folder-container {
-        padding: 2rem;
-        background: var(--bg-main);
-        min-height: calc(100vh - 64px);
+        padding: 1.5rem 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
     }
+    .mgmt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .mgmt-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.25rem 0;
+        letter-spacing: -0.01em;
+    }
+    .mgmt-subtitle {
+        color: var(--color-text-muted, #64748b);
+        margin: 0;
+        font-size: 0.9rem;
+    }
+    .badge-count {
+        background: var(--color-primary-bg, rgba(99, 102, 241, 0.12));
+        color: var(--color-primary, #6366f1);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        padding: 0.45rem 0.9rem;
+        border-radius: var(--radius-full, 9999px);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
     .folder-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+        gap: 1.25rem;
         margin-bottom: 3rem;
     }
     .folder-item {
-        background: var(--bg-card);
-        padding: 1.5rem;
-        border-radius: 1rem;
-        border: 1px solid var(--border-color);
+        background: var(--color-bg-card, #ffffff);
+        padding: 1.75rem 1.25rem;
+        border-radius: var(--radius-xl, 1rem);
+        border: 1px solid var(--color-border, #e2e8f0);
         text-align: center;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         text-decoration: none;
         color: inherit;
+        box-shadow: var(--shadow-sm);
     }
     .folder-item:hover {
-        transform: translateY(-5px);
+        transform: translateY(-4px);
         box-shadow: var(--shadow-lg);
-        border-color: var(--primary);
+        border-color: var(--color-primary, #6366f1);
     }
     .folder-icon {
-        font-size: 3rem;
-        color: var(--primary);
+        width: 52px;
+        height: 52px;
+        background: var(--color-primary-bg, rgba(99, 102, 241, 0.1));
+        color: var(--color-primary, #6366f1);
+        border-radius: var(--radius-lg, 12px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         margin-bottom: 1rem;
+        transition: transform 0.2s ease;
+    }
+    .folder-item:hover .folder-icon {
+        transform: scale(1.08);
     }
     .folder-name {
         font-weight: 700;
-        color: var(--text-main);
+        color: var(--color-text-main, #0f172a);
         font-size: 1rem;
         display: block;
+        margin-bottom: 0.25rem;
     }
     .folder-meta {
-        font-size: 0.75rem;
-        color: var(--text-muted);
+        font-size: 0.8125rem;
+        color: var(--color-text-muted, #64748b);
+    }
+
+    .no-data-card {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--color-bg-card, #ffffff);
+        border-radius: var(--radius-xl, 1rem);
+        border: 1px dashed var(--color-border, #e2e8f0);
+        box-shadow: var(--shadow-sm);
+    }
+    .no-data-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.5rem 0;
+    }
+    .no-data-card p {
+        color: var(--color-text-muted, #64748b);
+        margin: 0 0 1.5rem 0;
+        font-size: 0.9rem;
     }
 
     .video-list-container {
         display: none;
-        margin-top: 2rem;
+        margin-top: 1rem;
     }
     .video-list-container.active {
         display: block;
@@ -57,21 +120,22 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        color: var(--primary);
+        color: var(--color-primary, #6366f1);
         font-weight: 600;
+        font-size: 0.9rem;
         cursor: pointer;
         margin-bottom: 1.5rem;
-        transition: color 0.2s;
+        transition: opacity 0.2s ease;
     }
     .back-btn:hover {
-        color: var(--primary-dark);
+        opacity: 0.85;
     }
     
     /* Date grouping headers */
     .date-group-header {
         font-size: 0.875rem;
         font-weight: 700;
-        color: var(--text-muted);
+        color: var(--color-text-muted, #64748b);
         margin: 2rem 0 1rem 0;
         display: flex;
         align-items: center;
@@ -81,36 +145,39 @@
         content: "";
         flex: 1;
         height: 1px;
-        background: var(--border-color);
+        background: var(--color-border, #e2e8f0);
     }
 
     .video-row {
-        background: var(--bg-card);
-        padding: 1rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--border-color);
+        background: var(--color-bg-card, #ffffff);
+        padding: 1rem 1.25rem;
+        border-radius: var(--radius-lg, 0.75rem);
+        border: 1px solid var(--color-border, #e2e8f0);
         display: flex;
         align-items: center;
-        gap: 1.5rem;
-        margin-bottom: 1rem;
-        transition: all 0.2s;
+        gap: 1.25rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
     }
     .video-row:hover {
-        border-color: var(--primary);
-        background: var(--hover-bg);
+        border-color: var(--color-primary, #6366f1);
+        background: var(--color-bg-hover, #f8fafc);
+        transform: translateY(-1px);
     }
     .video-row-thumb {
         width: 120px;
         aspect-ratio: 16/9;
-        background: var(--gray-900);
-        border-radius: 0.5rem;
+        background: var(--color-bg-hover, #1e293b);
+        border-radius: var(--radius-md, 0.5rem);
         overflow: hidden;
         flex-shrink: 0;
+        border: 1px solid var(--color-border, #e2e8f0);
     }
     .video-row-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .video-row-info { flex: 1; }
-    .video-row-title { font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; }
-    .video-row-meta { font-size: 0.8125rem; color: var(--text-muted); }
+    .video-row-title { font-weight: 700; color: var(--color-text-main, #0f172a); margin-bottom: 0.25rem; font-size: 0.95rem; }
+    .video-row-meta { font-size: 0.8125rem; color: var(--color-text-muted, #64748b); }
     .video-row-actions { display: flex; gap: 0.5rem; }
 
     /* Breadcrumbs */
@@ -118,23 +185,23 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         font-size: 0.875rem;
     }
-    .breadcrumb-item-custom { color: var(--text-muted); }
-    .breadcrumb-item-custom.active { color: var(--text-main); font-weight: 700; }
-    .breadcrumb-separator { color: var(--border-color); }
+    .breadcrumb-item-custom { color: var(--color-text-muted, #64748b); }
+    .breadcrumb-item-custom.active { color: var(--color-text-main, #0f172a); font-weight: 700; }
+    .breadcrumb-separator { color: var(--color-border, #e2e8f0); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="folder-container">
-    <div class="dashboard-header mb-4">
+    <div class="mgmt-header">
         <div>
-            <h1>Recordings Library</h1>
-            <p>Organized recordings from your cameras and uploads.</p>
+            <h1 class="mgmt-title">Recordings Library</h1>
+            <p class="mgmt-subtitle">Organized recordings from your cameras and uploads.</p>
         </div>
-        <div class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-size: 0.875rem; padding: 0.5rem 1rem;">
+        <div class="badge-count">
             {{ total_count }} Total Items
         </div>
     </div>
@@ -145,17 +212,17 @@
             {% for folder in folders %}
             <div class="folder-item" onclick="openFolder('{{ folder.id }}')">
                 <div class="folder-icon">
-                    <i data-lucide="folder"></i>
+                    <i data-lucide="folder" style="width: 26px; height: 26px;"></i>
                 </div>
                 <span class="folder-name">{{ folder.name }}</span>
                 <span class="folder-meta">{{ folder.count }} items</span>
             </div>
             {% empty %}
-            <div class="no-data" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-card); border-radius: 20px; border: 1px dashed var(--border-color);">
-                <i data-lucide="folder-x" style="width: 64px; height: 64px; color: var(--text-muted); opacity: 0.5; margin-bottom: 1rem; display: inline-block;"></i>
-                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">No recordings yet</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Start a live stream or upload a video to see folders here.</p>
-                <a href="{% url 'admin_dashboard' %}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 8px;">
+            <div class="no-data-card">
+                <i data-lucide="folder-x" style="width: 56px; height: 56px; color: var(--color-text-muted); opacity: 0.5; margin-bottom: 1rem; display: inline-block;"></i>
+                <h3>No recordings yet</h3>
+                <p>Start a live stream or upload a video to see folders here.</p>
+                <a href="{% url 'admin_dashboard' %}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.65rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; background: var(--color-primary); color: white;">
                     <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
                     Go to Camera Fleet
                 </a>
@@ -168,7 +235,7 @@
     {% for folder in folders %}
     <div id="folder-{{ folder.id }}" class="video-list-container">
         <div class="back-btn" onclick="closeFolder()">
-            <i data-lucide="arrow-left"></i> Back to Folders
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Folders
         </div>
         
         <div class="breadcrumb-custom">
@@ -179,7 +246,7 @@
 
         {% for date_str, recordings in folder.dates.items %}
         <div class="date-group-header">
-            <i data-lucide="calendar" style="width: 14px;"></i>
+            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
             {{ date_str }}
         </div>
         
@@ -189,8 +256,8 @@
                 {% if rec.thumbnail %}
                 <img src="{{ rec.thumbnail.url }}" alt="{{ rec.title }}">
                 {% else %}
-                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-dark">
-                    <i data-lucide="video" class="text-white opacity-25"></i>
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: var(--color-bg-hover);">
+                    <i data-lucide="video" style="color: var(--color-text-muted); opacity: 0.5;"></i>
                 </div>
                 {% endif %}
             </div>
@@ -201,11 +268,11 @@
                 </div>
             </div>
             <div class="video-row-actions">
-                <a href="{% url 'watch_recording' rec.id %}" class="btn btn-sm btn-primary px-3">
+                <a href="{% url 'watch_recording' rec.id %}" class="btn btn-sm btn-primary px-3" style="background: var(--color-primary); border-color: var(--color-primary); display: inline-flex; align-items: center;">
                     <i data-lucide="play" class="me-1" style="width: 14px; height: 14px;"></i> Watch
                 </a>
                 {% if rec.video_file %}
-                <a href="{{ rec.video_file.url }}" download class="btn btn-sm btn-outline-secondary">
+                <a href="{{ rec.video_file.url }}" download class="btn btn-sm btn-outline-secondary" style="border-color: var(--color-border); color: var(--color-text-main);">
                     <i data-lucide="download" style="width: 14px; height: 14px;"></i>
                 </a>
                 {% endif %}

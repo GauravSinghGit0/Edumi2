@@ -33,8 +33,10 @@ class MobileCamera(models.Model):
     
     def has_permission(self, user):
         """Check if user has permission to access this mobile camera"""
+        if not (user and user.is_authenticated):
+            return False
         # Admin always has access
-        if user.is_superuser:
+        if user.is_superuser or getattr(user, 'is_staff', False) or (hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin'):
             return True
         # Check if teacher has explicit permission
         return MobileCameraPermission.objects.filter(mobile_camera=self, teacher=user).exists()

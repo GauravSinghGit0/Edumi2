@@ -5,211 +5,332 @@
 
 {% block extra_css %}
 <style>
-    .manager-container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-    .tabs-nav { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
-    .tab-link { 
-        padding: 0.75rem 1.5rem; 
-        text-decoration: none; 
-        color: var(--text-muted); 
-        font-weight: 600; 
-        border-radius: 0.5rem;
-        transition: all 0.2s;
+    .manager-container {
+        padding: 1.5rem 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
     }
-    .tab-link.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
-    .tab-link:hover:not(.active) { background: var(--hover-bg); color: var(--text-main); }
-    
-    .content-table { 
-        width: 100%; 
-        background: var(--bg-card); 
-        border-radius: 1rem; 
-        border: 1px solid var(--border-color);
-        border-collapse: separate;
-        border-spacing: 0;
+    .mgmt-header {
+        margin-bottom: 1.5rem;
     }
-    .content-table th:first-child { border-top-left-radius: 1rem; }
-    .content-table th:last-child { border-top-right-radius: 1rem; }
-    .content-table tr:last-child td:first-child { border-bottom-left-radius: 1rem; }
-    .content-table tr:last-child td:last-child { border-bottom-right-radius: 1rem; }
-    
-    .content-table th { background: var(--gray-50); padding: 1rem; text-align: left; font-size: 0.875rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border-color); }
-    .content-table td { padding: 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.9375rem; color: var(--text-main); }
-    .content-table tr:last-child td { border-bottom: none; }
-    
-    .badge { padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
-    .badge-video { background: rgba(67, 56, 202, 0.15); color: var(--primary); }
-    .badge-meeting { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
-    
-    .actions-cell { display: flex; gap: 0.75rem; align-items: center; }
-    .btn-icon { 
-        width: 32px; height: 32px; 
-        display: flex; align-items: center; justify-content: center; 
-        border-radius: 0.5rem; 
-        border: 1px solid var(--border-color); 
-        color: var(--text-muted); 
-        transition: all 0.2s;
-        background: var(--bg-card);
+    .mgmt-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.25rem 0;
+        letter-spacing: -0.01em;
     }
-    .btn-icon:hover { background: var(--hover-bg); color: var(--primary); border-color: var(--primary); }
-    .btn-icon.delete:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: var(--danger); }
+    .mgmt-subtitle {
+        color: var(--color-text-muted, #64748b);
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    .tabs-nav {
+        display: inline-flex;
+        background: var(--color-bg-hover, #f1f5f9);
+        padding: 4px;
+        border-radius: var(--radius-lg, 10px);
+        gap: 4px;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--color-border, #e2e8f0);
+    }
+    .tab-link {
+        padding: 0.55rem 1.25rem;
+        text-decoration: none;
+        color: var(--color-text-muted, #64748b);
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: var(--radius-md, 7px);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .tab-link.active {
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-primary, #6366f1);
+        box-shadow: var(--shadow-sm);
+    }
+    .tab-link:hover:not(.active) {
+        color: var(--color-text-main, #0f172a);
+    }
+    
+    .table-card {
+        background: var(--color-bg-card, #ffffff);
+        border-radius: var(--radius-xl, 1rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        box-shadow: var(--shadow-sm);
+        overflow: visible;
+        position: relative;
+    }
+    .content-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    .content-table th {
+        background: var(--color-bg-hover, #f8fafc);
+        padding: 0.875rem 1.25rem;
+        font-size: 0.8125rem;
+        color: var(--color-text-muted, #64748b);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+    }
+    .content-table td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border, #f1f5f9);
+        font-size: 0.875rem;
+        color: var(--color-text-main, #0f172a);
+        vertical-align: middle;
+    }
+    .content-table tr:last-child td {
+        border-bottom: none;
+    }
+    .content-table tr:hover td {
+        background: var(--color-bg-hover, #f8fafc);
+    }
+    
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .badge-published {
+        background: rgba(16, 185, 129, 0.12);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .badge-hidden {
+        background: rgba(245, 158, 11, 0.12);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    
+    .actions-cell {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md, 0.375rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        color: var(--color-text-muted, #64748b);
+        transition: all 0.2s ease;
+        background: var(--color-bg-card, #ffffff);
+        cursor: pointer;
+    }
+    .btn-icon:hover {
+        background: var(--color-bg-hover, #f8fafc);
+        color: var(--color-primary, #6366f1);
+        border-color: var(--color-primary, #6366f1);
+    }
     
     .dropdown { position: relative; display: inline-block; }
-    .dropdown-content { 
-        display: none; position: absolute; right: 0; background: var(--bg-card); 
-        min-width: 160px; box-shadow: var(--shadow-lg); 
-        border-radius: 0.5rem; border: 1px solid var(--border-color); z-index: 50;
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 4px);
+        background: var(--color-bg-card, #ffffff);
+        min-width: 160px;
+        box-shadow: var(--shadow-lg);
+        border-radius: var(--radius-md, 0.5rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        z-index: 50;
+        overflow: hidden;
+        animation: dropFade 0.15s ease-out;
     }
-    .dropdown:hover .dropdown-content, .dropdown-content.show { display: block; }
-    .dropdown-item { 
-        padding: 0.75rem 1rem; color: var(--text-main); text-decoration: none; 
-        display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;
+    @keyframes dropFade {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-    .dropdown-item:hover { background: var(--hover-bg); color: var(--text-main); }
-    .dropdown-item.danger { color: var(--danger); }
-    .dropdown-item.danger:hover { background: rgba(239, 68, 68, 0.1); }
+    .dropdown-content.show { display: block; }
+    .dropdown-item {
+        padding: 0.65rem 1rem;
+        color: var(--color-text-main, #334155);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .dropdown-item:hover {
+        background: var(--color-bg-hover, #f8fafc);
+        color: var(--color-primary, #6366f1);
+    }
+    .dropdown-item.danger {
+        color: var(--color-danger, #ef4444);
+    }
+    .dropdown-item.danger:hover {
+        background: rgba(239, 68, 68, 0.08);
+    }
 
     /* Meeting Status Badges */
-    .badge.status-live { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-    .badge.status-ended { background: var(--gray-200); color: var(--gray-700); }
-    .badge.status-scheduled { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
-    .badge.status-cancelled { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
-    
-    /* Animation for AJAX updates */
-    @keyframes highlight-fade {
-        0% { background-color: var(--warning); opacity: 0.2; }
-        100% { background-color: transparent; }
-    }
-    .updated-row { animation: highlight-fade 2s ease-out; }
+    .badge.status-live { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge.status-ended { background: var(--color-bg-hover, #e2e8f0); color: var(--color-text-muted, #64748b); }
+    .badge.status-scheduled { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+    .badge.status-cancelled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="manager-container">
-    <div class="dashboard-header mb-4">
-        <div>
-            <h1>Content Manager</h1>
-            <p>Manage videos, recordings, and live meeting histories.</p>
-        </div>
+    <div class="mgmt-header">
+        <h1 class="mgmt-title">Content Manager</h1>
+        <p class="mgmt-subtitle">Manage videos, recordings, and live meeting histories.</p>
     </div>
+    
     <div class="tabs-nav">
-        <a href="javascript:void(0)" class="tab-link active" onclick="switchTab('videos', event)">Videos & Recordings</a>
-        <a href="javascript:void(0)" class="tab-link" onclick="switchTab('meetings', event)">Meetings</a>
+        <a href="javascript:void(0)" class="tab-link active" onclick="switchTab('videos', event)">
+            <i data-lucide="video" style="width: 16px; height: 16px;"></i> Videos & Recordings
+        </a>
+        <a href="javascript:void(0)" class="tab-link" onclick="switchTab('meetings', event)">
+            <i data-lucide="calendar" style="width: 16px; height: 16px;"></i> Meetings
+        </a>
     </div>
 
     <!-- Videos Section -->
     <div id="videosSection">
-        <table class="content-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Video Name</th>
-                    <th>Uploader</th>
-                    <th>Date</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for rec in recordings %}
-                <tr id="rec-{{ rec.id }}">
-                    <td>#{{ rec.id }}</td>
-                    <td>
-                        <div style="font-weight: 700;">{{ rec.title }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ rec.camera.name|default:"Manual Upload" }}</div>
-                    </td>
-                    <td>{{ rec.teacher.username }}</td>
-                    <td>{{ rec.created_at|date:"M d, Y" }}</td>
-                    <td>{{ rec.duration|default:"--" }}</td>
-                    <td id="rec-status-{{ rec.id }}">
-                        <span class="badge {% if rec.is_published %}bg-success text-white{% else %}bg-warning{% endif %} status-text">
-                            {{ rec.is_published|yesno:"Published,Hidden" }}
-                        </span>
-                    </td>
-                    <td class="actions-cell">
-                        <a href="{% url 'watch_recording' rec.id %}" class="btn-icon" title="View Video" target="_blank">
-                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn-icon" onclick="toggleDropdown(this)">
-                                <i data-lucide="more-vertical" style="width: 16px; height: 16px;"></i>
-                            </button>
-                            <div class="dropdown-content">
-                                <a href="javascript:void(0)" onclick="togglePublish({{ rec.id }})" class="dropdown-item">
-                                    <i data-lucide="refresh-cw" style="width: 14px;"></i> 
-                                    <span class="toggle-text">{% if rec.is_published %}Hide{% else %}Publish{% endif %}</span>
-                                </a>
-                                <a href="javascript:void(0)" 
-                                   onclick="deleteItem('recording', {{ rec.id }}, '{% url 'delete_recording_admin' rec.id %}')" 
-                                   class="dropdown-item danger">
-                                    <i data-lucide="trash-2" style="width: 14px;"></i> Delete Video
-                                </a>
+        <div class="table-card">
+            <table class="content-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Video Name</th>
+                        <th>Uploader</th>
+                        <th>Date</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in recordings %}
+                    <tr id="rec-{{ rec.id }}">
+                        <td style="color: var(--color-text-muted); font-family: monospace; font-weight: 600;">#{{ rec.id }}</td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--color-text-main);">{{ rec.title }}</div>
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ rec.camera.name|default:"Manual Upload" }}</div>
+                        </td>
+                        <td style="color: var(--color-text-main);">{{ rec.teacher.username }}</td>
+                        <td style="color: var(--color-text-muted);">{{ rec.created_at|date:"M d, Y" }}</td>
+                        <td style="color: var(--color-text-main);">{{ rec.duration|default:"--" }}</td>
+                        <td id="rec-status-{{ rec.id }}">
+                            <span class="badge {% if rec.is_published %}badge-published{% else %}badge-hidden{% endif %} status-text">
+                                {{ rec.is_published|yesno:"Published,Hidden" }}
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <a href="{% url 'watch_recording' rec.id %}" class="btn-icon" title="View Video" target="_blank">
+                                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                            </a>
+                            <div class="dropdown">
+                                <button class="btn-icon" onclick="toggleDropdown(this)" title="Options">
+                                    <i data-lucide="more-vertical" style="width: 16px; height: 16px;"></i>
+                                </button>
+                                <div class="dropdown-content">
+                                    <a href="javascript:void(0)" onclick="togglePublish({{ rec.id }})" class="dropdown-item">
+                                        <i data-lucide="refresh-cw" style="width: 14px;"></i> 
+                                        <span class="toggle-text">{% if rec.is_published %}Hide{% else %}Publish{% endif %}</span>
+                                    </a>
+                                    <a href="javascript:void(0)" 
+                                       onclick="deleteItem('recording', {{ rec.id }}, '{% url 'delete_recording_admin' rec.id %}')" 
+                                       class="dropdown-item danger">
+                                        <i data-lucide="trash-2" style="width: 14px;"></i> Delete Video
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">No videos found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 3.5rem 2rem; color: var(--color-text-muted);">
+                            <i data-lucide="film" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.4;"></i>
+                            <p style="margin: 0; font-size: 0.95rem;">No videos or recordings found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Meetings Section -->
     <div id="meetingsSection" style="display: none;">
-        <table class="content-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Meeting Name</th>
-                    <th>Host</th>
-                    <th>Date</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in meetings %}
-                <tr id="meet-{{ m.id }}">
-                    <td>#{{ m.id }}</td>
-                    <td>
-                        <div style="font-weight: 700;">{{ m.title }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ m.classroom.title|default:"Personal Meeting" }}</div>
-                    </td>
-                    <td>{{ m.teacher.username }}</td>
-                    <td>{{ m.scheduled_time|date:"M d, Y" }}</td>
-                    <td>{{ m.duration_minutes }}m</td>
-                    <td>
-                        <span class="badge status-{{ m.status }}">
-                            {{ m.get_status_display }}
-                        </span>
-                    </td>
-                    <td class="actions-cell">
-                        <a href="{% url 'join_meeting' m.meeting_code %}" class="btn-icon" title="View Meeting" target="_blank">
-                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn-icon" onclick="toggleDropdown(this)">
-                                <i data-lucide="more-vertical" style="width: 16px; height: 16px;"></i>
-                            </button>
-                            <div class="dropdown-content">
-                                <a href="{% url 'meeting_attendance' m.meeting_code %}" class="dropdown-item">
-                                    <i data-lucide="users" style="width: 14px;"></i> Attendance
-                                </a>
-                                <a href="javascript:void(0)" 
-                                   onclick="deleteItem('meeting', {{ m.id }}, '{% url 'delete_meeting_admin' m.id %}')" 
-                                   class="dropdown-item danger">
-                                    <i data-lucide="trash-2" style="width: 14px;"></i> Delete Record
-                                </a>
+        <div class="table-card">
+            <table class="content-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Meeting Name</th>
+                        <th>Host</th>
+                        <th>Date</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in meetings %}
+                    <tr id="meet-{{ m.id }}">
+                        <td style="color: var(--color-text-muted); font-family: monospace; font-weight: 600;">#{{ m.id }}</td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--color-text-main);">{{ m.title }}</div>
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ m.classroom.title|default:"Personal Meeting" }}</div>
+                        </td>
+                        <td style="color: var(--color-text-main);">{{ m.teacher.username }}</td>
+                        <td style="color: var(--color-text-muted);">{{ m.scheduled_time|date:"M d, Y" }}</td>
+                        <td style="color: var(--color-text-main);">{{ m.duration_minutes }}m</td>
+                        <td>
+                            <span class="badge status-{{ m.status }}">
+                                {{ m.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <a href="{% url 'join_meeting' m.meeting_code %}" class="btn-icon" title="View Meeting" target="_blank">
+                                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                            </a>
+                            <div class="dropdown">
+                                <button class="btn-icon" onclick="toggleDropdown(this)" title="Options">
+                                    <i data-lucide="more-vertical" style="width: 16px; height: 16px;"></i>
+                                </button>
+                                <div class="dropdown-content">
+                                    <a href="{% url 'meeting_attendance' m.meeting_code %}" class="dropdown-item">
+                                        <i data-lucide="users" style="width: 14px;"></i> Attendance
+                                    </a>
+                                    <a href="javascript:void(0)" 
+                                       onclick="deleteItem('meeting', {{ m.id }}, '{% url 'delete_meeting_admin' m.id %}')" 
+                                       class="dropdown-item danger">
+                                        <i data-lucide="trash-2" style="width: 14px;"></i> Delete Record
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">No meetings found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 3.5rem 2rem; color: var(--color-text-muted);">
+                            <i data-lucide="calendar-x" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.4;"></i>
+                            <p style="margin: 0; font-size: 0.95rem;">No meetings found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

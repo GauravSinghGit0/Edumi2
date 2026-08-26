@@ -5,6 +5,7 @@ import logging
 import time
 import signal
 from django.conf import settings
+from django.utils import timezone
 from .models import CameraRecording
 from .ffmpeg_helpers import get_ffmpeg_binary
 
@@ -124,19 +125,22 @@ class RecordingEngine:
             self.output_path = os.path.join(settings.MEDIA_ROOT, relative_path)
             os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
         
-        # Map quality to resolution
+        # Ensure high-definition / master recording quality regardless of live adaptive bandwidth
         quality_map = {
-            '360p': '640x360',
-            '480p': '854x480',
-            '720p': '1280x720',
+            '360p': '1920x1080',  # Always record in HD 1080p minimum
+            '480p': '1920x1080',
+            '720p': '1920x1080',
             '1080p': '1920x1080',
-            '4K': '3840x2160'
+            '2K': '2560x1440',
+            '1440p': '2560x1440',
+            '4K': '3840x2160',
+            'auto': '1920x1080'
         }
-        res = quality_map.get(quality, '1280x720')
+        res = quality_map.get(quality, '1920x1080')
 
         # Determine encoder: Use verified hardware-accelerated encoder if available, else libx264
         encoder = _get_working_encoder()
-        logger.info(f"Using encoder: {encoder} for recording")
+        logger.info(f"Using encoder: {encoder} for HD recording at {res}")
 
         # Build robust FFmpeg command
         cmd = [
@@ -150,7 +154,12 @@ class RecordingEngine:
 
         stream_url = camera.get_stream_url()
         if stream_url and stream_url.startswith('rtsp'):
-            cmd.extend(['-rtsp_transport', 'tcp', '-fflags', '+nobuffer', '-flags', '+low_delay'])
+            cmd.extend([
+                '-rtsp_transport', 'tcp',
+                '-stimeout', '5000000',
+                '-fflags', '+nobuffer+genpts',
+                '-flags', '+low_delay'
+            ])
         if stream_url:
             cmd.extend(['-i', stream_url])
 
@@ -164,11 +173,11 @@ class RecordingEngine:
 
         cmd.extend(['-s', res, '-c:v', encoder])
 
-        # Encoder-specific options
+        # Encoder-specific options for crisp HD lecture capture
         if encoder == 'libx264':
-            cmd.extend(['-preset', 'ultrafast', '-crf', '23', '-profile:v', 'main'])
+            cmd.extend(['-preset', 'veryfast', '-crf', '21', '-profile:v', 'high'])
         else:
-            cmd.extend(['-b:v', '4M' if quality == '4K' else '2.5M'])
+            cmd.extend(['-b:v', '6M' if quality in ['4K', '2K', '1440p'] else '4M'])
 
         cmd.extend(['-pix_fmt', 'yuv420p'])
 

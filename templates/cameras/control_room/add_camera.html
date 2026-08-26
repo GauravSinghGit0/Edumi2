@@ -3,7 +3,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="modalTitle">Add Camera</h2>
-            <button class="close-btn" onclick="closeModal()">✕</button>
+            <button class="modal-close-btn" onclick="closeModal()" title="Close">✕</button>
         </div>
 
         <form id="cameraForm" onsubmit="saveCamera(event)">
@@ -26,12 +26,12 @@
 
             <!-- Type-specific hint banner -->
             <div id="typeHint" style="
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-                border-radius: 0.5rem;
+                background: var(--color-primary-bg, rgba(99, 102, 241, 0.08));
+                border: 1px solid var(--color-border, #e2e8f0);
+                border-radius: var(--radius-md, 0.5rem);
                 padding: 0.75rem 1rem;
-                font-size: 0.8rem;
-                color: #1e40af;
+                font-size: 0.8125rem;
+                color: var(--color-text-main, #0f172a);
                 margin-bottom: 1rem;
                 line-height: 1.5;
             "></div>
@@ -50,34 +50,35 @@
 
             <div id="rtspAuth" class="grid-2">
                 <div class="form-group">
-                    <label>Username <span style="color:#94a3b8; font-weight:400;">(optional)</span></label>
+                    <label>Username <span style="color:var(--color-text-muted, #94a3b8); font-weight:400;">(optional)</span></label>
                     <input type="text" id="camUser" name="username" class="form-control" placeholder="Leave blank if none">
                 </div>
                 <div class="form-group">
-                    <label>Password <span style="color:#94a3b8; font-weight:400;">(optional)</span></label>
+                    <label>Password <span style="color:var(--color-text-muted, #94a3b8); font-weight:400;">(optional)</span></label>
                     <input type="password" id="camPass" name="password" class="form-control" placeholder="Leave blank if none">
                 </div>
             </div>
 
             <div id="rtspPath" class="form-group">
-                <label>Stream Path <span style="color:#94a3b8; font-weight:400;">(optional — auto-detected if empty)</span></label>
-                <input type="text" id="camStreamPath" name="stream_path" class="form-control" placeholder="/stream  or  /live  or  /h264">
+                <label>Stream Path <span style="color:var(--color-text-muted, #94a3b8); font-weight:400;">(optional — auto-detected if empty)</span></label>
+                <input type="text" id="camStreamPath" name="stream_path" class="form-control" placeholder="/stream  or  /live  or  /axis-media/media.amp">
             </div>
 
             <!-- Test result area -->
-            <div id="testResult" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:0.5rem; font-size:0.8rem;"></div>
+            <div id="testResult" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:var(--radius-md, 0.5rem); font-size:0.8125rem;"></div>
 
             <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
                 <button type="button" id="testBtn" onclick="testCameraConnection()" style="
                     flex:1; min-width:120px;
                     padding:0.75rem;
-                    background:#f1f5f9;
-                    color:#475569;
-                    border:1px solid #e2e8f0;
-                    border-radius:0.5rem;
+                    background:var(--color-bg-hover, #f1f5f9);
+                    color:var(--color-text-main, #0f172a);
+                    border:1px solid var(--color-border, #e2e8f0);
+                    border-radius:var(--radius-md, 0.5rem);
                     font-weight:600;
                     cursor:pointer;
                     display:flex; align-items:center; justify-content:center; gap:0.5rem;
+                    transition: all 0.2s ease;
                 ">
                     🔍 Test Connection
                 </button>
@@ -88,15 +89,6 @@
 </div>
 
 <style>
-    .close-btn {
-        border: none;
-        background: none;
-        font-size: 1.25rem;
-        color: var(--text-muted);
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-    .close-btn:hover { color: var(--text-main); }
     .grid-2 {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -108,7 +100,10 @@
 </style>
 
 <script>
-    const TYPE_META = {
+(function() {
+    'use strict';
+
+    var TYPE_META = {
         rtsp: {
             ip: '192.168.1.100',
             port: 554,
@@ -145,124 +140,172 @@
         },
     };
 
+    window.TYPE_META = TYPE_META;
+
     function handleTypeChange() {
-        const type = document.getElementById('camType').value;
-        const meta = TYPE_META[type];
-        const isNew = !document.getElementById('cameraId').value;
+        var camTypeEl = document.getElementById('camType');
+        if (!camTypeEl) return;
+        var type = camTypeEl.value;
+        var meta = TYPE_META[type];
+        if (!meta) return;
+
+        var camIdEl = document.getElementById('cameraId');
+        var isNew = !camIdEl || !camIdEl.value;
 
         if (isNew) {
-            document.getElementById('camIp').value = meta.ip;
-            document.getElementById('camUser').value = meta.username;
-            document.getElementById('camPass').value = meta.password;
-            document.getElementById('camStreamPath').value = meta.stream_path;
+            var ipEl = document.getElementById('camIp');
+            var userEl = document.getElementById('camUser');
+            var passEl = document.getElementById('camPass');
+            var pathEl = document.getElementById('camStreamPath');
+            if (ipEl) ipEl.value = meta.ip;
+            if (userEl) userEl.value = meta.username;
+            if (passEl) passEl.value = meta.password;
+            if (pathEl) pathEl.value = meta.stream_path;
         }
 
-        document.getElementById('camPort').value = meta.port;
-        document.getElementById('typeHint').innerHTML = meta.hint;
+        var portEl = document.getElementById('camPort');
+        if (portEl) portEl.value = meta.port;
 
-        // Keep fields visible for all types so auto-assigned values can be reviewed/edited
-        document.getElementById('rtspAuth').style.display = 'grid';
-        document.getElementById('rtspPath').style.display = 'block';
+        var hintEl = document.getElementById('typeHint');
+        if (hintEl) hintEl.innerHTML = meta.hint;
 
-        // Reset test result on type change
-        document.getElementById('testResult').style.display = 'none';
+        var rtspAuth = document.getElementById('rtspAuth');
+        if (rtspAuth) rtspAuth.style.display = 'grid';
+
+        var rtspPath = document.getElementById('rtspPath');
+        if (rtspPath) rtspPath.style.display = 'block';
+
+        var testResult = document.getElementById('testResult');
+        if (testResult) testResult.style.display = 'none';
     }
 
     function openAddModal() {
-        document.getElementById('cameraForm').reset();
-        document.getElementById('cameraId').value = '';
-        document.getElementById('modalTitle').innerText = 'Add Camera';
-        document.getElementById('testResult').style.display = 'none';
+        var form = document.getElementById('cameraForm');
+        if (form) form.reset();
+        var idEl = document.getElementById('cameraId');
+        if (idEl) idEl.value = '';
+        var titleEl = document.getElementById('modalTitle');
+        if (titleEl) titleEl.innerText = 'Add Camera';
+        var testResult = document.getElementById('testResult');
+        if (testResult) testResult.style.display = 'none';
+
         handleTypeChange();
-        document.getElementById('cameraModal').classList.add('show');
-        if (typeof disableScroll === 'function') disableScroll();
+        var modal = document.getElementById('cameraModal');
+        if (modal) modal.classList.add('show');
+        if (typeof window.disableScroll === 'function') window.disableScroll();
     }
 
     function closeModal() {
-        document.getElementById('cameraModal').classList.remove('show');
-        if (typeof enableScroll === 'function') enableScroll();
+        var modal = document.getElementById('cameraModal');
+        if (modal) modal.classList.remove('show');
+        if (typeof window.enableScroll === 'function') window.enableScroll();
     }
 
     async function openEditModal(id) {
-        const res = await fetch(`/cameras/edit-camera/${id}/`);
-        const data = await res.json();
+        try {
+            var res = await fetch(`/cameras/edit-camera/${id}/`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            var data = await res.json();
 
-        document.getElementById('modalTitle').innerText = 'Edit Camera';
-        document.getElementById('cameraId').value = data.id;
-        document.getElementById('camName').value = data.name;
-        document.getElementById('camType').value = data.camera_type;
-        document.getElementById('camIp').value = data.ip_address;
-        document.getElementById('camPort').value = data.port;
-        document.getElementById('camUser').value = data.username || '';
-        document.getElementById('camPass').value = data.password || '';
-        document.getElementById('camStreamPath').value = data.stream_path || '';
-        document.getElementById('testResult').style.display = 'none';
+            var titleEl = document.getElementById('modalTitle');
+            if (titleEl) titleEl.innerText = 'Edit Camera';
+            var idEl = document.getElementById('cameraId');
+            if (idEl) idEl.value = data.id;
+            var nameEl = document.getElementById('camName');
+            if (nameEl) nameEl.value = data.name;
+            var typeEl = document.getElementById('camType');
+            if (typeEl) typeEl.value = data.camera_type;
+            var ipEl = document.getElementById('camIp');
+            if (ipEl) ipEl.value = data.ip_address;
+            var portEl = document.getElementById('camPort');
+            if (portEl) portEl.value = data.port;
+            var userEl = document.getElementById('camUser');
+            if (userEl) userEl.value = data.username || '';
+            var passEl = document.getElementById('camPass');
+            if (passEl) passEl.value = data.password || '';
+            var pathEl = document.getElementById('camStreamPath');
+            if (pathEl) pathEl.value = data.stream_path || '';
+            var testResult = document.getElementById('testResult');
+            if (testResult) testResult.style.display = 'none';
 
-        handleTypeChange();
-        document.getElementById('cameraModal').classList.add('show');
-        if (typeof disableScroll === 'function') disableScroll();
+            handleTypeChange();
+            var modal = document.getElementById('cameraModal');
+            if (modal) modal.classList.add('show');
+            if (typeof window.disableScroll === 'function') window.disableScroll();
+        } catch (e) {
+            alert('Failed to load camera data: ' + e.message);
+        }
     }
 
     async function testCameraConnection() {
-        const ip   = document.getElementById('camIp').value.trim();
-        const port = document.getElementById('camPort').value.trim();
-        const type = document.getElementById('camType').value;
-        const id   = document.getElementById('cameraId').value;
+        var ipEl = document.getElementById('camIp');
+        var portEl = document.getElementById('camPort');
+        var typeEl = document.getElementById('camType');
+        var idEl = document.getElementById('cameraId');
+
+        var ip = ipEl ? ipEl.value.trim() : '';
+        var port = portEl ? portEl.value.trim() : '';
+        var type = typeEl ? typeEl.value : 'rtsp';
+        var id = idEl ? idEl.value : '';
 
         if (!ip) {
             showTestResult('error', 'Enter an IP address first.');
             return;
         }
 
-        const btn = document.getElementById('testBtn');
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Testing...';
+        var btn = document.getElementById('testBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Testing...';
+        }
         showTestResult('info', 'Probing camera — this may take a few seconds...');
 
-        // If editing an existing camera, test it directly
         if (id) {
             try {
-                const res = await fetch(`/cameras/test-camera/${id}/`);
-                const data = await res.json();
+                var res = await fetch(`/cameras/test-camera/${id}/`);
+                var data = await res.json();
                 renderTestResult(data);
             } catch(e) {
                 showTestResult('error', `Network error: ${e.message}`);
             }
-            btn.disabled = false;
-            btn.innerHTML = '🔍 Test Connection';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Test Connection';
+            }
             return;
         }
 
-        // For unsaved cameras, do a quick browser-side reachability check using
-        // a temporary save → test → the test endpoint probes all paths.
-        // We use the probe endpoint directly.
         try {
-            const probeUrl = `/cameras/probe/?type=${encodeURIComponent(type)}&ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}`;
-            const res = await fetch(probeUrl);
-            const data = await res.json();
+            var probeUrl = `/cameras/probe/?type=${encodeURIComponent(type)}&ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}`;
+            var res = await fetch(probeUrl);
+            var data = await res.json();
             renderTestResult(data);
         } catch(e) {
             showTestResult('error', `Could not reach server: ${e.message}`);
         }
 
-        btn.disabled = false;
-        btn.innerHTML = '🔍 Test Connection';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Test Connection';
+        }
     }
 
     function renderTestResult(data) {
+        if (!data) return;
         if (data.overall_status === 'success') {
-            const path = data.working_path || '';
+            var path = data.working_path || '';
             showTestResult('success',
                 `✅ <b>Camera reachable!</b>  Working path: <code>${path}</code><br>${data.hint || ''}`
             );
-            // Auto-fill stream path if RTSP
-            if (path && document.getElementById('rtspPath').style.display !== 'none') {
-                document.getElementById('camStreamPath').value = path;
+            var streamPathEl = document.getElementById('camStreamPath');
+            var rtspPathEl = document.getElementById('rtspPath');
+            if (path && streamPathEl && rtspPathEl && rtspPathEl.style.display !== 'none') {
+                streamPathEl.value = path;
             }
         } else {
-            const results = (data.results || []).map(r =>
-                `<code>${r.url || r.method}</code> → ${r.status}`
-            ).join('<br>');
+            var results = (data.results || []).map(function(r) {
+                return `<code>${r.url || r.method}</code> → ${r.status}`;
+            }).join('<br>');
             showTestResult('error',
                 `❌ <b>Camera not reachable</b><br>${data.hint || ''}<br><br>${results}`
             );
@@ -270,8 +313,9 @@
     }
 
     function showTestResult(type, html) {
-        const el = document.getElementById('testResult');
-        const styles = {
+        var el = document.getElementById('testResult');
+        if (!el) return;
+        var styles = {
             success: 'background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;',
             error:   'background:#fef2f2; border:1px solid #fecaca; color:#991b1b;',
             info:    'background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;',
@@ -281,26 +325,52 @@
     }
 
     async function saveCamera(e) {
-        e.preventDefault();
-        const form = document.getElementById('cameraForm');
-        const formData = new FormData(form);
-        const id = formData.get('camera_id');
-        const url = id ? `/cameras/edit-camera/${id}/` : `/cameras/add-camera/`;
+        if (e) e.preventDefault();
+        var form = document.getElementById('cameraForm');
+        if (!form) return;
+        var formData = new FormData(form);
+        var id = formData.get('camera_id');
+        var url = id ? `/cameras/edit-camera/${id}/` : `/cameras/add-camera/`;
 
-        const res = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        });
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 
-        const data = await res.json();
-        if (data.status === 'success') {
-            window.location.reload();
-        } else {
-            alert(data.message || 'Failed to save camera');
+        try {
+            var res = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+
+            if (res.redirected) {
+                window.location.href = res.url;
+                return;
+            }
+
+            var data = await res.json();
+            if (data.status === 'success') {
+                if (typeof Turbo !== 'undefined') {
+                    Turbo.visit(window.location.href, { action: 'replace' });
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                alert(data.message || 'Failed to save camera');
+            }
+        } catch (err) {
+            alert('Error submitting camera form: ' + err.message);
         }
     }
 
-    // Run handleTypeChange on first load so hint + defaults are correct
+    // Expose all modal and action handlers to window
+    window.handleTypeChange = handleTypeChange;
+    window.openAddModal = openAddModal;
+    window.closeModal = closeModal;
+    window.openEditModal = openEditModal;
+    window.testCameraConnection = testCameraConnection;
+    window.saveCamera = saveCamera;
+
+    // Run handleTypeChange on load and Turbo navigations
     document.addEventListener('DOMContentLoaded', handleTypeChange);
+    document.addEventListener('turbo:load', handleTypeChange);
+})();
 </script>

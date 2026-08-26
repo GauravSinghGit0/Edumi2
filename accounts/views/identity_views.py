@@ -22,13 +22,14 @@ def identity_me_view(request):
     if not request.user.is_authenticated:
         return JsonResponse({
             'success': False,
-            'error': 'Unauthenticated',
-            'identity': IdentityService.get_identity(None)
-        }, status=401)
+            'authenticated': False,
+            'identity': None
+        }, status=200)
 
     identity = getattr(request, 'identity', None) or IdentityService.get_identity(request.user)
     return JsonResponse({
         'success': True,
+        'authenticated': True,
         'identity': identity
     })
 

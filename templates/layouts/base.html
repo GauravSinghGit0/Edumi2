@@ -45,7 +45,6 @@
             }
         })();
     </script>
-    {% include 'components/navbar.html' %}
 
     {% if messages %}
     <div class="messages-container">
@@ -66,23 +65,6 @@
     <script src="{% static 'js/eyes.js' %}"></script>
     <script src="{% static 'js/main.js' %}?v={{ timestamp }}"></script>
     <script src="{% static 'js/identity_sync.js' %}?v={{ timestamp }}"></script>
-    <script>
-        // Profile dropdown toggle
-        function toggleProfileDropdown() {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('show');
-        }
-
-        // Close dropdown when clicking outside
-        window.addEventListener('click', function (e) {
-            if (!e.target.closest('.nav-profile-dropdown')) {
-                const dropdown = document.getElementById('profileDropdown');
-                if (dropdown) {
-                    dropdown.classList.remove('show');
-                }
-            }
-        });
-    </script>
     {% include 'components/lucide_icons.html' %}
     {% block extra_js %}{% endblock %}
 </body>

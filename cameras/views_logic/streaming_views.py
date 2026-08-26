@@ -12,7 +12,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.contrib.auth import get_user_model
 from ..models import Camera, CameraRecording, CameraPermission
 from django.db.models import Q
-from .utils import is_admin, broadcast_live_status
+from .utils import is_admin, can_view_camera, broadcast_live_status
 from ..recording_engine import recording_engine
 
 logger = logging.getLogger(__name__)
@@ -143,10 +143,11 @@ class CameraStreamer:
                     except Exception:
                         pass
 
-        # Last-resort fallback
+        # Last-resort fallback (explicitly specify CAP_FFMPEG for RTSP to prevent CAP_IMAGES errors)
         try:
             os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
-            cap = cv2.VideoCapture(self.rtsp_url)
+            backend = cv2.CAP_ANY if is_http else cv2.CAP_FFMPEG
+            cap = cv2.VideoCapture(self.rtsp_url, backend)
             cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, RTSP_OPEN_TIMEOUT)
             if cap.isOpened():
                 ret, frame = cap.read()
@@ -660,14 +661,10 @@ def student_lecture_list(request):
 
 @login_required
 def watch_live(request, camera_id):
-    """Watch a live lecture (Student View)"""
-    # Allow admins to view any camera, even if not marked "live"
-    if is_admin(request.user):
-        camera = get_object_or_404(Camera, id=camera_id)
-    else:
-        camera = get_object_or_404(Camera, id=camera_id, is_live=True)
-
-    # In a real app, we'd check if the student belongs to the teacher's class
+    """Watch a live lecture (Student / Admin View)"""
+    camera = get_object_or_404(Camera, id=camera_id)
+    if not can_view_camera(request.user, camera):
+        return redirect('student_lecture_list')
 
     context = {
         'camera': camera,

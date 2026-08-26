@@ -524,6 +524,21 @@ function appendMessage({ isSent, content, imageUrl, fileUrl, fileName, time }) {
   const empty = container.querySelector('.chat-empty-box');
   if (empty) empty.remove();
 
+  // Ensure "Today" date separator exists for messages sent today
+  const allSeps = Array.from(container.querySelectorAll('.chat-date-separator'));
+  const hasToday = allSeps.some(s => s.textContent.trim().toLowerCase() === 'today');
+  if (!hasToday) {
+    const sep = document.createElement('div');
+    sep.className = 'chat-date-separator';
+    sep.innerHTML = '<span>Today</span>';
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+      container.insertBefore(sep, indicator);
+    } else {
+      container.appendChild(sep);
+    }
+  }
+
   const row = document.createElement('div');
   row.className = `chat-msg-row ${isSent ? 'sent' : 'recv'}`;
 
@@ -571,7 +586,31 @@ function appendMessage({ isSent, content, imageUrl, fileUrl, fileName, time }) {
     container.appendChild(row);
   }
   
+  // Update active sidebar conversation preview & time to 'now'
+  const shell = document.querySelector('.messages-shell');
+  const activeConvId = shell ? shell.dataset.conversationId : null;
+  if (activeConvId) {
+    const convItem = document.querySelector(`.conversation-item[href*="/inbox/${activeConvId}/"]`);
+    if (convItem) {
+      const prevEl = convItem.querySelector('.last-message-preview');
+      if (prevEl) {
+        prevEl.innerHTML = isSent ? `<span class="sender-label">You: </span>${escapeHtml(content || 'Attachment')}` : escapeHtml(content || 'Attachment');
+      }
+      const timeEl = convItem.querySelector('.last-message-time');
+      if (timeEl) {
+        timeEl.textContent = 'now';
+      }
+    }
+  }
+
   scrollToBottom(true);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /* ── WebSocket Event Listener ── */
@@ -580,6 +619,6 @@ window.addEventListener('new_message', function(e) {
   const shell = document.querySelector('.messages-shell');
   const activeConvId = shell ? shell.dataset.conversationId : null;
   if (activeConvId && d.conversation_id == activeConvId) {
-    appendMessage({ isSent: false, content: d.message, time: d.created_at || null });
+    appendMessage({ isSent: false, content: d.message, time: d.created_at || null, imageUrl: d.image_url, fileUrl: d.file_url, fileName: d.file_name });
   }
 });

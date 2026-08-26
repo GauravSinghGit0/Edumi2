@@ -5,25 +5,30 @@
         <div class="stream-main-col">
             
             <!-- Google Classroom Post Composer -->
-            <div class="stream-composer-card" style="position: relative;">
-                <div class="composer-header-row">
-                    <img src="{% if user.userprofile %}{{ user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff{% endif %}" 
-                         alt="{{ user.username }}" 
-                         class="composer-user-avatar"
-                         onerror="this.src='https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff'">
-                    <div class="composer-user-info">
-                        <span class="composer-user-name">{% if user.userprofile %}{{ user.userprofile.get_display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</span>
-                        <span class="composer-user-role">{% if is_teacher %}Instructor{% else %}Student Member{% endif %}</span>
-                    </div>
-                </div>
-
+            <div class="stream-composer-card">
                 <form id="classroomStreamForm" action="{% url 'send_message' conversation.id %}" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <textarea name="content" id="streamContentInput" class="stream-textarea" placeholder="Announce something or share study updates with your class..."></textarea>
+                    
+                    <div class="composer-header-row">
+                        <img src="{% if user.userprofile %}{{ user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff{% endif %}" 
+                             alt="{{ user.username }}" 
+                             class="composer-user-avatar"
+                             onerror="this.src='https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff'">
+                        <div class="composer-user-info">
+                            <span class="composer-user-name">{% if user.userprofile %}{{ user.userprofile.get_display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</span>
+                            <span class="composer-user-role {% if is_teacher %}role-teacher{% else %}role-student{% endif %}">
+                                {% if is_teacher %}Instructor{% else %}Student{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stream-input-wrap">
+                        <textarea name="content" id="streamContentInput" class="stream-textarea" placeholder="Announce something or share study resources with your class..." oninput="if(window.validateStreamComposer)validateStreamComposer()" onkeyup="if(window.validateStreamComposer)validateStreamComposer()" onchange="if(window.validateStreamComposer)validateStreamComposer()"></textarea>
+                    </div>
                     
                     <!-- Hidden File Inputs -->
-                    <input type="file" id="streamImageInput" name="image" accept="image/*" style="display: none;">
-                    <input type="file" id="streamFileInput" name="file" style="display: none;">
+                    <input type="file" id="streamImageInput" name="image" accept="image/*" style="display: none;" onchange="if(window.validateStreamComposer)validateStreamComposer()">
+                    <input type="file" id="streamFileInput" name="file" style="display: none;" onchange="if(window.validateStreamComposer)validateStreamComposer()">
 
                     <!-- Attachment Previews -->
                     <div class="stream-preview-strip" id="streamPreviewStrip" style="display: none;"></div>
@@ -32,15 +37,15 @@
                     <div class="composer-toolbar">
                         <div class="composer-tools">
                             <button type="button" class="tool-btn" onclick="document.getElementById('streamImageInput').click();" title="Attach Image">
-                                <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                <i data-lucide="image" style="width: 16px; height: 16px;"></i>
                                 <span>Photo</span>
                             </button>
-                            <button type="button" class="tool-btn" onclick="document.getElementById('streamFileInput').click();" title="Attach File / Document">
-                                <i data-lucide="paperclip" style="width: 15px; height: 15px;"></i>
+                            <button type="button" class="tool-btn" onclick="document.getElementById('streamFileInput').click();" title="Attach Document">
+                                <i data-lucide="paperclip" style="width: 16px; height: 16px;"></i>
                                 <span>File</span>
                             </button>
                             <button type="button" class="tool-btn" onclick="toggleStreamEmojiPicker();" title="Insert Emoji">
-                                <span>😀</span>
+                                <i data-lucide="smile" style="width: 16px; height: 16px;"></i>
                                 <span>Emoji</span>
                             </button>
                         </div>

@@ -3,20 +3,20 @@
     <!-- Materials Header & Actions -->
     <div class="materials-toolbar">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div class="badge-glass" style="background: rgba(99, 102, 241, 0.1); color: var(--stream-primary); border-color: rgba(99, 102, 241, 0.2);">
-                <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
-                {{ study_materials|length }} Learning Resources
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; border-radius: 2rem; font-size: 0.8125rem; font-weight: 700; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;">
+                <i data-lucide="book-open" style="width: 15px; height: 15px; color: #4338ca;"></i>
+                <span>{{ study_materials|length }} Learning Resources</span>
             </div>
             {% if material_units %}
-            <div class="badge-glass" style="background: rgba(16, 185, 129, 0.1); color: #059669; border-color: rgba(16, 185, 129, 0.2);">
-                <i data-lucide="folder" style="width: 15px; height: 15px;"></i>
-                {{ material_units|length }} Curriculum Units
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; border-radius: 2rem; font-size: 0.8125rem; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+                <i data-lucide="folder" style="width: 15px; height: 15px; color: #047857;"></i>
+                <span>{{ material_units|length }} Curriculum Units</span>
             </div>
             {% endif %}
         </div>
 
         <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <a href="{% url 'classroom_materials' classroom.id %}" class="btn-hero-action" style="background: transparent; border: 1px solid var(--stream-border); color: var(--stream-text-main); padding: 0.5rem 1rem; font-size: 0.8125rem; box-shadow: none;">
+            <a href="{% url 'classroom_materials' classroom.id %}" class="btn-outline-action">
                 <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
                 Open Full Library
             </a>

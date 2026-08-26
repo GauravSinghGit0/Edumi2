@@ -26,19 +26,23 @@ def admin_panel(request):
     from accounts.services import get_admin_stats
     stats = get_admin_stats()
 
-    all_users = User.objects.all().select_related('userprofile').order_by('-date_joined')
-    students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('-date_joined')
-    teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('-date_joined')
-    all_meetings = Meeting.objects.filter(classroom__isnull=True).select_related('teacher', 'classroom').order_by('-created_at')
-    live_meetings = Meeting.objects.filter(status='live', classroom__isnull=True).select_related('teacher', 'classroom').prefetch_related('participants').order_by('-created_at')
-    for meeting in live_meetings:
-        meeting.active_participants_count = meeting.participants.filter(is_active=True).count()
-    all_cameras = Camera.objects.all().order_by('-created_at')
-    recent_users = User.objects.all().select_related('userprofile').order_by('-date_joined')[:10]
+    recent_users = User.objects.all().select_related('userprofile').order_by('-date_joined')[:20]
+    students = User.objects.filter(userprofile__user_type='student').select_related('userprofile').order_by('-date_joined')[:20]
+    teachers = User.objects.filter(userprofile__user_type='teacher').select_related('userprofile').order_by('-date_joined')[:20]
+    all_meetings = Meeting.objects.filter(classroom__isnull=True).select_related('teacher', 'classroom').order_by('-created_at')[:20]
+    
+    from django.db.models import Count, Q
+    live_meetings = Meeting.objects.filter(
+        status='live', classroom__isnull=True
+    ).select_related('teacher', 'classroom').annotate(
+        active_participants_count=Count('participants', filter=Q(participants__is_active=True))
+    ).order_by('-created_at')[:20]
+
+    all_cameras = Camera.objects.all().order_by('-created_at')[:20]
 
     return render(request, 'accounts/admin/admin_panel.html', {
         **stats,
-        'all_users': all_users, 'students': students, 'teachers': teachers,
+        'all_users': recent_users, 'students': students, 'teachers': teachers,
         'all_meetings': all_meetings, 'live_meetings': live_meetings,
         'all_cameras': all_cameras, 'recent_users': recent_users,
     })

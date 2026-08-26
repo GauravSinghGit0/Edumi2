@@ -1,0 +1,656 @@
+/* ══════════════════════════════════════════════════════════════
+   GOOGLE CLASSROOM CARD SYSTEM - GLOBAL STYLES
+   Authentic Google Classroom Card Aesthetics with Light & Dark Mode
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Classroom Grid Container ── */
+.gclass-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+    gap: 1.5rem;
+    width: 100%;
+}
+
+@media (min-width: 1200px) {
+    .gclass-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .gclass-grid {
+        grid-template-columns: 1fr;
+        gap: 1.125rem;
+    }
+}
+
+/* ── Main Classroom Card ── */
+.gclass-card {
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #dadce0);
+    border-radius: 12px;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.22s ease;
+    min-height: 250px;
+}
+
+.gclass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.12), 0 6px 12px -2px rgba(0, 0, 0, 0.06);
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+body.dark-mode .gclass-card {
+    background: var(--color-bg-card, #1e293b);
+    border-color: var(--color-border, #334155);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+body.dark-mode .gclass-card:hover {
+    border-color: rgba(129, 140, 248, 0.45);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Header Banner (Cover Art) ── */
+.gclass-header {
+    height: 120px;
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    padding: 1rem 1.125rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: #ffffff;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    user-select: none;
+}
+
+/* Subtle decorative pattern overlay (Google Classroom authentic style) */
+.gclass-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-top-left-radius: 11px;
+    border-top-right-radius: 11px;
+    background-image: 
+        radial-gradient(circle at 90% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.12) 0%, transparent 45%);
+    pointer-events: none;
+}
+
+.gclass-header::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    width: 45%;
+    opacity: 0.12;
+    background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 40L60 20L100 40L60 60L20 40Z' stroke='white' stroke-width='2'/%3E%3Cpath d='M40 50V75C40 85 60 95 60 95C60 95 80 85 80 75V50' stroke='white' stroke-width='2' fill='none'/%3E%3Cpath d='M95 45V75' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='95' cy='80' r='3' fill='white'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 90px 90px;
+    pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AUTHENTIC GOOGLE CLASSROOM THEMES
+   ══════════════════════════════════════════════════════════════ */
+/* Default / Theme 1: Google Ocean Blue */
+.gclass-card .gclass-header,
+.gclass-theme-blue .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 1) .gclass-header {
+    background-color: #1967d2;
+    background-image: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+}
+
+/* Theme 2: Emerald Green */
+.gclass-theme-green .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 2) .gclass-header {
+    background-color: #137333;
+    background-image: linear-gradient(135deg, #188038 0%, #0d5324 100%);
+}
+
+/* Theme 3: Purple Violet */
+.gclass-theme-purple .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 3) .gclass-header {
+    background-color: #8430ce;
+    background-image: linear-gradient(135deg, #9334e6 0%, #5b1d99 100%);
+}
+
+/* Theme 4: Warm Amber / Sunset */
+.gclass-theme-amber .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 4) .gclass-header {
+    background-color: #b06000;
+    background-image: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+}
+
+/* Theme 5: Ruby Crimson / Coral */
+.gclass-theme-ruby .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 5) .gclass-header {
+    background-color: #c5221f;
+    background-image: linear-gradient(135deg, #e11d48 0%, #881337 100%);
+}
+
+/* Theme 6: Deep Teal / Cyan */
+.gclass-theme-teal .gclass-header,
+.gclass-grid > .gclass-card:nth-child(6n + 6) .gclass-header {
+    background-color: #007b83;
+    background-image: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
+}
+
+/* ── Header Top Row (Title & Menu Actions) ── */
+.gclass-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 2;
+}
+
+.gclass-title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.gclass-title {
+    color: #ffffff !important;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.28;
+    margin: 0 0 0.25rem 0;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.15s;
+}
+
+.gclass-title:hover {
+    text-decoration: underline !important;
+    opacity: 0.92;
+}
+
+.gclass-subtitle {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.gclass-sub-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gclass-code-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: all;
+}
+
+.gclass-code-badge:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.gclass-code-badge:active {
+    transform: scale(0.96);
+}
+
+/* ── Header Top Right Actions & Badges ── */
+.gclass-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+/* Live Badge */
+.gclass-live-badge {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    animation: gclass-pulse 2s infinite;
+}
+
+.gclass-live-badge .live-dot {
+    width: 6px;
+    height: 6px;
+    background: #ffffff;
+    border-radius: 50%;
+    animation: gclass-blink 1.2s infinite ease-in-out;
+}
+
+@keyframes gclass-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+}
+
+@keyframes gclass-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* 3-Dots Menu Button */
+.gclass-dropdown-wrap {
+    position: relative;
+}
+
+.gclass-menu-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.gclass-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.32);
+    transform: scale(1.06);
+}
+
+.gclass-menu-btn:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.gclass-menu-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* 3-Dots Dropdown Menu */
+.gclass-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    min-width: 190px;
+    padding: 0.4rem;
+    z-index: 100;
+    display: none;
+    animation: gclassFadeIn 0.15s ease-out;
+}
+
+.gclass-dropdown-menu.active {
+    display: block;
+}
+
+body.dark-mode .gclass-dropdown-menu {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes gclassFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.gclass-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-main, #334155);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.12s, color 0.12s;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gclass-dropdown-item:hover {
+    background: var(--color-bg-hover, #f1f5f9);
+    color: var(--color-primary, #4f46e5);
+}
+
+body.dark-mode .gclass-dropdown-item {
+    color: #cbd5e1;
+}
+
+body.dark-mode .gclass-dropdown-item:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.gclass-dropdown-item svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.gclass-dropdown-divider {
+    height: 1px;
+    background: var(--color-border, #e2e8f0);
+    margin: 0.35rem 0;
+}
+
+body.dark-mode .gclass-dropdown-divider {
+    background: #334155;
+}
+
+/* ── Card Middle Body ── */
+.gclass-body {
+    padding: 1.125rem 1.125rem 0.875rem 1.125rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--color-bg-card, #ffffff);
+}
+
+body.dark-mode .gclass-body {
+    background: var(--color-bg-card, #1e293b);
+}
+
+/* Teacher Stats Row */
+.gclass-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    background: var(--color-bg-hover, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 0.625rem 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+body.dark-mode .gclass-stats {
+    background: rgba(15, 23, 42, 0.5);
+    border-color: #334155;
+}
+
+.gclass-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    color: var(--color-text-main, #1e293b);
+    padding: 0.25rem;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.gclass-stat-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.dark-mode .gclass-stat-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.gclass-stat-num {
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--color-text-main, #0f172a);
+}
+
+body.dark-mode .gclass-stat-num {
+    color: #f8fafc;
+}
+
+.gclass-stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.15rem;
+}
+
+body.dark-mode .gclass-stat-label {
+    color: #94a3b8;
+}
+
+.gclass-stat-item.has-pending .gclass-stat-num {
+    color: #f59e0b;
+}
+
+.gclass-stat-item.has-pending .gclass-stat-label {
+    color: #d97706;
+}
+
+/* Student Course Description / Info */
+.gclass-student-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.25rem 0;
+}
+
+.gclass-desc {
+    font-size: 0.84375rem;
+    line-height: 1.45;
+    color: var(--color-text-muted, #64748b);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+body.dark-mode .gclass-desc {
+    color: #94a3b8;
+}
+
+/* ── Card Footer Action Bar ── */
+.gclass-footer {
+    padding: 0.75rem 1.125rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-bg-card, #ffffff);
+    border-bottom-left-radius: 11px;
+    border-bottom-right-radius: 11px;
+    display: flex;
+    width: 100%;
+}
+
+body.dark-mode .gclass-footer {
+    background: var(--color-bg-card, #1e293b);
+    border-top-color: #334155;
+}
+
+/* Action buttons full-width responsive layout */
+.gclass-footer-btns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.65rem;
+    width: 100%;
+    align-items: center;
+}
+
+.gclass-btn-open,
+.gclass-btn-manage {
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    color: var(--color-text-main, #1e293b);
+    background: var(--color-bg-hover, #f1f5f9);
+    border: 1px solid var(--color-border, #e2e8f0);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.gclass-btn-open:hover,
+.gclass-btn-manage:hover {
+    background: var(--color-border, #e2e8f0);
+    color: var(--color-text-main, #0f172a);
+}
+
+body.dark-mode .gclass-btn-open,
+body.dark-mode .gclass-btn-manage {
+    background: #334155;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+
+body.dark-mode .gclass-btn-open:hover,
+body.dark-mode .gclass-btn-manage:hover {
+    background: #475569;
+    color: #ffffff;
+}
+
+.gclass-btn-start {
+    padding: 0.55rem 0.95rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.gclass-btn-start:hover {
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.35);
+    transform: translateY(-1px);
+    color: #ffffff !important;
+}
+
+.gclass-btn-start svg {
+    width: 14px;
+    height: 14px;
+}
+
+.gclass-btn-live {
+    padding: 0.55rem 0.95rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    color: #ffffff !important;
+    background: #ef4444;
+    border: none;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    animation: gclass-pulse 2s infinite;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.gclass-btn-live:hover {
+    background: #dc2626;
+    color: #ffffff !important;
+}
+
+.gclass-btn-live svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Toast Feedback for Code Copy ── */
+.gclass-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e293b;
+    color: #ffffff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.gclass-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+body.dark-mode .gclass-toast {
+    background: #334155;
+    border: 1px solid #475569;
+}

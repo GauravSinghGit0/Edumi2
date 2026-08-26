@@ -94,7 +94,7 @@ def get_student_stats(user):
         'face_registered': face_registered,
     }
 
-def check_port_open(host, port, timeout=2):
+def check_port_open(host, port, timeout=0.05):
     import socket
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -106,8 +106,12 @@ def check_port_open(host, port, timeout=2):
         return False
 
 def get_admin_stats():
-    """Get overall platform statistics for the admin panel."""
-    camera_service_online = check_port_open('127.0.0.1', 8008)
+    """Get overall platform statistics for the admin panel with cached health checks."""
+    camera_service_online = cache.get('livekit_service_health')
+    if camera_service_online is None:
+        # Check actual LiveKit port 7880 or Daphne 8002
+        camera_service_online = check_port_open('127.0.0.1', 7880, timeout=0.05) or check_port_open('127.0.0.1', 8002, timeout=0.05)
+        cache.set('livekit_service_health', camera_service_online, 15)
 
     return {
         'total_users': User.objects.count(),
