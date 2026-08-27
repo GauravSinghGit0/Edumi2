@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -28,10 +29,13 @@ def sleep_meeting(request, meeting_code):
         return JsonResponse({'error': 'Only live meetings can be put to sleep'}, status=400)
     meeting.put_to_sleep()
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'meeting_{meeting.meeting_code}',
-        {'type': 'meeting_sleeping', 'message': 'Meeting has been put to sleep by the host'}
-    )
+    if channel_layer:
+        def _send_sleep():
+            async_to_sync(channel_layer.group_send)(
+                f'meeting_{meeting.meeting_code}',
+                {'type': 'meeting_sleeping', 'message': 'Meeting has been put to sleep by the host'}
+            )
+        transaction.on_commit(_send_sleep)
     return JsonResponse({'status': 'success', 'message': 'Meeting is now sleeping', 'sleep_status': 'sleeping'})
 
 
@@ -45,10 +49,13 @@ def unfreeze_meeting(request, meeting_code):
         return JsonResponse({'error': 'Meeting is not in sleep mode'}, status=400)
     meeting.unfreeze()
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'meeting_{meeting.meeting_code}',
-        {'type': 'meeting_unfrozen', 'message': 'Meeting is now active'}
-    )
+    if channel_layer:
+        def _send_unfreeze():
+            async_to_sync(channel_layer.group_send)(
+                f'meeting_{meeting.meeting_code}',
+                {'type': 'meeting_unfrozen', 'message': 'Meeting is now active'}
+            )
+        transaction.on_commit(_send_unfreeze)
     return JsonResponse({'status': 'success', 'message': 'Meeting is now active', 'sleep_status': 'active'})
 
 
@@ -77,10 +84,13 @@ def kick_participant(request, meeting_id, user_id):
         meeting=meeting, user=user_to_kick, defaults={'banned_until': ban_until}
     )
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'meeting_{meeting.meeting_code}',
-        {'type': 'kick_user', 'user_id': user_to_kick.id, 'message': 'You have been kicked by the teacher. You cannot rejoin for 1 hour.'}
-    )
+    if channel_layer:
+        def _send_kick():
+            async_to_sync(channel_layer.group_send)(
+                f'meeting_{meeting.meeting_code}',
+                {'type': 'kick_user', 'user_id': user_to_kick.id, 'message': 'You have been kicked by the teacher. You cannot rejoin for 1 hour.'}
+            )
+        transaction.on_commit(_send_kick)
     return JsonResponse({'status': 'success', 'message': f'{user_to_kick.username} kicked successfully'})
 
 
@@ -130,10 +140,13 @@ def meeting_global_control(request, meeting_id):
             msg = f'Teacher has {"enabled" if value else "disabled"} global {control_type.replace("_", " ")}'
 
         channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f'meeting_{meeting.meeting_code}',
-            {'type': 'global_control_update', 'control_type': control_type, 'value': value, 'message': msg}
-        )
+        if channel_layer:
+            def _send_global_ctrl():
+                async_to_sync(channel_layer.group_send)(
+                    f'meeting_{meeting.meeting_code}',
+                    {'type': 'global_control_update', 'control_type': control_type, 'value': value, 'message': msg}
+                )
+            transaction.on_commit(_send_global_ctrl)
         return JsonResponse({'status': 'success'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

@@ -15,5 +15,13 @@ class CamerasConfig(AppConfig):
         if 'manage.py' in sys.argv or os.path.basename(sys.argv[0]) == 'manage.py' and 'camera_service' in os.getcwd():
             return
 
-        from .recording_engine import cleanup_orphaned_recordings
-        threading.Thread(target=cleanup_orphaned_recordings, daemon=True).start()
+        def _deferred_cleanup():
+            import time
+            time.sleep(2)
+            try:
+                from .recording_engine import cleanup_orphaned_recordings
+                cleanup_orphaned_recordings()
+            except Exception:
+                pass
+
+        threading.Thread(target=_deferred_cleanup, daemon=True).start()

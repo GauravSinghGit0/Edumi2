@@ -40,29 +40,34 @@ EMOTION_LABELS = {
 class FaceTrackingConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        self.user         = self.scope['user']
+        self.user         = self.scope.get('user')
         self.meeting_code = self.scope['url_route']['kwargs']['meeting_code']
 
-        if not self.user.is_authenticated:
+        if not self.user or not self.user.is_authenticated:
             await self.close()
             return
 
-        # Only the meeting host (teacher) may connect
+        # Only the meeting host (teacher) or admin may connect
         is_host = await self._is_host()
         if not is_host:
             await self.close()
             return
 
-        # Load all registered embeddings for this meeting's classroom
-        self._embeddings = await self._load_all_embeddings()
-        self._frame_count = defaultdict(int)   # per student_id frame counter
-
+        # Accept early to establish WebSocket handshake
         await self.accept()
-        await self.send(json.dumps({
-            'type':    'connected',
-            'message': f'Face tracking active. {len(self._embeddings)} student(s) registered.',
-            'count':   len(self._embeddings),
-        }))
+
+        try:
+            # Load all registered embeddings for this meeting's classroom
+            self._embeddings = await self._load_all_embeddings()
+            self._frame_count = defaultdict(int)   # per student_id frame counter
+
+            await self.send(json.dumps({
+                'type':    'connected',
+                'message': f'Face tracking active. {len(self._embeddings)} student(s) registered.',
+                'count':   len(self._embeddings),
+            }))
+        except Exception as e:
+            logger.error(f"Error initializing FaceTrackingConsumer: {e}", exc_info=True)
 
     async def disconnect(self, close_code):
         pass

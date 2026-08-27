@@ -7,10 +7,20 @@
 (function() {
     'use strict';
 
+    if (window.EdumiIdentity) {
+        // Already initialized singleton — just trigger DOM update on current page
+        if (window.EdumiIdentity.currentUser) {
+            window.EdumiIdentity.updateDOMForUser(window.EdumiIdentity.currentUser);
+        }
+        return;
+    }
+
     class IdentitySyncManager {
         constructor() {
             this.currentUser = null;
             this.listeners = new Set();
+            this.boundSocket = null;
+            this._handleMessage = this._handleMessage.bind(this);
             this.init();
         }
 
@@ -18,6 +28,18 @@
             // Load initial identity from page meta or API
             this.fetchCurrentIdentity();
             this.bindWebSocketListener();
+
+            // Re-apply DOM updates on Turbo navigation
+            document.addEventListener('turbo:load', () => {
+                if (this.currentUser) {
+                    this.updateDOMForUser(this.currentUser);
+                }
+            });
+            document.addEventListener('turbo:render', () => {
+                if (this.currentUser) {
+                    this.updateDOMForUser(this.currentUser);
+                }
+            });
         }
 
         async fetchCurrentIdentity() {
@@ -33,39 +55,44 @@
                     }
                 }
             } catch (err) {
-                console.warn('[IdentitySync] Initial identity fetch error:', err);
+                // Silently handle fetch error
+            }
+        }
+
+        _handleMessage(event) {
+            try {
+                const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                const eventData = payload.data || payload;
+                
+                if (payload.type === 'identity_updated' || eventData.type === 'identity_updated') {
+                    const updatedIdentity = eventData.identity;
+                    if (updatedIdentity) {
+                        this.onIdentityUpdated(updatedIdentity);
+                    }
+                }
+            } catch (e) {
+                // Non-JSON message, ignore
             }
         }
 
         bindWebSocketListener() {
-            // Check if notificationSocket exists globally or attach listener
-            const handleMessage = (event) => {
-                try {
-                    const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-                    const eventData = payload.data || payload;
-                    
-                    if (payload.type === 'identity_updated' || eventData.type === 'identity_updated') {
-                        const updatedIdentity = eventData.identity;
-                        if (updatedIdentity) {
-                            console.log('[IdentitySync] Real-time identity update received:', updatedIdentity);
-                            this.onIdentityUpdated(updatedIdentity);
-                        }
-                    }
-                } catch (e) {
-                    // Non-JSON message, ignore
-                }
-            };
-
-            // Intercept window.notificationSocket if present or attach to WS
             if (window.notificationSocket) {
-                window.notificationSocket.addEventListener('message', handleMessage);
+                if (this.boundSocket !== window.notificationSocket) {
+                    if (this.boundSocket) {
+                        try { this.boundSocket.removeEventListener('message', this._handleMessage); } catch(_) {}
+                    }
+                    this.boundSocket = window.notificationSocket;
+                    this.boundSocket.addEventListener('message', this._handleMessage);
+                }
             } else {
-                // Periodically check if notificationSocket initialized
                 let attempts = 0;
                 const interval = setInterval(() => {
                     attempts++;
                     if (window.notificationSocket) {
-                        window.notificationSocket.addEventListener('message', handleMessage);
+                        if (this.boundSocket !== window.notificationSocket) {
+                            this.boundSocket = window.notificationSocket;
+                            this.boundSocket.addEventListener('message', this._handleMessage);
+                        }
                         clearInterval(interval);
                     } else if (attempts > 20) {
                         clearInterval(interval);
@@ -92,7 +119,6 @@
         updateDOMForUser(identity) {
             if (!identity || !identity.user_id) return;
 
-            // 1. Elements targeting current user
             const userId = identity.user_id;
 
             // Avatars

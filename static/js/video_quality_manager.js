@@ -68,8 +68,6 @@
             this.roomInstance = null;
             this.pcInstance = null;
             this.isScreenSharing = false;
-
-            console.log('%c[VideoQualityManager] Initialized ✅', 'background:#10b981;color:#fff;padding:2px 6px;border-radius:3px;font-weight:bold;');
         }
 
         /**

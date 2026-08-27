@@ -38,7 +38,8 @@
                 </div>
 
                 <div id="changeEmailContainer" style="display: none; margin-top: 10px;">
-                    <input type="email" id="customEmailInput" value="{{ email }}" placeholder="Enter correct email"
+                    <input type="email" id="customEmailInput" name="custom_email" value="{{ email }}" placeholder="Enter correct email"
+                           autocomplete="email" aria-label="Correct email address"
                            style="padding: 6px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.85rem; width: 240px;">
                     <button type="button" onclick="saveChangedEmail()"
                             style="background: #4f46e5; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-left: 4px;">
@@ -58,7 +59,11 @@
                     </svg>
                     {% endif %}
                 </span>
-                <span id="statusAlertMsg">{{ error|default:"" }}</span>
+                <span id="statusAlertText">
+                    {% if error %}
+                    {{ error }}
+                    {% endif %}
+                </span>
             </div>
 
             <!-- OTP Submission Form -->
@@ -68,17 +73,17 @@
                 <input type="hidden" name="otp_code" id="otpCodeHidden" value="">
 
                 <div class="otp-container">
-                    <label style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 10px;">
+                    <label id="otpLabel" style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 10px;">
                         Enter 6-digit verification code
                     </label>
 
                     <div class="otp-boxes-wrapper {% if error %}is-invalid{% endif %}" id="otpBoxesWrapper">
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" autofocus>
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="1">
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="2">
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="3">
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="4">
-                        <input type="text" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="5">
+                        <input type="text" id="otp-digit-0" name="otp_digit_0" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" aria-label="Digit 1 of 6" autofocus>
+                        <input type="text" id="otp-digit-1" name="otp_digit_1" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="1" aria-label="Digit 2 of 6">
+                        <input type="text" id="otp-digit-2" name="otp_digit_2" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="2" aria-label="Digit 3 of 6">
+                        <input type="text" id="otp-digit-3" name="otp_digit_3" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="3" aria-label="Digit 4 of 6">
+                        <input type="text" id="otp-digit-4" name="otp_digit_4" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="4" aria-label="Digit 5 of 6">
+                        <input type="text" id="otp-digit-5" name="otp_digit_5" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="5" aria-label="Digit 6 of 6">
                     </div>
                 </div>
 

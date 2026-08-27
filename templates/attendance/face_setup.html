@@ -472,256 +472,306 @@
 </div>
 
 <script>
-// ── Info Modal & Profile Completeness ─────────────────────
-const infoComplete = {{ info_complete|yesno:"true,false" }};
+(function() {
+    // ── Info Modal & Profile Completeness ─────────────────────
+    var infoComplete = {{ info_complete|yesno:"true,false" }};
 
-window.addEventListener('DOMContentLoaded', () => {
-    if (!infoComplete) {
-        document.getElementById('infoModal').classList.add('active');
-    }
-});
-
-async function saveProfileInfo() {
-    const roll = document.getElementById('modal_roll').value.trim();
-    const branch = document.getElementById('modal_branch').value.trim();
-    const contact = document.getElementById('modal_contact').value.trim();
-    const errorEl = document.getElementById('infoModalError');
-    
-    if (!roll || !branch) {
-        errorEl.textContent = "Please fill in all required fields (Roll Number and Branch).";
-        errorEl.style.display = "block";
-        return;
-    }
-    
-    try {
-        const resp = await fetch("{% url 'update_profile_info' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-            body: JSON.stringify({ roll_number: roll, branch: branch, contact_number: contact })
-        });
-        const data = await resp.json();
-        
-        if (data.status === 'success') {
-            document.getElementById('infoModal').classList.remove('active');
-            // Allow registration to proceed
-            window.location.reload(); // Reload to refresh infoComplete status
-        } else {
-            errorEl.textContent = data.message;
-            errorEl.style.display = "block";
+    function checkInfoModal() {
+        var modal = document.getElementById('infoModal');
+        if (modal && !infoComplete) {
+            modal.classList.add('active');
         }
-    } catch(e) {
-        errorEl.textContent = "Failed to update profile. Try again.";
-        errorEl.style.display = "block";
     }
-}
 
-// ── Tab switcher ───────────────────────────────────────────
-function switchTab(tab) {
-    document.querySelectorAll('.face-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.face-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-}
+    document.addEventListener('DOMContentLoaded', checkInfoModal);
+    document.addEventListener('turbo:load', checkInfoModal);
+    checkInfoModal();
 
-// ── Upload preview ─────────────────────────────────────────
-function previewImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const preview = document.getElementById('previewImg');
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-    document.getElementById('uploadBtn').disabled = false;
-}
-
-// Drag & drop
-const zone = document.getElementById('uploadZone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        const input = document.getElementById('photoInput');
-        const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
-        previewImage(input);
-    }
-});
-
-// ── Camera logic ────────────────────────────────────────────
-let cameraStream = null;
-let detectionInterval = null;
-let stabilityCounter = 0;
-let isCapturing = false;
-
-async function startCamera() {
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'user', width: {ideal:1280}, height: {ideal:720} } 
-        });
-        const video = document.getElementById('cameraFeed');
-        video.srcObject = cameraStream;
-        video.style.display = 'block';
-        document.getElementById('cameraPlaceholder').style.display = 'none';
-        document.getElementById('cameraStatus').textContent = 'Position your face inside the circle';
-        document.getElementById('startCamBtn').style.display = 'none';
-        document.getElementById('captureBtn').style.display = 'inline-flex';
-        document.getElementById('stopCamBtn').style.display = 'inline-flex';
+    window.saveProfileInfo = async function() {
+        var roll = (document.getElementById('modal_roll')?.value || '').trim();
+        var branch = (document.getElementById('modal_branch')?.value || '').trim();
+        var contact = (document.getElementById('modal_contact')?.value || '').trim();
+        var errorEl = document.getElementById('infoModalError');
         
-        // Start auto-detection
-        stabilityCounter = 0;
-        isCapturing = false;
-        detectionInterval = setInterval(detectFace, 800);
-    } catch(e) {
-        showCaptureResult('error', '⚠ Camera access denied. Please allow camera access in your browser settings.');
-    }
-}
-
-function stopCamera() {
-    if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
-    if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-    document.getElementById('cameraFeed').style.display = 'none';
-    document.getElementById('cameraPlaceholder').style.display = 'flex';
-    document.getElementById('cameraStatus').textContent = 'Click "Start Camera" to begin';
-    document.getElementById('startCamBtn').style.display = 'inline-flex';
-    document.getElementById('captureBtn').style.display = 'none';
-    document.getElementById('stopCamBtn').style.display = 'none';
-    document.getElementById('faceGuide').classList.remove('detected');
-}
-
-async function detectFace() {
-    if (isCapturing || !cameraStream) return;
-    
-    const video = document.getElementById('cameraFeed');
-    const canvas = document.getElementById('captureCanvas');
-    const guide = document.getElementById('faceGuide');
-    const statusEl = document.getElementById('cameraStatus');
-
-    // Small frame for fast detection
-    canvas.width = 240; canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-    ctx.translate(240, 0); ctx.scale(-1, 1); 
-    ctx.drawImage(video, 0, 0, 240, 180);
-    
-    const frameB64 = canvas.toDataURL('image/jpeg', 0.5);
-
-    try {
-        const resp = await fetch("{% url 'detect_face' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-            body: JSON.stringify({ frame_b64: frameB64 })
-        });
-        const data = await resp.json();
+        if (!roll || !branch) {
+            if (errorEl) {
+                errorEl.textContent = "Please fill in all required fields (Roll Number and Branch).";
+                errorEl.style.display = "block";
+            }
+            return;
+        }
         
-        if (data.status === 'success') {
-            guide.classList.add('detected');
-            stabilityCounter++;
+        try {
+            var resp = await fetch("{% url 'update_profile_info' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ roll_number: roll, branch: branch, contact_number: contact })
+            });
+            var data = await resp.json();
             
-            if (data.low_light_enhanced) {
-                statusEl.textContent = '🌙 Low-light assisted detection... Keep still';
-            } else {
-                statusEl.textContent = '🟢 Face detected! Hold still...';
+            if (data.status === 'success') {
+                var modal = document.getElementById('infoModal');
+                if (modal) modal.classList.remove('active');
+                infoComplete = true;
+                window.location.reload();
+            } else if (errorEl) {
+                errorEl.textContent = data.message;
+                errorEl.style.display = "block";
             }
-
-            if (stabilityCounter >= 2) {
-                statusEl.textContent = '📸 Auto-capturing...';
-                capturePhoto(); // Trigger final high-quality capture
+        } catch(e) {
+            if (errorEl) {
+                errorEl.textContent = "Failed to update profile. Try again.";
+                errorEl.style.display = "block";
             }
-        } else {
-            guide.classList.remove('detected');
-            stabilityCounter = 0;
-            statusEl.textContent = data.message || 'Position your face inside the circle';
         }
-    } catch(e) {
-        console.error("Detection error:", e);
-    }
-}
+    };
 
-async function capturePhoto() {
-    if (isCapturing) return;
-    isCapturing = true;
-    if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
+    // ── Tab switcher ───────────────────────────────────────────
+    window.switchTab = function(tab) {
+        document.querySelectorAll('.face-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.face-panel').forEach(p => p.classList.remove('active'));
+        var tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        var panelEl = document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        if (tabEl) tabEl.classList.add('active');
+        if (panelEl) panelEl.classList.add('active');
+    };
 
-    const video = document.getElementById('cameraFeed');
-    const canvas = document.getElementById('captureCanvas');
-    const captureBtn = document.getElementById('captureBtn');
-    const statusEl = document.getElementById('cameraStatus');
-    const guide = document.getElementById('faceGuide');
-    
-    guide.classList.add('detected');
-    
-    // Show processing state immediately
-    showCaptureResult('processing', 'Processing...');
-    statusEl.textContent = '📸 Capturing photo...';
-    
-    // Disable button
-    captureBtn.disabled = true;
-    captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20" style="animation: spin 1s linear infinite;"/></svg> Capturing…';
-    
-    // Small delay to show capture animation
-    await new Promise(r => setTimeout(r, 300));
-    
-    // Capture frame
-    canvas.width = 640; canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    ctx.translate(640, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, 640, 480);
-    
-    const frameB64 = canvas.toDataURL('image/jpeg', 0.92);
-    
-    // Show processing state
-    captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20" style="animation: spin 1s linear infinite;"/></svg> Processing…';
-    statusEl.textContent = '🧠 Processing face recognition...';
-    showCaptureResult('processing', 'Analyzing face...');
+    // ── Upload preview ─────────────────────────────────────────
+    window.previewImage = function(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var preview = document.getElementById('previewImg');
+        if (preview) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+        }
+        var upBtn = document.getElementById('uploadBtn');
+        if (upBtn) upBtn.disabled = false;
+    };
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const resp = await fetch("{% url 'capture_face_photo' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-            body: JSON.stringify({ 
-                frame_b64: frameB64
-                // Student info is now pulled from profile on server side
-            }),
-            signal: controller.signal
+    // Drag & drop
+    function setupDragAndDrop() {
+        var zone = document.getElementById('uploadZone');
+        if (!zone || zone._dragInitialized) return;
+        zone._dragInitialized = true;
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault(); zone.classList.remove('drag-over');
+            var file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                var input = document.getElementById('photoInput');
+                if (input) {
+                    var dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+                    window.previewImage(input);
+                }
+            }
         });
-        clearTimeout(timeoutId);
-        
-        const data = await resp.json();
-        if (data.status === 'success') {
-            document.getElementById('faceGuide').classList.add('verified');
-            statusEl.textContent = '✅ Registered!';
-            showCaptureResult('success', data.message || 'Face registered successfully!');
-            stopCamera();
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            statusEl.textContent = '❌ ' + (data.message || 'Registration failed');
-            showCaptureResult('error', data.message || 'Face registration failed. Please try again.');
-        }
-    } catch(e) {
-        if (e.name === 'AbortError') {
-            statusEl.textContent = '⏱ Request timed out';
-            showCaptureResult('error', 'Request timed out. Please try again.');
-        } else {
-            statusEl.textContent = '❌ Network error';
-            showCaptureResult('error', 'Network error. Please check your connection and try again.');
-        }
-    } finally {
-        captureBtn.disabled = false;
-        captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Capture & Register';
     }
-}
+    document.addEventListener('DOMContentLoaded', setupDragAndDrop);
+    document.addEventListener('turbo:load', setupDragAndDrop);
+    setupDragAndDrop();
 
-function showCaptureResult(type, msg) {
-    const el = document.getElementById('captureResult');
-    el.className = type; 
-    el.innerHTML = msg;
-    el.style.display = type === 'processing' ? 'flex' : 'block';
-}
+    // ── Camera logic ────────────────────────────────────────────
+    var cameraStream = null;
+    var detectionInterval = null;
+    var stabilityCounter = 0;
+    var isCapturing = false;
 
-function getCsrf() {
-    const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-    return c ? c.split('=')[1] : '';
-}
+    window.startCamera = async function() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user', width: {ideal:1280}, height: {ideal:720} } 
+            });
+            var video = document.getElementById('cameraFeed');
+            if (video) {
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+            }
+            var placeholder = document.getElementById('cameraPlaceholder');
+            if (placeholder) placeholder.style.display = 'none';
+            var statusEl = document.getElementById('cameraStatus');
+            if (statusEl) statusEl.textContent = 'Position your face inside the circle';
+            var startBtn = document.getElementById('startCamBtn');
+            if (startBtn) startBtn.style.display = 'none';
+            var capBtn = document.getElementById('captureBtn');
+            if (capBtn) capBtn.style.display = 'inline-flex';
+            var stopBtn = document.getElementById('stopCamBtn');
+            if (stopBtn) stopBtn.style.display = 'inline-flex';
+            
+            // Start auto-detection
+            stabilityCounter = 0;
+            isCapturing = false;
+            if (detectionInterval) clearInterval(detectionInterval);
+            detectionInterval = setInterval(detectFace, 800);
+        } catch(e) {
+            showCaptureResult('error', '⚠ Camera access denied. Please allow camera access in your browser settings.');
+        }
+    };
+
+    window.stopCamera = function() {
+        if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
+        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+        var video = document.getElementById('cameraFeed');
+        if (video) video.style.display = 'none';
+        var placeholder = document.getElementById('cameraPlaceholder');
+        if (placeholder) placeholder.style.display = 'flex';
+        var statusEl = document.getElementById('cameraStatus');
+        if (statusEl) statusEl.textContent = 'Click "Start Camera" to begin';
+        var startBtn = document.getElementById('startCamBtn');
+        if (startBtn) startBtn.style.display = 'inline-flex';
+        var capBtn = document.getElementById('captureBtn');
+        if (capBtn) capBtn.style.display = 'none';
+        var stopBtn = document.getElementById('stopCamBtn');
+        if (stopBtn) stopBtn.style.display = 'none';
+        var guide = document.getElementById('faceGuide');
+        if (guide) guide.classList.remove('detected');
+    };
+
+    async function detectFace() {
+        if (isCapturing || !cameraStream) return;
+        
+        var video = document.getElementById('cameraFeed');
+        var canvas = document.getElementById('captureCanvas');
+        var guide = document.getElementById('faceGuide');
+        var statusEl = document.getElementById('cameraStatus');
+        if (!video || !canvas) return;
+
+        // Small frame for fast detection
+        canvas.width = 240; canvas.height = 180;
+        var ctx = canvas.getContext('2d');
+        ctx.translate(240, 0); ctx.scale(-1, 1); 
+        ctx.drawImage(video, 0, 0, 240, 180);
+        
+        var frameB64 = canvas.toDataURL('image/jpeg', 0.5);
+
+        try {
+            var resp = await fetch("{% url 'detect_face' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ frame_b64: frameB64 })
+            });
+            var data = await resp.json();
+            
+            if (data.status === 'success') {
+                if (guide) guide.classList.add('detected');
+                stabilityCounter++;
+                
+                if (statusEl) {
+                    if (data.low_light_enhanced) {
+                        statusEl.textContent = '🌙 Low-light assisted detection... Keep still';
+                    } else {
+                        statusEl.textContent = '🟢 Face detected! Hold still...';
+                    }
+                }
+
+                if (stabilityCounter >= 2) {
+                    if (statusEl) statusEl.textContent = '📸 Auto-capturing...';
+                    window.capturePhoto();
+                }
+            } else {
+                if (guide) guide.classList.remove('detected');
+                stabilityCounter = 0;
+                if (statusEl) statusEl.textContent = data.message || 'Position your face inside the circle';
+            }
+        } catch(e) {
+            console.error("Detection error:", e);
+        }
+    }
+
+    window.capturePhoto = async function() {
+        if (isCapturing) return;
+        isCapturing = true;
+        if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
+
+        var video = document.getElementById('cameraFeed');
+        var canvas = document.getElementById('captureCanvas');
+        var captureBtn = document.getElementById('captureBtn');
+        var statusEl = document.getElementById('cameraStatus');
+        var guide = document.getElementById('faceGuide');
+        if (!video || !canvas) return;
+        
+        if (guide) guide.classList.add('detected');
+        
+        showCaptureResult('processing', 'Processing...');
+        if (statusEl) statusEl.textContent = '📸 Capturing photo...';
+        
+        if (captureBtn) {
+            captureBtn.disabled = true;
+            captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20" style="animation: spin 1s linear infinite;"/></svg> Capturing…';
+        }
+        
+        await new Promise(r => setTimeout(r, 300));
+        
+        canvas.width = 640; canvas.height = 480;
+        var ctx = canvas.getContext('2d');
+        ctx.translate(640, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, 640, 480);
+        
+        var frameB64 = canvas.toDataURL('image/jpeg', 0.92);
+        
+        if (captureBtn) captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20" style="animation: spin 1s linear infinite;"/></svg> Processing…';
+        if (statusEl) statusEl.textContent = '🧠 Processing face recognition...';
+        showCaptureResult('processing', 'Analyzing face...');
+
+        try {
+            var controller = new AbortController();
+            var timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            var resp = await fetch("{% url 'capture_face_photo' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ frame_b64: frameB64 }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            var data = await resp.json();
+            if (data.status === 'success') {
+                if (guide) guide.classList.add('verified');
+                if (statusEl) statusEl.textContent = '✅ Registered!';
+                showCaptureResult('success', data.message || 'Face registered successfully!');
+                window.stopCamera();
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                if (statusEl) statusEl.textContent = '❌ ' + (data.message || 'Registration failed');
+                showCaptureResult('error', data.message || 'Face registration failed. Please try again.');
+            }
+        } catch(e) {
+            if (e.name === 'AbortError') {
+                if (statusEl) statusEl.textContent = '⏱ Request timed out';
+                showCaptureResult('error', 'Request timed out. Please try again.');
+            } else {
+                if (statusEl) statusEl.textContent = '❌ Network error';
+                showCaptureResult('error', 'Network error. Please check your connection and try again.');
+            }
+        } finally {
+            if (captureBtn) {
+                captureBtn.disabled = false;
+                captureBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Capture & Register';
+            }
+            isCapturing = false;
+        }
+    };
+
+    function showCaptureResult(type, msg) {
+        var el = document.getElementById('captureResult');
+        if (!el) return;
+        el.className = type; 
+        el.innerHTML = msg;
+        el.style.display = type === 'processing' ? 'flex' : 'block';
+    }
+
+    function getCsrf() {
+        var c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+        return c ? c.split('=')[1] : '';
+    }
+
+    // Clean up camera on Turbo navigation
+    document.addEventListener('turbo:before-render', () => {
+        if (cameraStream) {
+            window.stopCamera();
+        }
+    });
+})();
 </script>
 {% endblock %}

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 /* =============================================================
    EduMi Video Editor — editor.css
    Uses global CSS variables from base.css for full theme support.
@@ -4552,8 +4554,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* ================================================================
    CANVA-STYLE TIMELINE THEME (Redesigned UI/UX)
    ================================================================ */
-
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 /* Font Family and Base Workspace Styling */
 .visual-trim-container,

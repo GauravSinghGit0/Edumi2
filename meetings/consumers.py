@@ -19,11 +19,14 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         try:
             self.meeting_code = self.scope['url_route']['kwargs']['meeting_code'].upper()
             self.room_group_name = f'meeting_{self.meeting_code}'
-            self.user = self.scope['user']
+            self.user = self.scope.get('user')
             
-            if not self.user.is_authenticated:
+            if not self.user or not self.user.is_authenticated:
                 await self.close()
                 return
+
+            # Accept connection first to complete handshake and prevent ERR_CONNECTION_RESET
+            await self.accept()
 
             # Join room group
             await self.channel_layer.group_add(
@@ -31,7 +34,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             
-            # Record join and get user meta in one go
+            # Record join and get user meta
             user_data = await self.get_user_meta()
 
             # Track for CAM_* rooms
@@ -40,10 +43,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     cam_room_participants[self.meeting_code] = {}
                 cam_room_participants[self.meeting_code][self.user.id] = self.user.username
             
-            # Get other active participants BEFORE accepting to ensure we have them
+            # Get other active participants safely
             active_participants = await self.get_active_participants()
-            
-            await self.accept()
 
             # Send current participant list to the joiner
             await self.send(text_data=json.dumps({
@@ -52,22 +53,25 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             }))
 
             # Notify others that user joined
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'user_joined',
-                    'user_id': user_data['id'],
-                    'username': user_data['username'],
-                    'display_name': user_data['display_name'],
-                    'pfp_url': user_data['pfp_url'],
-                    'is_host': user_data['is_host'],
-                    'is_admin': user_data['is_admin'],
-                }
-            )
+            if user_data:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'user_joined',
+                        'user_id': user_data['id'],
+                        'username': user_data['username'],
+                        'display_name': user_data.get('display_name', user_data['username']),
+                        'pfp_url': user_data.get('pfp_url', ''),
+                        'is_host': user_data.get('is_host', False),
+                        'is_admin': user_data.get('is_admin', False),
+                    }
+                )
         except Exception as e:
-            # Avoid using self.user directly in strings to prevent DB access errors
-            logger.error(f"WS Connect Error: {str(e)}")
-            await self.close()
+            logger.error(f"WS Connect Error in MeetingConsumer: {str(e)}", exc_info=True)
+            try:
+                await self.close()
+            except Exception:
+                pass
 
     @database_sync_to_async
     def get_user_meta(self):
@@ -97,19 +101,21 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 'username': self.user.username,
                 'display_name': get_user_display_name(self.user),
                 'pfp_url': get_user_avatar_url(self.user),
-                'is_host': meeting.teacher == self.user or self.user.is_superuser,
-                'is_admin': self.user.is_superuser
+                'is_host': meeting.teacher == self.user or bool(self.user.is_superuser),
+                'is_admin': bool(self.user.is_superuser)
             }
         except Meeting.DoesNotExist:
              # Handle CAM_* rooms for live lectures
              if self.meeting_code.startswith('CAM_'):
-                 camera_id = self.meeting_code.split('_')[1]
+                 parts = self.meeting_code.split('_')
+                 camera_id = parts[1] if len(parts) > 1 else None
                  is_host = False
-                 try:
-                     camera = Camera.objects.get(id=camera_id)
-                     is_host = (camera.live_teacher == self.user) or self.user.is_superuser
-                 except Exception as e:
-                     logger.warning(f"Error checking camera host status: {e}")
+                 if camera_id:
+                     try:
+                         camera = Camera.objects.get(id=camera_id)
+                         is_host = (camera.live_teacher == self.user) or bool(self.user.is_superuser)
+                     except Exception as e:
+                         logger.warning(f"Error checking camera host status: {e}")
                      
                  return {
                      'id': self.user.id,
@@ -117,7 +123,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                      'display_name': get_user_display_name(self.user),
                      'pfp_url': get_user_avatar_url(self.user),
                      'is_host': is_host,
-                     'is_admin': self.user.is_superuser
+                     'is_admin': bool(self.user.is_superuser)
                  }
              raise
 
@@ -138,14 +144,14 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     'username': p.user.username,
                     'display_name': get_user_display_name(p.user),
                     'pfp_url': get_user_avatar_url(p.user),
-                    'is_host': meeting.teacher == p.user or p.user.is_superuser,
-                    'is_admin': p.user.is_superuser
+                    'is_host': meeting.teacher == p.user or bool(p.user.is_superuser),
+                    'is_admin': bool(p.user.is_superuser)
                 } for p in active
             ]
         except Meeting.DoesNotExist:
             if self.meeting_code.startswith('CAM_'):
-                # Return from in-memory tracking
-                participants = cam_room_participants.get(self.meeting_code, {})
+                # Return from in-memory tracking safely
+                participants = dict(cam_room_participants.get(self.meeting_code, {}))
                 return [
                     {
                         'user_id': uid,
@@ -155,7 +161,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                         'is_host': False,
                         'is_admin': False
                     }
-                    for uid, uname in participants.items()
+                    for uid, uname in list(participants.items())
                     if uid != self.user.id
                 ]
             return []
@@ -239,16 +245,15 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             
             elif message_type == 'chat':
                 if 'message' in data:
-                    from common.utils import get_user_display_name, get_user_avatar_url
-                    await self.save_chat_message(data['message'])
+                    chat_meta = await self.save_chat_message(data['message'])
                     await self.channel_layer.group_send(
                         self.room_group_name,
                         {
                             'type': 'chat_message',
                             'message': data['message'],
                             'username': self.user.username,
-                            'display_name': get_user_display_name(self.user),
-                            'pfp_url': get_user_avatar_url(self.user),
+                            'display_name': chat_meta.get('display_name', self.user.username),
+                            'pfp_url': chat_meta.get('pfp_url', ''),
                             'user_id': self.user.id,
                             'timestamp': data.get('timestamp', timezone.now().isoformat())
                         }
@@ -477,6 +482,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_chat_message(self, message):
+        from common.utils import get_user_display_name, get_user_avatar_url
         try:
             meeting = Meeting.objects.get(meeting_code=self.meeting_code)
             MeetingChat.objects.create(
@@ -488,3 +494,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             pass # No persistence for CAM_* rooms
         except Exception as e:
             logger.error(f"Error saving chat message: {e}")
+            
+        return {
+            'display_name': get_user_display_name(self.user),
+            'pfp_url': get_user_avatar_url(self.user)
+        }

@@ -180,15 +180,22 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        let currentDeleteId = null;
-        let activeDropdown = null;
-        let activeTrigger = null;
+(function() {
+    function initManageRecordings() {
+        var editModalEl = document.getElementById('editModal');
+        var deleteModalEl = document.getElementById('deleteModal');
+        if (!editModalEl || !deleteModalEl || typeof bootstrap === 'undefined') return;
+
+        var editModal = bootstrap.Modal.getInstance(editModalEl) || new bootstrap.Modal(editModalEl);
+        var deleteModal = bootstrap.Modal.getInstance(deleteModalEl) || new bootstrap.Modal(deleteModalEl);
+        var currentDeleteId = null;
+        var activeDropdown = null;
+        var activeTrigger = null;
 
         // Toggle Visibility
         document.querySelectorAll('.publish-toggle').forEach(toggle => {
+            if (toggle._init) return;
+            toggle._init = true;
             toggle.addEventListener('change', function() {
                 const id = this.dataset.id;
                 fetch(`{% url 'toggle_recording_publish' 0 %}`.replace('0', id), {
@@ -218,6 +225,8 @@
 
         // Edit
         document.querySelectorAll('.edit-rec-btn').forEach(btn => {
+            if (btn._init) return;
+            btn._init = true;
             btn.addEventListener('click', function() {
                 document.getElementById('editId').value = this.dataset.id;
                 document.getElementById('editTitle').value = this.dataset.title;
@@ -226,25 +235,29 @@
             });
         });
 
-        document.getElementById('editForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const id = document.getElementById('editId').value;
-            const title = document.getElementById('editTitle').value;
-            const description = document.getElementById('editDescription').value;
+        var editForm = document.getElementById('editForm');
+        if (editForm && !editForm._init) {
+            editForm._init = true;
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('editId').value;
+                const title = document.getElementById('editTitle').value;
+                const description = document.getElementById('editDescription').value;
 
-            fetch('{% url "publish_recording" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}',
-                },
-                body: `recording_id=${id}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`
-            }).then(res => res.json()).then(data => {
-                if (data.status === 'success') {
-                    location.reload();
-                }
+                fetch('{% url "publish_recording" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: `recording_id=${id}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`
+                }).then(res => res.json()).then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                });
             });
-        });
+        }
 
         // Dropdown Portal Engine
         function closeActiveDropdown() {
@@ -266,35 +279,37 @@
             }
         }
 
-        document.querySelectorAll('.btn-action-trigger').forEach(button => {
-            button.addEventListener('click', function(e) {
+        document.querySelectorAll('.dropdown-portal-trigger').forEach(trigger => {
+            if (trigger._init) return;
+            trigger._init = true;
+            trigger.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const id = this.dataset.id;
-                const dropdown = document.getElementById('portal-menu-' + id);
                 
-                if (activeTrigger === this) {
-                    closeActiveDropdown();
-                    return;
-                }
+                const isCurrentActive = activeTrigger === this;
                 
                 closeActiveDropdown();
                 
+                if (isCurrentActive) return;
+                
                 activeTrigger = this;
+                activeTrigger.classList.add('active');
+                
+                const container = this.parentElement;
+                const dropdown = container.querySelector('.dropdown-portal-menu');
                 activeDropdown = dropdown;
                 
-                this.classList.add('active');
+                if (dropdown.parentElement !== document.body) {
+                    document.body.appendChild(dropdown);
+                }
                 
-                // Append to body (Portal)
-                document.body.appendChild(dropdown);
                 dropdown.style.display = 'flex';
                 dropdown.style.flexDirection = 'column';
                 
                 // Force reflow
                 dropdown.offsetHeight;
                 
-                // Measure position
-                const rect = this.getBoundingClientRect();
-                const dropdownWidth = 150;
+                const rect = trigger.getBoundingClientRect();
+                const dropdownWidth = 190;
                 const dropdownHeight = dropdown.offsetHeight || 135;
                 
                 let top = rect.bottom + 6;
@@ -334,36 +349,54 @@
             }
         });
 
-        // Close on scroll or resize to prevent layout detachment
         window.addEventListener('scroll', closeActiveDropdown, { passive: true });
         window.addEventListener('resize', closeActiveDropdown, { passive: true });
 
         // Event delegation for delete clicks inside portalled dropdowns
-        document.body.addEventListener('click', function(e) {
-            const btn = e.target.closest('.delete-rec-btn');
-            if (btn) {
-                currentDeleteId = btn.dataset.id;
-                document.getElementById('deleteTitle').textContent = btn.dataset.title;
-                deleteModal.show();
-                closeActiveDropdown();
-            }
-        });
-
-        document.getElementById('confirmDelete').addEventListener('click', function() {
-            if (!currentDeleteId) return;
-            
-            fetch(`/cameras/delete-recording/${currentDeleteId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                }
-            }).then(res => res.json()).then(data => {
-                if (data.status === 'success') {
-                    location.reload();
+        if (!document.body._deleteRecInit) {
+            document.body._deleteRecInit = true;
+            document.body.addEventListener('click', function(e) {
+                const btn = e.target.closest('.delete-rec-btn');
+                if (btn) {
+                    currentDeleteId = btn.dataset.id;
+                    document.getElementById('deleteTitle').textContent = btn.dataset.title;
+                    deleteModal.show();
+                    closeActiveDropdown();
                 }
             });
-        });
+        }
+
+        var confirmDeleteBtn = document.getElementById('confirmDelete');
+        if (confirmDeleteBtn && !confirmDeleteBtn._init) {
+            confirmDeleteBtn._init = true;
+            confirmDeleteBtn.addEventListener('click', function() {
+                if (!currentDeleteId) return;
+                
+                fetch(`/cameras/delete-recording/${currentDeleteId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    }
+                }).then(res => res.json()).then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                });
+            });
+        }
+
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initManageRecordings);
+    document.addEventListener('turbo:load', initManageRecordings);
+    document.addEventListener('turbo:before-render', () => {
+        // Remove portalled menus attached directly to body
+        document.querySelectorAll('body > .dropdown-portal-menu').forEach(el => el.remove());
     });
+})();
 </script>
 
 <style>

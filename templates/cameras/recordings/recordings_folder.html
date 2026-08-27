@@ -285,35 +285,40 @@
 </div>
 
 <script>
-    function openFolder(id) {
-        // Hide all containers
-        document.getElementById('foldersView').style.display = 'none';
+(function() {
+    window.openFolder = function(id) {
+        var foldersView = document.getElementById('foldersView');
+        if (foldersView) foldersView.style.display = 'none';
         document.querySelectorAll('.video-list-container').forEach(el => el.classList.remove('active'));
         
-        // Show target container
-        const target = document.getElementById('folder-' + id);
+        var target = document.getElementById('folder-' + id);
         if (target) {
             target.classList.add('active');
             window.location.hash = 'folder-' + id;
         }
-    }
+    };
 
-    function closeFolder() {
-        document.getElementById('foldersView').style.display = 'block';
+    window.closeFolder = function() {
+        var foldersView = document.getElementById('foldersView');
+        if (foldersView) foldersView.style.display = 'block';
         document.querySelectorAll('.video-list-container').forEach(el => el.classList.remove('active'));
         window.location.hash = '';
-    }
+    };
 
-    // Handle initial hash if any
-    window.addEventListener('load', () => {
+    function initFolderHash() {
         if (window.location.hash) {
-            const el = document.querySelector(window.location.hash);
-            if (el) {
-                document.getElementById('foldersView').style.display = 'none';
+            var el = document.querySelector(window.location.hash);
+            var foldersView = document.getElementById('foldersView');
+            if (el && foldersView) {
+                foldersView.style.display = 'none';
                 el.classList.add('active');
             }
         }
         if (window.lucide) lucide.createIcons();
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', initFolderHash);
+    document.addEventListener('turbo:load', initFolderHash);
+})();
 </script>
 {% endblock %}

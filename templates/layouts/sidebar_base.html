@@ -27,6 +27,17 @@
     <!-- Hotwired Turbo for seamless navigation (no full page reloads) -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.5/dist/turbo.es2017-esm.js"></script>
     <script>
+        // Enterprise Production Console Guard: silences noisy developer logs for end users
+        (function() {
+            if (!window.localStorage || localStorage.getItem('edumi_debug') !== 'true') {
+                const noop = function() {};
+                window.console.log = noop;
+                window.console.debug = noop;
+                window.console.info = noop;
+                window.console.trace = noop;
+            }
+        })();
+
         // Apply theme immediately to document root to avoid light-mode flash
         (function() {
             const savedTheme = localStorage.getItem('theme');
@@ -51,6 +62,20 @@
             }
             document.body.style.overflow = '';
         }
+
+        // Graceful handling of aborted requests during rapid navigation
+        document.addEventListener('turbo:fetch-request-error', (event) => {
+            // If request was aborted by user clicking another link rapidly, suppress the error
+            if (event.detail && event.detail.error && event.detail.error.name === 'AbortError') {
+                event.preventDefault();
+                return;
+            }
+            // If server returned a 500 error during fast clicking, fallback cleanly to full page visit
+            if (event.detail && event.detail.response && event.detail.response.status >= 500) {
+                event.preventDefault();
+                window.location.href = event.detail.url;
+            }
+        });
 
         // Apply theme and sync states of permanent elements before Turbo renders new body
         document.addEventListener('turbo:before-render', (event) => {
@@ -396,119 +421,120 @@
 
         // Real-time WebSocket connection
         function connectNotificationWS() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
-            const socket = new WebSocket(wsUrl);
-            window.notificationSocket = socket;
-
-            socket.onmessage = function (e) {
-                const data = JSON.parse(e.data);
-                console.log('Notification received:', data);
-
-                if (data.type === 'new_message') {
-                    showToast(`Message from ${data.sender}`, data.message, 'info');
-                    updateNotificationCount();
-                    // Refresh if on inbox or conversation page
-                    if (window.location.pathname.includes('/inbox/') || window.location.pathname.includes('/conversation/')) {
-                        refreshCurrentPage();
-                    }
-                    window.dispatchEvent(new CustomEvent('new_message', { detail: data }));
-                } else if (data.type === 'meeting_started') {
-                    showToast(`Class Started!`, `${data.title} is now LIVE.`, 'success');
-                    updateNotificationCount();
-                    refreshCurrentPage();
-                    window.dispatchEvent(new CustomEvent('meeting_state_change', { detail: data }));
-                } else if (data.type === 'live_status_change') {
-                    if (data.status === 'started') {
-                        showToast(`Live Lecture!`, `${data.teacher_name} is now live in ${data.camera_name}`, 'success');
-                    }
-                    // Only refresh if not in a meeting or camera control room/watch page to avoid disruption
-                    if (!window.location.pathname.includes('/meetings/join/') && 
-                        !window.location.pathname.includes('/cameras/control-room/') && 
-                        !window.location.pathname.includes('/cameras/watch-live/')) {
-                        refreshCurrentPage();
-                    }
-                    window.dispatchEvent(new CustomEvent('live_status_change', { detail: data }));
-                } else if (data.type === 'classroom_request') {
-                    showToast(`New Join Request`, `${data.student_name} wants to join ${data.classroom_title}`, 'info');
-                    updateNotificationCount();
-                    // Only refresh if on classroom management pages
-                    if (window.location.pathname.includes('/classrooms/') || window.location.pathname.includes('/manage/')) {
-                        refreshCurrentPage();
-                    }
-                } else if (data.type === 'classroom_approved') {
-                    showToast(`Request Approved!`, `You have been added to ${data.classroom_title}`, 'success');
-                    updateNotificationCount();
-                    refreshCurrentPage();
-                } else if (data.type === 'meeting_scheduled') {
-                    showToast(`New Meeting`, `A new meeting "${data.title}" has been scheduled.`, 'info');
-                    updateNotificationCount();
-                    if (window.location.pathname.includes('/dashboard/') || window.location.pathname === '/') {
-                        refreshCurrentPage();
-                    }
-                } else if (data.type === 'meeting_cancelled') {
-                    showToast(`Meeting Cancelled`, `"${data.title}" has been cancelled.`, 'warning');
-                    updateNotificationCount();
-                    refreshCurrentPage();
-                } else if (data.type === 'classroom_denied') {
-                    showToast(`Join Request Denied`, `Your request for ${data.classroom_title} was denied.`, 'error');
-                    updateNotificationCount();
-                    refreshCurrentPage();
-                } else if (data.type === 'classroom_removed') {
-                    showToast(`Removed from Class`, `You were removed from ${data.classroom_title}.`, 'warning');
-                    updateNotificationCount();
-                    refreshCurrentPage();
-                } else if (data.type === 'student_joined') {
-                    showToast(`Student Joined`, `${data.student_name} joined ${data.classroom_title}`, 'success');
-                    updateNotificationCount();
-                    // Don't refresh for every student join unless on the specific class view
-                    if (window.location.pathname.includes('/classrooms/view/')) {
-                        refreshCurrentPage();
-                    }
-                }
-            };
-
-            function refreshCurrentPage() {
-                // Avoid refreshing if user is in an active media session
-                if (window.room && window.room.state === 'connected') {
-                    console.log('Skipping auto-refresh: Active meeting session detected.');
-                    return;
-                }
-                if (window.isStreaming || window.isRecording) {
-                    console.log('Skipping auto-refresh: Active camera session detected.');
-                    return;
-                }
-
-                console.log('Smoothing refreshing page due to real-time update...');
-                if (typeof Turbo !== 'undefined') {
-                    Turbo.visit(window.location.href, { action: 'replace' });
-                } else {
-                    window.location.reload();
-                }
+            if (window.notificationSocket && 
+                (window.notificationSocket.readyState === WebSocket.OPEN || 
+                 window.notificationSocket.readyState === WebSocket.CONNECTING)) {
+                return;
             }
 
-            window.notificationReconnectAttempts = window.notificationReconnectAttempts || 0;
-            const maxAttempts = 5;
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+                const socket = new WebSocket(wsUrl);
+                window.notificationSocket = socket;
 
-            socket.onopen = function () {
-                window.notificationReconnectAttempts = 0;
-            };
+                socket.onopen = function () {
+                    window.notificationReconnectAttempts = 0;
+                };
 
-            socket.onclose = function (e) {
-                if (window.notificationReconnectAttempts < maxAttempts) {
-                    window.notificationReconnectAttempts++;
-                    const delay = Math.min(3000 * window.notificationReconnectAttempts, 15000);
-                    console.log(`Notification socket closed. Reconnect attempt ${window.notificationReconnectAttempts}/${maxAttempts} in ${delay / 1000}s...`);
-                    window.notificationReconnectTimer = setTimeout(connectNotificationWS, delay);
-                } else {
-                    console.warn('Notification socket disconnected: Max reconnect attempts reached.');
+                socket.onmessage = function (e) {
+                    try {
+                        const data = JSON.parse(e.data);
+                        console.log('Notification received:', data);
+
+                        if (data.type === 'new_message') {
+                            showToast(`Message from ${data.sender}`, data.message, 'info');
+                            updateNotificationCount();
+                            if (window.location.pathname.includes('/inbox/') || window.location.pathname.includes('/conversation/')) {
+                                debouncedPageRefresh();
+                            }
+                            window.dispatchEvent(new CustomEvent('new_message', { detail: data }));
+                        } else if (data.type === 'meeting_started') {
+                            showToast(`Class Started!`, `${data.title} is now LIVE.`, 'success');
+                            updateNotificationCount();
+                            debouncedPageRefresh();
+                            window.dispatchEvent(new CustomEvent('meeting_state_change', { detail: data }));
+                        } else if (data.type === 'live_status_change') {
+                            if (data.status === 'started') {
+                                showToast(`Live Lecture!`, `${data.teacher_name} is now live in ${data.camera_name}`, 'success');
+                            }
+                            if (!window.location.pathname.includes('/meetings/join/') && 
+                                !window.location.pathname.includes('/cameras/control-room/') && 
+                                !window.location.pathname.includes('/cameras/watch-live/')) {
+                                debouncedPageRefresh();
+                            }
+                            window.dispatchEvent(new CustomEvent('live_status_change', { detail: data }));
+                        } else if (data.type === 'classroom_request') {
+                            showToast(`New Join Request`, `${data.student_name} wants to join ${data.classroom_title}`, 'info');
+                            updateNotificationCount();
+                            if (window.location.pathname.includes('/classrooms/') || window.location.pathname.includes('/manage/')) {
+                                debouncedPageRefresh();
+                            }
+                        } else if (data.type === 'classroom_approved') {
+                            showToast(`Request Approved!`, `You have been added to ${data.classroom_title}`, 'success');
+                            updateNotificationCount();
+                            debouncedPageRefresh();
+                        } else if (data.type === 'meeting_scheduled') {
+                            showToast(`New Meeting`, `A new meeting "${data.title}" has been scheduled.`, 'info');
+                            updateNotificationCount();
+                            if (window.location.pathname.includes('/dashboard/') || window.location.pathname === '/') {
+                                debouncedPageRefresh();
+                            }
+                        } else if (data.type === 'meeting_cancelled') {
+                            showToast(`Meeting Cancelled`, `"${data.title}" has been cancelled.`, 'warning');
+                            updateNotificationCount();
+                            debouncedPageRefresh();
+                        } else if (data.type === 'classroom_denied') {
+                            showToast(`Join Request Denied`, `Your request for ${data.classroom_title} was denied.`, 'error');
+                            updateNotificationCount();
+                            debouncedPageRefresh();
+                        } else if (data.type === 'classroom_removed') {
+                            showToast(`Removed from Class`, `You were removed from ${data.classroom_title}.`, 'warning');
+                            updateNotificationCount();
+                            debouncedPageRefresh();
+                        } else if (data.type === 'student_joined') {
+                            showToast(`Student Joined`, `${data.student_name} joined ${data.classroom_title}`, 'success');
+                            updateNotificationCount();
+                            if (window.location.pathname.includes('/classrooms/view/')) {
+                                debouncedPageRefresh();
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error handling notification message:', err);
+                    }
+                };
+
+                let refreshTimeout = null;
+                function debouncedPageRefresh() {
+                    if (window.room && window.room.state === 'connected') return;
+                    if (window.isStreaming || window.isRecording) return;
+                    if (refreshTimeout) clearTimeout(refreshTimeout);
+                    refreshTimeout = setTimeout(() => {
+                        if (typeof Turbo !== 'undefined') {
+                            Turbo.visit(window.location.href, { action: 'replace' });
+                        } else {
+                            window.location.reload();
+                        }
+                    }, 500);
                 }
-            };
 
-            socket.onerror = function (err) {
-                console.error('Notification socket error:', err);
-                socket.close();
-            };
+                window.notificationReconnectAttempts = window.notificationReconnectAttempts || 0;
+                const maxAttempts = 5;
+
+                socket.onclose = function (e) {
+                    if (window.notificationReconnectAttempts < maxAttempts) {
+                        window.notificationReconnectAttempts++;
+                        const delay = Math.min(3000 * window.notificationReconnectAttempts, 15000);
+                        window.notificationReconnectTimer = setTimeout(connectNotificationWS, delay);
+                    }
+                };
+
+                socket.onerror = function (err) {
+                    // Suppress noisy error event when websocket is offline in dev
+                };
+            } catch (err) {
+                console.warn('Notification socket initialization skipped:', err);
+            }
         }
 
         // Toast System
@@ -555,24 +581,21 @@
             // Update Notification Count
             updateNotificationCount();
 
-            // Prevent duplicate WebSocket connections on Turbo navigation
-            if (!window.notificationSocket || 
-                (window.notificationSocket.readyState !== WebSocket.OPEN && 
-                 window.notificationSocket.readyState !== WebSocket.CONNECTING)) {
-                connectNotificationWS();
-            }
+            // Connect WebSocket if not active
+            connectNotificationWS();
         }
 
         // Register initialization
         document.addEventListener('DOMContentLoaded', initializeApp);
         document.addEventListener('turbo:load', initializeApp);
 
-        // Clean up socket connections before caching or rendering a new page
+        // Clean up socket on full page unload only
         function cleanupNotificationSocket() {
             if (window.notificationSocket) {
-                // Remove active onclose handlers so it doesn't trigger reconnect loop
-                window.notificationSocket.onclose = null;
-                window.notificationSocket.close();
+                if (window.notificationSocket.readyState === WebSocket.OPEN) {
+                    window.notificationSocket.onclose = null;
+                    window.notificationSocket.close();
+                }
                 window.notificationSocket = null;
             }
             if (window.notificationReconnectTimer) {
@@ -580,8 +603,7 @@
                 window.notificationReconnectTimer = null;
             }
         }
-        document.addEventListener('turbo:before-cache', cleanupNotificationSocket);
-        document.addEventListener('turbo:before-render', cleanupNotificationSocket);
+        window.addEventListener('beforeunload', cleanupNotificationSocket);
 
         // Theme Toggle Logic
         function toggleTheme() {
@@ -675,7 +697,7 @@
     <!-- Not authenticated - redirect to login -->
     <script>window.location.href = "{% url 'login' %}";</script>
     {% endif %}
-    <script src="{% static 'js/identity_sync.js' %}?v={{ timestamp }}"></script>
+    <script src="{% static 'js/identity_sync.js' %}"></script>
     <script src="{% static 'js/classroom-card.js' %}"></script>
     {% block extra_js %}{% endblock %}
     {% include 'components/lucide_icons.html' %}

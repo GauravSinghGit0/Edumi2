@@ -372,7 +372,12 @@ function initMessageComposer() {
   msgInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      messageForm.requestSubmit();
+      const hasText = msgInput.value.trim().length > 0;
+      const hasImage = imgInput && imgInput.files && imgInput.files.length > 0;
+      const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+      if (hasText || hasImage || hasFile) {
+        messageForm.requestSubmit();
+      }
     }
   });
 
@@ -382,14 +387,14 @@ function initMessageComposer() {
 
   if (imgInput) {
     imgInput.addEventListener('change', function() {
-      if (this.files[0]) showAttachmentPreview('image', this.files[0]);
+      if (this.files && this.files[0]) showAttachmentPreview('image', this.files[0]);
       updateSendBtn();
     });
   }
 
   if (fileInput) {
     fileInput.addEventListener('change', function() {
-      if (this.files[0]) showAttachmentPreview('file', this.files[0]);
+      if (this.files && this.files[0]) showAttachmentPreview('file', this.files[0]);
       updateSendBtn();
     });
   }
@@ -397,6 +402,14 @@ function initMessageComposer() {
   /* ── AJAX Submission ── */
   messageForm.addEventListener('submit', function(e) {
     e.preventDefault();
+    const hasText = msgInput && msgInput.value.trim().length > 0;
+    const hasImage = imgInput && imgInput.files && imgInput.files.length > 0;
+    const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+    if (!hasText && !hasImage && !hasFile) {
+      return; // Suppress empty submissions
+    }
+
     const form = this;
     const fd = new FormData(form);
     const btn = document.getElementById('sendBtn');
@@ -444,8 +457,8 @@ function updateSendBtn() {
   if (!ta || !send) return;
 
   const hasText = ta.value.trim().length > 0;
-  const hasImage = img && img.files.length > 0;
-  const hasFile = file && file.files.length > 0;
+  const hasImage = !!(img && img.files && img.files.length > 0);
+  const hasFile = !!(file && file.files && file.files.length > 0);
   send.disabled = !(hasText || hasImage || hasFile);
 }
 

@@ -176,127 +176,164 @@
 </div>
 
 <script>
+(function() {
+    var stream = null;
+    var micEnabled = true;
+    var camEnabled = true;
+    var faceCheckTimeout = null;
+
+    window.redirectToMeeting = function() {
+        window.location.href = "{% url 'join_meeting' meeting.meeting_code %}";
+    };
+
+    window.skipVerify = function() {
+        window.location.href = "{% url 'join_meeting' meeting.meeting_code %}?skip_verify=1";
+    };
+
 {% if face_registered %}
-let stream = null;
-let micEnabled = true;
-let camEnabled = true;
-const video = document.getElementById('videoPreview');
-const canvas = document.getElementById('identityCanvas');
-const overlay = document.getElementById('cameraOverlay');
-const joinBtn = document.getElementById('joinBtn');
-const micBtn = document.getElementById('micBtn');
-const camBtn = document.getElementById('camBtn');
+    window.initCamera = async function() {
+        var video = document.getElementById('videoPreview');
+        var overlay = document.getElementById('cameraOverlay');
+        if (!video) return;
 
-async function initCamera() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        video.srcObject = stream;
-        overlay.style.opacity = '0';
-        updateStatus('cam', true, 'Camera active');
-        video.onloadedmetadata = () => { setTimeout(performFaceCheck, 1000); };
-    } catch (err) {
-        updateStatus('cam', false, 'Access denied or no camera found');
-    }
-}
-
-function toggleMic() {
-    micEnabled = !micEnabled;
-    if (stream) {
-        stream.getAudioTracks().forEach(track => track.enabled = micEnabled);
-    }
-    if (micEnabled) {
-        micBtn.classList.remove('muted');
-        micBtn.innerHTML = '<i data-lucide="mic"></i>';
-    } else {
-        micBtn.classList.add('muted');
-        micBtn.innerHTML = '<i data-lucide="mic-off"></i>';
-    }
-    lucide.createIcons();
-}
-
-function toggleCam() {
-    camEnabled = !camEnabled;
-    if (stream) {
-        stream.getVideoTracks().forEach(track => track.enabled = camEnabled);
-    }
-    if (camEnabled) {
-        camBtn.classList.remove('muted');
-        camBtn.innerHTML = '<i data-lucide="video"></i>';
-    } else {
-        camBtn.classList.add('muted');
-        camBtn.innerHTML = '<i data-lucide="video-off"></i>';
-    }
-    lucide.createIcons();
-}
-
-function updateStatus(type, success, text) {
-    const item = document.getElementById(type + 'Status');
-    const textEl = document.getElementById(type + 'Text');
-    const mark = item.querySelector('.check-mark');
-    item.className = 'status-item ' + (success ? 'success' : 'error');
-    textEl.textContent = text;
-    mark.style.display = success ? 'block' : 'none';
-    checkReady();
-}
-
-async function performFaceCheck() {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    const imageData = canvas.toDataURL('image/jpeg');
-    try {
-        const response = await fetch('{% url "verify_face_prejoin" %}', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRFToken': '{{ csrf_token }}' 
-            },
-            body: JSON.stringify({ image: imageData, meeting_code: '{{ meeting.meeting_code }}' })
-        });
-        const data = await response.json();
-        if (data.success) {
-            updateStatus('face', true, 'Identity confirmed');
-            document.getElementById('identityVerify').style.display = 'block';
-        } else {
-            updateStatus('face', false, 'Not recognized — retrying...');
-            setTimeout(performFaceCheck, 3000);
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            video.srcObject = stream;
+            if (overlay) overlay.style.opacity = '0';
+            updateStatus('cam', true, 'Camera active');
+            video.onloadedmetadata = function() { 
+                if (faceCheckTimeout) clearTimeout(faceCheckTimeout);
+                faceCheckTimeout = setTimeout(performFaceCheck, 1000); 
+            };
+        } catch (err) {
+            updateStatus('cam', false, 'Access denied or no camera found');
         }
-    } catch (err) {
-        updateStatus('face', false, 'Verification error — retrying...');
-        setTimeout(performFaceCheck, 4000);
+    };
+
+    window.toggleMic = function() {
+        micEnabled = !micEnabled;
+        if (stream) {
+            stream.getAudioTracks().forEach(function(track) { track.enabled = micEnabled; });
+        }
+        var micBtn = document.getElementById('micBtn');
+        if (micBtn) {
+            if (micEnabled) {
+                micBtn.classList.remove('muted');
+                micBtn.innerHTML = '<i data-lucide="mic"></i>';
+            } else {
+                micBtn.classList.add('muted');
+                micBtn.innerHTML = '<i data-lucide="mic-off"></i>';
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    };
+
+    window.toggleCam = function() {
+        camEnabled = !camEnabled;
+        if (stream) {
+            stream.getVideoTracks().forEach(function(track) { track.enabled = camEnabled; });
+        }
+        var camBtn = document.getElementById('camBtn');
+        if (camBtn) {
+            if (camEnabled) {
+                camBtn.classList.remove('muted');
+                camBtn.innerHTML = '<i data-lucide="video"></i>';
+            } else {
+                camBtn.classList.add('muted');
+                camBtn.innerHTML = '<i data-lucide="video-off"></i>';
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    };
+
+    function updateStatus(type, success, text) {
+        var item = document.getElementById(type + 'Status');
+        var textEl = document.getElementById(type + 'Text');
+        if (!item || !textEl) return;
+        var mark = item.querySelector('.check-mark');
+        item.className = 'status-item ' + (success ? 'success' : 'error');
+        textEl.textContent = text;
+        if (mark) mark.style.display = success ? 'block' : 'none';
+        checkReady();
     }
-}
 
-function checkReady() {
-    const camOk = document.getElementById('camStatus').classList.contains('success');
-    const faceOk = document.getElementById('faceStatus').classList.contains('success');
-    joinBtn.disabled = !(camOk && faceOk);
-}
+    async function performFaceCheck() {
+        var video = document.getElementById('videoPreview');
+        var canvas = document.getElementById('identityCanvas');
+        if (!video || !canvas || !video.videoWidth) return;
 
-function redirectToMeeting() {
-    window.location.href = "{% url 'join_meeting' meeting.meeting_code %}";
-}
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        var imageData = canvas.toDataURL('image/jpeg');
+        try {
+            var response = await fetch('{% url "verify_face_prejoin" %}', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': '{{ csrf_token }}' 
+                },
+                body: JSON.stringify({ image: imageData, meeting_code: '{{ meeting.meeting_code }}' })
+            });
+            var data = await response.json();
+            if (data.success) {
+                updateStatus('face', true, 'Identity confirmed');
+                var identityVerify = document.getElementById('identityVerify');
+                if (identityVerify) identityVerify.style.display = 'block';
+            } else {
+                updateStatus('face', false, 'Not recognized — retrying...');
+                faceCheckTimeout = setTimeout(performFaceCheck, 3000);
+            }
+        } catch (err) {
+            updateStatus('face', false, 'Verification error — retrying...');
+            faceCheckTimeout = setTimeout(performFaceCheck, 4000);
+        }
+    }
 
-function skipVerify() {
-    window.location.href = "{% url 'join_meeting' meeting.meeting_code %}?skip_verify=1";
-}
+    function checkReady() {
+        var camItem = document.getElementById('camStatus');
+        var faceItem = document.getElementById('faceStatus');
+        var joinBtn = document.getElementById('joinBtn');
+        if (!joinBtn) return;
+        var camOk = camItem ? camItem.classList.contains('success') : false;
+        var faceOk = faceItem ? faceItem.classList.contains('success') : false;
+        joinBtn.disabled = !(camOk && faceOk);
+    }
 {% endif %}
 
-document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
-    
-    // Show IP camera access warning if not on localhost
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' || 
-                        window.location.hostname === '[::1]';
-    if (!isLocalhost) {
-        document.getElementById('ipWarningBanner').style.display = 'flex';
-        document.getElementById('currentOrigin').textContent = window.location.origin;
+    function initPreJoinPage() {
+        if (window.lucide) lucide.createIcons();
+        
+        var isLocalhost = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' || 
+                          window.location.hostname === '[::1]';
+        var banner = document.getElementById('ipWarningBanner');
+        var origin = document.getElementById('currentOrigin');
+        if (!isLocalhost && banner && origin) {
+            banner.style.display = 'flex';
+            origin.textContent = window.location.origin;
+        }
+        
+        {% if face_registered %}
+        if (typeof window.initCamera === 'function') {
+            window.initCamera();
+        }
+        {% endif %}
     }
-    
-    {% if face_registered %}
-    initCamera();
-    {% endif %}
-});
+
+    document.addEventListener('DOMContentLoaded', initPreJoinPage);
+    document.addEventListener('turbo:load', initPreJoinPage);
+
+    document.addEventListener('turbo:before-render', function() {
+        if (stream) {
+            stream.getTracks().forEach(function(track) { track.stop(); });
+            stream = null;
+        }
+        if (faceCheckTimeout) {
+            clearTimeout(faceCheckTimeout);
+            faceCheckTimeout = null;
+        }
+    });
+})();
 </script>
 {% endblock %}

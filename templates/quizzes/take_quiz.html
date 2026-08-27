@@ -249,107 +249,117 @@
 </div>
 
 <script>
-// ── Config from server ────────────────────────────────────────────────────────
-const QUIZ_ID         = {{ quiz.id }};
-const TIME_LIMIT_SECS = {% if quiz.time_limit %}{{ quiz.time_limit|floatformat:0 }} * 60{% else %}null{% endif %};
-const TOTAL_QUESTIONS = {{ quiz.questions.count }};
-const TIME_STATUS_URL = '{% url "quiz_time_status" quiz.id %}';
+(function() {
+    // ── Config from server ────────────────────────────────────────────────────────
+    var QUIZ_ID         = {{ quiz.id }};
+    var TIME_LIMIT_SECS = {% if quiz.time_limit %}{{ quiz.time_limit|floatformat:0 }} * 60{% else %}null{% endif %};
+    var TOTAL_QUESTIONS = {{ quiz.questions.count }};
+    var TIME_STATUS_URL = '{% url "quiz_time_status" quiz.id %}';
 
-// ── Answer tracking ───────────────────────────────────────────────────────────
-const answered = new Set();
+    // ── Answer tracking ───────────────────────────────────────────────────────────
+    var answered = new Set();
 
-function selectChoice(labelEl, qId, choiceId) {
-    // Remove .chosen from sibling labels
-    labelEl.closest('.question-card').querySelectorAll('.choice-option').forEach(l => l.classList.remove('chosen'));
-    labelEl.classList.add('chosen');
-    markAnswered(qId);
-}
+    window.selectChoice = function(labelEl, qId, choiceId) {
+        labelEl.closest('.question-card').querySelectorAll('.choice-option').forEach(l => l.classList.remove('chosen'));
+        labelEl.classList.add('chosen');
+        window.markAnswered(qId);
+    };
 
-function markAnswered(qId) {
-    answered.add(qId);
-    document.getElementById('answeredCount').textContent   = answered.size;
-    document.getElementById('unansweredCount').textContent = TOTAL_QUESTIONS - answered.size;
-    // Highlight the card
-    const card = document.getElementById('qcard_' + qId);
-    if (card) card.classList.add('answered');
-}
+    window.markAnswered = function(qId) {
+        answered.add(qId);
+        var ansEl = document.getElementById('answeredCount');
+        var unansEl = document.getElementById('unansweredCount');
+        if (ansEl) ansEl.textContent = answered.size;
+        if (unansEl) unansEl.textContent = TOTAL_QUESTIONS - answered.size;
+        var card = document.getElementById('qcard_' + qId);
+        if (card) card.classList.add('answered');
+    };
 
-// ── Confirm submit ────────────────────────────────────────────────────────────
-function confirmSubmit() {
-    const unanswered = TOTAL_QUESTIONS - answered.size;
-    if (unanswered > 0) {
-        return confirm(`You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Submit anyway?`);
-    }
-    return confirm('Submit your quiz? You cannot change your answers after submitting.');
-}
+    // ── Confirm submit ────────────────────────────────────────────────────────────
+    window.confirmSubmit = function() {
+        var unanswered = TOTAL_QUESTIONS - answered.size;
+        if (unanswered > 0) {
+            return confirm(`You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Submit anyway?`);
+        }
+        return confirm('Submit your quiz? You cannot change your answers after submitting.');
+    };
 
-// ── Timer ─────────────────────────────────────────────────────────────────────
-if (TIME_LIMIT_SECS !== null) {
-    const display  = document.getElementById('timerDisplay');
-    const fill     = document.getElementById('timerFill');
-    let   secsLeft = {{ seconds_remaining|default:"0" }};
-    const totalSec = TIME_LIMIT_SECS;
-    let   expired  = false;
-    let   syncInterval = 0;
+    // ── Timer ─────────────────────────────────────────────────────────────────────
+    var timerInterval = null;
+    var syncInterval = null;
 
-    function formatTime(secs) {
-        const m = Math.floor(secs / 60).toString().padStart(2, '0');
-        const s = (secs % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
-    }
+    if (TIME_LIMIT_SECS !== null) {
+        var display  = document.getElementById('timerDisplay');
+        var fill     = document.getElementById('timerFill');
+        var secsLeft = {{ seconds_remaining|default:"0" }};
+        var totalSec = TIME_LIMIT_SECS;
+        var expired  = false;
 
-    function applyUrgencyClasses(secs) {
-        const pct = secs / totalSec;
-        const els = [display, fill];
-        els.forEach(el => {
-            el.classList.toggle('warning',  pct <= 0.25 && pct > 0.10);
-            el.classList.toggle('critical', pct <= 0.10);
-        });
-    }
+        function formatTime(secs) {
+            var m = Math.floor(secs / 60).toString().padStart(2, '0');
+            var s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
 
-    function tick() {
-        if (expired) return;
-        secsLeft = Math.max(0, secsLeft - 1);
-        display.textContent = formatTime(secsLeft);
-        fill.style.width    = Math.max(0, (secsLeft / totalSec) * 100) + '%';
+        function applyUrgencyClasses(secs) {
+            var pct = secs / totalSec;
+            var els = [display, fill];
+            els.forEach(el => {
+                if (el) {
+                    el.classList.toggle('warning',  pct <= 0.25 && pct > 0.10);
+                    el.classList.toggle('critical', pct <= 0.10);
+                }
+            });
+        }
+
+        function tick() {
+            if (expired) return;
+            secsLeft = Math.max(0, secsLeft - 1);
+            if (display) display.textContent = formatTime(secsLeft);
+            if (fill) fill.style.width = Math.max(0, (secsLeft / totalSec) * 100) + '%';
+            applyUrgencyClasses(secsLeft);
+
+            if (secsLeft <= 0) {
+                expired = true;
+                autoSubmit();
+            }
+        }
+
+        async function syncWithServer() {
+            try {
+                var resp = await fetch(TIME_STATUS_URL);
+                var data = await resp.json();
+                if (data.has_timer && typeof data.seconds_remaining === 'number') {
+                    secsLeft = data.seconds_remaining;
+                    if (secsLeft <= 0 && !expired) {
+                        expired = true;
+                        autoSubmit();
+                    }
+                }
+            } catch(e) { }
+        }
+
+        function autoSubmit() {
+            var overlay = document.getElementById('expiredOverlay');
+            if (overlay) overlay.classList.add('show');
+            setTimeout(() => {
+                var form = document.getElementById('quizForm');
+                if (form) form.submit();
+            }, 1800);
+        }
+
+        if (display) display.textContent = formatTime(secsLeft);
+        if (fill) fill.style.width = (secsLeft / totalSec * 100) + '%';
         applyUrgencyClasses(secsLeft);
 
-        if (secsLeft <= 0) {
-            expired = true;
-            autoSubmit();
-        }
+        timerInterval = setInterval(tick, 1000);
+        syncInterval = setInterval(syncWithServer, 30000);
     }
 
-    // Sync with server every 30 seconds to avoid drift
-    async function syncWithServer() {
-        try {
-            const resp = await fetch(TIME_STATUS_URL);
-            const data = await resp.json();
-            if (data.has_timer && typeof data.seconds_remaining === 'number') {
-                secsLeft = data.seconds_remaining;
-                if (secsLeft <= 0 && !expired) {
-                    expired = true;
-                    autoSubmit();
-                }
-            }
-        } catch(e) { /* network blip — keep counting locally */ }
-    }
-
-    function autoSubmit() {
-        document.getElementById('expiredOverlay').classList.add('show');
-        // Submit the form after a short delay so the overlay is visible
-        setTimeout(() => {
-            document.getElementById('quizForm').submit();
-        }, 1800);
-    }
-
-    // Start
-    display.textContent = formatTime(secsLeft);
-    fill.style.width    = (secsLeft / totalSec * 100) + '%';
-    applyUrgencyClasses(secsLeft);
-
-    setInterval(tick, 1000);
-    setInterval(syncWithServer, 30000);
-}
+    document.addEventListener('turbo:before-render', () => {
+        if (timerInterval) clearInterval(timerInterval);
+        if (syncInterval) clearInterval(syncInterval);
+    });
+})();
 </script>
 {% endblock %}

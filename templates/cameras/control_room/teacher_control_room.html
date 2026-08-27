@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
+<meta name="turbo-cache-control" content="no-cache">
 <style>
     .control-room-container {
         display: grid;
@@ -131,6 +132,11 @@
         width: 100%;
         box-sizing: border-box;
     }
+    body.dark-mode .controls-bar {
+        background: #162032;
+        border-color: #334155;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
     .controls-left, .controls-right {
         display: flex;
         align-items: center;
@@ -198,6 +204,16 @@
         border-color: #cbd5e1;
         color: #0f172a;
     }
+    body.dark-mode .btn-ctrl-outline {
+        background: #0f172a;
+        border-color: #334155;
+        color: #cbd5e1;
+    }
+    body.dark-mode .btn-ctrl-outline:hover {
+        background: #1e293b;
+        border-color: #475569;
+        color: #ffffff;
+    }
     .btn-ctrl-outline.active {
         background: #ecfdf5 !important;
         color: #059669 !important;
@@ -222,12 +238,19 @@
         box-sizing: border-box;
         white-space: nowrap;
     }
+    body.dark-mode .ctrl-zoom-group {
+        background: #0f172a;
+        border-color: #334155;
+    }
     .ctrl-label {
         font-size: 0.75rem;
         font-weight: 700;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+    }
+    body.dark-mode .ctrl-label {
+        color: #94a3b8;
     }
     .ctrl-slider {
         -webkit-appearance: none;
@@ -238,6 +261,9 @@
         border-radius: 9999px;
         outline: none;
         cursor: pointer;
+    }
+    body.dark-mode .ctrl-slider {
+        background: #334155;
     }
     .ctrl-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
@@ -261,13 +287,17 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
     }
-    .ctrl-select {
-        background: #f8fafc;
+    body.dark-mode .ctrl-zoom-val {
+        color: #f1f5f9;
+    }
+    .ctrl-select, select.ctrl-select {
+        background-color: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         height: 38px;
+        min-width: 140px;
         box-sizing: border-box;
-        padding: 0 2rem 0 0.75rem;
+        padding: 0 2rem 0 0.85rem;
         font-size: 0.8125rem;
         font-weight: 600;
         color: #334155;
@@ -289,6 +319,21 @@
     .ctrl-select:focus {
         border-color: #6366f1;
         outline: none;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    body.dark-mode .ctrl-select, body.dark-mode select.ctrl-select {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f1f5f9 !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    }
+    body.dark-mode .ctrl-select:hover {
+        background-color: #1e293b !important;
+        border-color: #475569 !important;
+    }
+    body.dark-mode .ctrl-select option {
+        background-color: #0f172a;
+        color: #f1f5f9;
     }
     .btn-ctrl-square {
         width: 38px;
@@ -306,10 +351,26 @@
         transition: all 0.15s ease;
         user-select: none;
     }
+    .btn-ctrl-square svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+    }
     .btn-ctrl-square:hover {
         background: #f1f5f9;
         border-color: #cbd5e1;
         color: #0f172a;
+        transform: scale(1.02);
+    }
+    body.dark-mode .btn-ctrl-square {
+        background: #0f172a;
+        border-color: #334155;
+        color: #cbd5e1;
+    }
+    body.dark-mode .btn-ctrl-square:hover {
+        background: #1e293b;
+        border-color: #475569;
+        color: #ffffff;
     }
     @media (max-width: 900px) {
         .controls-bar {
@@ -464,17 +525,6 @@
             <!-- Top Left Live Badge -->
             <div class="hud-badge hud-badge-live">
                 <span class="live-dot"></span> LIVE
-            </div>
-
-            <!-- Top Right Camera Type Badge -->
-            <div class="hud-badge hud-badge-type">
-                {{ camera.get_camera_type_display|default:"RTSP Camera" }}
-            </div>
-
-            <!-- Bottom Left Info Overlay -->
-            <div class="hud-badge hud-badge-info">
-                <span>{{ camera.name|default:"Camera Feed" }}</span>
-                <span id="hudLiveTime"></span>
             </div>
 
             <!-- Bottom Right Action Buttons -->
@@ -971,7 +1021,6 @@
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/audio/{{ camera.id }}/?source=pc_monitor`;
         
-        console.log("Connecting to Monitor WebSocket:", wsUrl);
         monitorSocket = new WebSocket(wsUrl);
         monitorSocket.binaryType = 'arraybuffer';
         
@@ -1678,11 +1727,9 @@
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/meeting/${window.meetingCode}/`;
         
-        console.log("Connecting to Teacher Chat WebSocket:", wsUrl);
         chatWs = new WebSocket(wsUrl);
 
         chatWs.onopen = () => {
-            console.log("Teacher Chat connected!");
             showNotification('Chat connected!', 'success');
         };
 
@@ -1700,7 +1747,6 @@
         };
 
         chatWs.onclose = () => {
-            console.log("Chat disconnected. Retrying...");
             setTimeout(connectChat, 5000);
         };
     }
@@ -1835,8 +1881,46 @@
         const se = String(now.getSeconds()).padStart(2, '0');
         hudTime.textContent = `${yr}-${mo}-${da} ${hr}:${mi}:${se}`;
     }
-    setInterval(updateLiveHudTime, 1000);
-    updateLiveHudTime();
+    function cleanupMediaResources() {
+        try {
+            if (monitorSocket) {
+                monitorSocket.onclose = null;
+                monitorSocket.onerror = null;
+                monitorSocket.close();
+                monitorSocket = null;
+            }
+            if (audioSocket) {
+                audioSocket.onclose = null;
+                audioSocket.onerror = null;
+                audioSocket.close();
+                audioSocket = null;
+            }
+            if (chatWs) {
+                chatWs.onclose = null;
+                chatWs.onerror = null;
+                chatWs.close();
+                chatWs = null;
+            }
+            const audio = document.getElementById('monitorAudio');
+            if (audio) {
+                audio.pause();
+                if (audio.src && audio.src.startsWith('blob:')) {
+                    try { URL.revokeObjectURL(audio.src); } catch(_) {}
+                    audio.removeAttribute('src');
+                    audio.load();
+                }
+            }
+            if (monitorAudioContext && monitorAudioContext.state !== 'closed') {
+                monitorAudioContext.close().catch(() => {});
+            }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+        } catch (_) {}
+    }
+
+    window.addEventListener('pagehide', cleanupMediaResources);
+    window.addEventListener('beforeunload', cleanupMediaResources);
 
     if (window.lucide) {
         try {

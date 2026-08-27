@@ -636,6 +636,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <script>
+(function() {
     window.REEL_PROJECT_ID = "{{ project.pk }}";
     window.REEL_CHUNKED_UPLOAD_URL = "{% url 'chunked_upload' %}";
     window.REEL_STATUS_URL = "{% url 'project_status' project.pk %}";
@@ -666,39 +667,38 @@
 
     // Client-side high performance SVG waveform visualizer
     window.generateWaveformSvg = function(width, height, seed) {
-        const barWidth = 3;
-        const barGap = 2;
-        const totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
-        const halfHeight = height / 2;
-        let paths = [];
+        var barWidth = 3;
+        var barGap = 2;
+        var totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
+        var halfHeight = height / 2;
+        var paths = [];
 
-        // Pseudo-random consistent audio waveform generator
-        let s = (seed || 12345) % 2147483647;
+        var s = (seed || 12345) % 2147483647;
         function rnd() {
             s = (s * 16807) % 2147483647;
             return (s - 1) / 2147483646;
         }
 
-        for (let i = 0; i < totalBars; i++) {
-            const x = i * (barWidth + barGap);
-            // Mix sine wave with random peaks for realistic audio envelope
-            const envelope = 0.3 + 0.7 * Math.abs(Math.sin(i / 15.0) * Math.cos(i / 35.0));
-            const randomFactor = 0.2 + 0.8 * rnd();
-            const barH = Math.max(4, Math.min(height - 4, (halfHeight * 1.6) * envelope * randomFactor));
-            const y = halfHeight - (barH / 2);
+        for (var i = 0; i < totalBars; i++) {
+            var x = i * (barWidth + barGap);
+            var envelope = 0.3 + 0.7 * Math.abs(Math.sin(i / 15.0) * Math.cos(i / 35.0));
+            var randomFactor = 0.2 + 0.8 * rnd();
+            var barH = Math.max(4, Math.min(height - 4, (halfHeight * 1.6) * envelope * randomFactor));
+            var y = halfHeight - (barH / 2);
             paths.push(`<rect x="${x}" y="${y.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1.5" fill="currentColor" opacity="0.6"/>`);
         }
 
         return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="color: var(--ve-primary, #6366f1); display: block;">${paths.join('')}</svg>`;
     };
 
-    document.addEventListener("DOMContentLoaded", function () {
+    function initProjectDetail() {
         var video = document.getElementById('main-video');
         var proxyUrl = "{{ project.proxy_url|default:'' }}";
         var proxyStatus = "{{ project.proxy_status }}";
         var fallbackSrc = "{% if project.working_file and project.working_file.name %}{% url 'serve_media_ranges' path=project.working_file.name %}{% elif project.original_file and project.original_file.name %}{% url 'serve_media_ranges' path=project.original_file.name %}{% endif %}";
 
-        if (proxyUrl && proxyStatus === 'completed') {
+        if (proxyUrl && proxyStatus === 'completed' && video && !video._hlsAttached) {
+            video._hlsAttached = true;
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 var hls = new Hls();
                 hls.loadSource(proxyUrl);
@@ -721,38 +721,41 @@
         }
 
         // History Drawer Toggle
-        const showHistoryBtn = document.getElementById("btn-show-history");
-        const historyDrawer = document.getElementById("history-drawer");
-        const historyDrawerClose = document.getElementById("history-drawer-close");
-        const historyDrawerBackdrop = document.getElementById("history-drawer-backdrop");
+        var showHistoryBtn = document.getElementById("btn-show-history");
+        var historyDrawer = document.getElementById("history-drawer");
+        var historyDrawerClose = document.getElementById("history-drawer-close");
+        var historyDrawerBackdrop = document.getElementById("history-drawer-backdrop");
 
-        if (showHistoryBtn && historyDrawer) {
+        if (showHistoryBtn && historyDrawer && !showHistoryBtn._init) {
+            showHistoryBtn._init = true;
             showHistoryBtn.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.add("open");
             });
         }
-        if (historyDrawerClose && historyDrawer) {
+        if (historyDrawerClose && historyDrawer && !historyDrawerClose._init) {
+            historyDrawerClose._init = true;
             historyDrawerClose.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.remove("open");
             });
         }
-        if (historyDrawerBackdrop && historyDrawer) {
+        if (historyDrawerBackdrop && historyDrawer && !historyDrawerBackdrop._init) {
+            historyDrawerBackdrop._init = true;
             historyDrawerBackdrop.addEventListener("click", function (e) {
                 e.preventDefault();
                 historyDrawer.classList.remove("open");
             });
         }
 
-        // Wait for duration to be available (since app.js sets it)
+        // Wait for duration to be available
         function tryAddOriginalWaveform() {
-            const timelineBlock = document.getElementById("visual-trim-container");
+            var timelineBlock = document.getElementById("visual-trim-container");
             if (timelineBlock && typeof window.duration !== 'undefined' && window.duration > 0) {
-                const basePxPerSecond = 15;
-                const zoomFactor = 1.0;
-                const totalWidth = Math.max(800, window.duration * basePxPerSecond * zoomFactor);
-                const waveformContainer = document.getElementById("original-audio-waveform");
+                var basePxPerSecond = 15;
+                var zoomFactor = 1.0;
+                var totalWidth = Math.max(800, window.duration * basePxPerSecond * zoomFactor);
+                var waveformContainer = document.getElementById("original-audio-waveform");
                 if (waveformContainer && typeof window.generateWaveformSvg === 'function') {
                     waveformContainer.innerHTML = window.generateWaveformSvg(totalWidth, 44, 0);
                 }
@@ -763,36 +766,38 @@
         tryAddOriginalWaveform();
 
         // Volume sliders sync logic
-        const timelineVideoVol = document.getElementById('timeline-video-volume');
-        const timelineVideoVolVal = document.getElementById('timeline-video-volume-val');
-        const formVideoVol = document.getElementById('id_video_volume');
+        var timelineVideoVol = document.getElementById('timeline-video-volume');
+        var timelineVideoVolVal = document.getElementById('timeline-video-volume-val');
+        var formVideoVol = document.getElementById('id_video_volume');
 
-        if (timelineVideoVol && formVideoVol) {
+        if (timelineVideoVol && formVideoVol && !timelineVideoVol._init) {
+            timelineVideoVol._init = true;
             timelineVideoVol.value = formVideoVol.value;
             if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(formVideoVol.value).toFixed(1);
 
             timelineVideoVol.addEventListener('input', function (e) {
-                let val = e.target.value;
+                var val = e.target.value;
                 formVideoVol.value = val;
                 if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
-                const mainVid = document.getElementById('main-video');
+                var mainVid = document.getElementById('main-video');
                 if (mainVid) mainVid.volume = Math.min(1.0, parseFloat(val));
             });
 
             formVideoVol.addEventListener('input', function (e) {
-                let val = e.target.value;
+                var val = e.target.value;
                 timelineVideoVol.value = val;
                 if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
-                const mainVid = document.getElementById('main-video');
+                var mainVid = document.getElementById('main-video');
                 if (mainVid) mainVid.volume = Math.min(1.0, parseFloat(val));
             });
         }
 
-        const timelineBgVol = document.getElementById('timeline-bg-volume');
-        const timelineBgVolVal = document.getElementById('timeline-bg-volume-val');
-        const formBgVol = document.getElementById('id_bg_volume');
+        var timelineBgVol = document.getElementById('timeline-bg-volume');
+        var timelineBgVolVal = document.getElementById('timeline-bg-volume-val');
+        var formBgVol = document.getElementById('id_bg_volume');
 
-        if (timelineBgVol && formBgVol) {
+        if (timelineBgVol && formBgVol && !timelineBgVol._init) {
+            timelineBgVol._init = true;
             timelineBgVol.value = formBgVol.value;
             if (timelineBgVolVal) timelineBgVolVal.textContent = parseFloat(formBgVol.value).toFixed(1);
 
@@ -807,16 +812,21 @@
             });
         }
 
-        const undoBtn = document.getElementById("tb-undo");
-        if (undoBtn) {
+        var undoBtn = document.getElementById("tb-undo");
+        if (undoBtn && !undoBtn._init) {
+            undoBtn._init = true;
             undoBtn.addEventListener("click", function () {
-                const firstHistoryUndo = document.querySelector(".history-list li:first-child .history-revert-btn");
+                var firstHistoryUndo = document.querySelector(".history-list li:first-child .history-revert-btn");
                 if (firstHistoryUndo) {
                     firstHistoryUndo.click();
                 }
             });
         }
-    });
+    }
+
+    document.addEventListener("DOMContentLoaded", initProjectDetail);
+    document.addEventListener("turbo:load", initProjectDetail);
+})();
 </script>
 <script src="{% static 'video_editing/js/app.js' %}" defer></script>
 {% endblock %}

@@ -50,11 +50,13 @@ class Conversation(models.Model):
             return f"{users[0].username} - {users[1].username}"
         return f"Conversation {self.id}"
 
+from common.encryption import EncryptedTextField
+
 class Message(models.Model):
-    """Represents a message in a conversation"""
+    """Represents a message in a conversation (AES-256 encrypted content at rest)"""
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    content = models.TextField(blank=True)
+    content = EncryptedTextField(blank=True)
     image = models.ImageField(upload_to='chat_images/', blank=True, null=True)
     file = models.FileField(upload_to='chat_files/', blank=True, null=True)
     is_read = models.BooleanField(default=False)

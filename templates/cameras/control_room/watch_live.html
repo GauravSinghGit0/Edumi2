@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
+<meta name="turbo-cache-control" content="no-cache">
 <link rel="stylesheet" href="{% static 'css/meeting-room.css' %}">
 <style>
     .video-page-container {
@@ -654,6 +655,35 @@
     // Export function to window
     window.sendMessage = sendMessage;
     window.shareStream = shareStream;
+
+    function cleanupMediaResources() {
+        try {
+            if (audioWs) {
+                audioWs.onclose = null;
+                audioWs.onerror = null;
+                audioWs.close();
+                audioWs = null;
+            }
+            if (chatWs) {
+                chatWs.onclose = null;
+                chatWs.onerror = null;
+                chatWs.close();
+                chatWs = null;
+            }
+            const audio = document.getElementById('liveAudio');
+            if (audio) {
+                audio.pause();
+                if (audio.src && audio.src.startsWith('blob:')) {
+                    try { URL.revokeObjectURL(audio.src); } catch(_) {}
+                    audio.removeAttribute('src');
+                    audio.load();
+                }
+            }
+        } catch (_) {}
+    }
+
+    window.addEventListener('pagehide', cleanupMediaResources);
+    window.addEventListener('beforeunload', cleanupMediaResources);
 
     function initIcons() {
         if (window.lucide) lucide.createIcons();

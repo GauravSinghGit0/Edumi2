@@ -1,6 +1,7 @@
 
 import logging
 from urllib.parse import quote
+from django.db import transaction
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -110,17 +111,20 @@ def test_rtsp_paths(ip, port, username, password):
 def broadcast_live_status(camera, status):
     """Helper to broadcast live status changes to all connected users"""
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        "public_notifications",
-        {
-            "type": "send_notification",
-            "data": {
-                "type": "live_status_change",
-                "camera_id": camera.id,
-                "camera_name": camera.name,
-                "teacher_name": camera.live_teacher.username if camera.live_teacher else "",
-                "status": status,  # 'started' or 'stopped'
-            }
-        }
-    )
+    if channel_layer:
+        def _send():
+            async_to_sync(channel_layer.group_send)(
+                "public_notifications",
+                {
+                    "type": "send_notification",
+                    "data": {
+                        "type": "live_status_change",
+                        "camera_id": camera.id,
+                        "camera_name": camera.name,
+                        "teacher_name": camera.live_teacher.username if camera.live_teacher else "",
+                        "status": status,  # 'started' or 'stopped'
+                    }
+                }
+            )
+        transaction.on_commit(_send)
 

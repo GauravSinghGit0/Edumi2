@@ -142,17 +142,17 @@
                 {% csrf_token %}
 
                 <div class="form-field">
-                    <label>Username or Email</label>
-                    <input type="text" name="username" required placeholder="Enter your username or email"
-                        value="{{ entered_username|default:'' }}" autofocus>
+                    <label for="usernameInput">Username or Email</label>
+                    <input type="text" id="usernameInput" name="username" required placeholder="Enter your username or email"
+                        autocomplete="username" value="{{ entered_username|default:'' }}" autofocus>
                 </div>
 
                 <div class="form-field">
-                    <label>Password</label>
+                    <label for="passwordInput">Password</label>
                     <div class="password-field">
                         <input type="password" name="password" required placeholder="Enter your password"
-                            id="passwordInput">
-                        <button type="button" class="toggle-password" onclick="togglePassword()">
+                            id="passwordInput" autocomplete="current-password">
+                        <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -163,8 +163,8 @@
                 </div>
 
                 <div class="form-options">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="remember">
+                    <label class="checkbox-label" for="rememberInput">
+                        <input type="checkbox" id="rememberInput" name="remember">
                         <span>Remember for 30 days</span>
                     </label>
                     <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>

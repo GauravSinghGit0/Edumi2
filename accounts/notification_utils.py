@@ -1,3 +1,4 @@
+from django.db import transaction
 from .notification_models import Notification
 from django.contrib.auth import get_user_model
 from asgiref.sync import async_to_sync
@@ -12,13 +13,23 @@ def send_ws_notification(recipient_id, data):
         channel_layer = get_channel_layer()
         if channel_layer is None:
             return
-        async_to_sync(channel_layer.group_send)(
-            f"user_{recipient_id}",
-            {
-                "type": "send_notification",
-                "data": data
-            }
-        )
+
+        def _send():
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{recipient_id}",
+                    {
+                        "type": "send_notification",
+                        "data": data
+                    }
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"WebSocket notification failed for user {recipient_id}: {e}"
+                )
+
+        transaction.on_commit(_send)
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(

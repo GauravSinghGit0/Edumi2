@@ -14,18 +14,18 @@
       </label>
 
       <!-- Image Attach (Hidden input) -->
-      <input type="file" name="image" id="imageInput" accept="image/*" style="display:none;">
+      <input type="file" name="image" id="imageInput" accept="image/*" style="display:none;" aria-label="Upload image">
 
       <!-- Emoji Picker button wrapper -->
       <div style="position:relative;" id="emojiWrap">
-        <button type="button" class="composer-icon-btn" id="emojiToggleBtn" onclick="toggleEmojiPicker()" title="Emoji">
+        <button type="button" class="composer-icon-btn" id="emojiToggleBtn" onclick="toggleEmojiPicker()" title="Emoji" aria-label="Toggle emoji picker">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"/></svg>
         </button>
         
         <!-- Emoji Picker Panel -->
         <div class="composer-emoji-picker" id="emojiPicker" style="bottom: 50px; left: 0; right: auto;">
           <div class="emoji-picker-search-bar">
-            <input type="text" id="emojiSearch" placeholder="Search emoji…" oninput="filterEmojis(this.value)">
+            <input type="text" id="emojiSearch" name="emoji_search" placeholder="Search emoji…" autocomplete="off" aria-label="Search emojis" oninput="filterEmojis(this.value)">
           </div>
           <div class="emoji-picker-grid" id="emojiGrid"></div>
         </div>
@@ -35,7 +35,7 @@
     <div class="composer-input-row" id="chatInputRow">
       <textarea name="content" id="msgInput"
                 class="composer-textarea" rows="1"
-                placeholder="Type a message"></textarea>
+                placeholder="Type a message" aria-label="Type a message"></textarea>
     </div>
 
     <div class="composer-actions-right" style="padding-bottom: 5px;">

@@ -257,43 +257,47 @@
 </div>
 
 <script>
-let isExpanded = false;
+(function() {
+    var isExpanded = false;
 
-function toggleSessions(id) {
-    const panel = document.getElementById('sessions-' + id);
-    panel.classList.toggle('open');
-    checkExpandState();
-}
+    window.toggleSessions = function(id) {
+        var panel = document.getElementById('sessions-' + id);
+        if (panel) {
+            panel.classList.toggle('open');
+            checkExpandState();
+        }
+    };
 
-function checkExpandState() {
-    const panels = document.querySelectorAll('.sessions-panel');
-    const openPanels = document.querySelectorAll('.sessions-panel.open');
-    const btn = document.getElementById('expandAllBtn');
-    
-    if (!btn) return;
+    function checkExpandState() {
+        var panels = document.querySelectorAll('.sessions-panel');
+        var openPanels = document.querySelectorAll('.sessions-panel.open');
+        var btn = document.getElementById('expandAllBtn');
+        
+        if (!btn) return;
 
-    if (openPanels.length === panels.length && panels.length > 0) {
-        isExpanded = true;
-        btn.textContent = 'Collapse All';
-    } else {
-        isExpanded = false;
-        btn.textContent = 'Expand All';
+        if (openPanels.length === panels.length && panels.length > 0) {
+            isExpanded = true;
+            btn.textContent = 'Collapse All';
+        } else {
+            isExpanded = false;
+            btn.textContent = 'Expand All';
+        }
     }
-}
 
-function toggleExpandAll() {
-    const panels = document.querySelectorAll('.sessions-panel');
-    const btn = document.getElementById('expandAllBtn');
-    
-    if (!isExpanded) {
-        panels.forEach(p => p.classList.add('open'));
-        isExpanded = true;
-        if (btn) btn.textContent = 'Collapse All';
-    } else {
-        panels.forEach(p => p.classList.remove('open'));
-        isExpanded = false;
-        if (btn) btn.textContent = 'Expand All';
-    }
-}
+    window.toggleExpandAll = function() {
+        var panels = document.querySelectorAll('.sessions-panel');
+        var btn = document.getElementById('expandAllBtn');
+        
+        if (!isExpanded) {
+            panels.forEach(p => p.classList.add('open'));
+            isExpanded = true;
+            if (btn) btn.textContent = 'Collapse All';
+        } else {
+            panels.forEach(p => p.classList.remove('open'));
+            isExpanded = false;
+            if (btn) btn.textContent = 'Expand All';
+        }
+    };
+})();
 </script>
 {% endblock %}

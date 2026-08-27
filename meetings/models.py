@@ -194,10 +194,13 @@ class MeetingAttendanceLog(models.Model):
     event_type = models.CharField(max_length=10, choices=EVENT_CHOICES)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+from common.encryption import EncryptedTextField
+
 class MeetingChat(models.Model):
+    """Represents a chat message during a meeting (AES-256 encrypted at rest)"""
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='chats')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    message = models.TextField()
+    message = EncryptedTextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

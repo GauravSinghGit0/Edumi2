@@ -5,7 +5,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         user = self.scope.get("user")
-        if user and not user.is_anonymous:
+        if user and user.is_authenticated:
             self.user_id = user.id
             self.group_name = f"user_{self.user_id}"
             await self.channel_layer.group_add(

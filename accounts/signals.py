@@ -46,38 +46,44 @@ def _broadcast_identity_change(user_id):
     }
 
     # 1. Broadcast to user's personal channel group
-    try:
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user_id}",
-            event_data
-        )
-    except Exception as e:
-        logger.warning(f"Failed broadcasting identity update to user_{user_id}: {e}")
+    def _send_personal():
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"user_{user_id}",
+                event_data
+            )
+        except Exception as e:
+            logger.warning(f"Failed broadcasting identity update to user_{user_id}: {e}")
+
+    transaction.on_commit(_send_personal)
 
     # 2. Broadcast to active meetings/classrooms where user is participant
-    try:
-        from meetings.models import ClassroomMembership, MeetingParticipant
-        # Active classroom groups
-        c_ids = ClassroomMembership.objects.filter(
-            student_id=user_id, status='approved'
-        ).values_list('classroom_id', flat=True)
-        for cid in c_ids:
-            async_to_sync(channel_layer.group_send)(
-                f"classroom_{cid}",
-                event_data
-            )
+    def _send_rooms():
+        try:
+            from meetings.models import ClassroomMembership, MeetingParticipant
+            # Active classroom groups
+            c_ids = ClassroomMembership.objects.filter(
+                student_id=user_id, status='approved'
+            ).values_list('classroom_id', flat=True)
+            for cid in c_ids:
+                async_to_sync(channel_layer.group_send)(
+                    f"classroom_{cid}",
+                    event_data
+                )
 
-        # Active meeting groups
-        m_ids = MeetingParticipant.objects.filter(
-            user_id=user_id, is_active=True
-        ).values_list('meeting_id', flat=True)
-        for mid in m_ids:
-            async_to_sync(channel_layer.group_send)(
-                f"meeting_{mid}",
-                event_data
-            )
-    except Exception as e:
-        logger.warning(f"Error broadcasting identity update to active rooms for user_{user_id}: {e}")
+            # Active meeting groups
+            m_ids = MeetingParticipant.objects.filter(
+                user_id=user_id, is_active=True
+            ).values_list('meeting_id', flat=True)
+            for mid in m_ids:
+                async_to_sync(channel_layer.group_send)(
+                    f"meeting_{mid}",
+                    event_data
+                )
+        except Exception as e:
+            logger.warning(f"Error broadcasting identity update to active rooms for user_{user_id}: {e}")
+
+    transaction.on_commit(_send_rooms)
 
 
 @receiver(post_save, sender=User)

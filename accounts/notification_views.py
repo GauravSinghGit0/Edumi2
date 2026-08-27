@@ -11,12 +11,14 @@ from .notification_models import Notification
 @login_required
 def notifications_list(request):
     """Display all notifications for the current user"""
-    notifications = Notification.objects.filter(recipient=request.user)[:50]
+    notifications = Notification.objects.filter(recipient=request.user)
+    total_count = notifications.count()
     unread_count = Notification.get_unread_count(request.user)
     
     return render(request, 'accounts/messaging/notifications.html', {
-        'notifications': notifications,
-        'unread_count': unread_count
+        'notifications': notifications[:100],
+        'unread_count': unread_count,
+        'total_count': total_count
     })
 
 
@@ -27,7 +29,25 @@ def mark_notification_read(request, notification_id):
     notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
     notification.mark_as_read()
     
-    return JsonResponse({'status': 'success'})
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': Notification.get_unread_count(request.user)
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_notification_unread(request, notification_id):
+    """Mark a single notification as unread"""
+    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+    if notification.is_read:
+        notification.is_read = False
+        notification.save(update_fields=['is_read'])
+    
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': Notification.get_unread_count(request.user)
+    })
 
 
 @login_required
@@ -36,7 +56,10 @@ def mark_all_notifications_read(request):
     """Mark all notifications as read for the current user"""
     Notification.mark_all_as_read(request.user)
     
-    return JsonResponse({'status': 'success'})
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': 0
+    })
 
 
 @login_required
@@ -114,4 +137,8 @@ def delete_notification(request, notification_id):
     """Delete a single notification"""
     notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
     notification.delete()
-    return JsonResponse({'status': 'success'})
+    return JsonResponse({
+        'status': 'success',
+        'unread_count': Notification.get_unread_count(request.user),
+        'total_count': Notification.objects.filter(recipient=request.user).count()
+    })

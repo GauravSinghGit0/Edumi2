@@ -335,58 +335,67 @@
 </div>
 
 <script>
+(function() {
     // Tab state persistence
-    document.addEventListener('DOMContentLoaded', () => {
-        const hash = window.location.hash.replace('#', '');
+    function initContentManager() {
+        var hash = window.location.hash.replace('#', '');
         if (hash === 'videos' || hash === 'meetings') {
-            switchTab(hash);
+            window.switchTab(hash);
         }
-    });
+        if (window.lucide) lucide.createIcons();
+    }
 
-    function switchTab(tabId, event) {
+    document.addEventListener('DOMContentLoaded', initContentManager);
+    document.addEventListener('turbo:load', initContentManager);
+
+    window.switchTab = function(tabId, event) {
         if (event) {
             event.preventDefault();
         }
         
         document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
         
-        const activeLink = document.querySelector(`.tab-link[onclick*="'${tabId}'"]`);
+        var activeLink = document.querySelector(`.tab-link[onclick*="'${tabId}'"]`);
         if (activeLink) activeLink.classList.add('active');
         
-        if (tabId === 'videos') {
-            document.getElementById('videosSection').style.display = 'block';
-            document.getElementById('meetingsSection').style.display = 'none';
-        } else {
-            document.getElementById('videosSection').style.display = 'none';
-            document.getElementById('meetingsSection').style.display = 'block';
+        var videosSection = document.getElementById('videosSection');
+        var meetingsSection = document.getElementById('meetingsSection');
+        if (videosSection && meetingsSection) {
+            if (tabId === 'videos') {
+                videosSection.style.display = 'block';
+                meetingsSection.style.display = 'none';
+            } else {
+                videosSection.style.display = 'none';
+                meetingsSection.style.display = 'block';
+            }
         }
         
-        // Update URL hash without jumping
         history.replaceState(null, null, `#${tabId}`);
-    }
+    };
 
     // Dropdown handling
-    function toggleDropdown(btn) {
-        // Close other dropdowns
+    window.toggleDropdown = function(btn) {
         document.querySelectorAll('.dropdown-content.show').forEach(d => {
             if (d !== btn.nextElementSibling) d.classList.remove('show');
         });
-        btn.nextElementSibling.classList.toggle('show');
-    }
+        if (btn.nextElementSibling) {
+            btn.nextElementSibling.classList.toggle('show');
+        }
+    };
 
-    // Close dropdowns on click outside
-    window.onclick = function(event) {
+    // Close dropdowns on click outside without overwriting window.onclick
+    document.addEventListener('click', function(event) {
         if (!event.target.closest('.dropdown')) {
             document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
         }
-    }
+    });
 
-    function togglePublish(id) {
-        const btn = event ? event.currentTarget : null;
-        const row = document.getElementById(`rec-${id}`);
-        const statusCell = document.getElementById(`rec-status-${id}`);
-        const statusBadge = statusCell ? statusCell.querySelector('.badge') : null;
-        const toggleText = btn ? btn.querySelector('.toggle-text') : null;
+    window.togglePublish = function(id) {
+        var btn = (typeof event !== 'undefined' && event) ? event.currentTarget : null;
+        var row = document.getElementById(`rec-${id}`);
+        var statusCell = document.getElementById(`rec-status-${id}`);
+        var statusBadge = statusCell ? statusCell.querySelector('.badge') : null;
+        var toggleText = btn ? btn.querySelector('.toggle-text') : null;
 
         fetch(`/cameras/toggle-publish/${id}/`, {
             method: 'POST',
@@ -397,8 +406,7 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Update UI without reload
-                const isPublished = data.is_published;
+                var isPublished = data.is_published;
                 
                 if (statusBadge) {
                     statusBadge.className = `badge status-text ${isPublished ? 'bg-success text-white' : 'bg-warning'}`;
@@ -415,13 +423,13 @@
                     showToast(isPublished ? 'Video published' : 'Video hidden', 'success');
                 }
             } else {
-                alert(data.message);
+                alert(data.message || 'Failed to update publish state');
             }
         })
         .catch(err => console.error('Error toggling publish:', err));
-    }
+    };
 
-    function deleteItem(type, id, url) {
+    window.deleteItem = function(type, id, url) {
         if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
 
         fetch(url, {
@@ -433,8 +441,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                const rowId = type === 'recording' ? `rec-${id}` : `meet-${id}`;
-                const row = document.getElementById(rowId);
+                var rowId = type === 'recording' ? `rec-${id}` : `meet-${id}`;
+                var row = document.getElementById(rowId);
                 
                 if (row) {
                     row.style.opacity = '0';
@@ -442,7 +450,7 @@
                     row.style.transition = 'all 0.3s ease';
                     setTimeout(() => {
                         row.remove();
-                        const containerId = type === 'recording' ? 'videosSection' : 'meetingsSection';
+                        var containerId = type === 'recording' ? 'videosSection' : 'meetingsSection';
                         if (document.querySelectorAll(`#${containerId} tbody tr`).length === 0) {
                             location.reload();
                         }
@@ -457,6 +465,7 @@
             }
         })
         .catch(err => console.error('Error deleting item:', err));
-    }
+    };
+})();
 </script>
 {% endblock %}

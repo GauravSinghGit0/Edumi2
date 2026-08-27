@@ -196,7 +196,6 @@
 
         // Use a non-accumulating window handler pattern to avoid leaking event listeners
         window.onLiveStatusChange = function(e) {
-            console.log('Live status change detected in student lectures:', e.detail);
             if (typeof Turbo !== 'undefined') {
                 Turbo.visit(window.location.href, { action: 'replace' });
             } else {

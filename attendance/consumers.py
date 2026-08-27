@@ -27,16 +27,18 @@ CONSECUTIVE_MATCHES_REQUIRED = 2
 class FaceAttendanceConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        self.user         = self.scope['user']
+        self.user         = self.scope.get('user')
         self.meeting_code = self.scope['url_route']['kwargs']['meeting_code']
 
-        if not self.user.is_authenticated:
+        if not self.user or not self.user.is_authenticated:
             await self.close()
             return
 
+        # Accept early so handshake completes cleanly without ERR_CONNECTION_RESET
+        await self.accept()
+
         # Skip face attendance for admins/superusers
         if self.user.is_superuser:
-            await self.accept()
             await self.send(json.dumps({
                 'type':        'connected',
                 'interval':    999999,  # No need for captures
@@ -46,30 +48,32 @@ class FaceAttendanceConsumer(AsyncWebsocketConsumer):
             }))
             return
 
-        self.att_settings      = await self.get_settings()
-        self.encrypted_emb     = await self.get_encrypted_embedding()
-        self.verified_seconds  = 0
-        self.attendance_marked = False
-        self.join_time         = timezone.now()
+        try:
+            self.att_settings      = await self.get_settings()
+            self.encrypted_emb     = await self.get_encrypted_embedding()
+            self.verified_seconds  = 0
+            self.attendance_marked = False
+            self.join_time         = timezone.now()
 
-        # Rolling vote buffer — track last N frame results
-        self._vote_buffer = deque(maxlen=CONSECUTIVE_MATCHES_REQUIRED)
-        # Keep last raw frame bytes for motion liveness check
-        self._prev_frame  = None
+            # Rolling vote buffer — track last N frame results
+            self._vote_buffer = deque(maxlen=CONSECUTIVE_MATCHES_REQUIRED)
+            # Keep last raw frame bytes for motion liveness check
+            self._prev_frame  = None
 
-        await self.accept()
-        await self.send(json.dumps({
-            'type':        'connected',
-            'interval':    self.att_settings.get('interval', 15),
-            'message':     'Face recognition active.',
-            'has_profile': self.encrypted_emb is not None,
-        }))
-
-        if self.encrypted_emb is None:
             await self.send(json.dumps({
-                'type':    'no_profile',
-                'message': 'No face profile found. Please register your face in Settings.',
+                'type':        'connected',
+                'interval':    self.att_settings.get('interval', 15),
+                'message':     'Face recognition active.',
+                'has_profile': self.encrypted_emb is not None,
             }))
+
+            if self.encrypted_emb is None:
+                await self.send(json.dumps({
+                    'type':    'no_profile',
+                    'message': 'No face profile found. Please register your face in Settings.',
+                }))
+        except Exception as e:
+            logger.error(f"Error initializing FaceAttendanceConsumer: {e}", exc_info=True)
 
     async def disconnect(self, close_code):
         pass

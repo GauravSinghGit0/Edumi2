@@ -1,3 +1,5 @@
+@import url('design-tokens.css');
+
 /* ==========================================================================
    PROFILE PAGE STYLES - EDUMI 2 (Premium Re-design)
    LinkedIn / Discord / Reddit Inspired Professional Design System
@@ -51,7 +53,6 @@
 }
 
 /* Profile Page Styles */
-@import url('design-tokens.css');
 
 /* Dark Mode Variables */
 body.dark-mode {

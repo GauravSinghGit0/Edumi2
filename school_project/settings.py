@@ -313,7 +313,7 @@ else:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': DATABASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 30,
+                'timeout': 60,
                 'check_same_thread': False,
             },
         }
@@ -341,7 +341,7 @@ if REDIS_URL and sys.platform != 'win32' and (not DEBUG or env_bool('FORCE_REDIS
             'CONFIG': {
                 'hosts': [REDIS_URL],
                 'capacity': 1500,
-                'expiry': 10,
+                'expiry': 60,
             },
         }
     }
@@ -504,7 +504,7 @@ COMPRESS_ENABLED  = env_bool('COMPRESS_ENABLED', 'True')
 COMPRESS_URL      = STATIC_URL
 COMPRESS_ROOT     = STATIC_ROOT
 COMPRESS_STORAGE  = 'compressor.storage.CompressorFileStorage'
-COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'True')
+COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False' if DEBUG else 'True')
 COMPRESS_OFFLINE_MANIFEST = 'compressor.json'
 COMPRESS_REBUILD_TIMEOUT = 0 if DEBUG else 300
 
