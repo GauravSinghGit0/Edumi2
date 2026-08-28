@@ -62,6 +62,38 @@
         margin-bottom: var(--space-lg);
     }
 
+    /* Layout Split */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: var(--space-lg);
+    }
+    
+    .glass-card {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-sm);
+        height: fit-content;
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-md);
+    }
+    .card-title {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+    .card-title i { color: var(--color-primary); }
+
     /* Quick Access Grid */
     .section-title {
         font-size: var(--font-size-lg);
@@ -102,6 +134,74 @@
     .action-card i { color: var(--color-primary); width: 32px; height: 32px; }
     .action-card p { font-weight: var(--font-weight-semibold); font-size: var(--font-size-md); margin: 0; }
     .action-card span { font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: var(--font-weight-regular); }
+
+    /* Schedule Timeline */
+    .timeline { position: relative; padding-left: var(--space-md); }
+    .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--color-border); }
+    
+    .timeline-item { position: relative; margin-bottom: var(--space-md); }
+    .timeline-item::before { content: ''; position: absolute; left: calc(var(--space-md) * -1); top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); border: 2px solid var(--color-bg-card); transform: translateX(-50%); z-index: 2; }
+    .timeline-item.is-live::before { background: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25); }
+    
+    .timeline-content { background: var(--color-bg-hover); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); transition: all 0.2s; }
+    .timeline-content:hover { background: var(--color-bg-card); border-color: var(--color-primary); }
+    
+    .time-stamp { font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); color: var(--color-primary); text-transform: uppercase; margin-bottom: var(--space-2xs); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .class-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text-main); margin: 0 0 var(--space-2xs) 0; }
+    .class-meta { font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: var(--font-weight-regular); display: flex; align-items: center; gap: var(--space-xs); margin-bottom: 2px; }
+
+    .live-badge { 
+        background: rgba(239, 68, 68, 0.12); 
+        color: var(--color-danger); 
+        padding: 0.2rem 0.5rem; 
+        border-radius: var(--radius-full); 
+        font-size: var(--font-size-xs); 
+        font-weight: var(--font-weight-bold); 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.25rem;
+    }
+
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--color-danger);
+        animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .btn-join-live {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: var(--color-danger);
+        color: #ffffff !important;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+    .btn-join-live:hover {
+        background: var(--color-danger-hover, #dc2626);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-layout { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="dashboard-container">
@@ -126,34 +226,84 @@
         {% include 'components/stat_card.html' with icon="award" label="Academic Status" value="Verified" bg_color="rgba(245, 158, 11, 0.1)" icon_color="var(--color-warning)" %}
     </div>
     
-    <!-- Quick Access -->
-    <h2 class="section-title"><i data-lucide="zap"></i> Quick Access</h2>
-    <div class="action-grid">
-        <a href="{% url 'video_list' %}" class="action-card">
-            <i data-lucide="video"></i>
-            <p>Video Library</p>
-            <span>Browse recorded lectures</span>
-        </a>
-        <a href="{% url 'student_classrooms' %}" class="action-card">
-            <i data-lucide="layout"></i>
-            <p>Course Library</p>
-            <span>View your classrooms</span>
-        </a>
-        <a href="{% url 'inbox' %}" class="action-card">
-            <i data-lucide="message-square"></i>
-            <p>Student Inbox</p>
-            <span>Professor communications</span>
-        </a>
-        <a href="{% url 'profile_view' user.username %}" class="action-card">
-            <i data-lucide="user"></i>
-            <p>My Identity</p>
-            <span>Profile & Achievements</span>
-        </a>
-        <a href="{% url 'face_setup' %}" class="action-card">
-            <i data-lucide="fingerprint"></i>
-            <p>Bio Security</p>
-            <span>Face ID Management</span>
-        </a>
+    <div class="dashboard-layout">
+        <div class="main-column">
+            <!-- Quick Access -->
+            <h2 class="section-title"><i data-lucide="zap"></i> Quick Access</h2>
+            <div class="action-grid">
+                <a href="{% url 'video_list' %}" class="action-card">
+                    <i data-lucide="video"></i>
+                    <p>Video Library</p>
+                    <span>Browse recorded lectures</span>
+                </a>
+                <a href="{% url 'student_classrooms' %}" class="action-card">
+                    <i data-lucide="layout"></i>
+                    <p>Course Library</p>
+                    <span>View your classrooms</span>
+                </a>
+                <a href="{% url 'inbox' %}" class="action-card">
+                    <i data-lucide="message-square"></i>
+                    <p>Student Inbox</p>
+                    <span>Professor communications</span>
+                </a>
+                <a href="{% url 'profile_view' user.username %}" class="action-card">
+                    <i data-lucide="user"></i>
+                    <p>My Identity</p>
+                    <span>Profile & Achievements</span>
+                </a>
+                <a href="{% url 'face_setup' %}" class="action-card">
+                    <i data-lucide="fingerprint"></i>
+                    <p>Bio Security</p>
+                    <span>Face ID Management</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="card-header">
+                <h2 class="card-title"><i data-lucide="calendar"></i> Today's Schedule</h2>
+            </div>
+            <div class="timeline">
+                {% for meeting in upcoming_meetings %}
+                <div class="timeline-item {% if meeting.status == 'live' %}is-live{% endif %}">
+                    <span class="time-stamp">
+                        <span>{{ meeting.scheduled_time|date:"h:i A" }}</span>
+                        {% if meeting.status == 'live' %}
+                        <span class="live-badge"><span class="pulse-dot"></span> LIVE</span>
+                        {% else %}
+                        <span style="font-weight: var(--font-weight-regular); color: var(--color-text-muted);">{{ meeting.scheduled_time|date:"M d" }}</span>
+                        {% endif %}
+                    </span>
+                    <div class="timeline-content">
+                        <h4 class="class-title">{{ meeting.title }}</h4>
+                        <div class="class-meta">
+                            <i data-lucide="door-open" style="width:14px; flex-shrink:0;"></i>
+                            <span>{% if meeting.classroom %}{{ meeting.classroom.title }}{% else %}General Session{% endif %}</span>
+                        </div>
+                        {% if meeting.teacher %}
+                        <div class="class-meta">
+                            <i data-lucide="user" style="width:14px; flex-shrink:0;"></i>
+                            <span>Prof. {{ meeting.teacher.get_full_name|default:meeting.teacher.username }}</span>
+                        </div>
+                        {% endif %}
+                        {% if meeting.status == 'live' %}
+                        <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-join-live">
+                            <i data-lucide="video" style="width:14px; height:14px;"></i> Join Live Session
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="timeline-item">
+                    <div class="timeline-content" style="text-align:center;">
+                        <h4 class="class-title">No Classes Scheduled</h4>
+                        <div class="class-meta" style="justify-content: center;">Enjoy your academic break!</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'student_classrooms' %}" style="display:block; width:100%; padding:0.65rem; margin-top:var(--space-md); border-radius:var(--radius-md); border:1px dashed var(--color-border); background:none; color:var(--color-text-muted); font-weight:var(--font-weight-semibold); font-size:var(--font-size-xs); cursor:pointer; text-decoration:none; text-align:center;">View Course Library</a>
+        </div>
     </div>
 </div>
 

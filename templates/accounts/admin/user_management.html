@@ -215,6 +215,122 @@
     padding: 4rem 2rem;
     color: var(--color-text-muted, #64748b);
 }
+
+/* Group Theme & Filter Styling */
+.group-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.group-card {
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-xl, 1rem);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.group-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+}
+
+.group-card.active {
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: 0 0 0 2px var(--color-primary, #6366f1);
+}
+
+.group-card-info .group-label {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 0.25rem;
+}
+
+.group-card-info .group-count {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-text-main, #0f172a);
+}
+
+.group-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.group-card-all .group-card-icon { background: rgba(99, 102, 241, 0.12); color: #6366f1; }
+.group-card-student .group-card-icon { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.group-card-teacher .group-card-icon { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+.group-card-admin .group-card-icon { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+
+.role-tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--color-bg-hover, #f8fafc);
+    padding: 0.4rem;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--color-border, #e2e8f0);
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.role-tab-btn {
+    padding: 0.5rem 1.15rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.role-tab-btn:hover {
+    color: var(--color-text-main, #0f172a);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.role-tab-btn.active {
+    background: var(--color-bg-card, #ffffff);
+    color: var(--color-primary, #6366f1);
+    box-shadow: var(--shadow-sm);
+    font-weight: 700;
+}
+
+.role-tab-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--color-text-muted, #64748b);
+}
+
+.role-tab-btn.active .role-tab-badge {
+    background: var(--color-primary-bg, rgba(99, 102, 241, 0.12));
+    color: var(--color-primary, #6366f1);
+}
 </style>
 {% endblock %}
 
@@ -223,7 +339,7 @@
     <div class="mgmt-header">
         <div>
             <h1 class="mgmt-title">User Management</h1>
-            <p class="mgmt-subtitle">Search, inspect, manage roles, and maintain accounts across the school.</p>
+            <p class="mgmt-subtitle">Filter by groups, manage accounts, and assign roles across the school.</p>
         </div>
         
         <div class="search-box-wrapper">
@@ -232,8 +348,78 @@
                    id="userSearch" 
                    class="search-input" 
                    placeholder="Search by name, username, or role..."
-                   onkeyup="searchUsers()">
+                   onkeyup="applyUserFilters()">
         </div>
+    </div>
+
+    <!-- Group Theme Summary Cards -->
+    <div class="group-theme-grid">
+        <div class="group-card group-card-all {% if active_role == 'all' or not active_role %}active{% endif %}" onclick="selectRoleGroup('all')">
+            <div class="group-card-info">
+                <div class="group-label">All Members</div>
+                <div class="group-count">{{ total_count|default:users|length }}</div>
+            </div>
+            <div class="group-card-icon">
+                <i data-lucide="users"></i>
+            </div>
+        </div>
+
+        <div class="group-card group-card-student {% if active_role == 'student' %}active{% endif %}" onclick="selectRoleGroup('student')">
+            <div class="group-card-info">
+                <div class="group-label">Students Group</div>
+                <div class="group-count">{{ student_count|default:0 }}</div>
+            </div>
+            <div class="group-card-icon">
+                <i data-lucide="user"></i>
+            </div>
+        </div>
+
+        <div class="group-card group-card-teacher {% if active_role == 'teacher' %}active{% endif %}" onclick="selectRoleGroup('teacher')">
+            <div class="group-card-info">
+                <div class="group-label">Teachers Group</div>
+                <div class="group-count">{{ teacher_count|default:0 }}</div>
+            </div>
+            <div class="group-card-icon">
+                <i data-lucide="graduation-cap"></i>
+            </div>
+        </div>
+
+        <div class="group-card group-card-admin {% if active_role == 'admin' %}active{% endif %}" onclick="selectRoleGroup('admin')">
+            <div class="group-card-info">
+                <div class="group-label">Admins Group</div>
+                <div class="group-count">{{ admin_count|default:0 }}</div>
+            </div>
+            <div class="group-card-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Filter Tabs -->
+    <div class="role-tabs-bar">
+        <button class="role-tab-btn {% if active_role == 'all' or not active_role %}active{% endif %}" data-group="all" onclick="selectRoleGroup('all')">
+            <i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i>
+            All Users
+            <span class="role-tab-badge">{{ total_count|default:users|length }}</span>
+        </button>
+
+        <button class="role-tab-btn {% if active_role == 'student' %}active{% endif %}" data-group="student" onclick="selectRoleGroup('student')">
+            <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+            Students Only
+            <span class="role-tab-badge">{{ student_count|default:0 }}</span>
+        </button>
+
+        <button class="role-tab-btn {% if active_role == 'teacher' %}active{% endif %}" data-group="teacher" onclick="selectRoleGroup('teacher')">
+            <i data-lucide="graduation-cap" style="width: 16px; height: 16px;"></i>
+            Teachers Only
+            <span class="role-tab-badge">{{ teacher_count|default:0 }}</span>
+        </button>
+
+        <button class="role-tab-btn {% if active_role == 'admin' %}active{% endif %}" data-group="admin" onclick="selectRoleGroup('admin')">
+            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
+            Admins Only
+            <span class="role-tab-badge">{{ admin_count|default:0 }}</span>
+        </button>
     </div>
     
     <div class="user-table-card">
@@ -251,7 +437,9 @@
                 </thead>
                 <tbody id="usersTableBody">
                     {% for user in users %}
-                    <tr class="user-row">
+                    <tr class="user-row" 
+                        data-user-type="{% if user.is_superuser %}admin{% else %}{{ user.userprofile.user_type|default:'student' }}{% endif %}"
+                        data-is-superuser="{% if user.is_superuser %}true{% else %}false{% endif %}">
                         <td>
                             <div class="user-cell">
                                 <img src="{{ user.userprofile.get_profile_picture_url }}" 
@@ -330,36 +518,83 @@
         
         <div id="noResults" class="empty-users-box" style="display: none;">
             <i data-lucide="user-x" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 0.75rem;"></i>
-            <p style="margin: 0; font-weight: 600;">No users found matching your search query.</p>
+            <p id="noResultsText" style="margin: 0; font-weight: 600;">No users found matching your filter criteria.</p>
         </div>
     </div>
 </div>
 
 <script>
-function searchUsers() {
-    const searchInput = document.getElementById('userSearch').value.toLowerCase();
+let currentSelectedGroup = "{{ active_role|default:'all' }}";
+
+function selectRoleGroup(group) {
+    currentSelectedGroup = group;
+
+    // Update Card Active States
+    document.querySelectorAll('.group-card').forEach(card => {
+        card.classList.remove('active');
+        if (card.classList.contains(`group-card-${group}`)) {
+            card.classList.add('active');
+        }
+    });
+
+    // Update Tab Active States
+    document.querySelectorAll('.role-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-group') === group) {
+            btn.classList.add('active');
+        }
+    });
+
+    applyUserFilters();
+}
+
+function applyUserFilters() {
+    const searchInput = document.getElementById('userSearch').value.toLowerCase().trim();
     const rows = document.querySelectorAll('.user-row');
     const noResults = document.getElementById('noResults');
+    const noResultsText = document.getElementById('noResultsText');
     let visibleCount = 0;
-    
+
     rows.forEach(row => {
+        const userType = row.getAttribute('data-user-type') || '';
+        const isSuperuser = row.getAttribute('data-is-superuser') === 'true';
+
+        // Check Group Filter
+        let matchesGroup = false;
+        if (currentSelectedGroup === 'all') {
+            matchesGroup = true;
+        } else if (currentSelectedGroup === 'student') {
+            matchesGroup = (userType === 'student') && !isSuperuser;
+        } else if (currentSelectedGroup === 'teacher') {
+            matchesGroup = (userType === 'teacher') && !isSuperuser;
+        } else if (currentSelectedGroup === 'admin') {
+            matchesGroup = isSuperuser || (userType === 'admin');
+        }
+
+        // Check Search Query
         const username = row.querySelector('.searchable-username') ? row.querySelector('.searchable-username').textContent.toLowerCase() : '';
         const name = row.querySelector('.searchable-name') ? row.querySelector('.searchable-name').textContent.toLowerCase() : '';
         const email = row.querySelector('.searchable-email') ? row.querySelector('.searchable-email').textContent.toLowerCase() : '';
-        const type = row.querySelector('.searchable-type') ? row.querySelector('.searchable-type').textContent.toLowerCase() : '';
-        
-        const searchText = username + ' ' + name + ' ' + email + ' ' + type;
-        
-        if (searchText.includes(searchInput)) {
+        const typeText = row.querySelector('.searchable-type') ? row.querySelector('.searchable-type').textContent.toLowerCase() : '';
+
+        const fullText = username + ' ' + name + ' ' + email + ' ' + typeText;
+        const matchesSearch = searchInput === '' || fullText.includes(searchInput);
+
+        if (matchesGroup && matchesSearch) {
             row.style.display = '';
             visibleCount++;
         } else {
             row.style.display = 'none';
         }
     });
-    
-    if (visibleCount === 0 && searchInput !== '') {
+
+    if (visibleCount === 0) {
         noResults.style.display = 'block';
+        if (currentSelectedGroup !== 'all') {
+            noResultsText.textContent = `No ${currentSelectedGroup}s found matching your search criteria.`;
+        } else {
+            noResultsText.textContent = 'No users found matching your search query.';
+        }
     } else {
         noResults.style.display = 'none';
     }
@@ -367,6 +602,7 @@ function searchUsers() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
+    selectRoleGroup(currentSelectedGroup);
 });
 </script>
 {% endblock %}

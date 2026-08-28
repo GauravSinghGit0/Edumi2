@@ -50,11 +50,26 @@ def admin_panel(request):
 
 @login_required
 def user_management(request):
-    """List all users for admin management."""
+    """List all users for admin management with group filter support."""
     if not request.user.is_superuser:
         return redirect('login')
     users = User.objects.all().select_related('userprofile').order_by('-date_joined')
-    return render(request, 'accounts/admin/user_management.html', {'users': users})
+    
+    total_count = users.count()
+    student_count = users.filter(userprofile__user_type='student').count()
+    teacher_count = users.filter(userprofile__user_type='teacher').count()
+    admin_count = users.filter(is_superuser=True).count()
+    
+    active_role = request.GET.get('role', 'all').lower()
+
+    return render(request, 'accounts/admin/user_management.html', {
+        'users': users,
+        'total_count': total_count,
+        'student_count': student_count,
+        'teacher_count': teacher_count,
+        'admin_count': admin_count,
+        'active_role': active_role,
+    })
 
 
 @login_required

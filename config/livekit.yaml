@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # LiveKit SFU Server Configuration (Windows - auto-updated by start_app.ps1)
 # ==============================================================================
 port: 7880
@@ -8,8 +8,11 @@ bind_addresses:
 rtc:
   tcp_port: 7881
   udp_port: 7882
-  use_external_ip: false
-  node_ip: "10.31.51.110"
+  use_external_ip: true
+  node_ip: "10.189.194.35"
+  stun_servers:
+    - "stun.l.google.com:19302"
+    - "stun1.l.google.com:19302"
 
 keys:
     edumi_livekit_key_2026: edumi_livekit_sec_32chars_key_2026_prod

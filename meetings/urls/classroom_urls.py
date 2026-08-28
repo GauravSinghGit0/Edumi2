@@ -2,7 +2,8 @@
 from django.urls import path
 from meetings.views import (
     create_classroom, teacher_classrooms, student_classrooms, classroom_detail,
-    join_classroom_request, approve_join_request, deny_join_request,
+    join_classroom_request, approve_join_request, approve_all_join_requests,
+    deny_join_request, deny_all_join_requests, toggle_auto_approve,
     remove_student, delete_classroom, leave_classroom, start_classroom_meeting,
     classroom_attendance_history, classroom_attendance_detail, api_classrooms,
     classroom_materials_view, upload_study_material, create_material_unit,
@@ -18,7 +19,10 @@ urlpatterns = [
     path('classroom/<int:classroom_id>/',                        classroom_detail,              name='classroom_detail'),
     path('classroom/join/',                                      join_classroom_request,        name='join_classroom_request'),
     path('classroom/approve/<int:membership_id>/',               approve_join_request,          name='approve_join_request'),
+    path('classroom/<int:classroom_id>/approve-all/',           approve_all_join_requests,     name='approve_all_join_requests'),
     path('classroom/deny/<int:membership_id>/',                  deny_join_request,             name='deny_join_request'),
+    path('classroom/<int:classroom_id>/deny-all/',              deny_all_join_requests,        name='deny_all_join_requests'),
+    path('classroom/<int:classroom_id>/toggle-auto-approve/',   toggle_auto_approve,           name='toggle_auto_approve'),
     path('classroom/remove/<int:membership_id>/',                remove_student,                name='remove_student'),
     path('classroom/<int:classroom_id>/delete/',                 delete_classroom,              name='delete_classroom'),
     path('classroom/<int:classroom_id>/leave/',                  leave_classroom,               name='leave_classroom'),

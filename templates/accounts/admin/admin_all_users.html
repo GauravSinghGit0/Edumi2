@@ -5,64 +5,64 @@
 
 {% block content %}
 <div class="admin-container" style="max-width: 1400px; margin: 30px auto; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <h2 style="color: #2c3e50; margin-bottom: 5px;">👥 All Users</h2>
-            <p style="color: #7f8c8d;">Total: {{ total_count }} registered users</p>
+            <h2 style="color: var(--color-text-main); margin-bottom: 5px; font-weight: 800;">👥 All Users</h2>
+            <p style="color: var(--color-text-muted); margin: 0;">Total: {{ total_count }} registered users</p>
         </div>
-        <a href="{% url 'admin_panel' %}" style="padding: 10px 20px; background: #ecf0f1; color: #2c3e50; text-decoration: none; border-radius: 5px; font-weight: 600;">
-            ← Back to Admin Panel
+        <a href="{% url 'admin_panel' %}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem; background: var(--color-bg-hover); color: var(--color-text-main); text-decoration: none; border-radius: var(--radius-md, 0.5rem); font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border); transition: all 0.2s ease;">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Admin Panel
         </a>
     </div>
     
-    <div style="background: white; border-radius: 10px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-        <table style="width: 100%; border-collapse: collapse;">
+    <div style="background: var(--color-bg-card); border-radius: var(--radius-xl, 1rem); padding: 25px; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">Username</th>
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">Full Name</th>
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">Email</th>
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">User Type</th>
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">Date Joined</th>
-                    <th style="padding: 15px; text-align: left; color: #2c3e50;">Status</th>
+                <tr style="background: var(--color-bg-hover); border-bottom: 1px solid var(--color-border);">
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Username</th>
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Full Name</th>
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Email</th>
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">User Type</th>
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Date Joined</th>
+                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
-                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <tr style="border-bottom: 1px solid var(--color-border);">
                         <td style="padding: 15px;">
-                            <a href="{% url 'profile_view' u.username %}" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                            <a href="{% url 'profile_view' u.username %}" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">
                                 {{ u.username }}
                             </a>
                         </td>
-                        <td style="padding: 15px; color: #2c3e50;">
+                        <td style="padding: 15px; color: var(--color-text-main);">
                             {{ u.get_full_name|default:"-" }}
                         </td>
-                        <td style="padding: 15px; color: #7f8c8d;">
+                        <td style="padding: 15px; color: var(--color-text-muted);">
                             {{ u.email|default:"-" }}
                         </td>
                         <td style="padding: 15px;">
                             <span style="padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; 
-                                {% if u.userprofile.user_type == 'teacher' %}background: #e3f2fd; color: #1976d2;
-                                {% elif u.userprofile.user_type == 'student' %}background: #e8f5e9; color: #2e7d32;
-                                {% else %}background: #fff3e0; color: #ef6c00;{% endif %}">
+                                {% if u.userprofile.user_type == 'teacher' %}background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);
+                                {% elif u.userprofile.user_type == 'student' %}background: rgba(16, 185, 129, 0.15); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.3);
+                                {% else %}background: rgba(245, 158, 11, 0.15); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.3);{% endif %}">
                                 {{ u.userprofile.get_user_type_display|default:u.userprofile.user_type|default:"User"|title }}
                             </span>
                         </td>
-                        <td style="padding: 15px; color: #7f8c8d; font-size: 14px;">
+                        <td style="padding: 15px; color: var(--color-text-muted); font-size: 14px;">
                             {{ u.date_joined|date:"M d, Y" }}
                         </td>
                         <td style="padding: 15px;">
                             {% if u.is_active %}
-                                <span style="color: #27ae60; font-weight: 600;">Active</span>
+                                <span style="color: var(--color-success); font-weight: 600;">Active</span>
                             {% else %}
-                                <span style="color: #e74c3c; font-weight: 600;">Inactive</span>
+                                <span style="color: var(--color-danger); font-weight: 600;">Inactive</span>
                             {% endif %}
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="6" style="padding: 40px; text-align: center; color: #95a5a6;">
+                        <td colspan="6" style="padding: 40px; text-align: center; color: var(--color-text-muted);">
                             No users found
                         </td>
                     </tr>
@@ -71,4 +71,10 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+    });
+</script>
 {% endblock %}

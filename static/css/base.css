@@ -1148,3 +1148,44 @@ body.dark-mode .upload-zone h5 {
         min-height: 42px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ADMIN DASHBOARD DARK MODE & GLOBAL THEME ADAPTATION
+   ═══════════════════════════════════════════════════════════ */
+body.dark-mode .admin-container,
+html.dark-mode .admin-container {
+    color: var(--color-text-main, #f8fafc);
+}
+
+body.dark-mode .health-card,
+html.dark-mode .health-card,
+body.dark-mode .stat-mini-card,
+html.dark-mode .stat-mini-card,
+body.dark-mode .table-card,
+html.dark-mode .table-card,
+body.dark-mode .edit-user-card,
+html.dark-mode .edit-user-card {
+    background-color: var(--color-bg-card, #1e293b) !important;
+    border-color: var(--color-border, #334155) !important;
+    color: var(--color-text-main, #f8fafc) !important;
+}
+
+body.dark-mode .data-table th,
+html.dark-mode .data-table th {
+    background-color: var(--color-bg-hover, #334155) !important;
+    color: var(--color-text-muted, #94a3b8) !important;
+    border-color: var(--color-border, #334155) !important;
+}
+
+body.dark-mode .data-table td,
+html.dark-mode .data-table td {
+    color: var(--color-text-main, #f8fafc) !important;
+    border-color: var(--color-border, #334155) !important;
+}
+
+body.dark-mode .modal-box,
+html.dark-mode .modal-box {
+    background-color: var(--color-bg-card, #1e293b) !important;
+    color: var(--color-text-main, #f8fafc) !important;
+    border-color: var(--color-border, #334155) !important;
+}

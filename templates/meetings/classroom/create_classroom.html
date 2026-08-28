@@ -42,11 +42,23 @@
                 <small style="color: #7f8c8d; display: block; margin-top: 5px;">Share this with enrolled students only</small>
             </div>
             
-            <div style="margin-bottom: 30px;">
+            <div style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 500;">Description (Optional)</label>
                 <textarea name="description" rows="3"
                           style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;"
                           placeholder="Brief description of the classroom">{{ form_data.description|default:'' }}</textarea>
+            </div>
+            
+            <div style="margin-bottom: 25px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin: 0;">
+                    <input type="checkbox" name="auto_approve" style="width: 18px; height: 18px; margin-top: 2px; accent-color: #6366f1;" {% if form_data.auto_approve %}checked{% endif %}>
+                    <div>
+                        <strong style="color: #1e293b; font-size: 14px; display: block;">⚡ Instant Auto-Join (Google Classroom style)</strong>
+                        <span style="color: #64748b; font-size: 13px; display: block; margin-top: 2px;">
+                            Automatically approve students when they enter the correct class code & password without needing manual review for every student.
+                        </span>
+                    </div>
+                </label>
             </div>
             
             <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">

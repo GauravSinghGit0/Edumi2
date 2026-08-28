@@ -35,13 +35,16 @@ def create_classroom(request):
         password = request.POST.get('password')
         description = (request.POST.get('description') or '').strip()
 
+        auto_approve = request.POST.get('auto_approve') == 'on'
+
         if Classroom.objects.filter(class_code=class_code).exists():
             messages.error(request, 'Class code already exists. Please choose a different one.')
             # Store form data in session for repopulation
             request.session['classroom_form_data'] = {
                 'class_code': class_code,
                 'title': title,
-                'description': description
+                'description': description,
+                'auto_approve': auto_approve,
             }
             return redirect('create_classroom')
 
@@ -50,7 +53,8 @@ def create_classroom(request):
             title=title,
             password=make_password(password),
             teacher=request.user,
-            description=description
+            description=description,
+            auto_approve=auto_approve,
         )
         # Initialize classroom group conversation
         classroom.get_or_create_conversation()
@@ -122,18 +126,61 @@ def join_classroom_request(request):
                 messages.info(request, 'You are already a member of this classroom')
                 return redirect('classroom_detail', classroom_id=classroom.id)
             elif existing_membership.status == 'pending':
-                messages.info(request, 'Your join request is pending approval')
-                return redirect('student_classrooms')
-            elif existing_membership.status == 'denied':
-                messages.error(request, 'Your previous request was denied. Please contact the teacher.')
-                return redirect('student_classrooms')
+                if classroom.auto_approve:
+                    existing_membership.status = 'approved'
+                    existing_membership.approved_at = timezone.now()
+                    existing_membership.approved_by = classroom.teacher
+                    existing_membership.save()
+                    conv = classroom.get_or_create_conversation()
+                    conv.participants.add(request.user)
+                    notify_student_joined_classroom(request.user, classroom)
+                    messages.success(request, f'Welcome to "{classroom.title}"! You joined successfully.')
+                    return redirect('classroom_detail', classroom_id=classroom.id)
+                else:
+                    messages.info(request, 'Your join request is pending approval')
+                    return redirect('student_classrooms')
+            elif existing_membership.status in ('denied', 'removed', 'left'):
+                # Allow rejoining if credentials are valid
+                if classroom.auto_approve:
+                    existing_membership.status = 'approved'
+                    existing_membership.approved_at = timezone.now()
+                    existing_membership.approved_by = classroom.teacher
+                    existing_membership.save()
+                    conv = classroom.get_or_create_conversation()
+                    conv.participants.add(request.user)
+                    notify_student_joined_classroom(request.user, classroom)
+                    messages.success(request, f'Welcome back to "{classroom.title}"! You joined successfully.')
+                    return redirect('classroom_detail', classroom_id=classroom.id)
+                else:
+                    existing_membership.status = 'pending'
+                    existing_membership.requested_at = timezone.now()
+                    existing_membership.save()
+                    notify_classroom_join_request(request.user, classroom)
+                    messages.success(request, f'Join request re-submitted for "{classroom.title}". Waiting for teacher approval.')
+                    return redirect('student_classrooms')
 
-        ClassroomMembership.objects.create(
-            classroom=classroom, student=request.user, status='pending'
-        )
-        notify_classroom_join_request(request.user, classroom)
-        messages.success(request, f'Join request submitted for "{classroom.title}". Waiting for teacher approval.')
-        return redirect('student_classrooms')
+        # Create new membership
+        if classroom.auto_approve:
+            # Instant Auto-Join (like Google Classroom)
+            membership = ClassroomMembership.objects.create(
+                classroom=classroom,
+                student=request.user,
+                status='approved',
+                approved_at=timezone.now(),
+                approved_by=classroom.teacher,
+            )
+            conv = classroom.get_or_create_conversation()
+            conv.participants.add(request.user)
+            notify_student_joined_classroom(request.user, classroom)
+            messages.success(request, f'Welcome to "{classroom.title}"! You joined successfully.')
+            return redirect('classroom_detail', classroom_id=classroom.id)
+        else:
+            ClassroomMembership.objects.create(
+                classroom=classroom, student=request.user, status='pending'
+            )
+            notify_classroom_join_request(request.user, classroom)
+            messages.success(request, f'Join request submitted for "{classroom.title}". Waiting for teacher approval.')
+            return redirect('student_classrooms')
 
     # Retrieve stored form data if available
     form_data = request.session.get('join_classroom_form_data', {})
@@ -167,7 +214,7 @@ def approve_join_request(request, membership_id):
     """Teacher approves a student's join request."""
     membership = get_object_or_404(ClassroomMembership, id=membership_id)
     if membership.classroom.teacher != request.user:
-        return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
     membership.status = 'approved'
     membership.approved_at = timezone.now()
     membership.approved_by = request.user
@@ -184,11 +231,102 @@ def approve_join_request(request, membership_id):
 
 @login_required
 @require_http_methods(["POST"])
+def approve_all_join_requests(request, classroom_id):
+    """Teacher approves ALL pending student join requests in bulk with 1 click."""
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+    if classroom.teacher != request.user:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    pending_memberships = list(ClassroomMembership.objects.filter(
+        classroom=classroom, status='pending'
+    ).select_related('student'))
+
+    if not pending_memberships:
+        return JsonResponse({'status': 'info', 'count': 0, 'message': 'No pending requests to approve'})
+
+    now = timezone.now()
+    students_to_add = []
+    for membership in pending_memberships:
+        membership.status = 'approved'
+        membership.approved_at = now
+        membership.approved_by = request.user
+        membership.save(update_fields=['status', 'approved_at', 'approved_by'])
+        students_to_add.append(membership.student)
+        try:
+            notify_classroom_request_approved(membership.student, classroom, request.user)
+            notify_student_joined_classroom(membership.student, classroom)
+        except Exception:
+            pass
+
+    # Bulk sync students to classroom conversation
+    if students_to_add:
+        conv = classroom.get_or_create_conversation()
+        conv.participants.add(*students_to_add)
+
+    count = len(pending_memberships)
+    return JsonResponse({
+        'status': 'success',
+        'count': count,
+        'message': f'Successfully approved all {count} student(s)!'
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def deny_all_join_requests(request, classroom_id):
+    """Teacher denies ALL pending student join requests in bulk."""
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+    if classroom.teacher != request.user:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    pending_memberships = list(ClassroomMembership.objects.filter(
+        classroom=classroom, status='pending'
+    ).select_related('student'))
+
+    if not pending_memberships:
+        return JsonResponse({'status': 'info', 'count': 0, 'message': 'No pending requests to deny'})
+
+    for membership in pending_memberships:
+        membership.status = 'denied'
+        membership.save(update_fields=['status'])
+        try:
+            notify_classroom_request_denied(membership.student, classroom)
+        except Exception:
+            pass
+
+    count = len(pending_memberships)
+    return JsonResponse({
+        'status': 'success',
+        'count': count,
+        'message': f'Denied {count} request(s)'
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def toggle_auto_approve(request, classroom_id):
+    """Teacher toggles instant auto-join mode on/off for a classroom."""
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+    if classroom.teacher != request.user:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    classroom.auto_approve = not classroom.auto_approve
+    classroom.save(update_fields=['auto_approve'])
+
+    return JsonResponse({
+        'status': 'success',
+        'auto_approve': classroom.auto_approve,
+        'message': f'Instant Auto-Join is now {"enabled" if classroom.auto_approve else "disabled"}'
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
 def deny_join_request(request, membership_id):
     """Teacher denies a student's join request."""
     membership = get_object_or_404(ClassroomMembership, id=membership_id)
     if membership.classroom.teacher != request.user:
-        return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
     membership.status = 'denied'
     membership.save()
     notify_classroom_request_denied(membership.student, membership.classroom)

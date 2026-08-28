@@ -11,6 +11,7 @@ class Classroom(models.Model):
     password = models.CharField(max_length=128)  # Will be hashed
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_classrooms')
     description = models.TextField(blank=True)
+    auto_approve = models.BooleanField(default=False, help_text="Automatically approve students who join with valid class code & password")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

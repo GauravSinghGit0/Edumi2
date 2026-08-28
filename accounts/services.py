@@ -69,6 +69,7 @@ def get_student_stats(user):
     """Get statistics for the student dashboard."""
     from meetings.models import ClassroomMembership, Meeting
     from attendance.models import StudentFaceProfile
+    from django.db import models
     
     # Check if face is registered
     face_registered = StudentFaceProfile.objects.filter(student=user, is_active=True).exists()
@@ -80,11 +81,20 @@ def get_student_stats(user):
     ).values_list('classroom_id', flat=True)
     
     # Meetings are available if they are in student's classrooms
-    available_meetings = Meeting.objects.filter(
+    upcoming_meetings_qs = Meeting.objects.filter(
         classroom_id__in=my_classroom_ids,
         status__in=['scheduled', 'live'],
         meeting_type='classroom'
-    ).count()
+    ).select_related('classroom', 'teacher', 'teacher__userprofile').order_by(
+        models.Case(
+            models.When(status='live', then=models.Value(0)),
+            default=models.Value(1),
+            output_field=models.IntegerField(),
+        ),
+        'scheduled_time'
+    )
+    
+    available_meetings = upcoming_meetings_qs.count()
     
     return {
         'available_meetings': available_meetings,
@@ -92,7 +102,9 @@ def get_student_stats(user):
         'enrolled_courses': len(my_classroom_ids),
         'completed_assignments': 15,  # Placeholder/Future logic
         'face_registered': face_registered,
+        'upcoming_meetings': upcoming_meetings_qs,
     }
+
 
 def check_port_open(host, port, timeout=0.05):
     import socket

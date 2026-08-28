@@ -12,6 +12,9 @@
                     <div class="badge-glass"><i data-lucide="users" style="width: 15px; height: 15px;"></i> {{ classroom.get_approved_students.count }} Enrolled</div>
                     {% if is_teacher %}
                     <div class="badge-glass" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.4);"><i data-lucide="shield" style="width: 15px; height: 15px;"></i> Instructor Mode</div>
+                    {% if classroom.auto_approve %}
+                    <div class="badge-glass" style="background: rgba(245, 158, 11, 0.25); border-color: rgba(245, 158, 11, 0.4); color: #fff;"><i data-lucide="zap" style="width: 15px; height: 15px;"></i> Instant Auto-Join</div>
+                    {% endif %}
                     {% else %}
                     <div class="badge-glass"><i data-lucide="user-check" style="width: 15px; height: 15px;"></i> Student Member</div>
                     {% endif %}

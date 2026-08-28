@@ -415,6 +415,105 @@ function approveRequest(membershipId) {
     }).then(res => res.json()).then(data => { if (data.status === 'success') location.reload(); });
 }
 
+function approveAllRequests(classroomId) {
+    const btn = document.getElementById('btnApproveAll');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span> Approving...';
+    }
+    fetch(`/meetings/classroom/${classroomId}/approve-all/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert(data.message || 'Error approving requests');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Approve All';
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Error approving all requests:', err);
+        if (btn) btn.disabled = false;
+    });
+}
+
+function denyAllRequests(classroomId) {
+    if (!confirm('Are you sure you want to deny ALL pending student requests?')) return;
+    const btn = document.getElementById('btnDenyAll');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span> Denying...';
+    }
+    fetch(`/meetings/classroom/${classroomId}/deny-all/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert(data.message || 'Error denying requests');
+            if (btn) btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        console.error('Error denying all requests:', err);
+        if (btn) btn.disabled = false;
+    });
+}
+
+function toggleAutoApprove(classroomId) {
+    const toggle = document.getElementById('autoApproveToggle');
+    const slider = document.getElementById('autoApproveSlider');
+    const knob = document.getElementById('autoApproveKnob');
+    
+    fetch(`/meetings/classroom/${classroomId}/toggle-auto-approve/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const isEnabled = data.auto_approve;
+            if (toggle) toggle.checked = isEnabled;
+            if (slider) slider.style.backgroundColor = isEnabled ? '#10b981' : '#cbd5e1';
+            if (knob) knob.style.left = isEnabled ? '17px' : '3px';
+        } else {
+            alert(data.message || 'Failed to update auto-approve setting');
+            if (toggle) toggle.checked = !toggle.checked;
+        }
+    })
+    .catch(err => {
+        console.error('Error updating auto-approve:', err);
+        if (toggle) toggle.checked = !toggle.checked;
+    });
+}
+
+function filterPendingList(query) {
+    const q = (query || '').toLowerCase().trim();
+    const items = document.querySelectorAll('.pending-item');
+    items.forEach(item => {
+        const text = (item.dataset.search || item.textContent || '').toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+    });
+}
+
+function filterEnrolledList(query) {
+    const q = (query || '').toLowerCase().trim();
+    const items = document.querySelectorAll('.enrolled-item');
+    items.forEach(item => {
+        const text = (item.dataset.search || item.textContent || '').toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+    });
+}
+
 function denyRequest(membershipId) {
     if (confirm('Deny this request?')) {
         fetch(`/meetings/classroom/deny/${membershipId}/`, {
