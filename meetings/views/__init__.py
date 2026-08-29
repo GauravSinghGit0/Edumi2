@@ -29,6 +29,7 @@ from .meeting_views import (
     meeting_attendance,
     meeting_summary,
     end_meeting,
+    continue_meeting,
     leave_meeting,
     get_participants,
     delete_meeting,
@@ -56,5 +57,8 @@ from .material_views import (
     download_study_material,
     material_detail_api,
     digital_library_view,
+)
+from .recording_views import (
+    meeting_chunked_upload,
 )
 

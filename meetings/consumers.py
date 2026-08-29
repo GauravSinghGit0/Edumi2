@@ -285,8 +285,100 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     'type': 'participant_list',
                     'participants': active_participants
                 }))
+            
+            elif message_type == 'check_time_limit':
+                await self.process_expiration_check()
+
+            elif message_type == 'continue_meeting':
+                await self.process_continue_meeting()
+
+            elif message_type == 'start_recording':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'recording_started',
+                        'host_name': self.user.username
+                    }
+                )
+
+            elif message_type == 'stop_recording':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'recording_stopped',
+                        'host_name': self.user.username
+                    }
+                )
         except Exception as e:
             logger.error(f"Receive error: {e}")
+
+    async def recording_started(self, event):
+        """Handle recording started notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'recording_started',
+            'host_name': event.get('host_name', 'Host'),
+            'message': 'Meeting is being recorded by the host.'
+        }))
+
+    async def recording_stopped(self, event):
+        """Handle recording stopped notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'recording_stopped',
+            'host_name': event.get('host_name', 'Host'),
+            'message': 'Meeting recording stopped.'
+        }))
+
+    async def time_limit_expired_prompt(self, event):
+        """Handle time limit expiration prompt event for host"""
+        await self.send(text_data=json.dumps({
+            'type': 'time_limit_expired_prompt',
+            'message': event.get('message', 'The scheduled meeting time has ended. Do you want to continue the meeting?')
+        }))
+
+    async def meeting_continued(self, event):
+        """Handle meeting extension/continuation event"""
+        await self.send(text_data=json.dumps({
+            'type': 'meeting_continued',
+            'message': event.get('message', 'Meeting continuation granted by host.')
+        }))
+
+    async def meeting_ended(self, event):
+        """Handle meeting ended notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'meeting_ended',
+            'reason': event.get('reason', 'host_ended'),
+            'message': event.get('message', 'The meeting has ended.')
+        }))
+
+    @database_sync_to_async
+    def process_expiration_check(self):
+        from .services import check_and_process_meeting_expiration
+        try:
+            meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+            check_and_process_meeting_expiration(meeting)
+        except Meeting.DoesNotExist:
+            pass
+
+    @database_sync_to_async
+    def process_continue_meeting(self):
+        try:
+            meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+            if meeting.teacher == self.user or self.user.is_superuser:
+                meeting.is_extended = True
+                meeting.save(update_fields=['is_extended'])
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                if channel_layer:
+                    async_to_sync(channel_layer.group_send)(
+                        f'meeting_{self.meeting_code}',
+                        {
+                            'type': 'meeting_continued',
+                            'message': 'Meeting continuation granted by host.',
+                        }
+                    )
+        except Meeting.DoesNotExist:
+            pass
     
     async def user_joined(self, event):
         await self.send(text_data=json.dumps({
@@ -464,6 +556,10 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 event_type='leave'
             )
 
+            # --- TIME LIMIT & TEACHER PRESENCE ENFORCEMENT ---
+            from .services import check_and_process_meeting_expiration
+            check_and_process_meeting_expiration(meeting)
+
             # --- AUTO-CLEANUP FOR TEMPORARY MEETINGS ---
             if meeting.meeting_type == 'temporary':
                 active_exists = MeetingParticipant.objects.filter(
@@ -471,7 +567,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     is_active=True
                 ).exists()
                 
-                if not active_exists:
+                if not active_exists and meeting.status != 'ended':
                     meeting_code = meeting.meeting_code
                     meeting.delete()
                     logger.info(f"Temporary meeting {meeting_code} deleted via Consumer (last participant left).")

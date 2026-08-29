@@ -357,7 +357,7 @@
         <div class="group-card group-card-all {% if active_role == 'all' or not active_role %}active{% endif %}" onclick="selectRoleGroup('all')">
             <div class="group-card-info">
                 <div class="group-label">All Members</div>
-                <div class="group-count">{{ total_count|default:users|length }}</div>
+                <div class="group-count">{% if total_count != None %}{{ total_count }}{% else %}{{ users|length }}{% endif %}</div>
             </div>
             <div class="group-card-icon">
                 <i data-lucide="users"></i>
@@ -400,7 +400,7 @@
         <button class="role-tab-btn {% if active_role == 'all' or not active_role %}active{% endif %}" data-group="all" onclick="selectRoleGroup('all')">
             <i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i>
             All Users
-            <span class="role-tab-badge">{{ total_count|default:users|length }}</span>
+            <span class="role-tab-badge">{% if total_count != None %}{{ total_count }}{% else %}{{ users|length }}{% endif %}</span>
         </button>
 
         <button class="role-tab-btn {% if active_role == 'student' %}active{% endif %}" data-group="student" onclick="selectRoleGroup('student')">

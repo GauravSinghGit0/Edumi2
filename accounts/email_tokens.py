@@ -263,6 +263,26 @@ def _dispatch_email_async(subject, text_content, from_email, recipient_list, htm
     Dispatches email asynchronously via Celery worker, with instant non-blocking fallback to daemon thread.
     Ensures HTTP request threads return immediately without waiting on SMTP network latency.
     """
+    # If console or locmem backend is configured, dispatch directly via thread to ensure console visibility
+    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
+        import threading
+        def _send_console():
+            try:
+                send_mail(
+                    subject=subject,
+                    message=text_content.strip() if text_content else '',
+                    from_email=from_email or settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=recipient_list,
+                    html_message=html_content,
+                    fail_silently=False,
+                )
+            except Exception as e:
+                logger.error(f"Console email dispatch failed for {recipient_list}: {e}")
+
+        t = threading.Thread(target=_send_console, daemon=True)
+        t.start()
+        return True
+
     try:
         from accounts.tasks import send_email_async_task
         send_email_async_task.delay(
@@ -408,13 +428,16 @@ def verify_password_reset_otp(user_or_email, otp_code):
         email_str = str(user_or_email or '').strip().lower()
         if not email_str:
             return None, "Please provide your email address."
-        try:
-            # Match by email or username
-            if '@' in email_str:
-                user = User.objects.get(email__iexact=email_str)
-            else:
-                user = User.objects.get(username__iexact=email_str)
-        except User.DoesNotExist:
+        # Match by email or username safely
+        user = None
+        if '@' in email_str:
+            user = User.objects.filter(email__iexact=email_str).first()
+        else:
+            user = User.objects.filter(username__iexact=email_str).first()
+            if not user:
+                user = User.objects.filter(email__iexact=email_str).first()
+
+        if not user:
             return None, "No account associated with that email or username."
 
     # 1. Database-backed check

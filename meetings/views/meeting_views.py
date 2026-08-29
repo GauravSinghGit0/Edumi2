@@ -470,12 +470,12 @@ def end_meeting(request, meeting_id):
     """Teacher/admin ends a meeting, logs leaves, triggers summary generation."""
     meeting = get_object_or_404(Meeting, id=meeting_id)
     if meeting.teacher != request.user and not request.user.is_superuser:
-        return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
 
     end_time = timezone.now()
     meeting.status = 'ended'
     meeting.ended_at = end_time
-    meeting.save()
+    meeting.save(update_fields=['status', 'ended_at'])
 
     active_participants = MeetingParticipant.objects.filter(meeting=meeting, is_active=True).select_related('user')
     for p in active_participants:
@@ -494,9 +494,49 @@ def end_meeting(request, meeting_id):
     except Exception:
         pass
 
+    # Broadcast WS meeting_ended event to all room participants
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            f'meeting_{meeting.meeting_code}',
+            {
+                'type': 'meeting_ended',
+                'reason': 'host_ended',
+                'message': 'The meeting has been ended by the host.',
+            }
+        )
+
     if meeting.classroom:
         return JsonResponse({'status': 'success', 'redirect_url': f'/meetings/classroom/{meeting.classroom.id}/'})
     return JsonResponse({'status': 'success'})
+
+
+@login_required
+@require_http_methods(["POST"])
+def continue_meeting(request, meeting_id):
+    """Teacher extends an expired meeting to keep it active."""
+    meeting = get_object_or_404(Meeting, id=meeting_id)
+    if meeting.teacher != request.user and not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    meeting.is_extended = True
+    meeting.save(update_fields=['is_extended'])
+
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            f'meeting_{meeting.meeting_code}',
+            {
+                'type': 'meeting_continued',
+                'message': 'Meeting continuation granted by host.',
+            }
+        )
+
+    return JsonResponse({'status': 'success', 'message': 'Meeting extended successfully'})
 
 
 @login_required

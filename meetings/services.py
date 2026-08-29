@@ -57,8 +57,9 @@ def get_classroom_detail_context(classroom, user):
         'study_materials_count': len(materials),
     })
 
+    approved_students = classroom.get_approved_memberships()
+
     if is_teacher:
-        approved_students = classroom.get_approved_memberships()
         att_total_count = approved_students.count()
         
         meetings = classroom.meetings.all().annotate(
@@ -77,7 +78,82 @@ def get_classroom_detail_context(classroom, user):
         context.update({
             'meetings': classroom.meetings.filter(status__in=['scheduled', 'live']).order_by('-created_at'),
             'pending_requests': None,
-            'approved_students': None,
+            'approved_students': approved_students,
         })
         
     return context
+
+
+def check_and_process_meeting_expiration(meeting):
+    """
+    Core meeting lifecycle manager enforcing time-limits & teacher presence rules:
+      - Case 1: Time limit expired + Teacher NOT present -> Auto-end meeting & disconnect students.
+      - Case 2: Time limit expired + Teacher IS present & not extended -> Send continuation prompt modal to teacher.
+      - Case 3: Teacher previously extended but now left expired meeting -> Auto-end meeting.
+    Returns (processed: bool, status_action: str)
+    """
+    from django.utils import timezone
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    from .models import MeetingParticipant, MeetingAttendanceLog
+
+    if meeting.status != 'live':
+        return False, 'not_live'
+
+    if not meeting.is_expired():
+        return False, 'not_expired'
+
+    channel_layer = get_channel_layer()
+    room_group = f'meeting_{meeting.meeting_code}'
+    teacher_present = meeting.is_teacher_present()
+
+    # Case 1 & Case 3: Expired + Teacher absent -> End meeting
+    if not teacher_present:
+        end_time = timezone.now()
+        meeting.status = 'ended'
+        meeting.ended_at = end_time
+        meeting.save(update_fields=['status', 'ended_at'])
+
+        active_participants = MeetingParticipant.objects.filter(meeting=meeting, is_active=True).select_related('user')
+        for p in active_participants:
+            MeetingAttendanceLog.objects.create(participant=p, event_type='leave')
+            if p.joined_at:
+                session_secs = max(0, int((end_time - p.joined_at).total_seconds()))
+                p.total_duration_seconds = (p.total_duration_seconds or 0) + session_secs
+            p.is_active = False
+            p.left_at = end_time
+            p.save(update_fields=['is_active', 'left_at', 'total_duration_seconds'])
+
+        # Trigger summary task asynchronously
+        try:
+            from .tasks import generate_meeting_summary
+            generate_meeting_summary.delay(meeting.id)
+        except Exception:
+            pass
+
+        # Broadcast WS meeting_ended event to all connected clients
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                room_group,
+                {
+                    'type': 'meeting_ended',
+                    'reason': 'time_limit_expired',
+                    'message': 'The scheduled meeting time has ended and the host has left.',
+                }
+            )
+        return True, 'ended'
+
+    # Case 2: Expired + Teacher IS present
+    if not meeting.is_extended:
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                room_group,
+                {
+                    'type': 'time_limit_expired_prompt',
+                    'message': 'The scheduled meeting time has ended. Do you want to continue the meeting?',
+                }
+            )
+        return True, 'prompt_sent'
+
+    return False, 'extended_and_teacher_present'
+

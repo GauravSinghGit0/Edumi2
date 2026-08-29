@@ -670,7 +670,7 @@ body.dark-mode .skeleton-box {
             <p class="notif-header-subtitle">Stay updated with messages, meetings, classroom activity and other alerts.</p>
             <div class="notif-summary-pill" id="notifSummaryPill">
                 <span class="unread-highlight" id="summaryUnreadCount">{{ unread_count }}</span> unread &middot; 
-                <span id="summaryTotalCount">{{ total_count|default:notifications|length }}</span> total
+                <span id="summaryTotalCount">{% if total_count != None %}{{ total_count }}{% else %}{{ notifications|length }}{% endif %}</span> total
             </div>
         </div>
         

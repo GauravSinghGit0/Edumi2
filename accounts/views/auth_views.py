@@ -55,12 +55,11 @@ def login_view(request):
     if request.method == 'POST':
         username_or_email = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
-
         if not username_or_email or not password:
             return render(request, 'accounts/auth/login.html', {
                 'error': 'Please enter both username/email and password.',
                 'entered_username': username_or_email,
-            }, status=422)
+            }, status=400)
 
         # High-performance single-pass authentication
         user = None
@@ -116,14 +115,14 @@ def login_view(request):
                     'unverified_error': True,
                     'unverified_email': user.email,
                     'entered_username': username_or_email,
-                }, status=422)
+                }, status=400)
 
             # Check if user is active
             if not user.is_active:
                 return render(request, 'accounts/auth/login.html', {
                     'error': 'This account has been disabled. Please contact support.',
                     'entered_username': username_or_email,
-                }, status=422)
+                }, status=400)
 
             # Validated & Verified -> Log in
             login(request, user)
@@ -138,7 +137,7 @@ def login_view(request):
         return render(request, 'accounts/auth/login.html', {
             'error': 'Invalid username/email or password.',
             'entered_username': username_or_email,
-        }, status=422)
+        }, status=400)
 
     return render(request, 'accounts/auth/login.html')
 
@@ -175,12 +174,12 @@ def register(request):
                     'status': 'error',
                     'errors': serializer.errors,
                     'message': 'Please fix the errors below.'
-                }, status=422)
+                }, status=400)
 
             return render(request, 'accounts/auth/register.html', {
                 'errors': serializer.errors,
                 'form_data': data,
-            }, status=422)
+            }, status=400)
 
         # Valid registration data -> create user and profile (is_verified=False)
         try:
@@ -212,7 +211,7 @@ def register(request):
             return render(request, 'accounts/auth/register.html', {
                 'errors': error_dict,
                 'form_data': data,
-            }, status=422)
+            }, status=400)
 
     return render(request, 'accounts/auth/register.html')
 
@@ -474,7 +473,7 @@ def save_emoji_avatar(request):
 # PASSWORD RESET VIEWS
 # ==============================================================================
 
-@ratelimit(action='login')
+@ratelimit(action='password_reset')
 def password_reset_request(request):
     """
     Step 1: User enters username or email to request password reset instructions.
@@ -546,25 +545,34 @@ def password_reset_confirm(request):
         new_password2 = request.POST.get('new_password2', '')
 
         # Resolve user via token or OTP
+        user = None
         if token_verified and verified_user:
             user = verified_user
-        elif token:
-            user, err = verify_password_reset_token(token)
-            if not user:
-                return render(request, 'accounts/auth/password_reset_confirm.html', {
-                    'token': token,
-                    'error': err,
-                    'token_verified': False,
-                }, status=400)
         else:
             email_or_username = request.POST.get('email_or_username', '').strip()
             otp_code = request.POST.get('otp_code', '').strip()
-            user, err = verify_password_reset_otp(email_or_username, otp_code)
-            if not user:
+
+            if email_or_username or otp_code:
+                user, err = verify_password_reset_otp(email_or_username, otp_code)
+                if not user:
+                    return render(request, 'accounts/auth/password_reset_confirm.html', {
+                        'error': err,
+                        'email_or_username': email_or_username,
+                        'otp_code': otp_code,
+                        'token': token,
+                        'token_verified': False,
+                    }, status=400)
+            elif token:
+                user, err = verify_password_reset_token(token)
+                if not user:
+                    return render(request, 'accounts/auth/password_reset_confirm.html', {
+                        'token': token,
+                        'error': err,
+                        'token_verified': False,
+                    }, status=400)
+            else:
                 return render(request, 'accounts/auth/password_reset_confirm.html', {
-                    'error': err,
-                    'email_or_username': email_or_username,
-                    'otp_code': otp_code,
+                    'error': "Please enter your email/username and 6-digit code or use a valid reset link.",
                     'token_verified': False,
                 }, status=400)
 

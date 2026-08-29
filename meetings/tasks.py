@@ -75,3 +75,21 @@ def process_study_material_rag(material_id):
     except Exception as e:
         return f"Error processing RAG for material {material_id}: {str(e)}"
 
+
+@shared_task
+def check_expired_meetings_task():
+    """
+    Periodic background task enforcing meeting time-limit lifecycle.
+    Scans active live meetings and automatically processes expiration & presence rules.
+    """
+    from .models import Meeting
+    from .services import check_and_process_meeting_expiration
+    live_meetings = Meeting.objects.filter(status='live')
+    processed_count = 0
+    for meeting in live_meetings:
+        processed, action = check_and_process_meeting_expiration(meeting)
+        if processed:
+            processed_count += 1
+    return f"Processed expiration check for {processed_count} meeting(s)."
+
+

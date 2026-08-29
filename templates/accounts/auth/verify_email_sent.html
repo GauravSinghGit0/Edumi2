@@ -131,35 +131,41 @@ const otpBoxesWrapper = document.getElementById('otpBoxesWrapper');
 const otpForm = document.getElementById('otpForm');
 const verifyBtn = document.getElementById('verifyBtn');
 const statusAlert = document.getElementById('statusAlert');
-const statusAlertMsg = document.getElementById('statusAlertMsg');
+const statusAlertMsg = document.getElementById('statusAlertText') || document.getElementById('statusAlertMsg');
 const statusAlertIcon = document.getElementById('statusAlertIcon');
 const emailHidden = document.getElementById('emailHidden');
 const otpCodeHidden = document.getElementById('otpCodeHidden');
 
 // Helper to show alert banner
 function showAlert(type, message) {
-    statusAlert.className = `otp-badge-alert ${type}`;
-    statusAlert.style.display = 'flex';
-    statusAlertMsg.innerText = message;
-    if (type === 'error') {
-        statusAlertIcon.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>`;
-    } else if (type === 'success') {
-        statusAlertIcon.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>`;
-    } else {
-        statusAlertIcon.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>`;
+    if (statusAlert) {
+        statusAlert.className = `otp-badge-alert ${type}`;
+        statusAlert.style.display = 'flex';
+    }
+    if (statusAlertMsg) {
+        statusAlertMsg.innerText = message;
+    }
+    if (statusAlertIcon) {
+        if (type === 'error') {
+            statusAlertIcon.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>`;
+        } else if (type === 'success') {
+            statusAlertIcon.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>`;
+        } else {
+            statusAlertIcon.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>`;
+        }
     }
 }
 

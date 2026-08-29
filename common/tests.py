@@ -101,3 +101,92 @@ class FileValidationTests(TestCase):
         mp3_content = b"ID3\x04\x00\x00\x00\x00\x00#TSSE"
         f = SimpleUploadedFile("audio.mp3", mp3_content, content_type="audio/mpeg")
         validate_audio_file(f)
+
+
+class SidebarNavActiveTests(TestCase):
+    def _create_mock_request(self, path, url_name, view_name=None):
+        from unittest.mock import MagicMock
+        request = MagicMock()
+        request.path = path
+        request.resolver_match.url_name = url_name
+        request.resolver_match.view_name = view_name or url_name
+        return request
+
+    def test_classrooms_parent_highlight_on_classroom_detail(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/classroom/1/', 'classroom_detail')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'teacher_classrooms'), 'active')
+        self.assertEqual(is_active_nav(context, 'student_classrooms'), 'active')
+
+    def test_classrooms_parent_highlight_on_assignment_subpage(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/assignments/5/', 'assignment_detail')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'teacher_classrooms'), 'active')
+        self.assertEqual(is_active_nav(context, 'student_classrooms'), 'active')
+
+    def test_classrooms_parent_highlight_on_quiz_take_subpage(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/assignments/quizzes/3/take/', 'take_quiz')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'student_classrooms'), 'active')
+
+    def test_classrooms_parent_highlight_on_materials_subpage(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/classroom/2/materials/', 'classroom_materials')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'teacher_classrooms'), 'active')
+
+    def test_meetings_parent_highlight_on_meeting_subpage(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/meetings/join/room123/', 'join_meeting')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'teacher_meetings'), 'active')
+        self.assertEqual(is_active_nav(context, 'student_meetings'), 'active')
+
+    def test_unrelated_route_returns_empty(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/settings/', 'settings')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'teacher_classrooms'), '')
+        self.assertEqual(is_active_nav(context, 'teacher_meetings'), '')
+        self.assertEqual(is_active_nav(context, 'settings'), 'active')
+
+    def test_digital_library_route_does_not_highlight_meetings(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/meetings/library/', 'digital_library')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'digital_library'), 'active')
+        self.assertEqual(is_active_nav(context, 'student_meetings'), '')
+        self.assertEqual(is_active_nav(context, 'teacher_meetings'), '')
+
+    def test_classrooms_route_does_not_highlight_meetings(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/meetings/classroom/student/', 'student_classrooms')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'student_classrooms'), 'active')
+        self.assertEqual(is_active_nav(context, 'student_meetings'), '')
+
+    def test_content_manager_route_does_not_highlight_camera_fleet(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/cameras/content-manager/', 'admin_content_manager')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'admin_content_manager'), 'active')
+        self.assertEqual(is_active_nav(context, 'admin_dashboard'), '')
+
+    def test_recordings_library_route_does_not_highlight_camera_fleet(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/cameras/recordings-folder/', 'recordings_folder')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'recordings_folder'), 'active')
+        self.assertEqual(is_active_nav(context, 'admin_dashboard'), '')
+
+    def test_live_videos_route_does_not_highlight_manage_recordings(self):
+        from common.templatetags.common_tags import is_active_nav
+        req = self._create_mock_request('/cameras/lectures/', 'student_lecture_list')
+        context = {'request': req}
+        self.assertEqual(is_active_nav(context, 'student_lecture_list'), 'active')
+        self.assertEqual(is_active_nav(context, 'manage_recordings'), '')
+
+

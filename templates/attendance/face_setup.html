@@ -308,7 +308,32 @@
     border: 1px solid var(--border-color);
     border-radius: 28px; max-width: 480px; width: 100%; padding: 36px;
     box-shadow: 0 25px 60px rgba(0,0,0,0.15); 
+    position: relative;
     animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.info-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.info-modal-close:hover {
+    color: var(--text-main);
+    background: rgba(0,0,0,0.06);
+}
+.dark-mode .info-modal-close:hover {
+    background: rgba(255,255,255,0.08);
 }
 @keyframes modalIn {
     from { transform: scale(0.9) translateY(20px); opacity: 0; }
@@ -446,8 +471,9 @@
 </div>
 
 <!-- Info Modal -->
-<div class="info-modal" id="infoModal">
+<div class="info-modal" id="infoModal" onclick="if(event.target === this) closeInfoModal()">
     <div class="info-modal-content">
+        <button type="button" class="info-modal-close" onclick="closeInfoModal()" title="Close">&times;</button>
         <div class="info-modal-header">
             <h2>Complete Your Profile</h2>
             <p>We need a few more details before you can register your face for attendance.</p>
@@ -455,15 +481,11 @@
         <div id="infoModalError" style="color:#ef4444; font-size:0.8rem; margin-bottom:12px; text-align:center; display:none;"></div>
         <div class="info-form-group">
             <label>Roll Number</label>
-            <input type="text" id="modal_roll" class="info-form-control" placeholder="e.g. 21CS045" value="{{ u_profile.roll_number|default:'' }}">
+            <input type="text" id="modal_roll" class="info-form-control" placeholder="e.g. 21CS045" value="{{ user_identity.roll_number|default:user_identity.student_id|default:u_profile.roll_number|default:'' }}">
         </div>
         <div class="info-form-group">
             <label>Branch / Department</label>
-            <input type="text" id="modal_branch" class="info-form-control" placeholder="e.g. Computer Science" value="{{ u_profile.branch|default:'' }}">
-        </div>
-        <div class="info-form-group">
-            <label>Contact Number (Optional)</label>
-            <input type="text" id="modal_contact" class="info-form-control" placeholder="e.g. +91 98765 43210" value="{{ u_profile.contact_number|default:'' }}">
+            <input type="text" id="modal_branch" class="info-form-control" placeholder="e.g. Computer Science" value="{{ user_identity.branch|default:u_profile.branch|default:'' }}">
         </div>
         <button class="btn-primary" style="width:100%; justify-content:center; margin-top:12px;" onclick="saveProfileInfo()">
             Save & Continue
@@ -487,10 +509,14 @@
     document.addEventListener('turbo:load', checkInfoModal);
     checkInfoModal();
 
+    window.closeInfoModal = function() {
+        var modal = document.getElementById('infoModal');
+        if (modal) modal.classList.remove('active');
+    };
+
     window.saveProfileInfo = async function() {
         var roll = (document.getElementById('modal_roll')?.value || '').trim();
         var branch = (document.getElementById('modal_branch')?.value || '').trim();
-        var contact = (document.getElementById('modal_contact')?.value || '').trim();
         var errorEl = document.getElementById('infoModalError');
         
         if (!roll || !branch) {
@@ -505,13 +531,12 @@
             var resp = await fetch("{% url 'update_profile_info' %}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify({ roll_number: roll, branch: branch, contact_number: contact })
+                body: JSON.stringify({ roll_number: roll, branch: branch })
             });
             var data = await resp.json();
             
             if (data.status === 'success') {
-                var modal = document.getElementById('infoModal');
-                if (modal) modal.classList.remove('active');
+                closeInfoModal();
                 infoComplete = true;
                 window.location.reload();
             } else if (errorEl) {

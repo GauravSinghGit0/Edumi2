@@ -102,14 +102,7 @@
                     <p class="mat-desc">{{ mat.description }}</p>
                     {% endif %}
 
-                    {% if mat.rag_indexed %}
-                    <div style="margin-bottom: 0.75rem;">
-                        <span class="mat-rag-badge">
-                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
-                            RAG Vector Indexed · {{ mat.chunks.count }} Chunks
-                        </span>
-                    </div>
-                    {% endif %}
+
                 </div>
 
                 <div class="mat-card-footer">
@@ -167,6 +160,12 @@
             <button class="modal-close-btn" onclick="closeMaterialDetailModal()" type="button">&times;</button>
         </div>
 
+        <!-- Embedded Video Player & PDF Viewer -->
+        <div id="matDetailMediaPreview" style="display: none; margin-bottom: 1.25rem; border-radius: 0.875rem; overflow: hidden; background: #0f172a; position: relative;">
+            <video id="matDetailVideoPlayer" controls playsinline preload="metadata" style="width: 100%; max-height: 280px; display: none;"></video>
+            <iframe id="matDetailPdfViewer" style="width: 100%; height: 320px; max-height: 40vh; border: none; display: none;"></iframe>
+        </div>
+
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; font-size: 0.8125rem; color: var(--mat-text-muted);">
             <div><strong style="color: var(--mat-text-main);">Type:</strong> <span id="matDetailType">-</span></div>
             <div><strong style="color: var(--mat-text-main);">By:</strong> <span id="matDetailAuthor">-</span></div>
@@ -176,16 +175,11 @@
 
         <div class="rag-summary-box">
             <div class="rag-summary-title">
-                <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
-                AI Conceptual Summary (RAG Ready)
+                <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                Resource Summary
             </div>
             <p class="rag-summary-text" id="matDetailAiSummary">Loading...</p>
         </div>
-
-        <h4 style="font-size: 0.875rem; font-weight: 800; color: var(--mat-text-main); margin: 0 0 0.5rem 0;">
-            Segmented RAG Vector Chunks
-        </h4>
-        <div class="rag-chunks-list" id="matDetailChunksList"></div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--mat-border); padding-top: 1rem;">
             <button type="button" onclick="closeMaterialDetailModal()" class="btn-add-unit">Close</button>

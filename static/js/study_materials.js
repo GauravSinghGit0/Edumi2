@@ -66,8 +66,9 @@ function openMaterialDetailModal(materialId) {
     
     m.style.display = 'flex';
     document.getElementById('matDetailTitle').textContent = 'Loading resource...';
-    document.getElementById('matDetailAiSummary').textContent = 'Retrieving conceptual metadata and vector embeddings...';
-    document.getElementById('matDetailChunksList').innerHTML = '';
+    document.getElementById('matDetailAiSummary').textContent = 'Loading summary...';
+    const chunksList = document.getElementById('matDetailChunksList');
+    if (chunksList) chunksList.innerHTML = '';
 
     const previewContainer = document.getElementById('matDetailMediaPreview');
     const videoPlayer = document.getElementById('matDetailVideoPlayer');
@@ -93,7 +94,7 @@ function openMaterialDetailModal(materialId) {
                 document.getElementById('matDetailAuthor').textContent = data.uploaded_by;
                 document.getElementById('matDetailDate').textContent = data.created_at;
                 document.getElementById('matDetailSize').textContent = data.file_size || 'N/A';
-                document.getElementById('matDetailAiSummary').textContent = data.summary_ai || 'No AI summary generated.';
+                document.getElementById('matDetailAiSummary').textContent = data.summary_ai || 'No summary available for this resource.';
                 
                 // Embedded Video Player Streaming
                 if (data.is_video && data.stream_url && videoPlayer && previewContainer) {
@@ -119,23 +120,20 @@ function openMaterialDetailModal(materialId) {
                     }
                 }
 
-                // Render Chunks for RAG preview
+                // Render Chunks if element exists
                 const chunksList = document.getElementById('matDetailChunksList');
-                chunksList.innerHTML = '';
-                if (data.chunks && data.chunks.length > 0) {
-                    data.chunks.forEach(c => {
-                        const card = document.createElement('div');
-                        card.className = 'rag-chunk-card';
-                        card.innerHTML = `
-                            <div style="font-weight: 700; font-size: 0.75rem; color: var(--mat-primary); margin-bottom: 4px;">
-                                Chunk #${c.index + 1} (${c.token_count} tokens) · Vector ID: <code>${c.embedding_id}</code>
-                            </div>
-                            <div>${escapeHtml(c.text)}</div>
-                        `;
-                        chunksList.appendChild(card);
-                    });
-                } else {
-                    chunksList.innerHTML = '<p style="color: var(--mat-text-muted); font-size: 0.8125rem;">No text chunks segmented.</p>';
+                if (chunksList) {
+                    chunksList.innerHTML = '';
+                    if (data.chunks && data.chunks.length > 0) {
+                        data.chunks.forEach(c => {
+                            const card = document.createElement('div');
+                            card.className = 'rag-chunk-card';
+                            card.innerHTML = `
+                                <div>${escapeHtml(c.text)}</div>
+                            `;
+                            chunksList.appendChild(card);
+                        });
+                    }
                 }
 
                 if (window.lucide) lucide.createIcons();

@@ -91,19 +91,19 @@
                 // Use requestAnimationFrame to prevent visible layout shifts
                 requestAnimationFrame(() => {
                     const currentItems = currentSidebar.querySelectorAll('.sidebar-nav-item');
-                    const newActiveItem = newSidebar.querySelector('.sidebar-nav-item.active');
+                    const newActiveItems = newSidebar.querySelectorAll('.sidebar-nav-item.active');
 
                     // Clear active states on all items first (in a single batch)
                     currentItems.forEach(item => item.classList.remove('active'));
 
-                    // Apply active state to the matching item
-                    if (newActiveItem) {
+                    // Apply active state to the matching items
+                    newActiveItems.forEach(newActiveItem => {
                         const activeHref = newActiveItem.getAttribute('href');
                         const match = Array.from(currentItems).find(item => item.getAttribute('href') === activeHref);
                         if (match) {
                             match.classList.add('active');
                         }
-                    }
+                    });
 
                     // Sync all badges by matching href (more reliable than index)
                     const newItems = newSidebar.querySelectorAll('.sidebar-nav-item');

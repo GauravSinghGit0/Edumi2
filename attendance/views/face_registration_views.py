@@ -201,21 +201,28 @@ def detect_face(request):
 @login_required
 @require_POST
 def update_profile_info(request):
-    """AJAX: Update student profile details (roll, branch, contact)."""
+    """AJAX: Update student profile details (roll, branch). Syncs with SSOT IdentityService."""
     try:
         body = json.loads(request.body)
-        roll = body.get('roll_number', '')
-        branch = body.get('branch', '')
-        contact = body.get('contact_number', '')
+        roll = body.get('roll_number', '').strip()
+        branch = body.get('branch', '').strip()
+        contact = body.get('contact_number', '').strip()
         if not all([roll, branch]):
             return JsonResponse({'status': 'error', 'message': 'Roll Number and Branch are required.'}, status=400)
+            
         profile = request.user.userprofile
         profile.roll_number = roll
+        profile.student_id = roll
         profile.branch = branch
         if contact:
             profile.contact_number = contact
             profile.phone = contact
         profile.save()
+        
+        # Invalidate IdentityService cache to keep SSOT synchronized
+        from accounts.identity import IdentityService
+        IdentityService.invalidate_identity_cache(request.user.id)
+        
         return JsonResponse({'status': 'success', 'message': 'Profile updated successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

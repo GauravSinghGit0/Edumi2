@@ -95,14 +95,7 @@
                     <p class="mat-desc">{{ mat.description }}</p>
                     {% endif %}
 
-                    {% if mat.rag_indexed %}
-                    <div style="margin-bottom: 0.75rem;">
-                        <span class="mat-rag-badge">
-                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
-                            RAG Vector Indexed · {{ mat.chunks.count }} Chunks
-                        </span>
-                    </div>
-                    {% endif %}
+
                 </div>
 
                 <div class="mat-card-footer">

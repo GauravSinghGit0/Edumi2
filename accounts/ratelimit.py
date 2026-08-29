@@ -66,6 +66,8 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                         effective_limit = getattr(settings, 'REGISTRATION_RATE_LIMIT', 10)
                     elif action == 'resend_verification':
                         effective_limit = 5
+                    elif action == 'password_reset':
+                        effective_limit = getattr(settings, 'PASSWORD_RESET_RATE_LIMIT', 10)
                     else:
                         effective_limit = 10
 
@@ -75,6 +77,8 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                         effective_period = getattr(settings, 'REGISTRATION_RATE_PERIOD', 3600)
                     elif action == 'resend_verification':
                         effective_period = 900
+                    elif action == 'password_reset':
+                        effective_period = getattr(settings, 'PASSWORD_RESET_RATE_PERIOD', 900)
                     else:
                         effective_period = 3600
 

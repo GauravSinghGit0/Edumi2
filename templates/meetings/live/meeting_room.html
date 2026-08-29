@@ -462,6 +462,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     <span>Switch Camera</span>
                 </button>
+                <button class="menu-item" id="recordToggleBtn" onclick="toggleMeetingRecording(); toggleMoreOptions();">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8" fill="#ef4444" stroke="#ef4444"/></svg>
+                    <span id="recordToggleBtnText">Start Recording (MKV)</span>
+                </button>
                 <button class="menu-item" id="toggleStudentCameraBtn" onclick="toggleStudentViewPermission('student_can_view_camera'); toggleMoreOptions();">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
                     <span id="studentCameraStatusText">{% if student_can_view_camera %}Block Student Cam View{% else %}Allow Student Cam View{% endif %}</span>
@@ -542,6 +546,11 @@
     data-revoke-ban-url="{% url 'revoke_ban' meeting.id 0 %}"
     data-global-control-url="{% url 'meeting_global_control' meeting.id %}"
     data-allow-chat="{% if allow_chat %}true{% else %}false{% endif %}"
+    data-duration-minutes="{{ meeting.duration_minutes }}"
+    data-continue-url="{% url 'continue_meeting' meeting.id %}"
+    data-end-url="{% url 'end_meeting' meeting.id %}"
+    data-is-extended="{% if meeting.is_extended %}true{% else %}false{% endif %}"
+    data-recording-upload-url="{% url 'meeting_chunked_upload' %}"
     data-host-joined-at-ms="{{ host_joined_at_ms }}">
 </script>
 <script id="user-directory-data" type="application/json">
@@ -562,6 +571,25 @@
         </div>
     </div>
 </div>
+
+{% if is_host %}
+<!-- Time Limit Expired Modal (Teacher Only) -->
+<div id="timeLimitModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="timeLimitModalTitle">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 1.5rem;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 id="timeLimitModalTitle" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main, #1e293b);">Scheduled Time Expired</h3>
+        <p style="font-size: 0.9375rem; color: var(--color-text-muted, #64748b); margin-bottom: 1.5rem; line-height: 1.5;">
+            The scheduled meeting time has ended. Do you want to continue the meeting?
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <button type="button" class="kick-modal-btn cancel" onclick="handleTimeLimitChoice('end')" style="flex: 1; padding: 0.625rem 1rem; border-radius: 8px; font-weight: 600; background: #f1f5f9; color: #475569; border: none; cursor: pointer;">End Meeting</button>
+            <button type="button" class="kick-modal-btn confirm" onclick="handleTimeLimitChoice('continue')" style="flex: 1; padding: 0.625rem 1rem; border-radius: 8px; font-weight: 600; background: #6366f1; color: white; border: none; cursor: pointer;">Continue Meeting</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if is_host %}
 <!-- Camera Selection Modal -->
@@ -638,7 +666,9 @@ window.meetingConfig = {
     studentCanViewCamera: _d.studentCanViewCamera === 'true',
     studentCanViewScreenshare: _d.studentCanViewScreenshare === 'true',
     allowChat: _d.allowChat !== 'false',
-    hostJoinedAtMs: parseInt(_d.hostJoinedAtMs || "0")
+    hostJoinedAtMs: parseInt(_d.hostJoinedAtMs || "0"),
+    meetingId: _d.meetingId,
+    recordingUploadUrl: _d.recordingUploadUrl
 };
 
 window.allowChat = window.meetingConfig.allowChat;
@@ -1907,6 +1937,37 @@ function handleSignalingMessage(data) {
                 showNotification(`User kicked: ${data.user_id}`, 'info');
             }
             break;
+        case 'time_limit_expired_prompt':
+            if (window.isHost && !window.isExtended) {
+                showTimeLimitModal();
+            }
+            break;
+        case 'meeting_continued':
+            window.isExtended = true;
+            hideTimeLimitModal();
+            showNotification(data.message || 'Meeting extended by host.', 'info');
+            break;
+        case 'meeting_ended':
+            hideTimeLimitModal();
+            showNotification(data.message || 'The meeting has ended.', 'warning');
+            setTimeout(() => {
+                leaveMeeting();
+            }, 1200);
+            break;
+        case 'recording_started':
+            {
+                const badge = document.getElementById('recordingIndicator');
+                if (badge) badge.style.display = 'flex';
+                showNotification(data.message || 'Meeting is being recorded by host.', 'info');
+            }
+            break;
+        case 'recording_stopped':
+            {
+                const badge = document.getElementById('recordingIndicator');
+                if (badge) badge.style.display = 'none';
+                showNotification(data.message || 'Meeting recording stopped.', 'info');
+            }
+            break;
         case 'global_control_update':
             if (data.control_type === 'student_can_view_camera') {
                 window.studentCanViewCamera = data.value;
@@ -1922,6 +1983,260 @@ function handleSignalingMessage(data) {
                 showNotification(data.message || (data.value ? 'Chat enabled for everyone' : 'Chat limited to host only'), 'info');
             }
             break;
+    }
+}
+
+// ── Industry-Grade Live Meeting Room Recorder Engine (MKV Format) ────────────
+window.MeetingRecorder = {
+    recorder: null,
+    uploadId: null,
+    chunkIndex: 0,
+    timerInterval: null,
+    secondsElapsed: 0,
+    isRecording: false,
+
+    async start() {
+        if (this.isRecording) return;
+        try {
+            this.uploadId = 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            this.chunkIndex = 0;
+            this.secondsElapsed = 0;
+
+            // Audio mixing: Combine local microphone + all remote participant audio tracks
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const audioDestination = audioCtx.createMediaStreamDestination();
+
+            if (window.room && window.room.localParticipant) {
+                window.room.localParticipant.audioTrackPublications.forEach(pub => {
+                    if (pub.track && pub.track.mediaStreamTrack) {
+                        try {
+                            const localSrc = audioCtx.createMediaStreamSource(new MediaStream([pub.track.mediaStreamTrack]));
+                            localSrc.connect(audioDestination);
+                        } catch(_) {}
+                    }
+                });
+            }
+
+            if (window.room && window.room.remoteParticipants) {
+                window.room.remoteParticipants.forEach(p => {
+                    p.audioTrackPublications.forEach(pub => {
+                        if (pub.track && pub.track.mediaStreamTrack) {
+                            try {
+                                const rSrc = audioCtx.createMediaStreamSource(new MediaStream([pub.track.mediaStreamTrack]));
+                                rSrc.connect(audioDestination);
+                            } catch (_) {}
+                        }
+                    });
+                });
+            }
+
+            // Video Capture: Local screen share / camera or active video element
+            let videoTrack = null;
+            if (window.room && window.room.localParticipant) {
+                window.room.localParticipant.videoTrackPublications.forEach(pub => {
+                    if (pub.track && pub.track.mediaStreamTrack) {
+                        videoTrack = pub.track.mediaStreamTrack;
+                    }
+                });
+            }
+
+            const combinedStream = new MediaStream();
+            if (videoTrack) combinedStream.addTrack(videoTrack);
+            audioDestination.stream.getAudioTracks().forEach(t => combinedStream.addTrack(t));
+
+            // Support MKV container / Matroska codecs
+            const mimeTypes = [
+                'video/x-matroska;codecs=avc1,opus',
+                'video/x-matroska',
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm'
+            ];
+            let selectedMime = '';
+            for (const mime of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mime)) {
+                    selectedMime = mime;
+                    break;
+                }
+            }
+
+            this.recorder = new MediaRecorder(combinedStream, {
+                mimeType: selectedMime || undefined,
+                videoBitsPerSecond: 3000000
+            });
+
+            this.recorder.ondataavailable = (evt) => {
+                if (evt.data && evt.data.size > 0) {
+                    this.uploadChunk(evt.data, false);
+                }
+            };
+
+            this.recorder.onstop = () => {
+                this.finalizeUpload();
+            };
+
+            // Stream 5-second slice chunks for real-time resilience
+            this.recorder.start(5000);
+            this.isRecording = true;
+
+            if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+                window.signalingWs.send(JSON.stringify({ type: 'start_recording' }));
+            }
+
+            this.updateUI(true);
+            this.startTimer();
+            showNotification('Meeting recording started in MKV format.', 'success');
+        } catch (err) {
+            console.error('Failed to start recording:', err);
+            showNotification('Failed to start meeting recording: ' + err.message, 'error');
+        }
+    },
+
+    async stop() {
+        if (!this.isRecording || !this.recorder) return;
+        this.isRecording = false;
+        try {
+            this.recorder.stop();
+        } catch (_) {}
+
+        if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+            window.signalingWs.send(JSON.stringify({ type: 'stop_recording' }));
+        }
+
+        this.updateUI(false);
+        this.stopTimer();
+        showNotification('Recording stopped. Processing MKV video on server...', 'info');
+    },
+
+    async uploadChunk(blobData, isFinal = false) {
+        const cIndex = this.chunkIndex++;
+        const formData = new FormData();
+        formData.append('chunk', blobData, `chunk_${cIndex}.tmp`);
+        formData.append('uploadId', this.uploadId);
+        formData.append('chunkIndex', cIndex);
+        formData.append('totalChunks', isFinal ? cIndex + 1 : cIndex + 100);
+        formData.append('filename', `recording_${window.meetingConfig.meetingCode}.mkv`);
+        formData.append('meeting_id', window.meetingConfig.meetingId || '');
+
+        try {
+            const url = window.meetingConfig.recordingUploadUrl || '/meetings/recording/upload/';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': window.CSRF },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.status === 'success' && data.redirect_url) {
+                showNotification('Recording saved in MKV format!', 'success');
+            }
+        } catch (err) {
+            console.warn(`Chunk ${cIndex} upload notice:`, err);
+        }
+    },
+
+    async finalizeUpload() {
+        const formData = new FormData();
+        const dummyBlob = new Blob([], { type: 'video/x-matroska' });
+        const finalIndex = this.chunkIndex;
+        formData.append('chunk', dummyBlob, 'final.tmp');
+        formData.append('uploadId', this.uploadId);
+        formData.append('chunkIndex', finalIndex);
+        formData.append('totalChunks', finalIndex + 1);
+        formData.append('filename', `recording_${window.meetingConfig.meetingCode}.mkv`);
+        formData.append('meeting_id', window.meetingConfig.meetingId || '');
+
+        try {
+            const url = window.meetingConfig.recordingUploadUrl || '/meetings/recording/upload/';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': window.CSRF },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                showNotification('Meeting recording successfully saved & published in MKV format!', 'success');
+            }
+        } catch (err) {
+            console.warn('Final chunk upload notice:', err);
+        }
+    },
+
+    startTimer() {
+        this.stopTimer();
+        this.secondsElapsed = 0;
+        this.timerInterval = setInterval(() => {
+            this.secondsElapsed++;
+            const m = String(Math.floor(this.secondsElapsed / 60)).padStart(2, '0');
+            const s = String(this.secondsElapsed % 60).padStart(2, '0');
+            const timerEl = document.getElementById('recordingTimer');
+            if (timerEl) timerEl.textContent = `${m}:${s}`;
+        }, 1000);
+    },
+
+    stopTimer() {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = null;
+    },
+
+    updateUI(isRecording) {
+        const badge = document.getElementById('recordingIndicator');
+        if (badge) badge.style.display = isRecording ? 'flex' : 'none';
+        const txt = document.getElementById('recordToggleBtnText');
+        if (txt) txt.textContent = isRecording ? 'Stop Recording' : 'Start Recording (MKV)';
+    }
+};
+
+function toggleMeetingRecording() {
+    if (window.MeetingRecorder.isRecording) {
+        window.MeetingRecorder.stop();
+    } else {
+        window.MeetingRecorder.start();
+    }
+}
+
+function showTimeLimitModal() {
+    if (!window.isHost || window.isExtended) return;
+    const modal = document.getElementById('timeLimitModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function hideTimeLimitModal() {
+    const modal = document.getElementById('timeLimitModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function handleTimeLimitChoice(choice) {
+    hideTimeLimitModal();
+    if (choice === 'continue') {
+        window.isExtended = true;
+        if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+            window.signalingWs.send(JSON.stringify({ type: 'continue_meeting' }));
+        }
+        try {
+            await fetch(window.meetingConfig.continueUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': window.CSRF,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (e) {
+            console.warn('Continue meeting HTTP fallback error:', e);
+        }
+        showNotification('Meeting extended successfully. You can continue class.', 'success');
+    } else if (choice === 'end') {
+        try {
+            await fetch(window.meetingConfig.endUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': window.CSRF,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (e) {
+            console.warn('End meeting HTTP fallback error:', e);
+        }
+        leaveMeeting();
     }
 }
 

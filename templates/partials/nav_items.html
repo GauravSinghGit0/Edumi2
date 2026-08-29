@@ -1,3 +1,4 @@
+{% load common_tags %}
 {% comment %} 
     Role-based navigation items for sidebar.
 {% endcomment %}
@@ -6,27 +7,27 @@
     {% if user.is_superuser %}
         <div class="sidebar-nav-section">
             <div class="sidebar-nav-title">Management</div>
-            <a href="{% url 'admin_panel' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'admin_panel' %}active{% endif %}">
+            <a href="{% url 'admin_panel' %}" class="sidebar-nav-item {% is_active_nav request 'admin_panel' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
                 <span class="sidebar-nav-text">Admin Panel</span>
             </a>
-            <a href="{% url 'user_management' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'user_management' or '/user-management/' in request.path or '/admin/users/' in request.path or '/admin/students/' in request.path or '/admin/teachers/' in request.path %}active{% endif %}">
+            <a href="{% url 'user_management' %}" class="sidebar-nav-item {% is_active_nav request 'user_management' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="users"></i></span>
                 <span class="sidebar-nav-text">User Manager</span>
             </a>
-            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_meetings' or '/meetings/teacher/' in request.path or '/admin/meetings/' in request.path or '/admin/live-meetings/' in request.path %}active{% endif %}">
+            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_meetings' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
                 <span class="sidebar-nav-text">Meeting Logs</span>
             </a>
-            <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'admin_dashboard' or '/admin/cameras/' in request.path or '/cameras/dashboard/' in request.path %}active{% endif %}">
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'admin_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
                 <span class="sidebar-nav-text">Camera Fleet</span>
             </a>
-            <a href="{% url 'admin_content_manager' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'admin_content_manager' or '/content-manager/' in request.path %}active{% endif %}">
+            <a href="{% url 'admin_content_manager' %}" class="sidebar-nav-item {% is_active_nav request 'admin_content_manager' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="folder-kanban"></i></span>
                 <span class="sidebar-nav-text">Content Manager</span>
             </a>
-            <a href="{% url 'recordings_folder' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'recordings_folder' or '/recordings-folder/' in request.path %}active{% endif %}">
+            <a href="{% url 'recordings_folder' %}" class="sidebar-nav-item {% is_active_nav request 'recordings_folder' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="library"></i></span>
                 <span class="sidebar-nav-text">Recordings Library</span>
             </a>
@@ -34,38 +35,38 @@
     {% elif user.userprofile.user_type == 'teacher' %}
         <div class="sidebar-nav-section">
             <div class="sidebar-nav-title">Academic</div>
-            <a href="{% url 'teacher_dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}">
+            <a href="{% url 'teacher_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
                 <span class="sidebar-nav-text">Dashboard</span>
             </a>
-            <a href="{% url 'teacher_classrooms' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_classrooms' or '/classroom/teacher/' in request.path or '/classrooms/' in request.path %}active{% endif %}">
+            <a href="{% url 'teacher_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_classrooms' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
                 <span class="sidebar-nav-text">My Classrooms</span>
             </a>
-            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'digital_library' or '/library/' in request.path %}active{% endif %}">
+            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
                 <span class="sidebar-nav-text">Digital Library</span>
             </a>
-            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_meetings' or '/meetings/teacher/' in request.path %}active{% endif %}">
+            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_meetings' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
                 <span class="sidebar-nav-text">Meetings</span>
             </a>
-            <a href="{% url 'teacher_camera_dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'teacher_camera_dashboard' or '/control-room/' in request.path or '/teacher-camera-dashboard/' in request.path or '/cameras/teacher/' in request.path %}active{% endif %}">
+            <a href="{% url 'teacher_camera_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_camera_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
                 <span class="sidebar-nav-text">Live / Videos</span>
             </a>
         </div>
         <div class="sidebar-nav-section">
             <div class="sidebar-nav-title">Content</div>
-            <a href="{% url 'manage_recordings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'manage_recordings' or '/manage-recordings/' in request.path %}active{% endif %}">
+            <a href="{% url 'manage_recordings' %}" class="sidebar-nav-item {% is_active_nav request 'manage_recordings' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
                 <span class="sidebar-nav-text">Manage Recordings</span>
             </a>
-            <a href="{% url 'camera_upload_video' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'camera_upload_video' or '/upload-video/' in request.path %}active{% endif %}">
+            <a href="{% url 'camera_upload_video' %}" class="sidebar-nav-item {% is_active_nav request 'camera_upload_video' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="upload"></i></span>
                 <span class="sidebar-nav-text">Upload Video</span>
             </a>
-            <a href="{% url 'project_list' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'project_list' or '/video-editing/' in request.path %}active{% endif %}">
+            <a href="{% url 'project_list' %}" class="sidebar-nav-item {% is_active_nav request 'project_list' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="film"></i></span>
                 <span class="sidebar-nav-text">Video Editor</span>
             </a>
@@ -73,27 +74,27 @@
     {% elif user.userprofile.user_type == 'student' %}
         <div class="sidebar-nav-section">
             <div class="sidebar-nav-title">Student Portal</div>
-            <a href="{% url 'student_dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
+            <a href="{% url 'student_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'student_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
                 <span class="sidebar-nav-text">Home</span>
             </a>
-            <a href="{% url 'student_classrooms' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_classrooms' or '/classroom/student/' in request.path or '/classrooms/' in request.path %}active{% endif %}">
+            <a href="{% url 'student_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'student_classrooms' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
                 <span class="sidebar-nav-text">Classrooms</span>
             </a>
-            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'digital_library' or '/library/' in request.path %}active{% endif %}">
+            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
                 <span class="sidebar-nav-text">Digital Library</span>
             </a>
-            <a href="{% url 'student_meetings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_meetings' or '/meetings/student/' in request.path %}active{% endif %}">
+            <a href="{% url 'student_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'student_meetings' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
                 <span class="sidebar-nav-text">Meetings</span>
             </a>
-            <a href="{% url 'student_lecture_list' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'student_lecture_list' or '/lectures/' in request.path %}active{% endif %}">
+            <a href="{% url 'student_lecture_list' %}" class="sidebar-nav-item {% is_active_nav request 'student_lecture_list' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
                 <span class="sidebar-nav-text">Live / Videos</span>
             </a>
-            <a href="{% url 'face_setup' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'face_setup' or '/attendance/face/' in request.path or '/face-setup/' in request.path %}active{% endif %}">
+            <a href="{% url 'face_setup' %}" class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
                 <span class="sidebar-nav-text">Face Identity</span>
             </a>
@@ -102,22 +103,22 @@
 
     <div class="sidebar-nav-section">
         <div class="sidebar-nav-title">Communication</div>
-        <a href="{% url 'inbox' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'inbox' or '/inbox/' in request.path or '/conversation/' in request.path %}active{% endif %}">
+        <a href="{% url 'inbox' %}" class="sidebar-nav-item {% is_active_nav request 'inbox' %}">
             <span class="sidebar-nav-icon"><i data-lucide="message-square"></i></span>
             <span class="sidebar-nav-text">Messages</span>
         </a>
-        <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'notifications_list' or '/notifications/' in request.path %}active{% endif %}">
+        <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% is_active_nav request 'notifications_list' %}">
             <span class="sidebar-nav-icon"><i data-lucide="bell"></i></span>
             <span class="sidebar-nav-text">Notifications</span>
         </a>
     </div>
     <div class="sidebar-nav-section">
         <div class="sidebar-nav-title">Account</div>
-        <a href="{% url 'profile_view' user.username %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'profile_view' or '/profile/' in request.path %}active{% endif %}">
+        <a href="{% url 'profile_view' user.username %}" class="sidebar-nav-item {% is_active_nav request 'profile_view' %}">
             <span class="sidebar-nav-icon"><i data-lucide="user"></i></span>
             <span class="sidebar-nav-text">Profile</span>
         </a>
-        <a href="{% url 'settings' %}" class="sidebar-nav-item {% if request.resolver_match.url_name == 'settings' or '/settings/' in request.path %}active{% endif %}">
+        <a href="{% url 'settings' %}" class="sidebar-nav-item {% is_active_nav request 'settings' %}">
             <span class="sidebar-nav-icon"><i data-lucide="settings"></i></span>
             <span class="sidebar-nav-text">Settings</span>
         </a>

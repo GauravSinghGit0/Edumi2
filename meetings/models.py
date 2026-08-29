@@ -121,7 +121,9 @@ class Meeting(models.Model):
     student_can_view_screenshare = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    is_extended = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.title} - {self.meeting_code}"
@@ -150,6 +152,23 @@ class Meeting(models.Model):
     def can_join(self):
         """Check if users can join this meeting"""
         return self.status == 'live' and self.sleep_status == 'active'
+
+    def is_expired(self):
+        """Check if scheduled duration time limit has passed."""
+        start = self.started_at or self.scheduled_time
+        if not start:
+            return False
+        from datetime import timedelta
+        expiration_time = start + timedelta(minutes=self.duration_minutes)
+        return timezone.now() >= expiration_time
+
+    def is_teacher_present(self):
+        """Check if the teacher or host is currently connected and active in the meeting."""
+        return MeetingParticipant.objects.filter(
+            meeting=self,
+            user=self.teacher,
+            is_active=True
+        ).exists()
     
     def put_to_sleep(self):
         """Put meeting to sleep mode"""
