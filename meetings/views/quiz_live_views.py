@@ -193,6 +193,8 @@ def submit_meeting_quiz(request, meeting_code):
         submission.marks_obtained = total_obtained_marks
         submission.save()
 
+    is_auto_submitted = data.get('is_auto_submitted', False)
+
     try:
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
@@ -206,6 +208,7 @@ def submit_meeting_quiz(request, meeting_code):
                     'student_name': request.user.get_full_name() or request.user.username,
                     'quiz_id': quiz.id,
                     'tab_switch_count': tab_switch_count,
+                    'is_auto_submitted': is_auto_submitted,
                     'marks_obtained': submission.marks_obtained,
                     'total_marks': quiz.total_marks
                 }

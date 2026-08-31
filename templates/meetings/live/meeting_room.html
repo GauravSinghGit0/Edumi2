@@ -922,11 +922,14 @@
 <!-- Live Meeting Student Quiz Side Panel -->
 <div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none;">
     <div class="quiz-panel-header">
-        <div class="quiz-panel-title-box">
-            <h3 id="liveQuizPanelTitle" class="quiz-copy-protected">Live Meeting Quiz</h3>
-            <span id="liveQuizTimerBadge" style="display: none; background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px;">00:00</span>
+        <div class="quiz-panel-title-box" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <h3 id="liveQuizPanelTitle" class="quiz-copy-protected" style="margin:0;">Live Meeting Quiz</h3>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span id="studentWarningCountBadge" style="background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⚠️ Warnings: 0/2</span>
+                <span id="liveQuizTimerBadge" style="display: none; background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px;">00:00</span>
+            </div>
         </div>
-        <div class="quiz-progress-text" id="liveQuizProgressText">Question 1 of 1</div>
+        <div class="quiz-progress-text" id="liveQuizProgressText" style="margin-top:4px;">Question 1 of 1</div>
     </div>
 
     <div class="quiz-panel-body" id="liveQuizPanelBody">
@@ -4236,6 +4239,25 @@ let isQuizActive = false;
 let teacherLiveQuizSubmissions = new Map();
 let lastWarningTimestamp = 0;
 
+function getLocalStudentIdentity() {
+    if (window.room && window.room.localParticipant && window.room.localParticipant.identity) {
+        return String(window.room.localParticipant.identity);
+    }
+    return String(window.meetingConfig?.currentUserId || window.currentUserId || _d.userId || 'student');
+}
+
+function getLocalStudentName() {
+    const id = getLocalStudentIdentity();
+    if (window.IdentityDirectory) {
+        const name = window.IdentityDirectory.getName(id);
+        if (name && name !== id) return name;
+    }
+    if (window.room && window.room.localParticipant && window.room.localParticipant.name) {
+        return window.room.localParticipant.name;
+    }
+    return window.currentUsername || _d.userName || window.userName || 'Student';
+}
+
 function toggleQuizPanel() {
     if (isHost) {
         const panel = document.getElementById('teacherQuizMonitorPanel');
@@ -4306,15 +4328,29 @@ function updateTeacherMonitorStudentList() {
     const container = document.getElementById('teacherMonitorStudentsList');
     if (!container) return;
 
+    let studentMap = new Map();
+
+    // 1. Gather connected remote participants (excluding host)
     let participants = typeof getRemoteParticipants === 'function' ? getRemoteParticipants() : [];
-    document.getElementById('teacherMonitorTotalStudents').textContent = `${participants.length} Joined`;
+    participants.forEach(p => {
+        const uid = String(p.identity);
+        const name = p.name || (window.IdentityDirectory ? window.IdentityDirectory.getName(uid) : uid);
+        studentMap.set(uid, { identity: uid, name: name });
+    });
+
+    // 2. Gather entries from teacherLiveQuizSubmissions map
+    teacherLiveQuizSubmissions.forEach((sub, uid) => {
+        if (!studentMap.has(uid)) {
+            studentMap.set(uid, { identity: uid, name: sub.student_name || uid });
+        }
+    });
+
+    document.getElementById('teacherMonitorTotalStudents').textContent = `${studentMap.size} Active`;
 
     let html = '';
     let submittedCount = 0;
 
-    participants.forEach(p => {
-        const uid = String(p.identity);
-        const name = p.name || (window.IdentityDirectory ? window.IdentityDirectory.getName(uid) : uid);
+    studentMap.forEach((student, uid) => {
         const subInfo = teacherLiveQuizSubmissions.get(uid);
 
         let statusBadge = '<span style="background:#3b82f6; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔵 Taking Test</span>';
@@ -4337,16 +4373,16 @@ function updateTeacherMonitorStudentList() {
         }
 
         html += `
-            <div style="background: rgba(30,41,59,0.7); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+            <div style="background: rgba(30,41,59,0.7); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                 <div>
-                    <div style="font-size: 13px; font-weight: 600; color: #f1f5f9;">${name}</div>
+                    <div style="font-size: 13px; font-weight: 600; color: #f1f5f9;">${student.name}</div>
                     <div style="margin-top: 2px;">${violationInfo}</div>
                 </div>
                 <div>${statusBadge}</div>
             </div>`;
     });
 
-    if (participants.length === 0) {
+    if (studentMap.size === 0) {
         html = '<p style="color:#64748b; font-size:12px; text-align:center; padding:10px 0;">No active students connected.</p>';
     }
 
@@ -4447,11 +4483,19 @@ function startLiveMeetingQuiz(quiz) {
     document.getElementById('liveQuizPanelTitle').textContent = quiz.title;
     panel.style.display = 'flex';
 
+    // Reset student warning badge
+    const badge = document.getElementById('studentWarningCountBadge');
+    if (badge) {
+        badge.textContent = '⚠️ Warnings: 0/2';
+        badge.style.background = 'rgba(245, 158, 11, 0.2)';
+        badge.style.color = '#f59e0b';
+        badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+    }
+
     renderQuizQuestion(0);
 
     // Anti-cheating event listeners
     window.addEventListener('blur', handleQuizTabSwitch);
-    window.addEventListener('focusout', handleQuizTabSwitch);
     document.addEventListener('visibilitychange', handleQuizVisibilityChange);
 
     // Copy and text selection protection
@@ -4467,8 +4511,8 @@ function preventQuizCopy(e) {
 
     broadcastQuizEvent({
         type: 'quiz_copy_warning',
-        student_id: currentUserId || 'student',
-        student_name: window.IdentityDirectory ? (window.IdentityDirectory.getName(currentUserId) || currentUsername) : currentUsername,
+        student_id: getLocalStudentIdentity(),
+        student_name: getLocalStudentName(),
         timestamp: new Date().toLocaleTimeString()
     });
 
@@ -4501,16 +4545,32 @@ function triggerAntiCheatingWarning() {
 
     const isAutoSubmitted = (studentTabSwitchCount >= 3);
 
+    // Update warning counter badge on student panel
+    const badge = document.getElementById('studentWarningCountBadge');
+    if (badge) {
+        if (isAutoSubmitted) {
+            badge.textContent = '🚨 AUTO-SUBMITTED (3/3)';
+            badge.style.background = 'rgba(239, 68, 68, 0.2)';
+            badge.style.color = '#ef4444';
+            badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        } else {
+            badge.textContent = `⚠️ Warnings: ${studentTabSwitchCount}/2`;
+            badge.style.background = 'rgba(245, 158, 11, 0.2)';
+            badge.style.color = '#f59e0b';
+            badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        }
+    }
+
     if (isAutoSubmitted) {
-        showNotification('🚨 3rd Violation Recorded! Your test has been AUTO-SUBMITTED due to cheating policy!', 'error');
+        showNotification('🚨 3rd Violation Recorded! Your test has been AUTO-SUBMITTED due to anti-cheating policy!', 'error');
     } else {
         showNotification(`⚠️ WARNING (${studentTabSwitchCount}/2): Window/Tab switching is strictly prohibited! (Warning ${studentTabSwitchCount} of 2. 3rd time AUTO-SUBMITS your test)`, 'warning');
     }
 
     const alertPayload = {
         type: 'quiz_tab_switch_warning',
-        student_id: currentUserId || 'student',
-        student_name: window.IdentityDirectory ? (window.IdentityDirectory.getName(currentUserId) || currentUsername) : currentUsername,
+        student_id: getLocalStudentIdentity(),
+        student_name: getLocalStudentName(),
         tab_switch_count: studentTabSwitchCount,
         is_auto_submitted: isAutoSubmitted,
         timestamp: new Date().toLocaleTimeString()
@@ -4539,16 +4599,19 @@ function broadcastQuizEvent(payload) {
 
 function displayTeacherQuizTabAlert(data) {
     const container = document.getElementById('teacherMonitorAlertsBox');
-    if (!container) return;
-
-    const alertEl = document.createElement('div');
     const isAuto = data.is_auto_submitted;
     const isCopy = data.is_copy;
 
     let alertBg = isAuto ? '#ef4444' : (isCopy ? '#dc2626' : '#f59e0b');
     let alertMsg = isAuto ? `AUTO-SUBMITTED (3 Violations!)` : (isCopy ? `Attempted to Copy Question Text` : `Switched Window/Tab (${data.tab_switch_count}/2)`);
 
-    alertEl.style.cssText = `background:${alertBg}; color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:space-between; animation: slideDown 0.3s ease;`;
+    // High Priority Notification Toast for Teacher
+    showNotification(`⚠️ ${data.student_name}: ${alertMsg}`, isAuto ? 'error' : 'warning');
+
+    if (!container) return;
+
+    const alertEl = document.createElement('div');
+    alertEl.style.cssText = `background:${alertBg}; color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:space-between; animation: slideDown 0.3s ease; margin-bottom:4px;`;
     alertEl.innerHTML = `<span>⚠️ <strong>${data.student_name}</strong> ${alertMsg}</span> <span style="font-size:10px; opacity:0.8; margin-left:6px;">${data.timestamp}</span>`;
 
     container.prepend(alertEl);
@@ -4654,7 +4717,6 @@ function submitQuizAnswers(isAutoSubmit = false) {
 
     // Remove anti-cheating listeners
     window.removeEventListener('blur', handleQuizTabSwitch);
-    window.removeEventListener('focusout', handleQuizTabSwitch);
     document.removeEventListener('visibilitychange', handleQuizVisibilityChange);
 
     const timeTaken = Math.round((Date.now() - (quizStartTime || Date.now())) / 1000);

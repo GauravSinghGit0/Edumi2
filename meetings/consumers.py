@@ -315,9 +315,21 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     self.room_group_name,
                     {
                         'type': 'quiz_tab_switch_warning',
-                        'student_id': self.user.id,
-                        'student_name': data.get('student_name', self.user.username),
+                        'student_id': self.user.id if self.user and self.user.is_authenticated else data.get('student_id', 'student'),
+                        'student_name': data.get('student_name', self.user.get_full_name() or self.user.username if self.user and self.user.is_authenticated else 'Student'),
                         'tab_switch_count': data.get('tab_switch_count', 1),
+                        'is_auto_submitted': data.get('is_auto_submitted', False),
+                        'timestamp': data.get('timestamp', timezone.now().strftime('%H:%M:%S'))
+                    }
+                )
+
+            elif message_type == 'quiz_copy_warning':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'quiz_copy_warning',
+                        'student_id': self.user.id if self.user and self.user.is_authenticated else data.get('student_id', 'student'),
+                        'student_name': data.get('student_name', self.user.get_full_name() or self.user.username if self.user and self.user.is_authenticated else 'Student'),
                         'timestamp': data.get('timestamp', timezone.now().strftime('%H:%M:%S'))
                     }
                 )
@@ -478,6 +490,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'student_name': event['student_name'],
             'quiz_id': event['quiz_id'],
             'tab_switch_count': event.get('tab_switch_count', 0),
+            'is_auto_submitted': event.get('is_auto_submitted', False),
             'marks_obtained': event.get('marks_obtained', 0),
             'total_marks': event.get('total_marks', 0)
         }))
@@ -488,6 +501,15 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'student_id': event['student_id'],
             'student_name': event['student_name'],
             'tab_switch_count': event.get('tab_switch_count', 1),
+            'is_auto_submitted': event.get('is_auto_submitted', False),
+            'timestamp': event.get('timestamp', '')
+        }))
+
+    async def quiz_copy_warning(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'quiz_copy_warning',
+            'student_id': event['student_id'],
+            'student_name': event['student_name'],
             'timestamp': event.get('timestamp', '')
         }))
 
