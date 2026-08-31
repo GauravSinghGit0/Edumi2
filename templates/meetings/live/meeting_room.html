@@ -1366,7 +1366,7 @@ async function init() {
         }
 
         // Seed manual registry from SDK's remoteParticipants map (already connected peers)
-        if (window.room.remoteParticipants) {
+        if (window.room && window.room.remoteParticipants && typeof window.room.remoteParticipants.forEach === 'function') {
             window.room.remoteParticipants.forEach((p, identity) => {
                 if (p && p.identity) {
                     window._remoteParticipantsRegistry.set(p.identity, p);
@@ -1817,7 +1817,7 @@ function onParticipantConnected(participant) {
     }
 
     // Subscribe to any already-published tracks
-    if (participant.trackPublications) {
+    if (participant && participant.trackPublications && typeof participant.trackPublications.forEach === 'function') {
         participant.trackPublications.forEach(pub => {
             if (pub.isSubscribed && pub.track) {
                 onTrackSubscribed(pub.track, pub, participant);
@@ -2002,68 +2002,135 @@ window.MeetingRecorder = {
             this.chunkIndex = 0;
             this.secondsElapsed = 0;
 
-            // Audio mixing: Combine local microphone + all remote participant audio tracks
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const audioDestination = audioCtx.createMediaStreamDestination();
 
-            if (window.room && window.room.localParticipant) {
-                window.room.localParticipant.audioTrackPublications.forEach(pub => {
-                    if (pub.track && pub.track.mediaStreamTrack) {
-                        try {
-                            const localSrc = audioCtx.createMediaStreamSource(new MediaStream([pub.track.mediaStreamTrack]));
-                            localSrc.connect(audioDestination);
-                        } catch(_) {}
+            const safeGetTracks = (pubs) => {
+                if (!pubs) return [];
+                const pubList = (typeof pubs.values === 'function') ? Array.from(pubs.values()) :
+                                (typeof pubs.forEach === 'function' || Array.isArray(pubs)) ? Array.from(pubs) :
+                                (typeof pubs === 'object') ? Object.values(pubs) : [];
+                const tracks = [];
+                pubList.forEach(pub => {
+                    if (!pub) return;
+                    const tr = pub.track || pub.audioTrack || pub.videoTrack || pub;
+                    if (tr) {
+                        const mst = tr.mediaStreamTrack || (tr instanceof MediaStreamTrack ? tr : null);
+                        if (mst && mst.readyState === 'live') {
+                            tracks.push(mst);
+                        }
                     }
+                });
+                return tracks;
+            };
+
+            // Audio mixing: Combine local microphone + all remote participant audio tracks
+            if (window.room && window.room.localParticipant) {
+                const lp = window.room.localParticipant;
+                const localAudioPubs = lp.audioTrackPublications || lp.audioTracks || lp.trackPublications;
+                safeGetTracks(localAudioPubs).forEach(mst => {
+                    try {
+                        const src = audioCtx.createMediaStreamSource(new MediaStream([mst]));
+                        src.connect(audioDestination);
+                    } catch (_) {}
                 });
             }
 
-            if (window.room && window.room.remoteParticipants) {
-                window.room.remoteParticipants.forEach(p => {
-                    p.audioTrackPublications.forEach(pub => {
-                        if (pub.track && pub.track.mediaStreamTrack) {
+            const remotes = typeof getRemoteParticipants === 'function' ? getRemoteParticipants() : [];
+            remotes.forEach(p => {
+                if (!p) return;
+                const rAudioPubs = p.audioTrackPublications || p.audioTracks || p.trackPublications;
+                safeGetTracks(rAudioPubs).forEach(mst => {
+                    try {
+                        const src = audioCtx.createMediaStreamSource(new MediaStream([mst]));
+                        src.connect(audioDestination);
+                    } catch (_) {}
+                });
+            });
+
+            // Also check any HTML <audio> or <video> elements on page playing audio
+            document.querySelectorAll('audio, video').forEach(mediaEl => {
+                if (mediaEl.srcObject && mediaEl.srcObject instanceof MediaStream) {
+                    mediaEl.srcObject.getAudioTracks().forEach(mst => {
+                        if (mst && mst.readyState === 'live') {
                             try {
-                                const rSrc = audioCtx.createMediaStreamSource(new MediaStream([pub.track.mediaStreamTrack]));
-                                rSrc.connect(audioDestination);
+                                const src = audioCtx.createMediaStreamSource(new MediaStream([mst]));
+                                src.connect(audioDestination);
                             } catch (_) {}
                         }
                     });
-                });
-            }
+                }
+            });
 
             // Video Capture: Local screen share / camera or active video element
             let videoTrack = null;
             if (window.room && window.room.localParticipant) {
-                window.room.localParticipant.videoTrackPublications.forEach(pub => {
-                    if (pub.track && pub.track.mediaStreamTrack) {
-                        videoTrack = pub.track.mediaStreamTrack;
+                const lp = window.room.localParticipant;
+                const localVideoPubs = lp.videoTrackPublications || lp.videoTracks || lp.trackPublications;
+                const localVids = safeGetTracks(localVideoPubs);
+                if (localVids.length > 0) videoTrack = localVids[0];
+            }
+
+            if (!videoTrack) {
+                for (const p of remotes) {
+                    const rVidPubs = p ? (p.videoTrackPublications || p.videoTracks || p.trackPublications) : null;
+                    const rVids = safeGetTracks(rVidPubs);
+                    if (rVids.length > 0) {
+                        videoTrack = rVids[0];
+                        break;
                     }
-                });
+                }
+            }
+
+            if (!videoTrack) {
+                // Standby Canvas Stream Fallback for audio-only / camera-off meetings
+                try {
+                    const fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = 1280;
+                    fallbackCanvas.height = 720;
+                    const fCtx = fallbackCanvas.getContext('2d');
+                    if (fCtx) {
+                        fCtx.fillStyle = '#0f172a';
+                        fCtx.fillRect(0, 0, 1280, 720);
+                        fCtx.fillStyle = '#38bdf8';
+                        fCtx.font = 'bold 36px sans-serif';
+                        fCtx.textAlign = 'center';
+                        fCtx.fillText((window.meetingConfig && window.meetingConfig.meetingTitle) || 'Live Meeting', 640, 340);
+                        fCtx.fillStyle = '#94a3b8';
+                        fCtx.font = '22px sans-serif';
+                        fCtx.fillText('Audio-Only Session / Standby Recording', 640, 390);
+
+                        const canvasStream = fallbackCanvas.captureStream(10);
+                        const cVid = canvasStream.getVideoTracks();
+                        if (cVid.length > 0) videoTrack = cVid[0];
+                    }
+                } catch (_) {}
             }
 
             const combinedStream = new MediaStream();
             if (videoTrack) combinedStream.addTrack(videoTrack);
             audioDestination.stream.getAudioTracks().forEach(t => combinedStream.addTrack(t));
 
-            // Support MKV container / Matroska codecs
             const mimeTypes = [
                 'video/x-matroska;codecs=avc1,opus',
                 'video/x-matroska',
                 'video/webm;codecs=vp9,opus',
                 'video/webm;codecs=vp8,opus',
-                'video/webm'
+                'video/webm',
+                'audio/webm'
             ];
             let selectedMime = '';
             for (const mime of mimeTypes) {
-                if (MediaRecorder.isTypeSupported(mime)) {
+                if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) {
                     selectedMime = mime;
                     break;
                 }
             }
 
-            this.recorder = new MediaRecorder(combinedStream, {
-                mimeType: selectedMime || undefined,
+            this.recorder = new MediaRecorder(combinedStream, selectedMime ? {
+                mimeType: selectedMime,
                 videoBitsPerSecond: 3000000
-            });
+            } : undefined);
 
             this.recorder.ondataavailable = (evt) => {
                 if (evt.data && evt.data.size > 0) {
@@ -2075,7 +2142,6 @@ window.MeetingRecorder = {
                 this.finalizeUpload();
             };
 
-            // Stream 5-second slice chunks for real-time resilience
             this.recorder.start(5000);
             this.isRecording = true;
 
@@ -2085,7 +2151,7 @@ window.MeetingRecorder = {
 
             this.updateUI(true);
             this.startTimer();
-            showNotification('Meeting recording started in MKV format.', 'success');
+            showNotification('Meeting recording started.', 'success');
         } catch (err) {
             console.error('Failed to start recording:', err);
             showNotification('Failed to start meeting recording: ' + err.message, 'error');
@@ -2185,6 +2251,12 @@ window.MeetingRecorder = {
         if (txt) txt.textContent = isRecording ? 'Stop Recording' : 'Start Recording (MKV)';
     }
 };
+
+window.addEventListener('beforeunload', () => {
+    if (window.MeetingRecorder && window.MeetingRecorder.isRecording) {
+        try { window.MeetingRecorder.stop(); } catch (_) {}
+    }
+});
 
 function toggleMeetingRecording() {
     if (window.MeetingRecorder.isRecording) {
@@ -2561,7 +2633,8 @@ function updateTeacherTrackSubscription() {
     
     if (!hostParticipant) return;
     
-    hostParticipant.trackPublications.forEach(pub => {
+    if (hostParticipant && hostParticipant.trackPublications && typeof hostParticipant.trackPublications.forEach === 'function') {
+        hostParticipant.trackPublications.forEach(pub => {
         if (!pub.track) return;
 
         const isScreenSrc = pub.source === Track.Source.ScreenShare || pub.source === 'screen_share';

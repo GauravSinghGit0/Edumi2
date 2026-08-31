@@ -20,7 +20,7 @@ from common.validators import (
 )
 from meetings.models import Meeting
 from cameras.models import CameraRecording
-from cameras.ffmpeg_helpers import get_video_duration
+from cameras.ffmpeg_helpers import get_video_duration, get_ffmpeg_binary
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ def meeting_chunked_upload(request):
                 return JsonResponse({'status': 'error', 'message': 'Recording file exceeds maximum allowed size.'}, status=400)
 
             # Transcode/Remux raw stream into standardized MKV format using FFmpeg
-            ffmpeg_bin = getattr(settings, 'FFMPEG_BINARY', 'ffmpeg') or 'ffmpeg'
+            ffmpeg_bin = get_ffmpeg_binary()
             cmd = [
                 ffmpeg_bin, "-y",
                 "-i", raw_assembled_path,
