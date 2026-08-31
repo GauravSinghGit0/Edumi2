@@ -895,7 +895,7 @@ window.studentCanViewCamera = window.meetingConfig.studentCanViewCamera;
 window.studentCanViewScreenshare = window.meetingConfig.studentCanViewScreenshare;
 
 // ── LiveKit SDK Initialization ────────────────────────────────────────────────
-var Room, RoomEvent, Track, TrackEvent, LocalTrack,
+var Room, RoomEvent, Track, TrackEvent, LocalTrack, createLocalTracks,
     createLocalScreenTracks, VideoPresets, ScreenSharePresets, ConnectionState;
 
 function extractLiveKitSymbols() {
@@ -907,6 +907,7 @@ function extractLiveKitSymbols() {
         Track = bundle.Track;
         TrackEvent = bundle.TrackEvent;
         LocalTrack = bundle.LocalTrack;
+        createLocalTracks = bundle.createLocalTracks;
         createLocalScreenTracks = bundle.createLocalScreenTracks;
         VideoPresets = bundle.VideoPresets;
         ScreenSharePresets = bundle.ScreenSharePresets;
@@ -1330,41 +1331,76 @@ async function init() {
                 showNotification('Camera & Microphone disabled: HTTPS connection required by browser.', 'warning');
             }
         } else {
-            // Attempt Microphone (Graceful fallback on error)
-            if (window.isMicOn) {
+            // Attempt unified Audio & Video track acquisition & publishing (sending together for sync & zero delay)
+            const createLocalTracksFn = createLocalTracks || (window.LiveKitBundle && window.LiveKitBundle.createLocalTracks) || (window.LivekitClient && window.LivekitClient.createLocalTracks);
+            let combinedSuccess = false;
+
+            if (window.isMicOn && window.isCameraOn && typeof createLocalTracksFn === 'function') {
                 try {
-                    await window.room.localParticipant.setMicrophoneEnabled(true);
-                } catch (micErr) {
-                    console.warn('Microphone initialization failed:', micErr);
-                    window.isMicOn = false;
-                    let msg = 'Microphone access failed. Joined in listen-only mode.';
-                    if (micErr.name === 'NotFoundError' || micErr.name === 'DevicesNotFoundError') {
-                        msg = 'No microphone found on this device.';
-                    } else if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
-                        msg = 'Microphone permission denied.';
-                    } else if (micErr.name === 'NotReadableError' || micErr.name === 'TrackStartError') {
-                        msg = 'Microphone is currently in use by another app.';
+                    console.log('Acquiring Audio and Video tracks together to prevent delay and missing audio...');
+                    const localTracks = await createLocalTracksFn({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        },
+                        video: VideoPresets ? { resolution: VideoPresets.h720 } : true
+                    });
+
+                    for (const track of localTracks) {
+                        await window.room.localParticipant.publishTrack(track, {
+                            simulcast: true,
+                            videoCodec: 'vp8'
+                        });
                     }
-                    showNotification(msg, 'warning');
+                    combinedSuccess = true;
+                    console.log('Successfully published Audio and Video tracks together!');
+                } catch (combinedErr) {
+                    console.warn('Unified Audio+Video acquisition skipped/failed, falling back to individual track setup:', combinedErr);
                 }
             }
 
-            // Attempt Camera (Graceful fallback on error)
-            if (window.isCameraOn) {
-                try {
-                    await window.room.localParticipant.setCameraEnabled(true);
-                } catch (camErr) {
-                    console.warn('Camera initialization failed:', camErr);
-                    window.isCameraOn = false;
-                    let msg = 'Camera access failed. Joined without video.';
-                    if (camErr.name === 'NotFoundError' || camErr.name === 'DevicesNotFoundError') {
-                        msg = 'No camera found on this device.';
-                    } else if (camErr.name === 'NotAllowedError' || camErr.name === 'PermissionDeniedError') {
-                        msg = 'Camera permission denied.';
-                    } else if (camErr.name === 'NotReadableError' || camErr.name === 'TrackStartError') {
-                        msg = 'Camera is currently in use by another app.';
+            if (!combinedSuccess) {
+                // Fallback: Attempt Microphone (Graceful fallback on error)
+                if (window.isMicOn) {
+                    try {
+                        await window.room.localParticipant.setMicrophoneEnabled(true, {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        });
+                    } catch (micErr) {
+                        console.warn('Microphone initialization failed:', micErr);
+                        window.isMicOn = false;
+                        let msg = 'Microphone access failed. Joined in listen-only mode.';
+                        if (micErr.name === 'NotFoundError' || micErr.name === 'DevicesNotFoundError') {
+                            msg = 'No microphone found on this device.';
+                        } else if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
+                            msg = 'Microphone permission denied.';
+                        } else if (micErr.name === 'NotReadableError' || micErr.name === 'TrackStartError') {
+                            msg = 'Microphone is currently in use by another app.';
+                        }
+                        showNotification(msg, 'warning');
                     }
-                    showNotification(msg, 'warning');
+                }
+
+                // Fallback: Attempt Camera (Graceful fallback on error)
+                if (window.isCameraOn) {
+                    try {
+                        await window.room.localParticipant.setCameraEnabled(true);
+                    } catch (camErr) {
+                        console.warn('Camera initialization failed:', camErr);
+                        window.isCameraOn = false;
+                        let msg = 'Camera access failed. Joined without video.';
+                        if (camErr.name === 'NotFoundError' || camErr.name === 'DevicesNotFoundError') {
+                            msg = 'No camera found on this device.';
+                        } else if (camErr.name === 'NotAllowedError' || camErr.name === 'PermissionDeniedError') {
+                            msg = 'Camera permission denied.';
+                        } else if (camErr.name === 'NotReadableError' || camErr.name === 'TrackStartError') {
+                            msg = 'Camera is currently in use by another app.';
+                        }
+                        showNotification(msg, 'warning');
+                    }
                 }
             }
         }
@@ -2025,6 +2061,9 @@ window.MeetingRecorder = {
             this.secondsElapsed = 0;
 
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
             const audioDestination = audioCtx.createMediaStreamDestination();
 
             const safeGetTracks = (pubs) => {
@@ -2097,7 +2136,7 @@ window.MeetingRecorder = {
                             height: { ideal: 1080 },
                             frameRate: { ideal: 30 }
                         },
-                        audio: false
+                        audio: true
                     });
                     const dTracks = displayStream.getVideoTracks();
                     if (dTracks.length > 0) {
@@ -2105,6 +2144,15 @@ window.MeetingRecorder = {
                         videoTrack.onended = () => {
                             if (this.isRecording) this.stop();
                         };
+                    }
+                    const dAudio = displayStream.getAudioTracks();
+                    if (dAudio.length > 0) {
+                        dAudio.forEach(at => {
+                            try {
+                                const src = audioCtx.createMediaStreamSource(new MediaStream([at]));
+                                src.connect(audioDestination);
+                            } catch (_) {}
+                        });
                     }
                 } catch (displayErr) {
                     console.info('Full browser tab capture prompt skipped/canceled, proceeding with active room layout fallback:', displayErr);
