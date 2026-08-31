@@ -2635,28 +2635,29 @@ function updateTeacherTrackSubscription() {
     
     if (hostParticipant && hostParticipant.trackPublications && typeof hostParticipant.trackPublications.forEach === 'function') {
         hostParticipant.trackPublications.forEach(pub => {
-        if (!pub.track) return;
+            if (!pub.track) return;
 
-        const isScreenSrc = pub.source === Track.Source.ScreenShare || pub.source === 'screen_share';
-        const isCamSrc    = pub.source === Track.Source.Camera;
+            const isScreenSrc = pub.source === Track.Source.ScreenShare || pub.source === 'screen_share';
+            const isCamSrc    = pub.source === Track.Source.Camera;
 
-        if (isCamSrc) {
-            if (window.studentCanViewCamera) {
-                // Re-attach via TrackManager (dedup-safe)
-                window.TrackManager.attach(pub.track, pub, hostParticipant);
-            } else {
-                // Detach & clean up camera track
-                window.TrackManager.detach(pub.track, pub, hostParticipant);
+            if (isCamSrc) {
+                if (window.studentCanViewCamera) {
+                    // Re-attach via TrackManager (dedup-safe)
+                    window.TrackManager.attach(pub.track, pub, hostParticipant);
+                } else {
+                    // Detach & clean up camera track
+                    window.TrackManager.detach(pub.track, pub, hostParticipant);
+                }
+            } else if (isScreenSrc) {
+                if (window.studentCanViewScreenshare) {
+                    // Screen share goes into its own dedicated box via TrackManager
+                    window.TrackManager.attach(pub.track, pub, hostParticipant);
+                } else {
+                    window.TrackManager.detach(pub.track, pub, hostParticipant);
+                }
             }
-        } else if (isScreenSrc) {
-            if (window.studentCanViewScreenshare) {
-                // Screen share goes into its own dedicated box via TrackManager
-                window.TrackManager.attach(pub.track, pub, hostParticipant);
-            } else {
-                window.TrackManager.detach(pub.track, pub, hostParticipant);
-            }
-        }
-    });
+        });
+    }
 }
 
 async function toggleStudentViewPermission(type) {
