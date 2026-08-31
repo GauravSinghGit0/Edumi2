@@ -37,7 +37,7 @@ hyperlink
 idna
 Incremental
 kombu
-livekit-api>=0.7.0
+livekit-api>=0.4.0
 MarkupSafe
 msgpack
 numpy
