@@ -2289,6 +2289,10 @@ function onDataReceived(payload, participant) {
                 }
             }
         } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted') {
+            if (participant && participant.identity) {
+                if (!msg.student_id) msg.student_id = String(participant.identity);
+                if (!msg.student_name && participant.name) msg.student_name = participant.name;
+            }
             if (isHost && typeof handleTeacherQuizEvent === 'function') {
                 handleTeacherQuizEvent(msg);
             }
@@ -4313,22 +4317,38 @@ function closeTeacherQuizMonitor() {
     if (monitorPanel) monitorPanel.style.display = 'none';
 }
 
+function findTeacherQuizSubKey(studentId, studentName) {
+    const strId = String(studentId || '');
+    const strName = String(studentName || '').toLowerCase().trim();
+
+    for (let [key, val] of teacherLiveQuizSubmissions.entries()) {
+        if (String(key) === strId) return key;
+        if (val.student_name && val.student_name.toLowerCase().trim() === strName) return key;
+    }
+    return strId || strName || 'student';
+}
+
 function handleTeacherQuizEvent(msg) {
     if (!isHost) return;
 
     const studentId = String(msg.student_id || 'student');
-    let sub = teacherLiveQuizSubmissions.get(studentId) || { student_name: msg.student_name || 'Student' };
-    sub.student_name = msg.student_name || sub.student_name;
+    const studentName = msg.student_name || 'Student';
+
+    let targetKey = findTeacherQuizSubKey(studentId, studentName);
+    let sub = teacherLiveQuizSubmissions.get(targetKey) || { student_name: studentName, tab_switch_count: 0 };
+
+    sub.student_name = studentName;
+    if (msg.student_id) sub.student_id = String(msg.student_id);
 
     if (msg.type === 'quiz_submitted') {
         sub.submitted = true;
         sub.marks_obtained = msg.marks_obtained;
         sub.total_marks = msg.total_marks;
-        sub.tab_switch_count = msg.tab_switch_count;
-        sub.is_auto_submitted = msg.is_auto_submitted || false;
+        sub.tab_switch_count = msg.tab_switch_count !== undefined ? msg.tab_switch_count : sub.tab_switch_count;
+        sub.is_auto_submitted = msg.is_auto_submitted || sub.is_auto_submitted || false;
         showNotification(`📝 ${sub.student_name} submitted quiz! (${msg.marks_obtained}/${msg.total_marks} marks)`, 'info');
     } else if (msg.type === 'quiz_tab_switch_warning') {
-        sub.tab_switch_count = msg.tab_switch_count;
+        sub.tab_switch_count = Math.max(sub.tab_switch_count || 0, msg.tab_switch_count || 1);
         if (msg.is_auto_submitted) sub.is_auto_submitted = true;
         displayTeacherQuizTabAlert(msg);
     } else if (msg.type === 'quiz_copy_warning') {
@@ -4341,7 +4361,11 @@ function handleTeacherQuizEvent(msg) {
         });
     }
 
-    teacherLiveQuizSubmissions.set(studentId, sub);
+    teacherLiveQuizSubmissions.set(targetKey, sub);
+    if (studentId && studentId !== targetKey) {
+        teacherLiveQuizSubmissions.set(studentId, sub);
+    }
+
     updateTeacherMonitorStudentList();
 }
 
@@ -4372,13 +4396,22 @@ function updateTeacherMonitorStudentList() {
     let submittedCount = 0;
 
     studentMap.forEach((student, uid) => {
-        const subInfo = teacherLiveQuizSubmissions.get(uid);
+        let subInfo = teacherLiveQuizSubmissions.get(uid);
+
+        if (!subInfo) {
+            for (let [k, v] of teacherLiveQuizSubmissions.entries()) {
+                if (v.student_name && v.student_name.toLowerCase().trim() === String(student.name).toLowerCase().trim()) {
+                    subInfo = v;
+                    break;
+                }
+            }
+        }
 
         let statusBadge = '<span style="background:#3b82f6; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔵 Taking Test</span>';
         let violationInfo = '<span style="color:#64748b; font-size:11px;">0 Warnings</span>';
 
         if (subInfo) {
-            if (subInfo.is_auto_submitted) {
+            if (subInfo.is_auto_submitted || (subInfo.tab_switch_count >= 3)) {
                 submittedCount++;
                 statusBadge = '<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔴 AUTO-SUBMITTED</span>';
                 violationInfo = `<span style="color:#ef4444; font-size:11px; font-weight:600;">3 Violations (Limit Exceeded)</span>`;
@@ -4638,16 +4671,28 @@ function acknowledgeStudentQuizWarning() {
 }
 
 function broadcastQuizEvent(payload) {
-    if (window.room && window.room.localParticipant && typeof window.room.localParticipant.publishData === 'function') {
+    const jsonStr = JSON.stringify(payload);
+
+    // 1. LiveKit DataChannel
+    if (window.room && window.room.localParticipant) {
         try {
             const encoder = new TextEncoder();
-            window.room.localParticipant.publishData(encoder.encode(JSON.stringify(payload)), 1);
-        } catch(e) {}
+            const data = encoder.encode(jsonStr);
+            if (typeof window.room.localParticipant.publishData === 'function') {
+                window.room.localParticipant.publishData(data, 0); // 0 = RELIABLE
+            }
+        } catch(e) {
+            console.warn('LiveKit publishData error:', e);
+        }
     }
+
+    // 2. WebSocket Signaling
     if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
         try {
-            window.signalingWs.send(JSON.stringify(payload));
-        } catch(e) {}
+            window.signalingWs.send(jsonStr);
+        } catch(e) {
+            console.warn('WebSocket send error:', e);
+        }
     }
 }
 
@@ -4727,6 +4772,7 @@ function renderQuizQuestion(idx) {
 }
 
 function selectQuizMcqOption(questionId, choiceId, el) {
+    if (!isQuizActive) return;
     document.querySelectorAll('#liveQuizMcqContainer .quiz-option-item').forEach(item => item.classList.remove('selected'));
     el.classList.add('selected');
     const radio = el.querySelector('input[type="radio"]');
@@ -4750,6 +4796,7 @@ function saveCurrentQuestionAnswer() {
 }
 
 function nextQuizQuestion() {
+    if (!isQuizActive) return;
     saveCurrentQuestionAnswer();
     if (currentQuizQuestionIndex < activeLiveQuiz.questions.length - 1) {
         renderQuizQuestion(currentQuizQuestionIndex + 1);
@@ -4757,6 +4804,7 @@ function nextQuizQuestion() {
 }
 
 function skipQuizQuestion() {
+    if (!isQuizActive) return;
     saveCurrentQuestionAnswer();
     if (currentQuizQuestionIndex < activeLiveQuiz.questions.length - 1) {
         renderQuizQuestion(currentQuizQuestionIndex + 1);
@@ -4773,13 +4821,60 @@ function submitQuizAnswers(isAutoSubmit = false) {
     window.removeEventListener('blur', handleQuizTabSwitch);
     document.removeEventListener('visibilitychange', handleQuizVisibilityChange);
 
+    // Remove active quiz from sessionStorage immediately
+    try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(e){}
+
+    // Lock student side panel immediately
+    const panelBody = document.getElementById('liveQuizPanelBody');
+    const skipBtn = document.getElementById('liveQuizSkipBtn');
+    const nextBtn = document.getElementById('liveQuizNextBtn');
+    const submitBtn = document.getElementById('liveQuizSubmitBtn');
+
+    if (skipBtn) skipBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (submitBtn) submitBtn.style.display = 'none';
+
+    if (panelBody) {
+        panelBody.innerHTML = `
+            <div style="text-align: center; padding: 40px 15px;">
+                <div style="font-size: 50px; margin-bottom: 15px;">🔒</div>
+                <h3 style="color: ${isAutoSubmit ? '#ef4444' : '#10b981'}; font-weight: 700; margin-bottom: 10px;">
+                    ${isAutoSubmit ? 'TEST AUTO-SUBMITTED' : 'QUIZ SUBMITTED'}
+                </h3>
+                <p style="color: #94a3b8; font-size: 13px; line-height: 1.6;">
+                    ${isAutoSubmit ? 'Your test was automatically submitted because you exceeded 2 window/tab switch warnings.' : 'Your quiz responses have been recorded successfully.'}
+                </p>
+                <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #cbd5e1; font-size: 12px;">
+                    Status: <strong style="color: ${isAutoSubmit ? '#f87171' : '#34d399'}">${isAutoSubmit ? 'Auto-Submitted (Limit Exceeded)' : 'Completed'}</strong>
+                </div>
+            </div>`;
+    }
+
+    const modal = document.getElementById('studentQuizWarningModal');
+    if (modal) {
+        if (isAutoSubmit) {
+            modal.style.display = 'flex';
+            const mTitle = document.getElementById('quizWarningModalTitle');
+            const mText = document.getElementById('quizWarningModalText');
+            if (mTitle) {
+                mTitle.textContent = '🚨 TEST AUTO-SUBMITTED';
+                mTitle.style.color = '#ef4444';
+            }
+            if (mText) {
+                mText.innerHTML = 'Your test has been AUTO-SUBMITTED due to 3 cheating policy violations!<br><strong style="color:#ef4444;">No further answers can be edited or submitted.</strong>';
+            }
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+
     const timeTaken = Math.round((Date.now() - (quizStartTime || Date.now())) / 1000);
 
     fetch(`/meetings/submit-quiz/${meetingCode}/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            quiz_id: activeLiveQuiz.id,
+            quiz_id: activeLiveQuiz ? activeLiveQuiz.id : null,
             answers: studentQuizAnswers,
             time_taken_seconds: timeTaken,
             tab_switch_count: studentTabSwitchCount,
@@ -4788,20 +4883,10 @@ function submitQuizAnswers(isAutoSubmit = false) {
     })
     .then(res => res.json())
     .then(data => {
-        if (data.status === 'success') {
-            try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(e){}
-            showNotification(isAutoSubmit ? 'Test auto-submitted due to 3 violations!' : 'Quiz submitted successfully!', isAutoSubmit ? 'error' : 'success');
-            closeLiveQuizSidePanel();
-            showQuizToggleButton(false);
-        } else {
-            showNotification(data.message || 'Error submitting quiz', 'error');
-        }
+        showNotification(isAutoSubmit ? 'Test auto-submitted due to 3 violations!' : 'Quiz submitted successfully!', isAutoSubmit ? 'error' : 'success');
     })
     .catch(err => {
         console.error('Submit quiz error:', err);
-        showNotification('Error submitting quiz', 'error');
-        closeLiveQuizSidePanel();
-        showQuizToggleButton(false);
     });
 }
 
