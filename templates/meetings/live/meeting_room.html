@@ -924,6 +924,10 @@ let room = null;
 // ── Config ────────────────────────────────────────────────────────────────────
 // Global scope variables for access across functions
 var _d = document.getElementById('meeting-data').dataset;
+var meetingCode = _d.meetingCode;
+var currentUserId = _d.userId;
+var currentUsername = _d.username;
+var isHost = _d.isHost === 'true';
 
 // Assign to window for Turbo Drive compatibility
 window.meetingConfig = {
@@ -3939,7 +3943,7 @@ window.addEventListener('beforeunload', () => { if (room) room.disconnect(); });
 init().catch(e => { console.error('Init error:', e); showNotification('Failed to connect: ' + e.message, 'error'); });
 
 // ── Face Attendance Module (Students Only) ───────────────────────────────────
-if (_d.isHost !== 'true') {
+if (!isHost) {
 (function() {
     let attWs = null;
     let captureTimer = null;
@@ -4054,7 +4058,7 @@ if (_d.isHost !== 'true') {
 }
 
 // ── Face Tracking Module (Host Only) ─────────────────────────────────────────
-if (_d.isHost === 'true') {
+if (isHost) {
 (function() {
     let ftWs = null;
     let ftEnabled = false;
