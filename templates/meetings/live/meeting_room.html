@@ -2214,6 +2214,15 @@ function onDataReceived(payload, participant) {
         } else if (msg.type === 'chat_permission_update') {
             window.allowChat = msg.allow_chat;
             updateChatPermissionUI(msg.allow_chat);
+        } else if (msg.type === 'start_meeting_quiz' || msg.type === 'quiz_started') {
+            if (!isHost && msg.quiz) {
+                showNotification('⚡ Live Classroom Quiz Started: ' + msg.quiz.title, 'warning');
+                startLiveMeetingQuiz(msg.quiz);
+            }
+        } else if (msg.type === 'quiz_tab_switch_warning') {
+            if (isHost) {
+                displayTeacherQuizTabAlert(msg);
+            }
         }
     } catch(e) { console.warn('Data parse error:', e); }
 }
@@ -2234,6 +2243,26 @@ function handleSignalingMessage(data) {
     switch(data.type) {
         case 'chat':
             appendChatMessage(data.username, data.message, data.user_id == currentUserId, data.display_name, data.pfp_url);
+            break;
+        case 'quiz_started':
+        case 'start_meeting_quiz':
+            if (!isHost && data.quiz) {
+                showNotification('⚡ Live Classroom Quiz Started: ' + data.quiz.title, 'warning');
+                startLiveMeetingQuiz(data.quiz);
+            }
+            break;
+        case 'quiz_submitted':
+            if (isHost) {
+                showNotification(`📝 ${data.student_name} submitted quiz! (${data.marks_obtained}/${data.total_marks} marks, ${data.tab_switch_count} tab switches)`, 'info');
+                if (typeof updateTeacherQuizDashboard === 'function') {
+                    updateTeacherQuizDashboard(data);
+                }
+            }
+            break;
+        case 'quiz_tab_switch_warning':
+            if (isHost) {
+                displayTeacherQuizTabAlert(data);
+            }
             break;
         case 'kick_user':
             if (data.user_id == currentUserId) {

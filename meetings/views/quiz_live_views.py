@@ -84,16 +84,34 @@ def start_meeting_quiz(request, meeting_code):
             'choices': choices_payload
         })
 
+    quiz_payload = {
+        'id': quiz.id,
+        'title': quiz.title,
+        'description': quiz.description or '',
+        'total_marks': quiz.total_marks,
+        'time_limit': quiz.time_limit,
+        'questions': questions_payload
+    }
+
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f'meeting_{meeting_code.upper()}',
+                {
+                    'type': 'quiz_started',
+                    'quiz': quiz_payload,
+                    'host_name': request.user.get_full_name() or request.user.username
+                }
+            )
+    except Exception as e:
+        pass
+
     return JsonResponse({
         'status': 'success',
-        'quiz': {
-            'id': quiz.id,
-            'title': quiz.title,
-            'description': quiz.description or '',
-            'total_marks': quiz.total_marks,
-            'time_limit': quiz.time_limit,
-            'questions': questions_payload
-        }
+        'quiz': quiz_payload
     })
 
 
@@ -174,6 +192,26 @@ def submit_meeting_quiz(request, meeting_code):
 
         submission.marks_obtained = total_obtained_marks
         submission.save()
+
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f'meeting_{meeting_code.upper()}',
+                {
+                    'type': 'quiz_submitted',
+                    'student_id': request.user.id,
+                    'student_name': request.user.get_full_name() or request.user.username,
+                    'quiz_id': quiz.id,
+                    'tab_switch_count': tab_switch_count,
+                    'marks_obtained': submission.marks_obtained,
+                    'total_marks': quiz.total_marks
+                }
+            )
+    except Exception as e:
+        pass
 
     return JsonResponse({
         'status': 'success',

@@ -309,6 +309,18 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                         'host_name': self.user.username
                     }
                 )
+
+            elif message_type == 'quiz_tab_switch_warning':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'quiz_tab_switch_warning',
+                        'student_id': self.user.id,
+                        'student_name': data.get('student_name', self.user.username),
+                        'tab_switch_count': data.get('tab_switch_count', 1),
+                        'timestamp': data.get('timestamp', timezone.now().strftime('%H:%M:%S'))
+                    }
+                )
         except Exception as e:
             logger.error(f"Receive error: {e}")
 
@@ -450,6 +462,33 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'type': 'screen_share_stopped',
             'user_id': event['user_id'],
             'username': event['username']
+        }))
+
+    async def quiz_started(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'quiz_started',
+            'quiz': event['quiz'],
+            'host_name': event.get('host_name', 'Teacher')
+        }))
+
+    async def quiz_submitted(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'quiz_submitted',
+            'student_id': event['student_id'],
+            'student_name': event['student_name'],
+            'quiz_id': event['quiz_id'],
+            'tab_switch_count': event.get('tab_switch_count', 0),
+            'marks_obtained': event.get('marks_obtained', 0),
+            'total_marks': event.get('total_marks', 0)
+        }))
+
+    async def quiz_tab_switch_warning(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'quiz_tab_switch_warning',
+            'student_id': event['student_id'],
+            'student_name': event['student_name'],
+            'tab_switch_count': event.get('tab_switch_count', 1),
+            'timestamp': event.get('timestamp', '')
         }))
 
     async def meeting_sleeping(self, event):
