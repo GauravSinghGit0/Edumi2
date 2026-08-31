@@ -138,7 +138,8 @@ def join_meeting(request, meeting_code):
 
     kick_record = KickedParticipant.objects.filter(meeting=meeting, user=request.user).first()
     if kick_record and kick_record.is_banned():
-        messages.error(request, f'You have been kicked from this meeting. You can rejoin at {kick_record.banned_until.strftime("%H:%M")}.')
+        banned_until_fmt = kick_record.banned_until.strftime("%H:%M") if kick_record.banned_until else "a few minutes"
+        messages.error(request, f'You have been kicked from this meeting. You can rejoin at {banned_until_fmt}.')
         user_type = request.user.userprofile.user_type if hasattr(request.user, 'userprofile') else None
         return redirect('student_dashboard' if user_type == 'student' else 'teacher_dashboard')
 
@@ -177,7 +178,10 @@ def join_meeting(request, meeting_code):
     if meeting.teacher == request.user and meeting.status == 'scheduled':
         meeting.status = 'live'
         meeting.save()
-        notify_meeting_started(meeting, meeting.classroom)
+        try:
+            notify_meeting_started(meeting, meeting.classroom)
+        except Exception as e:
+            pass
 
     if meeting.teacher == request.user or request.user.is_superuser:
         participant.audio_permitted = True
@@ -216,19 +220,22 @@ def join_meeting(request, meeting_code):
     def _add_user_to_dir(user_obj, role='student'):
         if not user_obj:
             return
-        uid = str(user_obj.id)
-        if uid in user_directory:
-            return
-        avatar = get_user_avatar_url(user_obj)
-        if avatar and avatar.startswith('/'):
-            avatar = request.build_absolute_uri(avatar)
-        user_directory[uid] = {
-            'id': uid,
-            'username': user_obj.username,
-            'display_name': get_user_display_name(user_obj),
-            'pfp': avatar,
-            'role': role,
-        }
+        try:
+            uid = str(user_obj.id)
+            if uid in user_directory:
+                return
+            avatar = get_user_avatar_url(user_obj)
+            if avatar and avatar.startswith('/'):
+                avatar = request.build_absolute_uri(avatar)
+            user_directory[uid] = {
+                'id': uid,
+                'username': user_obj.username,
+                'display_name': get_user_display_name(user_obj),
+                'pfp': avatar,
+                'role': role,
+            }
+        except Exception:
+            pass
 
     # 1. Add Meeting Host
     _add_user_to_dir(meeting.teacher, role='host')
