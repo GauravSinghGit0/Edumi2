@@ -128,10 +128,9 @@ def submit_meeting_quiz(request, meeting_code):
             }
         )
 
-        if not created:
-            submission.tab_switch_count = tab_switch_count
-            submission.time_taken_seconds = time_taken_seconds
-            submission.submitted_at = timezone.now()
+        submission.tab_switch_count = tab_switch_count
+        submission.time_taken_seconds = time_taken_seconds
+        submission.submitted_at = timezone.now()
 
         total_obtained_marks = 0
         questions = {q.id: q for q in quiz.questions.prefetch_related('choices').all()}
@@ -222,7 +221,7 @@ def get_meeting_quiz_submissions(request, meeting_id, quiz_id):
             'student_id': sub.student.id,
             'student_name': sub.student.get_full_name() or sub.student.username,
             'student_username': sub.student.username,
-            'submitted_at': sub.submitted_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'submitted_at': sub.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if sub.submitted_at else '',
             'time_taken_display': sub.time_taken_display,
             'tab_switch_count': sub.tab_switch_count,
             'marks_obtained': sub.marks_obtained,
