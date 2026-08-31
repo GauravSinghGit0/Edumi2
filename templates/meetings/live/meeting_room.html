@@ -2084,15 +2084,42 @@ window.MeetingRecorder = {
                 }
             });
 
-            // Video Capture: Local screen share / camera or active video element
+            // Video Capture: Capture Full Browser Tab / Meeting Screen (Teacher View)
             let videoTrack = null;
-            if (window.room && window.room.localParticipant) {
+
+            // 1. Primary: Prompt teacher to capture Full Browser Tab / Meeting Screen via getDisplayMedia
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
+                try {
+                    const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            displaySurface: 'browser',
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    });
+                    const dTracks = displayStream.getVideoTracks();
+                    if (dTracks.length > 0) {
+                        videoTrack = dTracks[0];
+                        videoTrack.onended = () => {
+                            if (this.isRecording) this.stop();
+                        };
+                    }
+                } catch (displayErr) {
+                    console.info('Full browser tab capture prompt skipped/canceled, proceeding with active room layout fallback:', displayErr);
+                }
+            }
+
+            // 2. Fallback: Use active screen share or local video publication
+            if (!videoTrack && window.room && window.room.localParticipant) {
                 const lp = window.room.localParticipant;
                 const localVideoPubs = lp.videoTrackPublications || lp.videoTracks || lp.trackPublications;
                 const localVids = safeGetTracks(localVideoPubs);
                 if (localVids.length > 0) videoTrack = localVids[0];
             }
 
+            // 3. Fallback: Search remote participant video tracks
             if (!videoTrack) {
                 for (const p of remotes) {
                     const rVidPubs = p ? (p.videoTrackPublications || p.videoTracks || p.trackPublications) : null;
@@ -2104,8 +2131,31 @@ window.MeetingRecorder = {
                 }
             }
 
+            // 4. Fallback: Capture active meeting video DOM elements
             if (!videoTrack) {
-                // Standby Canvas Stream Fallback for audio-only / camera-off meetings
+                const videoEls = document.querySelectorAll('#mainVideoArea video, #sidebarVideoArea video, video');
+                for (const v of videoEls) {
+                    if (v.srcObject && v.srcObject instanceof MediaStream) {
+                        const vTracks = v.srcObject.getVideoTracks();
+                        if (vTracks.length > 0 && vTracks[0].readyState === 'live') {
+                            videoTrack = vTracks[0];
+                            break;
+                        }
+                    } else if (typeof v.captureStream === 'function') {
+                        try {
+                            const capStream = v.captureStream();
+                            const vTracks = capStream.getVideoTracks();
+                            if (vTracks.length > 0 && vTracks[0].readyState === 'live') {
+                                videoTrack = vTracks[0];
+                                break;
+                            }
+                        } catch (_) {}
+                    }
+                }
+            }
+
+            // 5. Fallback: Standby Canvas Stream if no video source is active
+            if (!videoTrack) {
                 try {
                     const fallbackCanvas = document.createElement('canvas');
                     fallbackCanvas.width = 1280;
@@ -2120,7 +2170,7 @@ window.MeetingRecorder = {
                         fCtx.fillText((window.meetingConfig && window.meetingConfig.meetingTitle) || 'Live Meeting', 640, 340);
                         fCtx.fillStyle = '#94a3b8';
                         fCtx.font = '22px sans-serif';
-                        fCtx.fillText('Audio-Only Session / Standby Recording', 640, 390);
+                        fCtx.fillText('Full Meeting Recording Active', 640, 390);
 
                         const canvasStream = fallbackCanvas.captureStream(10);
                         const cVid = canvasStream.getVideoTracks();
