@@ -1502,11 +1502,9 @@ async function init() {
         const { token, url } = data;
 
         // Show registration warning for students if not registered
-        {% if not is_host and not user.is_superuser %}
-        if (data.face_not_registered || "{{ face_not_registered }}" === "True") {
+        if (!IS_HOST && (data.face_not_registered || "{{ face_not_registered }}" === "True")) {
             showNotification('Face not registered! Please register in Attendance Settings.', 'warning');
         }
-        {% endif %}
 
         window.room = new Room({
             adaptiveStream: true,
@@ -3941,7 +3939,7 @@ window.addEventListener('beforeunload', () => { if (room) room.disconnect(); });
 init().catch(e => { console.error('Init error:', e); showNotification('Failed to connect: ' + e.message, 'error'); });
 
 // ── Face Attendance Module (Students Only) ───────────────────────────────────
-{% if not is_host and not user.is_superuser %}
+if (!IS_HOST) {
 (function() {
     let attWs = null;
     let captureTimer = null;
@@ -4053,10 +4051,10 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
 
     window.addEventListener('load', () => setTimeout(connect, 3000));
 })();
-{% endif %}
+}
 
 // ── Face Tracking Module (Host Only) ─────────────────────────────────────────
-{% if is_host %}
+if (IS_HOST) {
 (function() {
     let ftWs = null;
     let ftEnabled = false;
@@ -4146,7 +4144,7 @@ init().catch(e => { console.error('Init error:', e); showNotification('Failed to
         eb.textContent = label;
     }
 })();
-{% endif %}
+}
 
 // ── Live Meeting Quiz Engine & Anti-Cheating System ──────────────────────────
 let activeLiveQuiz = null;
