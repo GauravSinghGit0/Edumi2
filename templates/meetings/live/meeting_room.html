@@ -920,7 +920,16 @@
 {% endif %}
 
 <!-- Live Meeting Student Quiz Side Panel -->
-<div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none;">
+<div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none; position: relative;">
+    
+    <!-- Full Panel Anti-Cheating Warning Overlay Modal -->
+    <div id="studentQuizWarningModal" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;">
+        <div style="font-size: 44px; margin-bottom: 8px;">⚠️</div>
+        <h3 id="quizWarningModalTitle" style="color: #ef4444; margin: 0 0 8px 0; font-size: 18px; font-weight: 700;">WARNING 1 / 2</h3>
+        <p id="quizWarningModalText" style="color: #cbd5e1; font-size: 13px; margin: 0 0 16px 0; line-height: 1.5;">You switched tabs or window apps! Switching windows during a live test is strictly monitored.<br><strong style="color: #f87171;">3rd violation will AUTO-SUBMIT your test immediately!</strong></p>
+        <button class="btn btn-primary-quiz" onclick="acknowledgeStudentQuizWarning()" style="padding: 8px 24px; font-weight: 600; background: #ef4444; border-color: #ef4444;">I Understand</button>
+    </div>
+
     <div class="quiz-panel-header">
         <div class="quiz-panel-title-box" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <h3 id="liveQuizPanelTitle" class="quiz-copy-protected" style="margin:0;">Live Meeting Quiz</h3>
@@ -933,6 +942,18 @@
     </div>
 
     <div class="quiz-panel-body" id="liveQuizPanelBody">
+
+        <!-- Anti-Cheating In-Panel Warning Box -->
+        <div id="studentQuizWarningBox" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <span style="font-size: 16px;">⚠️</span>
+                <div>
+                    <div id="studentWarningBoxTitle" style="font-size: 12px; font-weight: 700; color: #fca5a5;">WARNING (1/2): Tab/Window Switch Detected!</div>
+                    <div id="studentWarningBoxDesc" style="font-size: 11px; color: #f87171; margin-top: 2px;">Switching tabs or windows is strictly prohibited. 3rd violation auto-submits your test.</div>
+                </div>
+            </div>
+        </div>
+
         <div class="quiz-question-container">
             <div class="quiz-question-badge" id="liveQuizQuestionMarks">1 Mark</div>
             <h4 class="quiz-question-text quiz-copy-protected" id="liveQuizQuestionText">Question text here...</h4>
@@ -4545,7 +4566,7 @@ function triggerAntiCheatingWarning() {
 
     const isAutoSubmitted = (studentTabSwitchCount >= 3);
 
-    // Update warning counter badge on student panel
+    // 1. Update Warning Badge on Student Quiz Panel
     const badge = document.getElementById('studentWarningCountBadge');
     if (badge) {
         if (isAutoSubmitted) {
@@ -4561,11 +4582,39 @@ function triggerAntiCheatingWarning() {
         }
     }
 
-    if (isAutoSubmitted) {
-        showNotification('🚨 3rd Violation Recorded! Your test has been AUTO-SUBMITTED due to anti-cheating policy!', 'error');
-    } else {
-        showNotification(`⚠️ WARNING (${studentTabSwitchCount}/2): Window/Tab switching is strictly prohibited! (Warning ${studentTabSwitchCount} of 2. 3rd time AUTO-SUBMITS your test)`, 'warning');
+    // 2. Show In-Panel Warning Box
+    const warnBox = document.getElementById('studentQuizWarningBox');
+    const boxTitle = document.getElementById('studentWarningBoxTitle');
+    const boxDesc = document.getElementById('studentWarningBoxDesc');
+    if (warnBox && boxTitle && boxDesc) {
+        warnBox.style.display = 'block';
+        if (isAutoSubmitted) {
+            boxTitle.textContent = `🚨 3rd VIOLATION: TEST AUTO-SUBMITTED!`;
+            boxDesc.textContent = `You exceeded the maximum 2 warning limit. Your answers have been automatically submitted.`;
+        } else {
+            boxTitle.textContent = `⚠️ WARNING (${studentTabSwitchCount}/2): Window / Tab Switch Detected!`;
+            boxDesc.textContent = `Switching windows or tabs is strictly prohibited. Warning ${studentTabSwitchCount} of 2. Next violation auto-submits your test!`;
+        }
     }
+
+    // 3. Show Full Side Panel Warning Overlay Modal
+    const modal = document.getElementById('studentQuizWarningModal');
+    const modalTitle = document.getElementById('quizWarningModalTitle');
+    const modalText = document.getElementById('quizWarningModalText');
+    if (modal && modalTitle && modalText) {
+        modal.style.display = 'flex';
+        if (isAutoSubmitted) {
+            modalTitle.textContent = '🚨 TEST AUTO-SUBMITTED';
+            modalTitle.style.color = '#ef4444';
+            modalText.innerHTML = 'You committed 3 window/tab switch violations!<br><strong style="color:#ef4444;">Your quiz answers have been automatically submitted.</strong>';
+        } else {
+            modalTitle.textContent = `⚠️ WARNING ${studentTabSwitchCount} / 2`;
+            modalTitle.style.color = '#f59e0b';
+            modalText.innerHTML = `You switched tabs or window apps!<br>Switching windows during a live test is strictly prohibited.<br><strong style="color:#f87171;">Warning ${studentTabSwitchCount} of 2. 3rd violation will AUTO-SUBMIT your test!</strong>`;
+        }
+    }
+
+    showNotification(isAutoSubmitted ? '🚨 3rd Violation! Test AUTO-SUBMITTED!' : `⚠️ WARNING (${studentTabSwitchCount}/2): Window/Tab switch detected!`, isAutoSubmitted ? 'error' : 'warning');
 
     const alertPayload = {
         type: 'quiz_tab_switch_warning',
@@ -4581,6 +4630,11 @@ function triggerAntiCheatingWarning() {
     if (isAutoSubmitted) {
         submitQuizAnswers(true);
     }
+}
+
+function acknowledgeStudentQuizWarning() {
+    const modal = document.getElementById('studentQuizWarningModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function broadcastQuizEvent(payload) {
@@ -4790,6 +4844,7 @@ window.selectQuizMcqOption = selectQuizMcqOption;
 window.closeTeacherQuizMonitor = closeTeacherQuizMonitor;
 window.toggleQuizPanel = toggleQuizPanel;
 window.handleTeacherQuizEvent = handleTeacherQuizEvent;
+window.acknowledgeStudentQuizWarning = acknowledgeStudentQuizWarning;
 </script>
 </body>
 </html>
