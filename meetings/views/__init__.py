@@ -61,4 +61,11 @@ from .material_views import (
 from .recording_views import (
     meeting_chunked_upload,
 )
+from .quiz_live_views import (
+    get_available_classroom_quizzes,
+    start_meeting_quiz,
+    submit_meeting_quiz,
+    get_meeting_quiz_submissions,
+)
+
 

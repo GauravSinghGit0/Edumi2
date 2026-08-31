@@ -106,20 +106,39 @@
     <div class="content-card">
         <h2 class="section-title">Submissions</h2>
         <div style="background: #fafafa; border-radius: 1rem; overflow: hidden;">
-            <div class="submission-row" style="background: #f1f5f9; font-weight: 700; color: #0f172a; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;">
+            <div class="submission-row" style="background: #f1f5f9; font-weight: 700; color: #0f172a; grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 1fr;">
                 <div>Student</div>
-                <div>Status</div>
+                <div>Status & Mode</div>
+                <div>Anti-Cheating</div>
                 <div>Time Taken</div>
                 <div>Score</div>
                 <div>Action</div>
             </div>
             {% for submission_data in submissions %}
-            <div class="submission-row" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr;">
-                <div class="student-name">{{ submission_data.student.get_full_name|default:submission_data.student.username }}</div>
+            <div class="submission-row" style="grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 1fr;">
+                <div class="student-name">
+                    {{ submission_data.student.get_full_name|default:submission_data.student.username }}
+                </div>
                 <div>
                     <span class="status-badge status-{{ submission_data.status }}">
                         {{ submission_data.status|capfirst }}
                     </span>
+                    {% if submission_data.submission and submission_data.submission.is_live_meeting_quiz %}
+                        <span class="status-badge" style="background: #e0e7ff; color: #4338ca; margin-top: 4px; display: inline-block;">Live Meeting</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if submission_data.submission %}
+                        {% if submission_data.submission.tab_switch_count > 0 %}
+                            <span style="background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 0.375rem; display: inline-flex; align-items: center; gap: 4px;">
+                                ⚠️ {{ submission_data.submission.tab_switch_count }} Tab Switch{% if submission_data.submission.tab_switch_count > 1 %}es{% endif %}
+                            </span>
+                        {% else %}
+                            <span style="color: #10b981; font-size: 0.875rem; font-weight: 600;">✓ Clean</span>
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
                 </div>
                 <div style="font-size:0.875rem; color:#475569;">
                     {% if submission_data.submission %}
@@ -146,7 +165,9 @@
                             Grade
                         </a>
                         {% else %}
-                        <span style="color: #10b981; font-weight: 600;">✓ Graded</span>
+                        <a href="{% url 'evaluate_quiz_submission' submission_data.submission.id %}" style="color: #10b981; text-decoration: none; font-weight: 600;">
+                            ✓ Graded (Review)
+                        </a>
                         {% endif %}
                     {% else %}
                         —

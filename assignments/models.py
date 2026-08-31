@@ -213,9 +213,12 @@ class Choice(models.Model):
 
 
 class QuizSubmission(models.Model):
-    """Model for student submissions to quizzes"""
+    """Model for student submissions to quizzes (both Classroom and Live Meeting quizzes)"""
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="submissions")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_submissions")
+    meeting = models.ForeignKey('meetings.Meeting', on_delete=models.CASCADE, null=True, blank=True, related_name="quiz_submissions")
+    is_live_meeting_quiz = models.BooleanField(default=False, db_index=True)
+    tab_switch_count = models.IntegerField(default=0, help_text="Number of anti-cheating tab switch violations")
     # Timer tracking
     started_at = models.DateTimeField(null=True, blank=True, help_text="When the student opened the quiz")
     submitted_at = models.DateTimeField(auto_now_add=True)
@@ -227,7 +230,7 @@ class QuizSubmission(models.Model):
     evaluated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="evaluated_quizzes")
 
     class Meta:
-        unique_together = ["quiz", "student"]
+        unique_together = ["quiz", "student", "meeting"]
         ordering = ["-submitted_at"]
         verbose_name = "Quiz Submission"
         verbose_name_plural = "Quiz Submissions"
