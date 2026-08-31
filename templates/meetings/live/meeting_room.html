@@ -924,7 +924,6 @@ let room = null;
 // ── Config ────────────────────────────────────────────────────────────────────
 // Global scope variables for access across functions
 var _d = document.getElementById('meeting-data').dataset;
-const IS_HOST = _d.isHost === 'true';
 
 // Assign to window for Turbo Drive compatibility
 window.meetingConfig = {
@@ -1503,7 +1502,7 @@ async function init() {
         const { token, url } = data;
 
         // Show registration warning for students if not registered
-        if (!IS_HOST && (data.face_not_registered || "{{ face_not_registered }}" === "True")) {
+        if (!window.meetingConfig?.isHost && (data.face_not_registered || "{{ face_not_registered }}" === "True")) {
             showNotification('Face not registered! Please register in Attendance Settings.', 'warning');
         }
 
@@ -3940,7 +3939,7 @@ window.addEventListener('beforeunload', () => { if (room) room.disconnect(); });
 init().catch(e => { console.error('Init error:', e); showNotification('Failed to connect: ' + e.message, 'error'); });
 
 // ── Face Attendance Module (Students Only) ───────────────────────────────────
-if (!IS_HOST) {
+if (_d.isHost !== 'true') {
 (function() {
     let attWs = null;
     let captureTimer = null;
@@ -4055,7 +4054,7 @@ if (!IS_HOST) {
 }
 
 // ── Face Tracking Module (Host Only) ─────────────────────────────────────────
-if (IS_HOST) {
+if (_d.isHost === 'true') {
 (function() {
     let ftWs = null;
     let ftEnabled = false;
