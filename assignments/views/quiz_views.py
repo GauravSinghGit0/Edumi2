@@ -36,8 +36,11 @@ def classroom_quizzes(request, classroom_id):
     if is_teacher:
         quizzes = classroom.quizzes.all()
     else:
-        # Students only see published quizzes
-        quizzes = classroom.quizzes.filter(status='published')
+        # Students only see published quizzes whose due_date has not passed
+        now = timezone.now()
+        quizzes = classroom.quizzes.filter(status='published').filter(
+            models.Q(due_date__gte=now) | models.Q(due_date__isnull=True)
+        )
     
     return render(request, 'quizzes/classroom_quizzes.html', {
         'classroom': classroom,
@@ -262,7 +265,11 @@ def take_quiz(request, quiz_id):
         return redirect('student_classrooms')
 
     if quiz.status != 'published':
-        messages.error(request, 'This quiz is not yet published')
+        messages.error(request, 'This quiz is private/draft and only available for live meeting use')
+        return redirect('classroom_quizzes', classroom_id=classroom.id)
+
+    if quiz.due_date and timezone.now() > quiz.due_date:
+        messages.error(request, 'This quiz time limit/due date has expired and is no longer available.')
         return redirect('classroom_quizzes', classroom_id=classroom.id)
 
     existing_submission = QuizSubmission.objects.filter(quiz=quiz, student=request.user).first()

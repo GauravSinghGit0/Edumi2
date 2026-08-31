@@ -749,6 +749,19 @@
 
         <div class="control-separator"></div>
 
+        {% if is_host %}
+        <!-- Dedicated Recording Control Button for Teacher/Host -->
+        <button class="control-button" id="mainRecordBtn" onclick="toggleMeetingRecording()" title="Start Recording" data-tooltip="Start Recording">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="7" fill="#ef4444" stroke="#ef4444"/></svg>
+        </button>
+        {% endif %}
+
+        <!-- Live Quiz Open/Close Toggle Button -->
+        <button class="control-button" id="activeQuizToggleBtn" onclick="toggleQuizPanel()" title="Live Quiz Panel" data-tooltip="Live Quiz Panel" style="display: none; background: #6366f1; color: #fff;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span class="notification-badge" id="quizActiveBadge" style="display:inline-block; background: #ef4444; width: 8px; height: 8px; border-radius: 50%; top: 4px; right: 4px;"></span>
+        </button>
+
         <!-- More Options Container -->
         <div class="more-options-container">
             <!-- Popup menu — shown above the button -->
@@ -796,12 +809,6 @@
                 </button>
 
             </div>
-
-            <!-- Live Quiz Open/Close Toggle Button -->
-            <button class="control-button" id="activeQuizToggleBtn" onclick="toggleQuizPanel()" title="Live Quiz Panel" data-tooltip="Live Quiz Panel" style="display: none; background: #6366f1; color: #fff; position: relative;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <span class="notification-badge" id="quizActiveBadge" style="display:inline-block; background: #ef4444; width: 8px; height: 8px; border-radius: 50%; top: 4px; right: 4px;"></span>
-            </button>
 
             <!-- The ⋮ trigger button -->
             <button class="control-button" id="moreBtn" onclick="toggleMoreOptions()" title="More options" data-tooltip="More options">
@@ -2367,6 +2374,11 @@ function onDataReceived(payload, participant) {
                     openTeacherQuizMonitor(msg.quiz);
                 }
             }
+        } else if (msg.type === 'teacher_left_quiz_ended') {
+            if (!isHost && isQuizActive) {
+                showNotification('🛑 Teacher left the meeting. Your quiz progress has been auto-submitted.', 'warning');
+                submitQuizAnswers(true);
+            }
         } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted') {
             if (participant && participant.identity) {
                 if (!msg.student_id) msg.student_id = String(participant.identity);
@@ -2414,6 +2426,12 @@ function handleSignalingMessage(data) {
         case 'quiz_copy_warning':
             if (isHost && typeof handleTeacherQuizEvent === 'function') {
                 handleTeacherQuizEvent(data);
+            }
+            break;
+        case 'teacher_left_quiz_ended':
+            if (!isHost && isQuizActive) {
+                showNotification('🛑 Teacher left the meeting. Your quiz progress has been auto-submitted.', 'warning');
+                submitQuizAnswers(true);
             }
             break;
         case 'kick_user':
@@ -2809,6 +2827,22 @@ window.MeetingRecorder = {
         if (badge) badge.style.display = isRecording ? 'flex' : 'none';
         const txt = document.getElementById('recordToggleBtnText');
         if (txt) txt.textContent = isRecording ? 'Stop Recording' : 'Start Recording (MKV)';
+        const mainRecBtn = document.getElementById('mainRecordBtn');
+        if (mainRecBtn) {
+            if (isRecording) {
+                mainRecBtn.classList.add('recording-active');
+                mainRecBtn.title = 'Stop Recording';
+                mainRecBtn.setAttribute('data-tooltip', 'Stop Recording');
+                mainRecBtn.style.background = '#ef4444';
+                mainRecBtn.style.color = '#fff';
+            } else {
+                mainRecBtn.classList.remove('recording-active');
+                mainRecBtn.title = 'Start Recording';
+                mainRecBtn.setAttribute('data-tooltip', 'Start Recording');
+                mainRecBtn.style.background = '';
+                mainRecBtn.style.color = '';
+            }
+        }
     }
 };
 
@@ -3865,6 +3899,21 @@ window.switchSidebarTab = switchSidebarTab;
 
 // ── Leave ─────────────────────────────────────────────────────────────────────
 async function leaveMeeting() {
+    if (isHost && activeLiveQuiz && activeLiveQuiz.id) {
+        broadcastQuizEvent({
+            type: 'teacher_left_quiz_ended',
+            quiz_id: activeLiveQuiz.id
+        });
+        if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+            try {
+                window.signalingWs.send(JSON.stringify({
+                    type: 'teacher_left_quiz_ended',
+                    quiz_id: activeLiveQuiz.id
+                }));
+            } catch (_) {}
+        }
+        try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(_) {}
+    }
     if (room) await room.disconnect();
     await fetch(LEAVE_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
     window.location.href = AFTER_LEAVE;
@@ -4971,11 +5020,13 @@ function restoreActiveQuizState() {
             if (quiz && quiz.id) {
                 activeLiveQuiz = quiz;
                 showQuizToggleButton(true);
-                if (isHost) {
-                    openTeacherQuizMonitor(quiz);
-                } else {
-                    startLiveMeetingQuiz(quiz);
+                if (!isHost) {
+                    const localSub = sessionStorage.getItem(`quiz_submitted_${meetingCode}_${quiz.id}`);
+                    if (!localSub) {
+                        startLiveMeetingQuiz(quiz);
+                    }
                 }
+                // For Host: keep quiz state ready in memory, do NOT auto-open monitor panel on join
             }
         }
     } catch(e) {

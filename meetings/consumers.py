@@ -333,6 +333,15 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                         'timestamp': data.get('timestamp', timezone.now().strftime('%H:%M:%S'))
                     }
                 )
+
+            elif message_type == 'teacher_left_quiz_ended':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'teacher_left_quiz_ended',
+                        'quiz_id': data.get('quiz_id')
+                    }
+                )
         except Exception as e:
             logger.error(f"Receive error: {e}")
 
@@ -511,6 +520,12 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'student_id': event['student_id'],
             'student_name': event['student_name'],
             'timestamp': event.get('timestamp', '')
+        }))
+
+    async def teacher_left_quiz_ended(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'teacher_left_quiz_ended',
+            'quiz_id': event.get('quiz_id')
         }))
 
     async def meeting_sleeping(self, event):
