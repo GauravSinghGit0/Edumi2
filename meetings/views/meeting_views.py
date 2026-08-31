@@ -131,16 +131,17 @@ def join_meeting(request, meeting_code):
     """Join a meeting room — creates/updates participant record and logs the join event."""
     meeting = get_object_or_404(Meeting, meeting_code=meeting_code)
 
+    profile = getattr(request.user, 'userprofile', None)
+    user_type = getattr(profile, 'user_type', None) if profile else None
+
     if meeting.is_sleeping():
         messages.error(request, 'This meeting is currently in sleep mode. Please wait for the host to unfreeze it.')
-        user_type = request.user.userprofile.user_type if hasattr(request.user, 'userprofile') else None
         return redirect('student_dashboard' if user_type == 'student' else 'teacher_dashboard')
 
     kick_record = KickedParticipant.objects.filter(meeting=meeting, user=request.user).first()
     if kick_record and kick_record.is_banned():
         banned_until_fmt = kick_record.banned_until.strftime("%H:%M") if kick_record.banned_until else "a few minutes"
         messages.error(request, f'You have been kicked from this meeting. You can rejoin at {banned_until_fmt}.')
-        user_type = request.user.userprofile.user_type if hasattr(request.user, 'userprofile') else None
         return redirect('student_dashboard' if user_type == 'student' else 'teacher_dashboard')
 
     if meeting.classroom:
@@ -152,8 +153,8 @@ def join_meeting(request, meeting_code):
             messages.error(request, 'You must be an approved member of this classroom to join')
             return redirect('student_classrooms')
 
-    is_student = hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student'
-    is_host = meeting.teacher == request.user or request.user.is_superuser
+    is_student = (user_type == 'student')
+    is_host = (meeting.teacher == request.user if meeting.teacher else False) or request.user.is_superuser
 
     face_not_registered = False
     if is_student and not is_host:
@@ -173,17 +174,20 @@ def join_meeting(request, meeting_code):
         participant.is_active = True
         participant.save(update_fields=['joined_at', 'is_active'])
 
-    MeetingAttendanceLog.objects.create(participant=participant, event_type='join')
+    try:
+        MeetingAttendanceLog.objects.create(participant=participant, event_type='join')
+    except Exception:
+        pass
 
-    if meeting.teacher == request.user and meeting.status == 'scheduled':
+    if meeting.teacher and meeting.teacher == request.user and meeting.status == 'scheduled':
         meeting.status = 'live'
         meeting.save()
         try:
             notify_meeting_started(meeting, meeting.classroom)
-        except Exception as e:
+        except Exception:
             pass
 
-    if meeting.teacher == request.user or request.user.is_superuser:
+    if (meeting.teacher and meeting.teacher == request.user) or request.user.is_superuser:
         participant.audio_permitted = True
         participant.video_permitted = True
         participant.screenshare_permitted = True
@@ -205,7 +209,7 @@ def join_meeting(request, meeting_code):
             camera_ids = camera_qs.values_list('camera_id', flat=True)
             teacher_cameras = Camera.objects.filter(id__in=camera_ids)
     
-    host_participant = MeetingParticipant.objects.filter(meeting=meeting, user=meeting.teacher).first()
+    host_participant = MeetingParticipant.objects.filter(meeting=meeting, user=meeting.teacher).first() if meeting.teacher else None
     host_joined_at_ms = 0
     if host_participant and host_participant.joined_at:
         import datetime
@@ -238,7 +242,8 @@ def join_meeting(request, meeting_code):
             pass
 
     # 1. Add Meeting Host
-    _add_user_to_dir(meeting.teacher, role='host')
+    if meeting.teacher:
+        _add_user_to_dir(meeting.teacher, role='host')
 
     # 2. Add Current User
     _add_user_to_dir(request.user, role='host' if is_host else 'student')
@@ -254,14 +259,14 @@ def join_meeting(request, meeting_code):
     # 4. Add Active/Past Meeting Participants
     meeting_participants = MeetingParticipant.objects.filter(meeting=meeting).select_related('user', 'user__userprofile')
     for mp in meeting_participants:
-        _add_user_to_dir(mp.user, role='host' if (mp.user == meeting.teacher or mp.user.is_superuser) else 'student')
+        _add_user_to_dir(mp.user, role='host' if (meeting.teacher and mp.user == meeting.teacher or mp.user.is_superuser) else 'student')
 
     context = {
         'meeting': meeting,
         'participant': participant,
         'is_host': is_host,
-        'host_id': str(meeting.teacher.id),
-        'user_type': request.user.userprofile.user_type if hasattr(request.user, 'userprofile') else 'student',
+        'host_id': str(meeting.teacher.id) if meeting.teacher else '',
+        'user_type': user_type or 'student',
         'display_name': get_user_display_name(request.user),
         'pfp_url': get_user_avatar_url(request.user),
         'livekit_url': settings.LIVEKIT_URL,
