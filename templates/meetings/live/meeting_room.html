@@ -878,6 +878,39 @@
         </div>
     </div>
 </div>
+
+<!-- Live Meeting Teacher Quiz Monitoring Dashboard Side Panel -->
+<div id="teacherQuizMonitorPanel" class="quiz-side-panel" style="display: none; width: 380px;">
+    <div class="quiz-panel-header" style="background: linear-gradient(135deg, #1e1b4b, #312e81); border-bottom: 1px solid rgba(99,102,241,0.3); padding: 14px 16px;">
+        <div class="quiz-panel-title-box">
+            <h3 id="teacherMonitorTitle" style="color: #818cf8; font-size: 15px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
+                📊 Live Quiz Dashboard
+            </h3>
+            <span id="teacherMonitorSubCount" style="background: #10b981; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">0 Submitted</span>
+        </div>
+        <button onclick="closeTeacherQuizMonitor()" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;" title="Close Panel">✕</button>
+    </div>
+
+    <div class="quiz-panel-body" style="padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
+        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Active Quiz:</span>
+                <span id="teacherMonitorQuizName" style="font-size: 13px; color: #f8fafc; font-weight: 700;">-</span>
+            </div>
+            <div style="font-size: 11px; color: #f43f5e; font-weight: 500;">🔒 Anti-Cheating Active • Max 2 Warnings (3rd Auto-Submits)</div>
+        </div>
+
+        <div id="teacherMonitorAlertsBox" style="display: flex; flex-direction: column; gap: 6px;"></div>
+
+        <div>
+            <h4 style="font-size: 12px; color: #cbd5e1; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Student Live Status</span>
+                <span id="teacherMonitorTotalStudents" style="font-size: 11px; color: #94a3b8; font-weight: 500;">0 Joined</span>
+            </h4>
+            <div id="teacherMonitorStudentsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 <!-- Live Meeting Student Quiz Side Panel -->
@@ -4187,6 +4220,75 @@ let studentTabSwitchCount = 0;
 let quizStartTime = null;
 let isQuizActive = false;
 
+// Teacher Live Quiz State Tracking
+let teacherLiveQuizSubmissions = new Map();
+
+function openTeacherQuizMonitor(quiz) {
+    const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
+    if (!monitorPanel) return;
+
+    document.getElementById('teacherMonitorQuizName').textContent = quiz.title;
+    monitorPanel.style.display = 'flex';
+    updateTeacherMonitorStudentList();
+}
+
+function closeTeacherQuizMonitor() {
+    const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
+    if (monitorPanel) monitorPanel.style.display = 'none';
+}
+
+function updateTeacherMonitorStudentList() {
+    const container = document.getElementById('teacherMonitorStudentsList');
+    if (!container) return;
+
+    let participants = typeof getRemoteParticipants === 'function' ? getRemoteParticipants() : [];
+    document.getElementById('teacherMonitorTotalStudents').textContent = `${participants.length} Joined`;
+
+    let html = '';
+    let submittedCount = 0;
+
+    participants.forEach(p => {
+        const uid = String(p.identity);
+        const name = p.name || (window.IdentityDirectory ? window.IdentityDirectory.getName(uid) : uid);
+        const subInfo = teacherLiveQuizSubmissions.get(uid);
+
+        let statusBadge = '<span style="background:#3b82f6; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔵 Taking Test</span>';
+        let violationInfo = '<span style="color:#64748b; font-size:11px;">0 Warnings</span>';
+
+        if (subInfo) {
+            if (subInfo.is_auto_submitted) {
+                submittedCount++;
+                statusBadge = '<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔴 AUTO-SUBMITTED</span>';
+                violationInfo = `<span style="color:#ef4444; font-size:11px; font-weight:600;">3 Violations (Limit Exceeded)</span>`;
+            } else if (subInfo.submitted) {
+                submittedCount++;
+                statusBadge = `<span style="background:#10b981; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🟢 Score: ${subInfo.marks_obtained}/${subInfo.total_marks}</span>`;
+                violationInfo = `<span style="color:#94a3b8; font-size:11px;">Submitted • ${subInfo.tab_switch_count || 0} Tab Switches</span>`;
+            } else if (subInfo.tab_switch_count > 0) {
+                const count = subInfo.tab_switch_count;
+                statusBadge = `<span style="background:#f59e0b; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">⚠️ Warning ${count}/2</span>`;
+                violationInfo = `<span style="color:#f59e0b; font-size:11px; font-weight:600;">${count} Tab/Window Switches</span>`;
+            }
+        }
+
+        html += `
+            <div style="background: rgba(30,41,59,0.7); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 13px; font-weight: 600; color: #f1f5f9;">${name}</div>
+                    <div style="margin-top: 2px;">${violationInfo}</div>
+                </div>
+                <div>${statusBadge}</div>
+            </div>`;
+    });
+
+    if (participants.length === 0) {
+        html = '<p style="color:#64748b; font-size:12px; text-align:center; padding:10px 0;">No active students connected.</p>';
+    }
+
+    container.innerHTML = html;
+    document.getElementById('teacherMonitorSubCount').textContent = `${submittedCount} Submitted`;
+}
+
 function openStartQuizModal() {
     const modal = document.getElementById('meetingQuizSelectModal');
     const container = document.getElementById('quizSelectListContainer');
@@ -4241,21 +4343,11 @@ function launchSelectedQuiz(quizId) {
             closeStartQuizModal();
             showNotification(`Launched quiz: ${data.quiz.title}`, 'success');
 
-            // Broadcast over LiveKit Data Channel
-            if (window.room && window.room.localParticipant && typeof window.room.localParticipant.publishData === 'function') {
-                try {
-                    const payload = JSON.stringify({
-                        type: 'start_meeting_quiz',
-                        quiz: data.quiz
-                    });
-                    const encoder = new TextEncoder();
-                    window.room.localParticipant.publishData(encoder.encode(payload), 1);
-                } catch(e) {
-                    console.warn('Failed to publish start_meeting_quiz payload:', e);
-                }
-            }
+            broadcastQuizEvent({
+                type: 'start_meeting_quiz',
+                quiz: data.quiz
+            });
 
-            // Launch for host as well
             startLiveMeetingQuiz(data.quiz);
         } else {
             showNotification(data.message || 'Failed to start quiz', 'error');
@@ -4269,6 +4361,14 @@ function launchSelectedQuiz(quizId) {
 
 function startLiveMeetingQuiz(quiz) {
     activeLiveQuiz = quiz;
+
+    if (isHost) {
+        // Teacher Side: Open Live Monitoring Dashboard
+        openTeacherQuizMonitor(quiz);
+        return;
+    }
+
+    // Student Side: Open Student Test Side Panel
     currentQuizQuestionIndex = 0;
     studentQuizAnswers = {};
     studentTabSwitchCount = 0;
@@ -4283,68 +4383,101 @@ function startLiveMeetingQuiz(quiz) {
 
     renderQuizQuestion(0);
 
-    // Attach anti-cheating listeners
+    // Anti-cheating event listeners
     window.addEventListener('blur', handleQuizTabSwitch);
     document.addEventListener('visibilitychange', handleQuizVisibilityChange);
 
-    // Attach copy-protection on quiz side panel
+    // Copy and text selection protection
     panel.addEventListener('copy', preventQuizCopy);
     panel.addEventListener('contextmenu', preventQuizCopy);
+    panel.addEventListener('selectstart', preventQuizCopy);
 }
 
 function preventQuizCopy(e) {
+    if (!isQuizActive || isHost) return;
     e.preventDefault();
     showNotification('⚠️ Copying or selecting quiz questions is strictly prohibited!', 'warning');
+
+    broadcastQuizEvent({
+        type: 'quiz_copy_warning',
+        student_id: currentUserId || 'student',
+        student_name: window.IdentityDirectory ? (window.IdentityDirectory.getName(currentUserId) || currentUsername) : currentUsername,
+        timestamp: new Date().toLocaleTimeString()
+    });
+
     return false;
 }
 
 function handleQuizTabSwitch() {
-    if (!isQuizActive) return;
+    if (!isQuizActive || isHost) return;
     triggerAntiCheatingWarning();
 }
 
 function handleQuizVisibilityChange() {
-    if (!isQuizActive) return;
+    if (!isQuizActive || isHost) return;
     if (document.hidden) {
         triggerAntiCheatingWarning();
     }
 }
 
 function triggerAntiCheatingWarning() {
+    if (!isQuizActive || isHost) return;
     studentTabSwitchCount++;
-    showNotification(`⚠️ WARNING: Tab/window switching is strictly prohibited during live quiz! (Warning #${studentTabSwitchCount})`, 'error');
 
-    // Broadcast warning alert to host over LiveKit Data Channel
+    const isAutoSubmitted = (studentTabSwitchCount >= 3);
+
+    if (isAutoSubmitted) {
+        showNotification('🚨 3rd Violation Recorded! Your test has been AUTO-SUBMITTED due to cheating policy!', 'error');
+    } else {
+        showNotification(`⚠️ WARNING (${studentTabSwitchCount}/2): Window/Tab switching is strictly prohibited! (Warning ${studentTabSwitchCount} of 2. 3rd time AUTO-SUBMITS your test)`, 'warning');
+    }
+
+    const alertPayload = {
+        type: 'quiz_tab_switch_warning',
+        student_id: currentUserId || 'student',
+        student_name: window.IdentityDirectory ? (window.IdentityDirectory.getName(currentUserId) || currentUsername) : currentUsername,
+        tab_switch_count: studentTabSwitchCount,
+        is_auto_submitted: isAutoSubmitted,
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    broadcastQuizEvent(alertPayload);
+
+    if (isAutoSubmitted) {
+        submitQuizAnswers(true);
+    }
+}
+
+function broadcastQuizEvent(payload) {
     if (window.room && window.room.localParticipant && typeof window.room.localParticipant.publishData === 'function') {
         try {
-            const payload = JSON.stringify({
-                type: 'quiz_tab_switch_warning',
-                student_id: _d.userId || 'student',
-                student_name: window.IdentityDirectory ? (window.IdentityDirectory.getName(_d.userId) || _d.userName) : 'Student',
-                tab_switch_count: studentTabSwitchCount,
-                timestamp: new Date().toLocaleTimeString()
-            });
             const encoder = new TextEncoder();
-            window.room.localParticipant.publishData(encoder.encode(payload), 1);
+            window.room.localParticipant.publishData(encoder.encode(JSON.stringify(payload)), 1);
+        } catch(e) {}
+    }
+    if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+        try {
+            window.signalingWs.send(JSON.stringify(payload));
         } catch(e) {}
     }
 }
 
 function displayTeacherQuizTabAlert(data) {
-    const container = document.getElementById('quizAlertContainer');
+    const container = document.getElementById('teacherMonitorAlertsBox');
     if (!container) return;
 
     const alertEl = document.createElement('div');
-    alertEl.style.cssText = 'background:#ef4444; color:#ffffff; padding:12px 18px; border-radius:10px; font-weight:600; font-size:13.5px; box-shadow:0 10px 25px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); pointer-events:auto; display:flex; align-items:center; gap:10px; animation: slideDown 0.3s ease;';
-    alertEl.innerHTML = `<span>⚠️ <strong>ALERT:</strong> ${data.student_name || 'A student'} switched tabs/windows! (Violation #${data.tab_switch_count})</span> <span style="font-size:11px; opacity:0.8; margin-left:auto;">${data.timestamp}</span>`;
+    const isAuto = data.is_auto_submitted;
+    alertEl.style.cssText = `background:${isAuto ? '#ef4444' : '#f59e0b'}; color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:space-between; animation: slideDown 0.3s ease;`;
+    alertEl.innerHTML = `<span>⚠️ <strong>${data.student_name}</strong> ${isAuto ? 'AUTO-SUBMITTED (3 Violations!)' : 'Switched Window/Tab (' + data.tab_switch_count + '/2)'}</span> <span style="font-size:10px; opacity:0.8; margin-left:6px;">${data.timestamp}</span>`;
 
-    container.appendChild(alertEl);
+    container.prepend(alertEl);
 
     setTimeout(() => {
         alertEl.style.opacity = '0';
         alertEl.style.transition = 'opacity 0.5s ease';
         setTimeout(() => alertEl.remove(), 500);
-    }, 7000);
+    }, 8000);
 }
 
 function renderQuizQuestion(idx) {
@@ -4435,7 +4568,7 @@ function skipQuizQuestion() {
     }
 }
 
-function submitQuizAnswers() {
+function submitQuizAnswers(isAutoSubmit = false) {
     saveCurrentQuestionAnswer();
     isQuizActive = false;
 
@@ -4452,13 +4585,14 @@ function submitQuizAnswers() {
             quiz_id: activeLiveQuiz.id,
             answers: studentQuizAnswers,
             time_taken_seconds: timeTaken,
-            tab_switch_count: studentTabSwitchCount
+            tab_switch_count: studentTabSwitchCount,
+            is_auto_submitted: isAutoSubmit
         })
     })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            showNotification('Quiz submitted successfully!', 'success');
+            showNotification(isAutoSubmit ? 'Test auto-submitted due to 3 violations!' : 'Quiz submitted successfully!', isAutoSubmit ? 'error' : 'success');
             closeLiveQuizSidePanel();
         } else {
             showNotification(data.message || 'Error submitting quiz', 'error');
@@ -4486,6 +4620,7 @@ window.skipQuizQuestion = skipQuizQuestion;
 window.submitQuizAnswers = submitQuizAnswers;
 window.closeLiveQuizSidePanel = closeLiveQuizSidePanel;
 window.selectQuizMcqOption = selectQuizMcqOption;
+window.closeTeacherQuizMonitor = closeTeacherQuizMonitor;
 </script>
 </body>
 </html>
