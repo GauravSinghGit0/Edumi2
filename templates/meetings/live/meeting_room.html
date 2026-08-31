@@ -718,6 +718,12 @@
 
             </div>
 
+            <!-- Live Quiz Open/Close Toggle Button -->
+            <button class="control-button" id="activeQuizToggleBtn" onclick="toggleQuizPanel()" title="Live Quiz Panel" data-tooltip="Live Quiz Panel" style="display: none; background: #6366f1; color: #fff; position: relative;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span class="notification-badge" id="quizActiveBadge" style="display:inline-block; background: #ef4444; width: 8px; height: 8px; border-radius: 50%; top: 4px; right: 4px;"></span>
+            </button>
+
             <!-- The ⋮ trigger button -->
             <button class="control-button" id="moreBtn" onclick="toggleMoreOptions()" title="More options" data-tooltip="More options">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
@@ -2248,13 +2254,19 @@ function onDataReceived(payload, participant) {
             window.allowChat = msg.allow_chat;
             updateChatPermissionUI(msg.allow_chat);
         } else if (msg.type === 'start_meeting_quiz' || msg.type === 'quiz_started') {
-            if (!isHost && msg.quiz) {
-                showNotification('⚡ Live Classroom Quiz Started: ' + msg.quiz.title, 'warning');
-                startLiveMeetingQuiz(msg.quiz);
+            if (msg.quiz) {
+                try { sessionStorage.setItem(`active_live_quiz_${meetingCode}`, JSON.stringify(msg.quiz)); } catch(e){}
+                if (typeof showQuizToggleButton === 'function') showQuizToggleButton(true);
+                if (!isHost) {
+                    showNotification('⚡ Live Classroom Quiz Started: ' + msg.quiz.title, 'warning');
+                    startLiveMeetingQuiz(msg.quiz);
+                } else {
+                    openTeacherQuizMonitor(msg.quiz);
+                }
             }
-        } else if (msg.type === 'quiz_tab_switch_warning') {
-            if (isHost) {
-                displayTeacherQuizTabAlert(msg);
+        } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted') {
+            if (isHost && typeof handleTeacherQuizEvent === 'function') {
+                handleTeacherQuizEvent(msg);
             }
         }
     } catch(e) { console.warn('Data parse error:', e); }
@@ -2279,22 +2291,22 @@ function handleSignalingMessage(data) {
             break;
         case 'quiz_started':
         case 'start_meeting_quiz':
-            if (!isHost && data.quiz) {
-                showNotification('⚡ Live Classroom Quiz Started: ' + data.quiz.title, 'warning');
-                startLiveMeetingQuiz(data.quiz);
-            }
-            break;
-        case 'quiz_submitted':
-            if (isHost) {
-                showNotification(`📝 ${data.student_name} submitted quiz! (${data.marks_obtained}/${data.total_marks} marks, ${data.tab_switch_count} tab switches)`, 'info');
-                if (typeof updateTeacherQuizDashboard === 'function') {
-                    updateTeacherQuizDashboard(data);
+            if (data.quiz) {
+                try { sessionStorage.setItem(`active_live_quiz_${meetingCode}`, JSON.stringify(data.quiz)); } catch(e){}
+                if (typeof showQuizToggleButton === 'function') showQuizToggleButton(true);
+                if (!isHost) {
+                    showNotification('⚡ Live Classroom Quiz Started: ' + data.quiz.title, 'warning');
+                    startLiveMeetingQuiz(data.quiz);
+                } else {
+                    openTeacherQuizMonitor(data.quiz);
                 }
             }
             break;
+        case 'quiz_submitted':
         case 'quiz_tab_switch_warning':
-            if (isHost) {
-                displayTeacherQuizTabAlert(data);
+        case 'quiz_copy_warning':
+            if (isHost && typeof handleTeacherQuizEvent === 'function') {
+                handleTeacherQuizEvent(data);
             }
             break;
         case 'kick_user':
@@ -4222,6 +4234,26 @@ let isQuizActive = false;
 
 // Teacher Live Quiz State Tracking
 let teacherLiveQuizSubmissions = new Map();
+let lastWarningTimestamp = 0;
+
+function toggleQuizPanel() {
+    if (isHost) {
+        const panel = document.getElementById('teacherQuizMonitorPanel');
+        if (panel) {
+            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
+        }
+    } else {
+        const panel = document.getElementById('meetingQuizSidePanel');
+        if (panel) {
+            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
+        }
+    }
+}
+
+function showQuizToggleButton(show) {
+    const btn = document.getElementById('activeQuizToggleBtn');
+    if (btn) btn.style.display = show ? 'flex' : 'none';
+}
 
 function openTeacherQuizMonitor(quiz) {
     const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
@@ -4229,12 +4261,45 @@ function openTeacherQuizMonitor(quiz) {
 
     document.getElementById('teacherMonitorQuizName').textContent = quiz.title;
     monitorPanel.style.display = 'flex';
+    showQuizToggleButton(true);
     updateTeacherMonitorStudentList();
 }
 
 function closeTeacherQuizMonitor() {
     const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
     if (monitorPanel) monitorPanel.style.display = 'none';
+}
+
+function handleTeacherQuizEvent(msg) {
+    if (!isHost) return;
+
+    const studentId = String(msg.student_id || 'student');
+    let sub = teacherLiveQuizSubmissions.get(studentId) || { student_name: msg.student_name || 'Student' };
+    sub.student_name = msg.student_name || sub.student_name;
+
+    if (msg.type === 'quiz_submitted') {
+        sub.submitted = true;
+        sub.marks_obtained = msg.marks_obtained;
+        sub.total_marks = msg.total_marks;
+        sub.tab_switch_count = msg.tab_switch_count;
+        sub.is_auto_submitted = msg.is_auto_submitted || false;
+        showNotification(`📝 ${sub.student_name} submitted quiz! (${msg.marks_obtained}/${msg.total_marks} marks)`, 'info');
+    } else if (msg.type === 'quiz_tab_switch_warning') {
+        sub.tab_switch_count = msg.tab_switch_count;
+        if (msg.is_auto_submitted) sub.is_auto_submitted = true;
+        displayTeacherQuizTabAlert(msg);
+    } else if (msg.type === 'quiz_copy_warning') {
+        sub.copy_attempts = (sub.copy_attempts || 0) + 1;
+        displayTeacherQuizTabAlert({
+            student_name: sub.student_name,
+            tab_switch_count: 'Copy Attempt',
+            timestamp: msg.timestamp,
+            is_copy: true
+        });
+    }
+
+    teacherLiveQuizSubmissions.set(studentId, sub);
+    updateTeacherMonitorStudentList();
 }
 
 function updateTeacherMonitorStudentList() {
@@ -4343,6 +4408,8 @@ function launchSelectedQuiz(quizId) {
             closeStartQuizModal();
             showNotification(`Launched quiz: ${data.quiz.title}`, 'success');
 
+            try { sessionStorage.setItem(`active_live_quiz_${meetingCode}`, JSON.stringify(data.quiz)); } catch(e){}
+
             broadcastQuizEvent({
                 type: 'start_meeting_quiz',
                 quiz: data.quiz
@@ -4361,14 +4428,13 @@ function launchSelectedQuiz(quizId) {
 
 function startLiveMeetingQuiz(quiz) {
     activeLiveQuiz = quiz;
+    showQuizToggleButton(true);
 
     if (isHost) {
-        // Teacher Side: Open Live Monitoring Dashboard
         openTeacherQuizMonitor(quiz);
         return;
     }
 
-    // Student Side: Open Student Test Side Panel
     currentQuizQuestionIndex = 0;
     studentQuizAnswers = {};
     studentTabSwitchCount = 0;
@@ -4385,6 +4451,7 @@ function startLiveMeetingQuiz(quiz) {
 
     // Anti-cheating event listeners
     window.addEventListener('blur', handleQuizTabSwitch);
+    window.addEventListener('focusout', handleQuizTabSwitch);
     document.addEventListener('visibilitychange', handleQuizVisibilityChange);
 
     // Copy and text selection protection
@@ -4408,14 +4475,22 @@ function preventQuizCopy(e) {
     return false;
 }
 
-function handleQuizTabSwitch() {
+function handleQuizTabSwitch(e) {
     if (!isQuizActive || isHost) return;
+    const now = Date.now();
+    if (now - lastWarningTimestamp < 1200) return;
+    lastWarningTimestamp = now;
+
     triggerAntiCheatingWarning();
 }
 
 function handleQuizVisibilityChange() {
     if (!isQuizActive || isHost) return;
-    if (document.hidden) {
+    if (document.hidden || document.visibilityState === 'hidden') {
+        const now = Date.now();
+        if (now - lastWarningTimestamp < 1200) return;
+        lastWarningTimestamp = now;
+
         triggerAntiCheatingWarning();
     }
 }
@@ -4468,8 +4543,13 @@ function displayTeacherQuizTabAlert(data) {
 
     const alertEl = document.createElement('div');
     const isAuto = data.is_auto_submitted;
-    alertEl.style.cssText = `background:${isAuto ? '#ef4444' : '#f59e0b'}; color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:space-between; animation: slideDown 0.3s ease;`;
-    alertEl.innerHTML = `<span>⚠️ <strong>${data.student_name}</strong> ${isAuto ? 'AUTO-SUBMITTED (3 Violations!)' : 'Switched Window/Tab (' + data.tab_switch_count + '/2)'}</span> <span style="font-size:10px; opacity:0.8; margin-left:6px;">${data.timestamp}</span>`;
+    const isCopy = data.is_copy;
+
+    let alertBg = isAuto ? '#ef4444' : (isCopy ? '#dc2626' : '#f59e0b');
+    let alertMsg = isAuto ? `AUTO-SUBMITTED (3 Violations!)` : (isCopy ? `Attempted to Copy Question Text` : `Switched Window/Tab (${data.tab_switch_count}/2)`);
+
+    alertEl.style.cssText = `background:${alertBg}; color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:space-between; animation: slideDown 0.3s ease;`;
+    alertEl.innerHTML = `<span>⚠️ <strong>${data.student_name}</strong> ${alertMsg}</span> <span style="font-size:10px; opacity:0.8; margin-left:6px;">${data.timestamp}</span>`;
 
     container.prepend(alertEl);
 
@@ -4574,6 +4654,7 @@ function submitQuizAnswers(isAutoSubmit = false) {
 
     // Remove anti-cheating listeners
     window.removeEventListener('blur', handleQuizTabSwitch);
+    window.removeEventListener('focusout', handleQuizTabSwitch);
     document.removeEventListener('visibilitychange', handleQuizVisibilityChange);
 
     const timeTaken = Math.round((Date.now() - (quizStartTime || Date.now())) / 1000);
@@ -4592,8 +4673,10 @@ function submitQuizAnswers(isAutoSubmit = false) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
+            try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(e){}
             showNotification(isAutoSubmit ? 'Test auto-submitted due to 3 violations!' : 'Quiz submitted successfully!', isAutoSubmit ? 'error' : 'success');
             closeLiveQuizSidePanel();
+            showQuizToggleButton(false);
         } else {
             showNotification(data.message || 'Error submitting quiz', 'error');
         }
@@ -4602,6 +4685,7 @@ function submitQuizAnswers(isAutoSubmit = false) {
         console.error('Submit quiz error:', err);
         showNotification('Error submitting quiz', 'error');
         closeLiveQuizSidePanel();
+        showQuizToggleButton(false);
     });
 }
 
@@ -4610,6 +4694,27 @@ function closeLiveQuizSidePanel() {
     const panel = document.getElementById('meetingQuizSidePanel');
     if (panel) panel.style.display = 'none';
 }
+
+function restoreActiveQuizState() {
+    try {
+        const stored = sessionStorage.getItem(`active_live_quiz_${meetingCode}`);
+        if (stored) {
+            const quiz = JSON.parse(stored);
+            if (quiz && quiz.id) {
+                activeLiveQuiz = quiz;
+                showQuizToggleButton(true);
+                if (isHost) {
+                    openTeacherQuizMonitor(quiz);
+                } else {
+                    startLiveMeetingQuiz(quiz);
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Failed to restore quiz state:', e);
+    }
+}
+setTimeout(restoreActiveQuizState, 1200);
 
 window.openStartQuizModal = openStartQuizModal;
 window.closeStartQuizModal = closeStartQuizModal;
@@ -4621,6 +4726,8 @@ window.submitQuizAnswers = submitQuizAnswers;
 window.closeLiveQuizSidePanel = closeLiveQuizSidePanel;
 window.selectQuizMcqOption = selectQuizMcqOption;
 window.closeTeacherQuizMonitor = closeTeacherQuizMonitor;
+window.toggleQuizPanel = toggleQuizPanel;
+window.handleTeacherQuizEvent = handleTeacherQuizEvent;
 </script>
 </body>
 </html>
