@@ -924,6 +924,7 @@ let room = null;
 // ── Config ────────────────────────────────────────────────────────────────────
 // Global scope variables for access across functions
 var _d = document.getElementById('meeting-data').dataset;
+const IS_HOST = _d.isHost === 'true';
 
 // Assign to window for Turbo Drive compatibility
 window.meetingConfig = {
