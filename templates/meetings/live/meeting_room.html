@@ -318,6 +318,12 @@
 <body class="meeting-body" data-turbo="false">
 <div class="meet-container">
 
+    <!-- Audio Autoplay Banner -->
+    <div id="audioAutoplayBanner" onclick="if(window.room) window.room.startAudio(); document.querySelectorAll('audio').forEach(a => a.play().catch(_ => {})); this.style.display='none';" style="display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%); z-index:99999; background:#ef4444; color:#ffffff; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; box-shadow:0 10px 25px rgba(0,0,0,0.3); align-items:center; gap:10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        Click anywhere to enable meeting audio (Browser Autoplay Unlocked)
+    </div>
+
     <!-- Top Bar -->
     <div class="meet-topbar">
         <div class="meet-info">
@@ -1101,7 +1107,14 @@ window.TrackManager = {
             // Audio elements live on <body>, hidden, not inside video boxes
             el.id            = `audio-${participant.identity}-${key}`;
             el.style.display = 'none';
+            el.autoplay      = true;
+            el.volume        = 1.0;
             document.body.appendChild(el);
+            el.play().catch(err => {
+                console.warn('Audio play notice (awaiting user gesture):', err);
+                const banner = document.getElementById('audioAutoplayBanner');
+                if (banner) banner.style.display = 'flex';
+            });
         }
 
         this._attached.set(key, { el, boxId: box.id, isScreen, identity: participant.identity });
@@ -1262,10 +1275,12 @@ async function init() {
             await window.room.startAudio();
         } catch (audioContextErr) {
             console.warn('AudioContext autoplay restricted by browser, listening for user gesture to activate audio.');
+            const banner = document.getElementById('audioAutoplayBanner');
+            if (banner) banner.style.display = 'flex';
         }
 
         const resumeAudioOnGesture = async () => {
-            if (window.room && window.room.canPlaybackAudio === false) {
+            if (window.room) {
                 try {
                     await window.room.startAudio();
                     console.log('LiveKit AudioContext activated via user gesture.');
@@ -1273,6 +1288,13 @@ async function init() {
                     console.warn('startAudio attempt on gesture:', e);
                 }
             }
+            document.querySelectorAll('audio').forEach(a => {
+                if (a.paused) {
+                    a.play().catch(_ => {});
+                }
+            });
+            const banner = document.getElementById('audioAutoplayBanner');
+            if (banner) banner.style.display = 'none';
         };
         ['click', 'touchstart', 'keydown'].forEach(evtType => {
             document.addEventListener(evtType, resumeAudioOnGesture, { passive: true });
