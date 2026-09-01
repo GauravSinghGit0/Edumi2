@@ -5,34 +5,12 @@
 
 {% block content %}
 <style>
-    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .form-card { background: white; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid #e2e8f0; }
-    .form-title { font-size: 1.875rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
-    .form-subtitle { color: #64748b; margin-bottom: 2rem; }
-    
-    .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-weight: 600; color: #0f172a; margin-bottom: 0.5rem; font-size: 0.9375rem; }
-    .form-control { width: 100%; padding: 0.875rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.875rem; font-size: 1rem; transition: all 0.2s; }
-    .form-control:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); outline: none; }
-    textarea.form-control { min-height: 120px; resize: vertical; }
-    
+    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
     .date-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    
-    .btn-primary { background: #4f46e5; color: white; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
-    .btn-secondary { background: #f1f5f9; color: #0f172a; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    
     .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    
-    .file-upload-area { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 2rem; text-align: center; transition: all 0.2s; }
-    .file-upload-area:hover { border-color: #6366f1; background: #f5f3ff; }
-    
     .existing-files { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
-    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #f8fafc; border-radius: 0.75rem; }
-    .file-info { display: flex; align-items: center; gap: 0.75rem; }
     .btn-delete-file { background: #fee2e2; color: #991b1b; border: none; padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+    body.dark-mode .btn-delete-file { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
 </style>
 
 <div class="create-container">

@@ -563,10 +563,3 @@ def _probe_http(cam_type, ip, port, camera_obj=None):
     })
 
 
-# ===========================================================================
-# Misc
-# ===========================================================================
-
-@login_required
-def test_feed_page(request):
-    return render(request, "test_feed.html")

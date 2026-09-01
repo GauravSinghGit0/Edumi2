@@ -651,8 +651,6 @@
     window.REEL_PROJECT_TIMELINE_STATE = JSON.parse('{{ timeline_state_json|default:"null"|escapejs }}');
     window.REEL_PROJECT_PROXY_STATUS = "{{ project.proxy_status }}";
     window.REEL_PROJECT_PROXY_URL = "{{ project.proxy_url|default:'' }}";
-    window.REEL_PROJECT_SAVE_TIMELINE_URL = "{% url 'save_timeline' project.pk %}";
-    window.REEL_PROJECT_EXPORT_TIMELINE_URL = "{% url 'export_timeline' project.pk %}";
     window.REEL_PROJECT_OPERATIONS = [
         {% for op in operations %}
         {

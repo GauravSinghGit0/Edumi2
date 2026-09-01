@@ -5,29 +5,9 @@
 
 {% block content %}
 <style>
-    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .form-card { background: white; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid #e2e8f0; }
-    .form-title { font-size: 1.875rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
-    .form-subtitle { color: #64748b; margin-bottom: 2rem; }
-    
-    .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-weight: 600; color: #0f172a; margin-bottom: 0.5rem; font-size: 0.9375rem; }
-    .form-control { width: 100%; padding: 0.875rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.875rem; font-size: 1rem; transition: all 0.2s; }
-    .form-control:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); outline: none; }
-    textarea.form-control { min-height: 120px; resize: vertical; }
-    
+    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
     .date-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    
-    .btn-primary { background: #4f46e5; color: white; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
-    .btn-secondary { background: #f1f5f9; color: #0f172a; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    
     .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    
-    .file-upload-area { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 2rem; text-align: center; transition: all 0.2s; }
-    .file-upload-area:hover { border-color: #6366f1; background: #f5f3ff; }
 </style>
 
 <div class="create-container">
@@ -77,7 +57,7 @@
                 <label for="question_files">Attach Files (Questions, Images, PDFs, etc.)</label>
                 <div class="file-upload-area">
                     <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 0.75rem;"></i>
-                    <p style="color: #475569; margin: 0 0 0.5rem 0;">Drag and drop files here or click to browse</p>
+                    <p style="margin: 0 0 0.5rem 0;">Drag and drop files here or click to browse</p>
                     <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;">
                     <button type="button" onclick="document.getElementById('question_files').click()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">Choose Files</button>
                 </div>
@@ -96,7 +76,7 @@
             
             <div class="btn-group">
                 <a href="{% url 'classroom_assignments' classroom.id %}" class="btn-secondary">Cancel</a>
-                <button type="submit" name="action" value="draft" class="btn-secondary" style="background: #e0e7ff; color: #3730a3;">Save as Draft</button>
+                <button type="submit" name="action" value="draft" class="btn-draft">Save as Draft</button>
                 <button type="submit" name="action" value="publish" class="btn-primary">Publish Assignment</button>
             </div>
         </form>

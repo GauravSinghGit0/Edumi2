@@ -22,20 +22,10 @@
     .grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
     {% if is_teacher %}.grid-layout { grid-template-columns: 1fr 1fr; }{% endif %}
     
-    .section-card { background: white; border-radius: 1.5rem; padding: 2rem; border: 1px solid #e2e8f0; }
-    .section-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 1.5rem 0; display: flex; align-items: center; gap: 0.75rem; }
-    
     .file-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
-    .file-item { 
-        display: flex; align-items: center; justify-content: space-between; 
-        padding: 0.875rem; background: #f8fafc; border-radius: 0.875rem; 
-    }
     .file-info { display: flex; align-items: center; gap: 0.75rem; }
-    .file-download { color: #4f46e5; font-weight: 600; text-decoration: none; }
+    .file-download { color: #6366f1; font-weight: 600; text-decoration: none; }
     
-    .submission-item { 
-        background: #f8fafc; border-radius: 1rem; padding: 1.25rem; margin-bottom: 1rem; border-left: 4px solid #cbd5e1;
-    }
     .submission-item.late { border-left-color: #ef4444; }
     .submission-item.submitted { border-left-color: #22c55e; }
     .submission-header { display: flex; justify-content: space-between; align-items: start; }
@@ -46,6 +36,9 @@
     .badge-submitted { background: #dcfce7; color: #166534; }
     .badge-late { background: #fee2e2; color: #991b1b; }
     .badge-missing { background: #fef2f2; color: #b91c1c; }
+    body.dark-mode .badge-submitted { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    body.dark-mode .badge-late { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    body.dark-mode .badge-missing { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
     
     .btn-primary { background: #4f46e5; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.875rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
     .btn-primary:hover { background: #4338ca; }

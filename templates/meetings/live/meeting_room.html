@@ -2712,6 +2712,7 @@ window.MeetingRecorder = {
 
             this.recorder.ondataavailable = (evt) => {
                 if (evt.data && evt.data.size > 0) {
+                    this.lastChunkBlob = evt.data;
                     this.uploadChunk(evt.data, false);
                 }
             };
@@ -2779,29 +2780,9 @@ window.MeetingRecorder = {
     },
 
     async finalizeUpload() {
-        const formData = new FormData();
-        const dummyBlob = new Blob([], { type: 'video/x-matroska' });
-        const finalIndex = this.chunkIndex;
-        formData.append('chunk', dummyBlob, 'final.tmp');
-        formData.append('uploadId', this.uploadId);
-        formData.append('chunkIndex', finalIndex);
-        formData.append('totalChunks', finalIndex + 1);
-        formData.append('filename', `recording_${window.meetingConfig.meetingCode}.mkv`);
-        formData.append('meeting_id', window.meetingConfig.meetingId || '');
-
-        try {
-            const url = window.meetingConfig.recordingUploadUrl || '/meetings/recording/upload/';
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': window.CSRF },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                showNotification('Meeting recording successfully saved & published in MKV format!', 'success');
-            }
-        } catch (err) {
-            console.warn('Final chunk upload notice:', err);
+        if (this.lastChunkBlob) {
+            await this.uploadChunk(this.lastChunkBlob, true);
+            this.lastChunkBlob = null;
         }
     },
 

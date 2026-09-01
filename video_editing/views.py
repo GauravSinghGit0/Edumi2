@@ -982,48 +982,6 @@ def publish_to_lecture(request, pk):
         return redirect(f"{reverse('project_detail', args=[pk])}?recording_id={recording_id}")
 
 
-# Keep Celery save_timeline / export_timeline stubs for safety
-@login_required
-@require_POST
-def save_timeline(request, pk):
-    project = get_object_or_404(VideoProject, pk=pk)
-    try:
-        data = json.loads(request.body)
-        project.timeline_state = data
-        project.save(update_fields=['timeline_state'])
-        return JsonResponse({"status": "success"})
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-
-@login_required
-@require_POST
-def export_timeline(request, pk):
-    project = get_object_or_404(VideoProject, pk=pk)
-    try:
-        data = json.loads(request.body)
-        project.timeline_state = data
-        project.save(update_fields=['timeline_state'])
-        project.status = "processing"
-        project.save(update_fields=['status'])
-        from .tasks import export_video_task
-        try:
-            from school_project.celery import app as celery_app
-            inspect = celery_app.control.inspect()
-            if inspect and inspect.stats():
-                export_video_task.delay(project.id, data)
-                return JsonResponse({"status": "processing"})
-            else:
-                export_video_task(project.id, data)
-                return JsonResponse({"status": "success"})
-        except Exception:
-            export_video_task(project.id, data)
-            return JsonResponse({"status": "success"})
-    except Exception as e:
-        project.status = "error"
-        project.error_message = str(e)
-        project.save(update_fields=['status', 'error_message'])
-        return JsonResponse({"error": str(e)}, status=500)
 
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files import File

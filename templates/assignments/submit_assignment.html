@@ -5,27 +5,12 @@
 
 {% block content %}
 <style>
-    .submit-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .form-card { background: white; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid #e2e8f0; }
-    .form-title { font-size: 1.875rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
-    .form-subtitle { color: #64748b; margin-bottom: 2rem; }
-    
-    .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-weight: 600; color: #0f172a; margin-bottom: 0.5rem; font-size: 0.9375rem; }
-    
-    .btn-primary { background: #4f46e5; color: white; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
-    .btn-secondary { background: #f1f5f9; color: #0f172a; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    
+    .submit-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
     .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    
-    .file-upload-area { border: 2px dashed #cbd5e1; border-radius: 1rem; padding: 2rem; text-align: center; transition: all 0.2s; }
-    .file-upload-area:hover { border-color: #6366f1; background: #f5f3ff; }
-    
     .deadline-warning { background: #fef3c7; color: #92400e; padding: 1rem 1.5rem; border-radius: 1rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem; }
     .deadline-overdue { background: #fee2e2; color: #991b1b; }
+    body.dark-mode .deadline-warning { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    body.dark-mode .deadline-overdue { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
 </style>
 
 <div class="submit-container">

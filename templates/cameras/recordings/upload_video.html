@@ -4,6 +4,10 @@
 {% block title %}Upload Lecture - Edumi{% endblock %}
 
 {% block content %}
+<script>
+    // Seamless redirect to Manage Recordings page with upload modal open
+    window.location.replace("{% url 'manage_recordings' %}?upload=true");
+</script>
 <div class="uv-container">
 
     <!-- Page Header — matches Meetings header pattern -->

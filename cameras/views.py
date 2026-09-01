@@ -24,7 +24,7 @@ from cameras.views_logic import (
     like_recording,
     # camera management
     admin_dashboard, add_camera, edit_camera, delete_camera,
-    camera_feed, test_camera, test_feed_page, probe_camera,
+    camera_feed, test_camera, probe_camera,
     # streaming & control
     mobile_mic, teacher_camera_dashboard, teacher_control_room, update_zoom,
     start_streaming, stop_streaming, live_participants,

@@ -344,7 +344,8 @@ def manage_recordings(request):
         return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
     recordings = CameraRecording.objects.filter(teacher=request.user).order_by('-created_at')
-    return render(request, 'cameras/recordings/manage_recordings.html', {'recordings': recordings})
+    cameras = Camera.objects.all() if request.user.is_superuser else Camera.objects.filter(camerapermission__teacher=request.user).distinct()
+    return render(request, 'cameras/recordings/manage_recordings.html', {'recordings': recordings, 'cameras': cameras})
 
 
 @login_required

@@ -5,26 +5,47 @@
 
 {% block content %}
 <style>
-    .assignments-container { max-width: 1400px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
+    .assignments-container { max-width: 1400px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
     
-    .page-header { 
+    .assignment-hero-card { 
         background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
         border-radius: 1.5rem; 
-        padding: 3rem; 
+        padding: 2.5rem 3rem; 
         color: white; 
         margin-bottom: 2rem; 
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        box-shadow: 0 20px 25px -5px rgba(30, 64, 175, 0.25);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
     }
     
-    .page-header h1 { font-size: 2.5rem; font-weight: 800; margin: 0; }
-    .page-header p { margin-top: 0.75rem; color: rgba(255,255,255,0.8); font-size: 1.125rem; }
+    .assignment-hero-card h1 { font-size: 2.5rem; font-weight: 800; margin: 0.25rem 0 0.5rem 0; color: #ffffff; line-height: 1.2; }
+    .assignment-hero-card p { margin: 0; color: rgba(255,255,255,0.9); font-size: 1.125rem; font-weight: 400; }
     
-    .btn-primary { 
-        background: white; color: #1e40af; padding: 0.875rem 1.75rem; border-radius: 1rem; 
-        font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; 
-        transition: all 0.2s; border: none;
+    .btn-hero-action { 
+        background: #ffffff !important; 
+        color: #1e40af !important; 
+        padding: 0.875rem 1.75rem; 
+        border-radius: 1rem; 
+        font-weight: 700; 
+        font-size: 1rem;
+        text-decoration: none; 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.625rem; 
+        transition: all 0.2s ease-in-out; 
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        white-space: nowrap;
     }
-    .btn-primary:hover { background: #f0f9ff; transform: translateY(-2px); }
+    .btn-hero-action:hover { 
+        background: #f0f9ff !important; 
+        color: #1e3a8a !important; 
+        transform: translateY(-2px); 
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
     
     .assignments-grid { display: flex; flex-direction: column; gap: 1.25rem; }
     
@@ -47,7 +68,7 @@
     .status-late { background: #fee2e2; color: #991b1b; }
     .status-missing { background: #fef2f2; color: #b91c1c; }
     
-    .assignment-meta { display: flex; gap: 1.5rem; color: #64748b; font-size: 0.875rem; }
+    .assignment-meta { display: flex; gap: 1.5rem; color: #64748b; font-size: 0.875rem; flex-wrap: wrap; }
     .meta-item { display: flex; align-items: center; gap: 0.5rem; }
     
     .assignment-footer { margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
@@ -55,23 +76,33 @@
     
     .btn-view { padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; background: #f1f5f9; color: #0f172a; text-decoration: none; transition: all 0.2s; }
     .btn-view:hover { background: #e2e8f0; }
+
+    /* Dark Mode */
+    body.dark-mode .assignment-card { background: var(--color-bg-card, #1e293b); border-color: var(--color-border, #334155); }
+    body.dark-mode .assignment-title { color: var(--color-text-main, #f8fafc); }
+    body.dark-mode .assignment-description { color: var(--color-text-muted, #94a3b8); }
+    body.dark-mode .assignment-meta { color: var(--color-text-muted, #94a3b8); }
+    body.dark-mode .assignment-footer { border-top-color: var(--color-border, #334155); }
+    body.dark-mode .btn-view { background: var(--color-bg-hover, #334155); color: var(--color-text-main, #f8fafc); }
+    body.dark-mode .btn-view:hover { background: var(--color-border, #475569); }
+    body.dark-mode .empty-card { background: var(--color-bg-card, #1e293b) !important; border: 1px solid var(--color-border, #334155); }
+    body.dark-mode .empty-card h3 { color: var(--color-text-main, #f8fafc) !important; }
+    body.dark-mode .empty-card p { color: var(--color-text-muted, #94a3b8) !important; }
 </style>
 
 <div class="assignments-container">
     <!-- Page Header -->
-    <div class="page-header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span style="font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem;">{{ classroom.title }}</span>
-                <h1>Assignments</h1>
-                <p>Manage and track all course assignments</p>
-            </div>
-            {% if is_teacher %}
-            <a href="{% url 'create_assignment' classroom.id %}" class="btn-primary">
-                <i data-lucide="plus-circle"></i> Create Assignment
-            </a>
-            {% endif %}
+    <div class="assignment-hero-card">
+        <div>
+            <span style="font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem;">{{ classroom.title }}</span>
+            <h1>Assignments</h1>
+            <p>Manage and track all course assignments</p>
         </div>
+        {% if is_teacher %}
+        <a href="{% url 'create_assignment' classroom.id %}" class="btn-hero-action">
+            <i data-lucide="plus-circle"></i> Create Assignment
+        </a>
+        {% endif %}
     </div>
 
     <!-- Assignments List -->
@@ -111,7 +142,7 @@
         {% endfor %}
     </div>
     {% else %}
-    <div style="background: white; border-radius: 1.5rem; padding: 4rem; text-align: center;">
+    <div class="empty-card" style="background: white; border-radius: 1.5rem; padding: 4rem; text-align: center;">
         <i data-lucide="inbox" style="width: 64px; height: 64px; color: #94a3b8; margin-bottom: 1rem;"></i>
         <h3 style="color: #0f172a; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">No assignments yet</h3>
         <p style="color: #64748b;">{% if is_teacher %}Create your first assignment to get started!{% else %}Check back later for assignments.{% endif %}</p>
