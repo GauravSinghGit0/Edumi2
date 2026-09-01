@@ -77,6 +77,13 @@ function switchClassroomTab(tabName) {
     } else if (tabName === 'people') {
         targetPanel = document.getElementById('tabContentPeople');
         targetBtn = document.getElementById('tabBtnPeople');
+    } else if (tabName === 'lectures') {
+        targetPanel = document.getElementById('tabContentLectures');
+        targetBtn = document.getElementById('tabBtnLectures');
+        const lecBadge = document.getElementById('lecturesCountBadge');
+        if (lecBadge) {
+            lecBadge.style.display = 'none';
+        }
     }
 
     if (targetPanel) targetPanel.style.display = 'block';

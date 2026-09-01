@@ -136,9 +136,16 @@ def upload_video(request):
             if camera_id:
                 camera = Camera.objects.filter(id=camera_id).first()
 
+            classroom = None
+            classroom_id = request.POST.get('classroom')
+            if classroom_id:
+                from meetings.models import Classroom
+                classroom = Classroom.objects.filter(id=classroom_id, teacher=request.user).first()
+
             recording = CameraRecording.objects.create(
                 teacher=request.user,
                 camera=camera,
+                classroom=classroom,
                 title=title,
                 description=description,
                 video_file=video_file,
@@ -255,9 +262,16 @@ def camera_chunked_upload(request):
             if camera_id:
                 camera = Camera.objects.filter(id=camera_id).first()
 
+            classroom = None
+            classroom_id = request.POST.get('classroom')
+            if classroom_id:
+                from meetings.models import Classroom
+                classroom = Classroom.objects.filter(id=classroom_id, teacher=request.user).first()
+
             recording = CameraRecording(
                 teacher=request.user,
                 camera=camera,
+                classroom=classroom,
                 title=title,
                 description=description,
                 recording_status='completed',
@@ -345,7 +359,13 @@ def manage_recordings(request):
 
     recordings = CameraRecording.objects.filter(teacher=request.user).order_by('-created_at')
     cameras = Camera.objects.all() if request.user.is_superuser else Camera.objects.filter(camerapermission__teacher=request.user).distinct()
-    return render(request, 'cameras/recordings/manage_recordings.html', {'recordings': recordings, 'cameras': cameras})
+    from meetings.models import Classroom
+    teacher_classrooms = Classroom.objects.filter(teacher=request.user, is_active=True).order_by('title')
+    return render(request, 'cameras/recordings/manage_recordings.html', {
+        'recordings': recordings,
+        'cameras': cameras,
+        'teacher_classrooms': teacher_classrooms,
+    })
 
 
 @login_required
@@ -497,15 +517,90 @@ def edit_recording(request, recording_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def assign_recording_classroom(request, recording_id):
+    """Bulk assign/unassign a recording to multiple classrooms via M2M.
+    Accepts JSON body: { "classroom_ids": [1, 2, 5] }
+    Sets exactly those classrooms (removes any not in the list).
+    """
+    import json
+    recording = get_object_or_404(CameraRecording, id=recording_id)
+    if not (request.user.is_superuser or recording.teacher == request.user):
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        classroom_ids = data.get('classroom_ids', [])
+    except (json.JSONDecodeError, AttributeError):
+        classroom_ids = request.POST.getlist('classroom_ids', [])
+
+    from meetings.models import Classroom
+    # Only allow classrooms owned by this teacher
+    valid_classrooms = Classroom.objects.filter(
+        id__in=classroom_ids, teacher=request.user, is_active=True
+    )
+    recording.classrooms.set(valid_classrooms)
+
+    # Also update the legacy FK to the first classroom or None
+    first = valid_classrooms.first()
+    recording.classroom = first
+    recording.save(update_fields=['classroom'])
+
+    assigned_names = list(valid_classrooms.values_list('title', flat=True))
+    return JsonResponse({
+        'status': 'success',
+        'assigned_count': len(assigned_names),
+        'assigned_classrooms': assigned_names,
+        'message': f"Assigned to {len(assigned_names)} classroom(s)" if assigned_names else 'Unassigned from all classrooms',
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_recording_classrooms(request, recording_id):
+    """Return the currently assigned classroom IDs for a recording (for populating toggle states)."""
+    recording = get_object_or_404(CameraRecording, id=recording_id)
+    if not (request.user.is_superuser or recording.teacher == request.user):
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+
+    assigned_ids = list(recording.classrooms.values_list('id', flat=True))
+    return JsonResponse({
+        'status': 'success',
+        'classroom_ids': assigned_ids,
+    })
+
+
+@login_required
 def watch_recording(request, recording_id):
     """Watch a recorded lecture"""
     recording = get_object_or_404(CameraRecording, id=recording_id)
-    recording.views_count += 1
-    recording.save(update_fields=['views_count'])
 
-    # Check permissions: owner or published
+    # Check basic permissions: owner, superuser or published
     if not (recording.is_published or recording.teacher == request.user or request.user.is_superuser):
         return HttpResponse("Unauthorized", status=403)
+
+    # If assigned to a specific classroom, check student enrollment
+    if recording.classroom and not (recording.teacher == request.user or request.user.is_superuser):
+        from meetings.models import ClassroomMembership
+        is_enrolled = ClassroomMembership.objects.filter(
+            classroom=recording.classroom,
+            student=request.user,
+            status='approved'
+        ).exists()
+        if not is_enrolled:
+            return HttpResponse("Unauthorized - This lecture is restricted to members of " + recording.classroom.title, status=403)
+
+    # Only increment view count for unique students
+    if request.user.is_authenticated:
+        # Check if user is a teacher or admin
+        is_teacher_or_admin = request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher')
+        
+        # If they are a student and haven't viewed it yet, increment the count
+        if not is_teacher_or_admin:
+            if not recording.viewed_by.filter(id=request.user.id).exists():
+                recording.viewed_by.add(request.user)
+                recording.views_count += 1
+                recording.save(update_fields=['views_count'])
 
     # Recommended videos (same teacher or same camera)
     recommended = CameraRecording.objects.filter(

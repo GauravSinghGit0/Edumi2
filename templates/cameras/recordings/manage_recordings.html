@@ -49,7 +49,16 @@
                             </div>
                                 <div>
                                     <div class="font-weight-bold text-dark">{{ rec.title }}</div>
-                                    <div class="text-muted small">{{ rec.camera.name|default:"Manual Upload" }}</div>
+                                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                        <span class="text-muted small">{{ rec.camera.name|default:"Manual Upload" }}</span>
+                                        {% if rec.classroom %}
+                                        <span class="badge px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11px; background: #e0e7ff; color: #4338ca; border-radius: 6px;">
+                                            <i data-lucide="school" style="width: 12px; height: 12px;"></i> {{ rec.classroom.title }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted px-2 py-1" style="font-size: 11px; border-radius: 6px;">General</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -97,19 +106,63 @@
                         </td>
                         <td class="px-4 text-end">
                             <div style="position: relative; display: inline-block;">
-                                <button class="btn-action-trigger d-inline-flex align-items-center justify-content-center" 
+                                <button class="btn btn-light btn-sm dropdown-portal-trigger px-2 font-weight-bold" 
                                         data-id="{{ rec.id }}"
-                                        aria-label="Actions">
-                                    <i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i>
+                                        aria-label="Actions"
+                                        style="font-size: 18px; line-height: 1;">
+                                    &#8942;
                                 </button>
                                 
-                                <div class="custom-portal-dropdown" id="portal-menu-{{ rec.id }}" style="display: none;">
+                                <div class="dropdown-portal-menu" id="portal-menu-{{ rec.id }}" style="display: none;">
                                     <a class="dropdown-portal-item" href="{% url 'watch_recording' rec.id %}">
                                         <i data-lucide="play" style="width: 16px; height: 16px;"></i> Watch
                                     </a>
                                     <a class="dropdown-portal-item" href="{% url 'edit_recording' rec.id %}">
                                         <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Edit
                                     </a>
+                                    <div class="dropdown-portal-divider"></div>
+                                    <div class="assign-trigger-wrapper" style="position: relative;">
+                                        <button class="dropdown-portal-item assign-btn" data-id="{{ rec.id }}" type="button">
+                                            <i data-lucide="share-2" style="width: 16px; height: 16px;"></i>
+                                            <span style="flex:1; text-align:left;">Assign</span>
+                                            <span class="assign-count-badge" id="assign-count-{{ rec.id }}" style="display:none;">0</span>
+                                            <i data-lucide="chevron-right" style="width: 14px; height: 14px; opacity: 0.5;"></i>
+                                        </button>
+                                        <!-- Nested Assign Submenu -->
+                                        <div class="assign-nested-dropdown" id="assign-panel-{{ rec.id }}">
+                                            <div class="assign-nested-header">
+                                                <i data-lucide="layout-grid" style="width: 15px; height: 15px;"></i>
+                                                <span>Assign to Classrooms</span>
+                                            </div>
+                                            <div class="assign-nested-body">
+                                                {% for c in teacher_classrooms %}
+                                                <label class="assign-classroom-row" for="assign-toggle-{{ rec.id }}-{{ c.id }}">
+                                                    <div class="assign-classroom-info">
+                                                        <span class="assign-classroom-icon">
+                                                            <i data-lucide="school" style="width: 14px; height: 14px;"></i>
+                                                        </span>
+                                                        <div>
+                                                            <div class="assign-classroom-name">{{ c.title }}</div>
+                                                            <div class="assign-classroom-code">{{ c.class_code }}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="assign-toggle-switch">
+                                                        <input type="checkbox" class="assign-toggle-input" 
+                                                               id="assign-toggle-{{ rec.id }}-{{ c.id }}"
+                                                               data-recording-id="{{ rec.id }}"
+                                                               data-classroom-id="{{ c.id }}">
+                                                        <span class="assign-toggle-slider"></span>
+                                                    </div>
+                                                </label>
+                                                {% empty %}
+                                                <div class="assign-empty-state">
+                                                    <i data-lucide="info" style="width: 16px; height: 16px; opacity: 0.4;"></i>
+                                                    <span>No classrooms found</span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="dropdown-portal-divider"></div>
                                     <button class="dropdown-portal-item text-danger delete-rec-btn" data-id="{{ rec.id }}" data-title="{{ rec.title }}">
                                         <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete
@@ -385,6 +438,124 @@
             });
         }
 
+        // --- Nested Assign Dropdown Logic ---
+        let activeAssignDropdown = null;
+
+        function closeActiveAssignDropdown() {
+            if (activeAssignDropdown) {
+                activeAssignDropdown.classList.remove('show');
+                activeAssignDropdown = null;
+            }
+        }
+
+        // Close nested when main dropdown closes
+        const originalClose = closeActiveDropdown;
+        closeActiveDropdown = function() {
+            closeActiveAssignDropdown();
+            originalClose();
+        };
+
+        if (!document.body._assignRecInit) {
+            document.body._assignRecInit = true;
+
+            // Toggle nested dropdown
+            document.body.addEventListener('click', function(e) {
+                const assignBtn = e.target.closest('.assign-btn');
+                
+                if (assignBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const recId = assignBtn.dataset.id;
+                    const nestedPanel = document.getElementById(`assign-panel-${recId}`);
+                    
+                    if (activeAssignDropdown && activeAssignDropdown !== nestedPanel) {
+                        closeActiveAssignDropdown();
+                    }
+                    
+                    if (nestedPanel) {
+                        const isShowing = nestedPanel.classList.contains('show');
+                        
+                        if (!isShowing) {
+                            // Position it to the left or right of the parent
+                            const btnRect = assignBtn.getBoundingClientRect();
+                            const panelWidth = 260; // min-width
+                            
+                            // Check if space on left
+                            if (btnRect.left > panelWidth + 20) {
+                                nestedPanel.style.left = `-${panelWidth + 4}px`;
+                                nestedPanel.style.top = '-10px';
+                            } else {
+                                nestedPanel.style.left = `${btnRect.width + 4}px`;
+                                nestedPanel.style.top = '-10px';
+                            }
+                            
+                            nestedPanel.classList.add('show');
+                            activeAssignDropdown = nestedPanel;
+                            
+                            // Fetch current state
+                            fetch(`/cameras/get-recording-classrooms/${recId}/`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        const ids = data.classroom_ids;
+                                        const checkboxes = nestedPanel.querySelectorAll('.assign-toggle-input');
+                                        checkboxes.forEach(cb => {
+                                            cb.checked = ids.includes(parseInt(cb.dataset.classroomId));
+                                        });
+                                        // Update badge
+                                        const badge = document.getElementById(`assign-count-${recId}`);
+                                        if (badge) {
+                                            badge.textContent = ids.length;
+                                            badge.style.display = ids.length > 0 ? 'inline-flex' : 'none';
+                                        }
+                                    }
+                                });
+                        } else {
+                            closeActiveAssignDropdown();
+                        }
+                    }
+                } else if (activeAssignDropdown && !e.target.closest('.assign-nested-dropdown')) {
+                    closeActiveAssignDropdown();
+                }
+            });
+
+            // Handle toggle switch changes
+            document.body.addEventListener('change', function(e) {
+                if (e.target.classList.contains('assign-toggle-input')) {
+                    const recId = e.target.dataset.recordingId;
+                    const nestedPanel = document.getElementById(`assign-panel-${recId}`);
+                    
+                    if (nestedPanel) {
+                        // Gather all checked IDs
+                        const checkboxes = nestedPanel.querySelectorAll('.assign-toggle-input:checked');
+                        const classroomIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.classroomId));
+                        
+                        // Update badge instantly for UX
+                        const badge = document.getElementById(`assign-count-${recId}`);
+                        if (badge) {
+                            badge.textContent = classroomIds.length;
+                            badge.style.display = classroomIds.length > 0 ? 'inline-flex' : 'none';
+                        }
+                        
+                        // Send bulk update
+                        fetch(`/cameras/assign-classroom/${recId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}',
+                            },
+                            body: JSON.stringify({ classroom_ids: classroomIds })
+                        }).then(res => res.json()).then(data => {
+                            if (data.status !== 'success') {
+                                console.error('Failed to assign classrooms', data);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
         if (window.lucide) {
             lucide.createIcons();
         }
@@ -434,29 +605,8 @@
     .table tbody tr:hover {
         background-color: var(--hover-bg) !important;
     }
-    
-    /* Action trigger button */
-    .btn-action-trigger {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        border: 1px solid var(--border-color);
-        background: var(--bg-card);
-        color: var(--text-main);
-        cursor: pointer;
-        padding: 0;
-        transition: all 0.2s ease;
-    }
-    
-    .btn-action-trigger:hover, .btn-action-trigger.active {
-        background: var(--hover-bg);
-        border-color: var(--primary);
-        color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-    }
-    
     /* Custom Portal Dropdown (Body-level fixed element) */
-    .custom-portal-dropdown {
+    .dropdown-portal-menu {
         position: fixed;
         z-index: 999999;
         background: var(--bg-card);
@@ -473,13 +623,13 @@
         transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     }
     
-    .custom-portal-dropdown.show {
+    .dropdown-portal-menu.show {
         opacity: 1;
         transform: scale(1);
         pointer-events: auto;
     }
     
-    body.dark-mode .custom-portal-dropdown {
+    body.dark-mode .dropdown-portal-menu {
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.4);
     }
     
@@ -532,6 +682,225 @@
     .dropdown-portal-divider {
         border-top: 1px solid var(--border-color);
         margin: 6px 0;
+    }
+
+    /* ── Nested Assign-to-Classroom Submenu ── */
+    .assign-trigger-wrapper {
+        position: relative;
+    }
+
+    .assign-btn {
+        position: relative;
+    }
+
+    .assign-count-badge {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 5px;
+        line-height: 1;
+    }
+
+    .assign-nested-dropdown {
+        position: absolute;
+        z-index: 1000000;
+        min-width: 260px;
+        max-width: 300px;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 12px;
+        box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.12), 0 6px 14px -4px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+
+        /* Animation */
+        opacity: 0;
+        transform: translateX(-6px) scale(0.97);
+        pointer-events: none;
+        transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .assign-nested-dropdown.show {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+        pointer-events: auto;
+    }
+
+    body.dark-mode .assign-nested-dropdown {
+        box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45), 0 6px 14px -4px rgba(0, 0, 0, 0.3);
+    }
+
+    .assign-nested-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted, #64748b);
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+        background: var(--bg-body, #f8fafc);
+    }
+
+    body.dark-mode .assign-nested-header {
+        background: rgba(15, 23, 42, 0.5);
+    }
+
+    .assign-nested-body {
+        padding: 6px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .assign-nested-body::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .assign-nested-body::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    body.dark-mode .assign-nested-body::-webkit-scrollbar-thumb {
+        background: #475569;
+    }
+
+    .assign-classroom-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        margin: 0;
+    }
+
+    .assign-classroom-row:hover {
+        background: var(--hover-bg, #f1f5f9);
+    }
+
+    .assign-classroom-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .assign-classroom-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+        color: #6366f1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    body.dark-mode .assign-classroom-icon {
+        background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(168,85,247,0.2) 100%);
+        color: #a5b4fc;
+    }
+
+    .assign-classroom-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main, #1e293b);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+    }
+
+    .assign-classroom-code {
+        font-size: 11px;
+        color: var(--text-muted, #94a3b8);
+        font-weight: 500;
+    }
+
+    /* Custom Toggle Switch */
+    .assign-toggle-switch {
+        position: relative;
+        width: 38px;
+        height: 22px;
+        flex-shrink: 0;
+    }
+
+    .assign-toggle-input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+    }
+
+    .assign-toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: var(--border-color, #cbd5e1);
+        border-radius: 11px;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .assign-toggle-slider::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        background: #ffffff;
+        border-radius: 50%;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    .assign-toggle-input:checked + .assign-toggle-slider {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    }
+
+    .assign-toggle-input:checked + .assign-toggle-slider::before {
+        transform: translateX(16px);
+    }
+
+    .assign-toggle-input:focus + .assign-toggle-slider {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    body.dark-mode .assign-toggle-slider {
+        background: #334155;
+    }
+
+    body.dark-mode .assign-toggle-slider::before {
+        background: #94a3b8;
+    }
+
+    body.dark-mode .assign-toggle-input:checked + .assign-toggle-slider::before {
+        background: #ffffff;
+    }
+
+    .assign-empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 20px 10px;
+        color: var(--text-muted, #94a3b8);
+        font-size: 13px;
     }
 
 /* Modal Styles */
@@ -994,7 +1363,17 @@ body.dark-mode .uv-divider, body.dark-mode .uv-actions { border-color: var(--col
                                 </div>
 
                                 <div class="uv-field">
-                                    <label class="uv-label">Link to Camera / Classroom</label>
+                                    <label class="uv-label">Assign to Classroom</label>
+                                    <select name="classroom" class="uv-input uv-select">
+                                        <option value="">General / Unassigned</option>
+                                        {% for c in teacher_classrooms %}
+                                        <option value="{{ c.id }}">{{ c.title }} ({{ c.class_code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="uv-field">
+                                    <label class="uv-label">Link to Camera</label>
                                     <select name="camera" class="uv-input uv-select">
                                         <option value="">Not linked (Manual Upload)</option>
                                         {% for camera in cameras %}
@@ -1191,6 +1570,7 @@ function closeUploadModal() {
             const title = modalVideoTitle?.value || 'Untitled Lecture';
             const description = this.querySelector('[name="description"]')?.value || '';
             const camera = this.querySelector('[name="camera"]')?.value || '';
+            const classroom = this.querySelector('[name="classroom"]')?.value || '';
             const thumbFile = modalThumbInput.files[0];
 
             const submitBtn = document.getElementById('modalSubmitBtn');
@@ -1221,6 +1601,7 @@ function closeUploadModal() {
                     formData.append('title', title);
                     formData.append('description', description);
                     if (camera) formData.append('camera', camera);
+                    if (classroom) formData.append('classroom', classroom);
                     if (thumbFile && i === totalChunks - 1) formData.append('thumbnail', thumbFile);
 
                     const data = await sendChunkWithRetry('{% url "camera_chunked_upload" %}', formData);

@@ -153,37 +153,7 @@
         {% endfor %}
     </div>
 
-    <h2 class="section-title"><i data-lucide="video"></i> Recorded Lectures</h2>
-    <div class="lecture-grid">
-        {% for rec in recordings %}
-        <a href="{% url 'watch_recording' rec.id %}" class="lecture-card">
-            <div class="thumbnail-wrapper">
-                {% if rec.thumbnail %}
-                <img src="{{ rec.thumbnail.url }}" alt="{{ rec.title }}">
-                {% else %}
-                <img src="{% static 'images/video-placeholder.svg' %}" alt="Thumbnail">
-                {% endif %}
-                {% if rec.duration %}
-                <span class="duration-badge">{{ rec.duration|duration_hms }}</span>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                <div class="lecture-title">{{ rec.title }}</div>
-                <div class="lecture-meta">
-                    <span class="teacher-link" onclick="event.preventDefault(); window.location='{% url 'teacher_profile' rec.teacher.id %}'">
-                        <i data-lucide="user" style="width:14px;"></i> {{ rec.teacher.username }}
-                    </span>
-                    <span><i data-lucide="calendar" style="width:14px;"></i> {{ rec.created_at|date:"M d, Y" }}</span>
-                </div>
-            </div>
-        </a>
-        {% empty %}
-        <div class="flat-card" style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--color-text-muted, #94a3b8);">
-            <i data-lucide="video-off" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5;"></i>
-            <p style="margin: 0; font-weight: 500;">No lectures found matching your search.</p>
-        </div>
-        {% endfor %}
-    </div>
+
 </div>
 
 <script>

@@ -139,27 +139,6 @@
         {% endfor %}
     </div>
 
-    <div class="recordings-section">
-        <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i data-lucide="video" style="color: #6366f1;"></i> Recent Recordings
-        </h2>
-        {% for rec in recent_recordings %}
-        <div class="recording-item">
-            <div>
-                <div style="font-weight: 600; color: #1e293b;">{{ rec.title }}</div>
-                <div style="font-size: 0.75rem; color: #64748b;">{{ rec.created_at|date:"M d, Y • H:i" }} • {{ rec.camera.name }}</div>
-            </div>
-            <div>
-                {% if rec.is_published %}
-                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 600;">PUBLISHED</span>
-                {% else %}
-                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: #fef9c3; color: #854d0e; border-radius: 4px; font-weight: 600;">DRAFT</span>
-                {% endif %}
-            </div>
-        </div>
-        {% empty %}
-        <p style="text-align: center; color: #94a3b8; padding: 1rem;">No recordings found.</p>
-        {% endfor %}
-    </div>
+
 </div>
 {% endblock %}

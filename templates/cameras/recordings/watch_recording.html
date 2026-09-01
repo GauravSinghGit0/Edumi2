@@ -32,7 +32,7 @@
     .video-title {
         font-size: 1.5rem;
         font-weight: 800;
-        color: #1e293b;
+        color: var(--text-main, #1e293b);
         margin-bottom: 0.75rem;
     }
     .video-actions {
@@ -40,7 +40,7 @@
         justify-content: space-between;
         align-items: center;
         padding-bottom: 1rem;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
         margin-bottom: 1.5rem;
     }
     .uploader-info {
@@ -51,7 +51,7 @@
     .uploader-avatar {
         width: 40px;
         height: 40px;
-        background: #6366f1;
+        background: var(--primary, #6366f1);
         color: white;
         border-radius: 50%;
         display: flex;
@@ -60,11 +60,11 @@
         font-weight: 700;
     }
     .description-box {
-        background: #f1f5f9;
+        background: var(--hover-bg, #f1f5f9);
         padding: 1rem;
         border-radius: 12px;
         font-size: 0.9375rem;
-        color: #334155;
+        color: var(--text-main, #334155);
         white-space: pre-wrap;
     }
     .recommendation-card {
@@ -94,7 +94,7 @@
     .rec-title {
         font-weight: 700;
         font-size: 0.9rem;
-        color: #1e293b;
+        color: var(--text-main, #1e293b);
         margin-bottom: 0.25rem;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -104,10 +104,10 @@
     }
     .rec-meta {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--text-muted, #64748b);
     }
     .badge-live {
-        background: #ef4444;
+        background: var(--danger, #ef4444);
         color: white;
         padding: 2px 8px;
         border-radius: 4px;
@@ -156,8 +156,8 @@
                     <img src="{% if recording.teacher.userprofile %}{{ recording.teacher.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ recording.teacher.get_full_name|default:recording.teacher.username|urlencode }}&background=6366f1&color=fff{% endif %}" alt="{{ recording.teacher.username }}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ recording.teacher.get_full_name|default:recording.teacher.username|urlencode }}&background=6366f1&color=fff'">
                 </div>
                 <div>
-                    <div class="font-weight-bold" style="color:#1e293b;">{% if recording.teacher.userprofile %}{{ recording.teacher.userprofile.get_display_name }}{% else %}{{ recording.teacher.get_full_name|default:recording.teacher.username }}{% endif %}</div>
-                    <div class="text-muted small">Recorded on {{ recording.created_at|date:"M d, Y" }}</div>
+                    <div class="font-weight-bold" style="color: var(--text-main, #1e293b);">{% if recording.teacher.userprofile %}{{ recording.teacher.userprofile.get_display_name }}{% else %}{{ recording.teacher.get_full_name|default:recording.teacher.username }}{% endif %}</div>
+                    <div class="text-muted small" style="color: var(--text-muted, #6c757d) !important;">Recorded on {{ recording.created_at|date:"M d, Y" }}</div>
                 </div>
             </div>
             <div class="d-flex gap-2">

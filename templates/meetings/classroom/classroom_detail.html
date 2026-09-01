@@ -48,6 +48,13 @@
             <span class="tab-badge permanent-badge" style="background: #fee2e2; color: #ef4444;">{{ pending_requests.count }} Pending</span>
             {% endif %}
         </button>
+        <button class="classroom-tab-btn" onclick="switchClassroomTab('lectures')" id="tabBtnLectures">
+            <i data-lucide="video" style="width: 18px; height: 18px;"></i>
+            Class Lectures
+            {% if classroom_recordings_count and classroom_recordings_count > 0 %}
+            <span class="tab-badge" id="lecturesCountBadge" data-count="{{ classroom_recordings_count }}">{{ classroom_recordings_count }}</span>
+            {% endif %}
+        </button>
     </div>
 
     <!-- Tab 1: Stream & Group Chat -->
@@ -61,6 +68,9 @@
 
     <!-- Tab 4: People & Class Roster -->
     {% include 'meetings/partials/classroom/tab_people.html' %}
+
+    <!-- Tab 5: Class Lectures & Videos -->
+    {% include 'meetings/partials/classroom/tab_lectures.html' %}
 </div>
 
 <!-- Modals for Materials -->

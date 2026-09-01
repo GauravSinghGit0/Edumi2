@@ -1,0 +1,110 @@
+{% load static %}
+<div id="tabContentLectures" class="tab-content-panel" style="display: none;">
+    
+    <!-- Tab Sub-header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3" style="background: var(--bg-card, #ffffff); padding: 1.25rem 1.5rem; border-radius: 1rem; border: 1px solid var(--border-color, #e2e8f0);">
+        <div>
+            <h3 class="m-0 font-weight-bold text-dark" style="font-size: 1.25rem;">📹 Classroom Video Lectures</h3>
+            <p class="text-muted small m-0 mt-1">Access lecture recordings and video materials assigned specifically to {{ classroom.title }}</p>
+        </div>
+        {% if is_teacher %}
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'manage_recordings' %}?upload=true" class="btn btn-primary d-inline-flex align-items-center gap-2" style="border-radius: 0.75rem; font-weight: 600;">
+                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
+                Upload & Assign Video
+            </a>
+            <a href="{% url 'manage_recordings' %}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" style="border-radius: 0.75rem; font-weight: 600;">
+                <i data-lucide="film" style="width: 16px; height: 16px;"></i>
+                Manage All
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Videos Grid -->
+    {% if classroom_recordings %}
+    <div class="row g-4">
+        {% for rec in classroom_recordings %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm overflow-hidden" style="border-radius: 1.25rem; transition: transform 0.2s ease, box-shadow 0.2s ease; background: var(--bg-card, #ffffff);">
+                <!-- Thumbnail Container -->
+                <div class="position-relative" style="aspect-ratio: 16/9; background: #0f172a; overflow: hidden;">
+                    <a href="{% url 'watch_recording' rec.id %}" class="d-block w-100 h-100 position-relative text-decoration-none group">
+                        {% if rec.thumbnail %}
+                        <img src="{{ rec.thumbnail.url }}" alt="{{ rec.title }}" class="w-100 h-100 object-fit-cover">
+                        {% else %}
+                        <img src="{% static 'images/video-placeholder.svg' %}" alt="{{ rec.title }}" class="w-100 h-100 object-fit-cover opacity-75">
+                        {% endif %}
+                        
+                        <!-- Play Overlay Button -->
+                        <div class="position-absolute top-50 start-50 translate-middle d-flex align-items-center justify-content-center" 
+                             style="width: 52px; height: 52px; border-radius: 50%; background: rgba(99, 102, 241, 0.9); color: #ffffff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: transform 0.2s ease;">
+                            <i data-lucide="play" style="width: 24px; height: 24px; margin-left: 3px;"></i>
+                        </div>
+                    </a>
+
+                    <!-- Duration Badge -->
+                    {% if rec.duration %}
+                    <span class="position-absolute bottom-0 end-0 m-2 px-2 py-1 bg-dark text-white rounded small font-weight-bold" style="font-size: 11px; background: rgba(15, 23, 42, 0.85) !important;">
+                        {{ rec.duration }}
+                    </span>
+                    {% endif %}
+
+                    <!-- Visibility Badge for Teachers -->
+                    {% if is_teacher %}
+                    <span class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded small font-weight-bold {% if rec.is_published %}bg-success text-white{% else %}bg-warning text-dark{% endif %}" style="font-size: 11px;">
+                        {% if rec.is_published %}Published{% else %}Draft (Hidden){% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body d-flex flex-column p-3">
+                    <h5 class="card-title font-weight-bold text-dark mb-2 text-truncate" style="font-size: 1.05rem;" title="{{ rec.title }}">
+                        {{ rec.title }}
+                    </h5>
+                    
+                    {% if rec.description %}
+                    <p class="card-text text-muted small mb-3 text-truncate-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem;">
+                        {{ rec.description }}
+                    </p>
+                    {% endif %}
+
+                    <div class="mt-auto pt-2 border-top d-flex align-items-center justify-content-between text-muted small">
+                        <div class="d-flex align-items-center gap-3">
+                            <span title="Views"><i data-lucide="eye" style="width: 14px; height: 14px;"></i> {{ rec.views_count }}</span>
+                            <span title="Recorded Date"><i data-lucide="calendar" style="width: 14px; height: 14px;"></i> {{ rec.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <a href="{% url 'watch_recording' rec.id %}" class="btn btn-sm btn-primary px-3 font-weight-bold" style="border-radius: 0.625rem;">
+                            Watch
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5 px-3 rounded-4 border" style="background: var(--bg-card, #ffffff); border-color: var(--border-color, #dee2e6) !important;">
+        <div class="d-inline-flex align-items-center justify-content-center p-4 text-primary rounded-circle mb-3" style="background: var(--hover-bg, #f8f9fa);">
+            <i data-lucide="video-off" style="width: 48px; height: 48px; color: var(--primary, #6366f1);"></i>
+        </div>
+        <h4 class="font-weight-bold mb-2" style="color: var(--text-main, #212529);">No Lecture Videos Assigned Yet</h4>
+        <p class="text-muted max-w-md mx-auto mb-4" style="max-width: 480px;">
+            {% if is_teacher %}
+            You haven't assigned any lecture videos to {{ classroom.title }} yet. Click below to upload or assign a video lecture.
+            {% else %}
+            Your teacher hasn't uploaded or assigned any video lectures to this classroom yet. Check back soon!
+            {% endif %}
+        </p>
+        {% if is_teacher %}
+        <a href="{% url 'manage_recordings' %}?upload=true" class="btn btn-primary px-4 py-2 font-weight-bold" style="border-radius: 0.75rem;">
+            <i data-lucide="upload-cloud" style="width: 18px; height: 18px;" class="me-2"></i>
+            Upload Lecture Video
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>

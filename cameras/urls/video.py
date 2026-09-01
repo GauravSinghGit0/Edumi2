@@ -19,5 +19,7 @@ urlpatterns = [
     path('apply-trim/<int:recording_id>/', views.apply_recording_trim, name='apply_recording_trim'),
     path('generate-thumbnail/<int:recording_id>/', views.generate_recording_thumbnail, name='generate_recording_thumbnail'),
     path('edit-recording/<int:recording_id>/', views.edit_recording, name='edit_recording'),
+    path('assign-classroom/<int:recording_id>/', views.assign_recording_classroom, name='assign_recording_classroom'),
+    path('get-recording-classrooms/<int:recording_id>/', views.get_recording_classrooms, name='get_recording_classrooms'),
     path('recordings/like/<int:recording_id>/', views.like_recording, name='like_recording'),
 ]

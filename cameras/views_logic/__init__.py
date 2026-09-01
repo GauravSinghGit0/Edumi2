@@ -13,7 +13,7 @@ from .video_views import (
     toggle_recording_publish, watch_recording, stream_recording_chunk,
     recording_playlist, teacher_profile, delete_recording,
     update_recording_edit, apply_recording_trim, generate_recording_thumbnail,
-    edit_recording,
+    edit_recording, assign_recording_classroom, get_recording_classrooms,
 )
 from .camera_views import (
     admin_dashboard,
@@ -82,6 +82,8 @@ __all__ = [
     'apply_recording_trim',
     'generate_recording_thumbnail',
     'edit_recording',
+    'assign_recording_classroom',
+    'get_recording_classrooms',
     'like_recording',
     'recording_analytics',
     # Camera

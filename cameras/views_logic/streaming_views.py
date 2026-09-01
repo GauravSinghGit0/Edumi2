@@ -441,12 +441,8 @@ def teacher_camera_dashboard(request):
     # Combine lists
     all_cameras = rtsp_cameras + mobile_cameras
 
-    # Get recent recordings by this teacher
-    recent_recordings = CameraRecording.objects.filter(teacher=request.user).order_by('-created_at')[:5]
-
     return render(request, 'cameras/control_room/teacher_dashboard.html', {
         'cameras': all_cameras,
-        'recent_recordings': recent_recordings
     })
 
 
@@ -623,19 +619,11 @@ def student_lecture_list(request):
             filtered_live.append(cam)
 
     # 2. Filter Recordings
-    # recordings = CameraRecording.objects.filter(is_published=True).select_related('teacher', 'camera')
-    # For recordings, if the camera used is traditionally for a classroom, should we hide it?
-    # Usually recordings are published by teachers explicitly, but let's stick to the "meetings" logic.
-    # If a recording's camera has a livekit_room that belongs to a classroom, maybe check?
-    # For now, let's keep recordings as they are unless they have a direct classroom link (which they don't yet).
-    recordings = CameraRecording.objects.filter(is_published=True).select_related('teacher', 'camera')
+    # The Recorded Lectures section has been removed from this page.
+    # Videos are now strictly confined to their respective classrooms.
+    recordings = []
 
     if query:
-        recordings = recordings.filter(
-            Q(title__icontains=query) |
-            Q(teacher__username__icontains=query) |
-            Q(camera__name__icontains=query)
-        )
         # Re-filter the filtered_live list for query
         filtered_live = [
             cam for cam in filtered_live
@@ -644,7 +632,6 @@ def student_lecture_list(request):
         ]
 
     if teacher_id:
-        recordings = recordings.filter(teacher_id=teacher_id)
         filtered_live = [cam for cam in filtered_live if str(cam.live_teacher_id) == str(teacher_id)]
 
     # Get list of teachers for filtering

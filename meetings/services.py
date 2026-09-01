@@ -48,6 +48,12 @@ def get_classroom_detail_context(classroom, user):
     # Fetch study materials and units for tab
     units = classroom.material_units.all().prefetch_related('materials')
     materials = list(classroom.study_materials.filter(is_published=True).select_related('unit', 'uploaded_by').order_by('-created_at'))
+
+    from cameras.models import CameraRecording
+    if is_teacher:
+        classroom_recordings = CameraRecording.objects.filter(classrooms=classroom).distinct().order_by('-created_at')
+    else:
+        classroom_recordings = CameraRecording.objects.filter(classrooms=classroom, is_published=True).distinct().order_by('-created_at')
     
     context.update({
         'conversation': conversation,
@@ -55,6 +61,8 @@ def get_classroom_detail_context(classroom, user):
         'material_units': units,
         'study_materials': materials,
         'study_materials_count': len(materials),
+        'classroom_recordings': classroom_recordings,
+        'classroom_recordings_count': classroom_recordings.count(),
     })
 
     approved_students = classroom.get_approved_memberships()

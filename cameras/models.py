@@ -94,6 +94,7 @@ def get_thumbnail_upload_path(instance, filename):
 
 class CameraRecording(models.Model):
     camera = models.ForeignKey(Camera, on_delete=models.CASCADE, null=True, blank=True)
+    classroom = models.ForeignKey('meetings.Classroom', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordings')
     teacher = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -114,6 +115,10 @@ class CameraRecording(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     views_count = models.PositiveIntegerField(default=0)
     likes_count = models.PositiveIntegerField(default=0)
+    # Track unique students who watched the video
+    viewed_by = models.ManyToManyField(User, blank=True, related_name='viewed_recordings')
+    # Multi-classroom assignment (a recording can be shared to multiple classrooms)
+    classrooms = models.ManyToManyField('meetings.Classroom', blank=True, related_name='assigned_recordings')
 
     def generate_chunked_thumbnail(self):
         """Generate a thumbnail for a chunked recording from its first chunk in DB"""
