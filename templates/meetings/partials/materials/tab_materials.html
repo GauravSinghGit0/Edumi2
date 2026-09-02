@@ -1,37 +1,36 @@
 <!-- ══════════════ TAB 4: STUDY MATERIALS & DIGITAL LIBRARY ══════════════ -->
 <div id="tabContentMaterials" class="tab-content-panel" style="display: none;">
-    <!-- Materials Header & Actions -->
-    <div class="materials-toolbar">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; border-radius: 2rem; font-size: 0.8125rem; font-weight: 700; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;">
-                <i data-lucide="book-open" style="width: 15px; height: 15px; color: #4338ca;"></i>
-                <span>{{ study_materials|length }} Learning Resources</span>
+    <div class="section-card">
+        <!-- Materials Header & Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 class="section-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="book-open"></i> Study Materials & Library</h2>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; margin-left: 2.25rem;">
+                    {% if material_units %}
+                    <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+                        <span>{{ material_units|length }} Curriculum Units</span>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% if material_units %}
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; border-radius: 2rem; font-size: 0.8125rem; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
-                <i data-lucide="folder" style="width: 15px; height: 15px; color: #047857;"></i>
-                <span>{{ material_units|length }} Curriculum Units</span>
-            </div>
-            {% endif %}
-        </div>
 
-        <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <a href="{% url 'classroom_materials' classroom.id %}" class="btn-outline-action">
-                <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
-                Open Full Library
-            </a>
-            {% if is_teacher %}
-            <button onclick="openCreateUnitModal()" class="btn-add-unit" type="button">
-                <i data-lucide="folder-plus" style="width: 15px; height: 15px;"></i>
-                New Unit
-            </button>
-            <button onclick="openUploadModal()" class="btn-add-material" type="button">
-                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
-                Upload Resource
-            </button>
-            {% endif %}
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <a href="{% url 'classroom_materials' classroom.id %}" class="btn-outline-action" style="padding: 0.5rem 1rem; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--stream-border); border-radius: 8px; text-decoration: none; color: var(--stream-text-main);">
+                    <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+                    Open Full Library
+                </a>
+                {% if is_teacher %}
+                <button onclick="openCreateUnitModal()" class="btn-outline-action" type="button" style="padding: 0.5rem 1rem; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--stream-border); border-radius: 8px; background: transparent; color: var(--stream-text-main);">
+                    <i data-lucide="folder-plus" style="width: 15px; height: 15px;"></i>
+                    New Unit
+                </button>
+                <button onclick="openUploadModal()" class="btn-hero-action" type="button" style="padding: 0.5rem 1rem; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.35rem; background: #6366f1; color: white; border-radius: 8px; border: none;">
+                    <i data-lucide="upload-cloud" style="width: 15px; height: 15px;"></i>
+                    Upload Resource
+                </button>
+                {% endif %}
+            </div>
         </div>
-    </div>
 
     <!-- Materials Units Accordion / Grid -->
     {% if material_units or study_materials %}
@@ -115,16 +114,7 @@
 
         <!-- Uncategorized Materials -->
         {% if study_materials %}
-        <div class="unit-section-box">
-            <div class="unit-header">
-                <div class="unit-title-row">
-                    <div class="unit-badge-icon" style="background: #f1f5f9; color: #475569;">#</div>
-                    <div>
-                        <h3 class="unit-title">General Study Resources</h3>
-                        <p class="unit-desc">Class notes, reference guides, and supplementary materials.</p>
-                    </div>
-                </div>
-            </div>
+
 
             <div class="materials-grid">
                 {% for mat in study_materials %}
@@ -186,12 +176,11 @@
                 {% endif %}
                 {% endfor %}
             </div>
-        </div>
         {% endif %}
     {% else %}
-        <div class="stream-post-card" style="text-align: center; padding: 4rem 2rem;">
-            <i data-lucide="folder-open" style="width: 54px; height: 54px; color: #cbd5e1; margin-bottom: 1rem;"></i>
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--stream-text-main);">No Study Materials Uploaded Yet</h3>
+        <div style="text-align: center; padding: 3.5rem 0;">
+            <i data-lucide="folder-open" style="width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 1rem;"></i>
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 700; color: var(--stream-text-main);">No Study Materials Uploaded Yet</h4>
             <p style="color: var(--stream-text-muted); font-size: 0.875rem; margin: 0 auto 1.5rem; max-width: 420px;">
                 {% if is_teacher %}
                 Start building your classroom library! Upload lecture notes, PDF slides, syllabus documents, or video links for your students.
@@ -200,11 +189,12 @@
                 {% endif %}
             </p>
             {% if is_teacher %}
-            <button onclick="openUploadModal()" class="btn-add-material" type="button">
-                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
+            <button onclick="openUploadModal()" class="btn-hero-action" style="padding: 0.5rem 1rem; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.35rem; background: #6366f1; color: white; border-radius: 8px; border: none;" type="button">
+                <i data-lucide="upload-cloud" style="width: 15px; height: 15px;"></i>
                 Upload First Material
             </button>
             {% endif %}
         </div>
     {% endif %}
+    </div>
 </div>

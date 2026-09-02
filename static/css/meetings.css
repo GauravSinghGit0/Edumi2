@@ -680,3 +680,30 @@ body.dark-mode .meeting-empty-title {
 body.dark-mode .meeting-empty-desc {
     color: #94a3b8;
 }
+
+/* Video Card Component */
+.yt-vid-card {
+    padding: 0.75rem;
+    border-radius: 1rem;
+    background: var(--stream-bg-card, #ffffff);
+    border: 1px solid transparent;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.yt-vid-card:hover {
+    box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: var(--stream-border, #e2e8f0);
+}
+.yt-vid-card .thumb-wrapper {
+    border-radius: 0.5rem;
+}
+.yt-vid-card .play-overlay-full {
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.yt-vid-card:hover .play-overlay-full {
+    opacity: 1;
+}
+

@@ -16,9 +16,7 @@
                              onerror="this.src='https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=6366f1&color=fff'">
                         <div class="composer-user-info">
                             <span class="composer-user-name">{% if user.userprofile %}{{ user.userprofile.get_display_name }}{% else %}{{ user.get_full_name|default:user.username }}{% endif %}</span>
-                            <span class="composer-user-role {% if is_teacher %}role-teacher{% else %}role-student{% endif %}">
-                                {% if is_teacher %}Instructor{% else %}Student{% endif %}
-                            </span>
+
                         </div>
                     </div>
 
@@ -28,7 +26,6 @@
                     
                     <!-- Hidden File Inputs -->
                     <input type="file" id="streamImageInput" name="image" accept="image/*" style="display: none;" onchange="if(window.validateStreamComposer)validateStreamComposer()">
-                    <input type="file" id="streamFileInput" name="file" style="display: none;" onchange="if(window.validateStreamComposer)validateStreamComposer()">
 
                     <!-- Attachment Previews -->
                     <div class="stream-preview-strip" id="streamPreviewStrip" style="display: none;"></div>
@@ -39,10 +36,6 @@
                             <button type="button" class="tool-btn" onclick="document.getElementById('streamImageInput').click();" title="Attach Image">
                                 <i data-lucide="image" style="width: 16px; height: 16px;"></i>
                                 <span>Photo</span>
-                            </button>
-                            <button type="button" class="tool-btn" onclick="document.getElementById('streamFileInput').click();" title="Attach Document">
-                                <i data-lucide="paperclip" style="width: 16px; height: 16px;"></i>
-                                <span>File</span>
                             </button>
                             <button type="button" class="tool-btn" onclick="toggleStreamEmojiPicker();" title="Insert Emoji">
                                 <i data-lucide="smile" style="width: 16px; height: 16px;"></i>

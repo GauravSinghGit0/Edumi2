@@ -1,5 +1,6 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
+{% load common_tags %}
 
 {% block title %}Manage Lectures - Edumi{% endblock %}
 
@@ -50,13 +51,11 @@
                                 <div>
                                     <div class="font-weight-bold text-dark">{{ rec.title }}</div>
                                     <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                                        <span class="text-muted small">{{ rec.camera.name|default:"Manual Upload" }}</span>
-                                        {% if rec.classroom %}
-                                        <span class="badge px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11px; background: #e0e7ff; color: #4338ca; border-radius: 6px;">
-                                            <i data-lucide="school" style="width: 12px; height: 12px;"></i> {{ rec.classroom.title }}
-                                        </span>
-                                        {% else %}
-                                        <span class="badge bg-light text-muted px-2 py-1" style="font-size: 11px; border-radius: 6px;">General</span>
+                                        {% if rec.duration %}
+                                        <div class="video-duration-badge small text-muted font-weight-bold" style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center;">
+                                            <i data-lucide="clock" style="width: 12px; height: 12px; margin-right: 4px;"></i>
+                                            {{ rec.duration|duration_hms }}
+                                        </div>
                                         {% endif %}
                                     </div>
                                 </div>

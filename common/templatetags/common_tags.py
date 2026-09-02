@@ -45,7 +45,10 @@ def duration_hms_filter(duration):
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
     
-    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    else:
+        return f"{minutes}:{secs:02d}"
 
 
 

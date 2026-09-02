@@ -356,7 +356,7 @@ body.dark-mode .live-session-banner {
 
 .stream-textarea {
     width: 100%;
-    border: none;
+    border: none !important;
     background: transparent;
     color: var(--stream-text-main);
     font-family: inherit;
@@ -365,7 +365,8 @@ body.dark-mode .live-session-banner {
     padding: 0;
     resize: none;
     min-height: 60px;
-    outline: none;
+    outline: none !important;
+    box-shadow: none !important;
     box-sizing: border-box;
 }
 
