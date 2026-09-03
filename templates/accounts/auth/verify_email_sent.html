@@ -126,15 +126,15 @@ function getCookie(name) {
     return cookieValue;
 }
 
-const otpBoxes = Array.from(document.querySelectorAll('.otp-digit-box'));
-const otpBoxesWrapper = document.getElementById('otpBoxesWrapper');
-const otpForm = document.getElementById('otpForm');
-const verifyBtn = document.getElementById('verifyBtn');
-const statusAlert = document.getElementById('statusAlert');
-const statusAlertMsg = document.getElementById('statusAlertText') || document.getElementById('statusAlertMsg');
-const statusAlertIcon = document.getElementById('statusAlertIcon');
-const emailHidden = document.getElementById('emailHidden');
-const otpCodeHidden = document.getElementById('otpCodeHidden');
+var otpBoxes = Array.from(document.querySelectorAll('.otp-digit-box'));
+var otpBoxesWrapper = document.getElementById('otpBoxesWrapper');
+var otpForm = document.getElementById('otpForm');
+var verifyBtn = document.getElementById('verifyBtn');
+var statusAlert = document.getElementById('statusAlert');
+var statusAlertMsg = document.getElementById('statusAlertText') || document.getElementById('statusAlertMsg');
+var statusAlertIcon = document.getElementById('statusAlertIcon');
+var emailHidden = document.getElementById('emailHidden');
+var otpCodeHidden = document.getElementById('otpCodeHidden');
 
 // Helper to show alert banner
 function showAlert(type, message) {
