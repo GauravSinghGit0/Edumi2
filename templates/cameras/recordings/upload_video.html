@@ -20,7 +20,7 @@
 
     <!-- Upload Card -->
     <div class="uv-card">
-        <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data">
+        <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data" data-turbo="false">
             {% csrf_token %}
 
             <!-- Step 1: Video File Selection -->
@@ -411,15 +411,17 @@ body.dark-mode .uv-btn-ghost { background: var(--bg-card); color: var(--text-mai
 (function () {
     const videoInput = document.getElementById('videoInput');
     const thumbInput = document.getElementById('thumbInput');
-    const dropZone = document.getElementById('dropZone');
+    const dropZoneEl = document.getElementById('dropZone');
     const step2 = document.getElementById('step2');
     const uploadPlaceholder = document.getElementById('uploadPlaceholder');
     const fileInfo = document.getElementById('fileInfo');
     const fileNameDisplay = document.getElementById('fileName');
     const fileSizeDisplay = document.getElementById('fileSize');
 
+    if (!dropZoneEl) return;
+
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
+        dropZoneEl.addEventListener(eventName, preventDefaults, false);
     });
 
     function preventDefaults(e) {
@@ -428,14 +430,14 @@ body.dark-mode .uv-btn-ghost { background: var(--bg-card); color: var(--text-mai
     }
 
     ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        dropZoneEl.addEventListener(eventName, () => dropZoneEl.classList.add('dragover'), false);
     });
 
     ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        dropZoneEl.addEventListener(eventName, () => dropZoneEl.classList.remove('dragover'), false);
     });
 
-    dropZone.addEventListener('drop', handleDrop, false);
+    dropZoneEl.addEventListener('drop', handleDrop, false);
 
     function handleDrop(e) {
         const dt = e.dataTransfer;

@@ -24,7 +24,7 @@
   </div>
 
   {% if is_own_profile %}
-  <form id="profileForm" method="post" enctype="multipart/form-data" action="">
+  <form id="profileForm" method="post" enctype="multipart/form-data" action="" data-turbo="false">
     {% csrf_token %}
     {% endif %}
 

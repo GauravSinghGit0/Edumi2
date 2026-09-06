@@ -5,122 +5,340 @@
 
 {% block content %}
 <style>
-    .evaluate-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .header-card { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); border-radius: 1.5rem; padding: 2.5rem; color: white; margin-bottom: 1.5rem; }
-    .header-title { font-size: 1.875rem; font-weight: 800; margin: 0 0 0.5rem 0; }
-    .header-subtitle { color: rgba(255,255,255,0.8); margin: 0; }
-    
-    .content-card { background: white; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
-    .section-title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0 0 1.5rem 0; }
-    
-    .answer-card { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.75rem; margin-bottom: 1.5rem; }
-    .question-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
-    .question-number { font-weight: 800; color: #7c3aed; font-size: 1.125rem; }
-    .question-text { color: #0f172a; font-weight: 600; font-size: 1.125rem; margin-bottom: 1rem; }
-    
-    .student-answer { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
-    .answer-label { font-weight: 700; color: #64748b; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.5rem; }
-    .answer-text { color: #0f172a; }
-    
-    .correct-answer { background: #dcfce7; border: 1px solid #86efac; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
-    .correct-label { font-weight: 700; color: #166534; font-size: 0.875rem; text-transform: uppercase; margin-bottom: 0.5rem; }
-    
-    .marks-input { width: 120px; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; text-align: center; }
-    .marks-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); outline: none; }
-    
-    .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-weight: 600; color: #0f172a; margin-bottom: 0.5rem; }
-    .form-control { width: 100%; padding: 0.875rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; font-size: 1rem; }
-    textarea.form-control { min-height: 120px; resize: vertical; }
-    
-    .btn-primary { background: #7c3aed; color: white; border: none; padding: 1rem 2.5rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: #6d28d9; transform: translateY(-2px); }
-    .btn-secondary { background: #f1f5f9; color: #0f172a; border: none; padding: 1rem 2.5rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-    
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
+    .evaluate-page {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+    }
+
+    /* ── Header Banner (Classroom Hero Standard) ── */
+    .classroom-hero {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+        border-radius: var(--radius-xl, 16px);
+        padding: var(--space-lg, 1.5rem) var(--space-xl, 2rem);
+        color: #ffffff !important;
+        margin-bottom: var(--space-lg, 1.5rem);
+        box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-subtitle {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-primary-light, #818cf8);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: var(--space-2xs);
+        display: block;
+    }
+
+    .hero-title {
+        font-size: var(--font-size-3xl, 1.75rem);
+        font-weight: var(--font-weight-bold);
+        margin: 0 0 var(--space-xs) 0;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        color: #ffffff !important;
+    }
+
+    .hero-desc {
+        font-size: var(--font-size-md);
+        color: rgba(255, 255, 255, 0.88);
+        margin: 0 0 var(--space-md) 0;
+    }
+
+    .hero-badges {
+        display: flex;
+        gap: var(--space-xs);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .badge-glass {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius-full);
+        padding: 0.25rem 0.75rem;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    /* ── Content & Answer Cards ── */
+    .glass-card {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: var(--space-lg);
+    }
+
+    .answer-card {
+        background: var(--color-bg-main, #f8fafc);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--space-md) var(--space-lg);
+        margin-bottom: var(--space-md);
+        transition: border-color 0.2s;
+    }
+
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-xs);
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+
+    .q-badge {
+        background: var(--color-primary);
+        color: #ffffff;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .marks-control {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        padding: 0.2rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .marks-input {
+        width: 50px;
+        border: none;
+        font-size: var(--font-size-md);
+        font-weight: var(--font-weight-bold);
+        text-align: right;
+        color: var(--color-primary);
+        background: transparent;
+        outline: none;
+    }
+
+    .marks-denom {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-muted);
+    }
+
+    .question-text {
+        font-size: var(--font-size-md);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-main);
+        margin-bottom: var(--space-sm);
+        line-height: 1.45;
+    }
+
+    .student-answer-box {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+        margin-bottom: var(--space-xs);
+    }
+
+    .box-label {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-2xs);
+    }
+
+    .box-text {
+        color: var(--color-text-main);
+        font-size: var(--font-size-sm);
+        line-height: 1.4;
+    }
+
+    .correct-answer-box {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .correct-box-label {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-success);
+        margin-bottom: var(--space-2xs);
+    }
+
+    .correct-box-text {
+        color: var(--color-success);
+        font-weight: var(--font-weight-semibold);
+        font-size: var(--font-size-sm);
+    }
+
+    .btn-action-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: var(--space-lg);
+        padding-top: var(--space-md);
+        border-top: 1px solid var(--color-border);
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+    }
+
+    .btn-lms {
+        padding: 0 1.25rem;
+        height: var(--btn-height-md);
+        border-radius: var(--radius-md);
+        font-weight: var(--font-weight-semibold);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        border: none;
+    }
+
+    .btn-lms-secondary {
+        background: var(--color-bg-main);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-main);
+    }
+
+    .btn-lms-secondary:hover {
+        background: var(--color-bg-hover);
+    }
+
+    .btn-lms-primary {
+        background: var(--color-success);
+        color: #ffffff;
+    }
+
+    .btn-lms-primary:hover {
+        background: var(--color-success-hover);
+    }
 </style>
 
-<div class="evaluate-container">
-    <a href="{% url 'quiz_detail' quiz.id %}" style="color: #7c3aed; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Quiz
-    </a>
+<div class="evaluate-page">
+    <!-- Header Banner -->
+    <div class="classroom-hero">
+        <span class="hero-subtitle">
+            SUBMISSION EVALUATION • {{ quiz.title }}
+        </span>
+        <h1 class="hero-title">Grade Submission: {{ submission.student.get_full_name|default:submission.student.username }}</h1>
+        <p class="hero-desc">Student Username: @{{ submission.student.username }}</p>
 
-    <div class="header-card">
-        <h1 class="header-title">Grade Quiz Submission</h1>
-        <p class="header-subtitle">{{ submission.student.get_full_name|default:submission.student.username }} - {{ quiz.title }}</p>
-        <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; align-items: center;">
+        <div class="hero-badges">
             {% if submission.is_live_meeting_quiz %}
-                <span style="background: rgba(255,255,255,0.2); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">🎥 Live Meeting Quiz</span>
+                <span class="badge-glass">
+                    <i data-lucide="video" style="width: 13px; height: 13px;"></i> Live Meeting
+                </span>
             {% endif %}
+
             {% if submission.tab_switch_count > 0 %}
-                <span style="background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">⚠️ {{ submission.tab_switch_count }} Anti-Cheating Tab Switch Violations</span>
+                <span class="badge-glass" style="background: rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.5);">
+                    <i data-lucide="shield-alert" style="width: 13px; height: 13px;"></i> {{ submission.tab_switch_count }} Tab Switch Violations
+                </span>
             {% else %}
-                <span style="background: #10b981; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">✓ No Tab Switching Detected</span>
+                <span class="badge-glass" style="background: rgba(16, 185, 129, 0.3); border-color: rgba(16, 185, 129, 0.5);">
+                    <i data-lucide="shield-check" style="width: 13px; height: 13px;"></i> Proctor Clean (0 violations)
+                </span>
             {% endif %}
+
             {% if submission.time_taken_display %}
-                <span style="background: rgba(255,255,255,0.15); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">⏱️ Time Taken: {{ submission.time_taken_display }}</span>
+                <span class="badge-glass">
+                    <i data-lucide="clock" style="width: 13px; height: 13px;"></i> Time Taken: {{ submission.time_taken_display }}
+                </span>
             {% endif %}
         </div>
     </div>
 
     <form method="post" data-turbo="false">
         {% csrf_token %}
-        
+
         {% for answer in answers %}
         <div class="answer-card">
             <div class="question-header">
-                <span class="question-number">Question {{ forloop.counter }}</span>
-                <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <span style="color: #64748b; font-weight: 600;">/ {{ answer.question.marks }}</span>
+                <span class="q-badge">Question {{ forloop.counter }}</span>
+                <div class="marks-control">
                     <input type="number" name="marks_{{ answer.question.id }}" class="marks-input" min="0" max="{{ answer.question.marks }}" value="{{ answer.marks_obtained|default:0 }}">
+                    <span class="marks-denom">/ {{ answer.question.marks }} pts</span>
                 </div>
             </div>
+
             <p class="question-text">{{ answer.question.question_text }}</p>
-            
+
             {% if answer.question.question_type == 'mcq' %}
-            <div class="student-answer">
-                <div class="answer-label">Student's Answer</div>
-                <div class="answer-text">
+            <div class="student-answer-box">
+                <div class="box-label">Student's Selected Answer</div>
+                <div class="box-text">
                     {% if answer.selected_choice %}
                         {{ answer.selected_choice.choice_text }}
                     {% else %}
-                        No answer
+                        <span style="color: var(--color-text-muted); font-style: italic;">No option selected</span>
                     {% endif %}
                 </div>
             </div>
-            <div class="correct-answer">
-                <div class="correct-label">Correct Answer</div>
-                <div style="color: #166534; font-weight: 600;">
+
+            <div class="correct-answer-box">
+                <div class="correct-box-label">Correct Answer Key</div>
+                <div class="correct-box-text">
                     {% for choice in answer.question.choices.all %}
                         {% if choice.is_correct %}
-                            {{ choice.choice_text }}
+                            ✓ {{ choice.choice_text }}
                         {% endif %}
                     {% endfor %}
                 </div>
             </div>
             {% elif answer.question.question_type == 'text' %}
-            <div class="student-answer">
-                <div class="answer-label">Student's Answer</div>
-                <div class="answer-text">{{ answer.text_answer|default:"No answer" }}</div>
+            <div class="student-answer-box">
+                <div class="box-label">Student's Written Response</div>
+                <div class="box-text" style="white-space: pre-wrap;">{{ answer.text_answer|default:"No response provided" }}</div>
             </div>
             {% endif %}
         </div>
         {% endfor %}
-        
-        <div class="content-card">
-            <h2 class="section-title">Overall Feedback</h2>
-            <div class="form-group">
-                <label for="feedback">Feedback (Optional)</label>
-                <textarea name="feedback" id="feedback" class="form-control">{{ submission.feedback|default:'' }}</textarea>
+
+        <!-- Overall Feedback Card -->
+        <div class="glass-card">
+            <h2 style="font-size: var(--font-size-md); font-weight: var(--font-weight-bold); color: var(--color-text-main); margin: 0 0 var(--space-sm) 0;">
+                Overall Feedback & Notes
+            </h2>
+            <div style="margin-bottom: 0;">
+                <textarea name="feedback" id="feedback" style="width: 100%; min-height: 80px; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--color-bg-main); color: var(--color-text-main);" placeholder="Optional feedback visible to the student upon score release...">{{ submission.feedback|default:'' }}</textarea>
             </div>
-            <div class="btn-group">
-                <a href="{% url 'quiz_detail' quiz.id %}" class="btn-secondary">Cancel</a>
-                <button type="submit" class="btn-primary">
-                    <i data-lucide="check-circle"></i> Save Grades
+
+            <div class="btn-action-row">
+                <a href="{% url 'quiz_detail' quiz.id %}" class="btn-lms btn-lms-secondary">
+                    Cancel
+                </a>
+                <button type="submit" class="btn-lms btn-lms-primary">
+                    <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i> Finalize & Save Grades
                 </button>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('turbo:load', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
 {% endblock %}

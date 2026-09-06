@@ -142,7 +142,7 @@
             </div>
             {% endif %}
 
-            <form method="post" action="{% url 'register' %}" class="auth-form" id="registerForm" novalidate>
+            <form method="post" action="{% url 'register' %}" class="auth-form" id="registerForm" data-turbo="false" novalidate>
                 {% csrf_token %}
 
                 <!-- Username Field -->

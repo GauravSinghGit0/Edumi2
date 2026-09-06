@@ -9,9 +9,9 @@ services:
     container_name: edumi_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: edumi_db
-      POSTGRES_USER: edumi_user
-      POSTGRES_PASSWORD: edumi_pass
+      POSTGRES_DB: ${POSTGRES_DB:-edumi_db}
+      POSTGRES_USER: ${POSTGRES_USER:-edumi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:

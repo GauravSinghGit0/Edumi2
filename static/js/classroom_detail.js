@@ -374,30 +374,33 @@ function escapeHtml(text) {
 }
 
 /* ── WebSocket Real-Time Message Listener ── */
-window.addEventListener('new_message', function(e) {
-    const d = e.detail;
-    const container = document.querySelector('.classroom-detail-container');
-    const currentConvId = container ? container.dataset.conversationId : null;
-    const currentUsername = container ? container.dataset.username : null;
+if (!window._classroomNewMessageBound) {
+    window._classroomNewMessageBound = true;
+    window.addEventListener('new_message', function(e) {
+        const d = e.detail;
+        const container = document.querySelector('.classroom-detail-container');
+        const currentConvId = container ? container.dataset.conversationId : null;
+        const currentUsername = container ? container.dataset.username : null;
 
-    if (currentConvId && d.conversation_id == currentConvId) {
-        // If the message was sent by someone else, append it
-        if (d.sender !== currentUsername) {
-            appendStreamPost({
-                sender: d.sender,
-                sender_name: d.sender_name || d.sender,
-                sender_role: d.sender_role || 'Student',
-                sender_pfp: d.sender_pfp,
-                content: d.message,
-                image_url: d.image_url,
-                file_url: d.file_url,
-                file_name: d.file_name,
-                created_at: d.created_at || 'Just now',
-                created_date: 'Today',
-            });
+        if (currentConvId && d.conversation_id == currentConvId) {
+            // If the message was sent by someone else, append it
+            if (d.sender !== currentUsername) {
+                appendStreamPost({
+                    sender: d.sender,
+                    sender_name: d.sender_name || d.sender,
+                    sender_role: d.sender_role || 'Student',
+                    sender_pfp: d.sender_pfp,
+                    content: d.message,
+                    image_url: d.image_url,
+                    file_url: d.file_url,
+                    file_name: d.file_name,
+                    created_at: d.created_at || 'Just now',
+                    created_date: 'Today',
+                });
+            }
         }
-    }
-});
+    });
+}
 
 /* ── CSRF and Enrollment Action Helpers ── */
 function getCookie(name) {
@@ -450,8 +453,17 @@ function approveAllRequests(classroomId) {
     });
 }
 
-function denyAllRequests(classroomId) {
-    if (!confirm('Are you sure you want to deny ALL pending student requests?')) return;
+async function denyAllRequests(classroomId) {
+    if (window.EdumiPopup) {
+        const confirmed = await EdumiPopup.warning({
+            title: 'Deny All Requests',
+            message: 'Are you sure you want to deny ALL pending student requests?',
+            confirmText: 'Deny All'
+        });
+        if (!confirmed) return;
+    } else if (!confirm('Are you sure you want to deny ALL pending student requests?')) {
+        return;
+    }
     const btn = document.getElementById('btnDenyAll');
     if (btn) {
         btn.disabled = true;
@@ -521,8 +533,18 @@ function filterEnrolledList(query) {
     });
 }
 
-function denyRequest(membershipId) {
-    if (confirm('Deny this request?')) {
+async function denyRequest(membershipId) {
+    let confirmed = true;
+    if (window.EdumiPopup) {
+        confirmed = await EdumiPopup.warning({
+            title: 'Deny Request',
+            message: 'Deny this request?',
+            confirmText: 'Deny'
+        });
+    } else {
+        confirmed = confirm('Deny this request?');
+    }
+    if (confirmed) {
         fetch(`/meetings/classroom/deny/${membershipId}/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
@@ -530,8 +552,18 @@ function denyRequest(membershipId) {
     }
 }
 
-function removeStudent(membershipId) {
-    if (confirm('Remove student from class?')) {
+async function removeStudent(membershipId) {
+    let confirmed = true;
+    if (window.EdumiPopup) {
+        confirmed = await EdumiPopup.danger({
+            title: 'Remove Student',
+            message: 'Remove student from class?',
+            confirmText: 'Remove'
+        });
+    } else {
+        confirmed = confirm('Remove student from class?');
+    }
+    if (confirmed) {
         fetch(`/meetings/classroom/remove/${membershipId}/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
@@ -540,8 +572,18 @@ function removeStudent(membershipId) {
 }
 
 /* ── Meeting Controls ── */
-function deleteClassroomMeeting(meetingId) {
-    if (!confirm('Are you sure you want to permanently delete this meeting session?')) return;
+async function deleteClassroomMeeting(meetingId) {
+    let confirmed = true;
+    if (window.EdumiPopup) {
+        confirmed = await EdumiPopup.danger({
+            title: 'Delete Session',
+            message: 'Are you sure you want to permanently delete this meeting session?',
+            confirmText: 'Delete Meeting'
+        });
+    } else {
+        confirmed = confirm('Are you sure you want to permanently delete this meeting session?');
+    }
+    if (!confirmed) return;
     fetch(`/meetings/delete/${meetingId}/`, {
         method: 'POST',
         headers: {
@@ -565,8 +607,18 @@ function deleteClassroomMeeting(meetingId) {
     .catch(err => console.error('Error deleting meeting:', err));
 }
 
-function endClassroomMeeting(meetingId) {
-    if (!confirm('End this live meeting session for everyone now?')) return;
+async function endClassroomMeeting(meetingId) {
+    let confirmed = true;
+    if (window.EdumiPopup) {
+        confirmed = await EdumiPopup.danger({
+            title: 'End Meeting',
+            message: 'End this live meeting session for everyone now?',
+            confirmText: 'End Meeting'
+        });
+    } else {
+        confirmed = confirm('End this live meeting session for everyone now?');
+    }
+    if (!confirmed) return;
     fetch(`/meetings/end/${meetingId}/`, {
         method: 'POST',
         headers: {

@@ -5,39 +5,185 @@
 
 {% block content %}
 <style>
-    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
-    .date-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    .existing-files { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
-    .btn-delete-file { background: #fee2e2; color: #991b1b; border: none; padding: 0.375rem 0.75rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
-    body.dark-mode .btn-delete-file { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .create-container { 
+        max-width: var(--container-max-width); 
+        margin: 0 auto; 
+        padding: var(--space-md) var(--space-lg); 
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif); 
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-primary, #4f46e5);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        margin-bottom: 1.5rem;
+        transition: gap 0.15s;
+    }
+    .back-link:hover { gap: 0.65rem; }
+
+    .form-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 1.25rem);
+        padding: 2rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    
+    .form-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.35rem 0;
+        letter-spacing: -0.02em;
+    }
+    .form-subtitle {
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.875rem;
+        margin: 0 0 1.75rem 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-main, #334155);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.65rem 0.875rem;
+        border-radius: var(--radius-md, 0.625rem);
+        border: 1px solid var(--color-border, #cbd5e1);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.15s;
+    }
+    .form-control:focus {
+        border-color: var(--color-primary, #4f46e5);
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+
+    textarea.form-control {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    .date-time-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 1.25rem; 
+    }
+    @media (max-width: 640px) { .date-time-grid { grid-template-columns: 1fr; } }
+
+    .existing-files { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.65rem 1rem;
+        background: var(--color-bg-main, #f8fafc);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.625rem;
+    }
+    .file-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--color-text-main); }
+    .btn-delete-file { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.25); padding: 0.35rem 0.75rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.8125rem; cursor: pointer; transition: all 0.15s; }
+    .btn-delete-file:hover { background: #dc2626; color: #ffffff; }
+
+    .file-upload-area {
+        border: 2px dashed var(--color-border, #cbd5e1);
+        border-radius: var(--radius-md, 0.875rem);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        background: var(--color-bg-main, #f8fafc);
+        transition: border-color 0.15s;
+    }
+    .file-upload-area:hover { border-color: var(--color-primary, #4f46e5); }
+
+    .btn-group { 
+        display: flex; 
+        gap: 0.875rem; 
+        margin-top: 2rem; 
+        justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: var(--radius-md, 0.625rem);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        border: 1px solid var(--color-border, #e2e8f0);
+        color: var(--color-text-main, #334155);
+        background: var(--color-bg-main, #f8fafc);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-secondary:hover { background: var(--color-bg-hover, #e2e8f0); }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.5rem;
+        border-radius: var(--radius-md, 0.625rem);
+        font-weight: 700;
+        font-size: 0.875rem;
+        border: none;
+        color: #ffffff;
+        background: var(--color-primary, #4f46e5);
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+        transition: all 0.15s;
+    }
+    .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+
+    /* Dark Mode */
+    body.dark-mode .form-card { background: var(--color-bg-card); border-color: var(--color-border); }
+    body.dark-mode .file-item { background: var(--color-bg-hover); border-color: var(--color-border); }
+    body.dark-mode .file-upload-area { background: var(--color-bg-hover); border-color: var(--color-border); }
 </style>
 
 <div class="create-container">
-    <a href="{% url 'classroom_assignments' assignment.classroom.id %}" style="color: #6366f1; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Assignments
+    <a href="{% url 'classroom_assignments' assignment.classroom.id %}" class="back-link">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Assignments
     </a>
 
     <div class="form-card">
         <h1 class="form-title">Edit Assignment</h1>
-        <p class="form-subtitle">Update your assignment details</p>
+        <p class="form-subtitle">Update details for <strong>{{ assignment.title }}</strong></p>
 
         <form method="post" enctype="multipart/form-data" data-turbo="false">
             {% csrf_token %}
             
             <div class="form-group">
-                <label for="title">Assignment Title</label>
+                <label for="title">Assignment Title *</label>
                 <input type="text" name="title" id="title" class="form-control" required value="{{ assignment.title }}">
             </div>
             
             <div class="form-group">
-                <label for="description">Description</label>
+                <label for="description">Summary / Overview</label>
                 <textarea name="description" id="description" class="form-control">{{ assignment.description }}</textarea>
             </div>
             
             <div class="form-group">
-                <label for="instructions">Instructions</label>
-                <textarea name="instructions" id="instructions" class="form-control">{{ assignment.instructions }}</textarea>
+                <label for="instructions">Detailed Instructions</label>
+                <textarea name="instructions" id="instructions" class="form-control" style="min-height: 140px;">{{ assignment.instructions }}</textarea>
             </div>
             
             <div class="date-time-grid">
@@ -64,9 +210,9 @@
                     <div class="file-item">
                         <div class="file-info">
                             {% if file.file_type == 'link' %}
-                            <i data-lucide="link-2"></i>
+                            <i data-lucide="link-2" style="width:16px;height:16px;color:var(--color-primary);"></i>
                             {% else %}
-                            <i data-lucide="file"></i>
+                            <i data-lucide="file-text" style="width:16px;height:16px;color:var(--color-primary);"></i>
                             {% endif %}
                             <span>{{ file.filename }}</span>
                         </div>
@@ -80,41 +226,63 @@
             <div class="form-group">
                 <label for="question_files">Attach New Files</label>
                 <div class="file-upload-area">
-                    <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 0.75rem;"></i>
-                    <p style="color: #475569; margin: 0 0 0.5rem 0;">Add more files to the assignment</p>
-                    <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;">
-                    <button type="button" onclick="document.getElementById('question_files').click()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">Choose Files</button>
+                    <i data-lucide="upload-cloud" style="width: 44px; height: 44px; color: var(--color-primary, #4f46e5); margin-bottom: 0.75rem;"></i>
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-text-main);">Add more files to the assignment</p>
+                    <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;" onchange="updateFileCountLabel(this)">
+                    <button type="button" onclick="document.getElementById('question_files').click()" class="btn-secondary">
+                        <i data-lucide="folder-open" style="width:15px;height:15px;"></i> <span id="fileChooseText">Choose Files</span>
+                    </button>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="question_links">Add Links (URLs)</label>
+                <label>Add Links (URLs)</label>
                 <div id="links-container">
                     <div class="link-input" style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;">
-                        <input type="text" name="link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
+                        <input type="text" name="link_text[]" class="form-control" placeholder="Link Label (e.g., Reference Document)" style="flex: 1;">
                         <input type="url" name="link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
                     </div>
                 </div>
-                <button type="button" onclick="addLinkInput()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">+ Add Another Link</button>
+                <button type="button" onclick="addLinkInput()" class="btn-secondary" style="font-size: 0.8125rem; padding: 0.45rem 1.0rem;">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Another Link
+                </button>
             </div>
             
-            <div class="btn-group">
+            <div class="btn-group" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                 <a href="{% url 'classroom_assignments' assignment.classroom.id %}" class="btn-secondary">Cancel</a>
                 {% if assignment.status == 'draft' %}
-                <button type="submit" name="action" value="draft" class="btn-secondary" style="background: #e0e7ff; color: #3730a3;">Update Draft</button>
-                <button type="submit" name="action" value="publish" class="btn-primary">Publish</button>
+                <button type="submit" name="action" value="draft" class="btn-secondary" style="background: rgba(79,70,229,0.1); color: var(--color-primary);">Update Draft</button>
+                <button type="submit" name="action" value="publish" class="btn-primary">Publish Now</button>
                 {% else %}
-                <button type="submit" name="action" value="update" class="btn-secondary" style="background: #e0e7ff; color: #3730a3;">Save Changes</button>
-                <button type="submit" name="action" value="archive" class="btn-secondary" style="background: #f1f5f9; color: #64748b;">Archive</button>
+                <button type="submit" name="action" value="update" class="btn-primary">Save Changes</button>
+                <button type="submit" name="action" value="unpublish" class="btn-secondary" style="background: rgba(245,158,11,0.1); color: #d97706; border-color: rgba(245,158,11,0.3);">Unpublish (Draft)</button>
+                <button type="submit" name="action" value="archive" class="btn-secondary" style="background: rgba(100,116,139,0.1); color: #64748b; border-color: rgba(100,116,139,0.25);">Archive</button>
                 {% endif %}
+                <button type="submit" name="action" value="delete" class="btn-secondary" style="background: rgba(239,68,68,0.1); color: #dc2626; border-color: rgba(239,68,68,0.3); margin-left: auto;"
+                    data-confirm="Are you sure you want to permanently delete assignment &quot;{{ assignment.title|escapejs }}&quot;? All attached files and student submissions will be lost. This action cannot be undone."
+                    data-confirm-title="Delete Assignment"
+                    data-confirm-type="danger"
+                    data-confirm-btn="Delete Assignment">
+                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete Assignment
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-function deleteFile(fileId) {
-    if (confirm('Are you sure you want to delete this file?')) {
+async function deleteFile(fileId) {
+    var confirmed = true;
+    if (typeof EdumiPopup !== 'undefined' && EdumiPopup.danger) {
+        confirmed = await EdumiPopup.danger({
+            title: 'Delete Attachment',
+            message: 'Are you sure you want to delete this file?',
+            confirmText: 'Delete File'
+        });
+    } else {
+        confirmed = confirm('Are you sure you want to delete this file?');
+    }
+    if (confirmed) {
         fetch(`/assignments/question-files/${fileId}/delete/`, {
             method: 'POST',
             headers: {
@@ -136,10 +304,10 @@ function addLinkInput() {
     newLink.className = 'link-input';
     newLink.style.cssText = 'display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;';
     newLink.innerHTML = `
-        <input type="text" name="link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
+        <input type="text" name="link_text[]" class="form-control" placeholder="Link Label (e.g., Reference Document)" style="flex: 1;">
         <input type="url" name="link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
-        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;">
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem; display: flex; align-items: center;">
+            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
     `;
     container.appendChild(newLink);
@@ -147,5 +315,16 @@ function addLinkInput() {
         lucide.createIcons();
     }
 }
+
+function updateFileCountLabel(input) {
+    var txt = document.getElementById('fileChooseText');
+    if (!txt) return;
+    if (input.files && input.files.length > 0) {
+        txt.textContent = input.files.length + ' file(s) selected';
+    } else {
+        txt.textContent = 'Choose Files';
+    }
+}
 </script>
 {% endblock %}
+

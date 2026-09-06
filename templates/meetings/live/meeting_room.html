@@ -3791,7 +3791,12 @@ async function toggleGlobalControl(type) {
 }
 
 async function kickUser(userId) {
-    if (!confirm('Are you sure you want to kick this student for 1 hour?')) return;
+    const confirmed = await EdumiPopup.danger({
+        title: 'Kick Student',
+        message: 'Are you sure you want to kick this student for 1 hour?',
+        confirmText: 'Kick Student'
+    });
+    if (!confirmed) return;
     
     const url = window.meetingConfig.kickUrl.replace('0', userId);
     const res = await fetch(url, {
@@ -4555,20 +4560,28 @@ function openStartQuizModal() {
             if (data.status === 'success' && data.quizzes && data.quizzes.length > 0) {
                 let html = '';
                 data.quizzes.forEach(q => {
+                    const hasQuestions = q.question_count > 0;
+                    const statusBadge = q.status === 'draft'
+                        ? `<span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(245, 158, 11, 0.3);">Draft (Private)</span>`
+                        : `<span style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Published</span>`;
+
                     html += `
                         <div class="quiz-card-select-item">
                             <div class="quiz-card-select-info">
-                                <h4>${q.title}</h4>
-                                <p>${q.question_count} Questions • ${q.total_marks} Marks ${q.time_limit ? '• ' + q.time_limit + ' mins' : ''}</p>
+                                <h4 style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">${q.title} ${statusBadge}</h4>
+                                <p>${q.question_count} Question${q.question_count === 1 ? '' : 's'} • ${q.total_marks} Marks ${q.time_limit ? '• ' + q.time_limit + ' mins' : ''}</p>
                             </div>
-                            <button class="btn btn-primary-quiz" onclick="launchSelectedQuiz(${q.id})">Launch Quiz</button>
+                            ${hasQuestions
+                                ? `<button class="btn btn-primary-quiz" onclick="launchSelectedQuiz(${q.id})">Launch Quiz</button>`
+                                : `<button class="btn btn-secondary-quiz" disabled style="opacity: 0.5; cursor: not-allowed;" title="Add questions in Classroom first">No Questions</button>`
+                            }
                         </div>`;
                 });
                 container.innerHTML = html;
             } else {
                 container.innerHTML = `<div style="text-align:center; padding: 20px 0;">
-                    <p style="color:#94a3b8; font-size:14px;">No published quizzes found for classroom <strong>${data.classroom_title || ''}</strong>.</p>
-                    <p style="color:#64748b; font-size:12px;">Create and publish a quiz in the Classroom before launching it in a meeting.</p>
+                    <p style="color:#94a3b8; font-size:14px;">No quizzes found for classroom <strong>${data.classroom_title || ''}</strong>.</p>
+                    <p style="color:#64748b; font-size:12px;">Create a quiz in the Classroom before launching it in a meeting.</p>
                 </div>`;
             }
         })
@@ -5030,6 +5043,7 @@ window.toggleQuizPanel = toggleQuizPanel;
 window.handleTeacherQuizEvent = handleTeacherQuizEvent;
 window.acknowledgeStudentQuizWarning = acknowledgeStudentQuizWarning;
 </script>
+{% include 'components/reusable_popup.html' %}
 </body>
 </html>
 

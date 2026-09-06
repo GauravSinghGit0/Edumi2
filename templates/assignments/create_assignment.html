@@ -5,36 +5,186 @@
 
 {% block content %}
 <style>
-    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
-    .date-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
+    .create-container { 
+        max-width: var(--container-max-width); 
+        margin: 0 auto; 
+        padding: var(--space-md) var(--space-lg); 
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif); 
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-primary, #4f46e5);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        margin-bottom: 1.5rem;
+        transition: gap 0.15s;
+    }
+    .back-link:hover { gap: 0.65rem; }
+
+    .form-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 1.25rem);
+        padding: 2rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    
+    .form-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.35rem 0;
+        letter-spacing: -0.02em;
+    }
+    .form-subtitle {
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.875rem;
+        margin: 0 0 1.75rem 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-main, #334155);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.65rem 0.875rem;
+        border-radius: var(--radius-md, 0.625rem);
+        border: 1px solid var(--color-border, #cbd5e1);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.15s;
+    }
+    .form-control:focus {
+        border-color: var(--color-primary, #4f46e5);
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+
+    textarea.form-control {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    .date-time-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 1.25rem; 
+    }
+    @media (max-width: 640px) { .date-time-grid { grid-template-columns: 1fr; } }
+
+    .file-upload-area {
+        border: 2px dashed var(--color-border, #cbd5e1);
+        border-radius: var(--radius-md, 0.875rem);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        background: var(--color-bg-main, #f8fafc);
+        transition: border-color 0.15s;
+    }
+    .file-upload-area:hover {
+        border-color: var(--color-primary, #4f46e5);
+    }
+
+    .btn-group { 
+        display: flex; 
+        gap: 0.875rem; 
+        margin-top: 2rem; 
+        justify-content: flex-end;
+        align-items: center;
+    }
+    
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: var(--radius-md, 0.625rem);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        border: 1px solid var(--color-border, #e2e8f0);
+        color: var(--color-text-main, #334155);
+        background: var(--color-bg-main, #f8fafc);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-secondary:hover { background: var(--color-bg-hover, #e2e8f0); }
+
+    .btn-draft {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: var(--radius-md, 0.625rem);
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 1px solid rgba(245,158,11,0.3);
+        color: #b45309;
+        background: rgba(245,158,11,0.1);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-draft:hover { background: rgba(245,158,11,0.2); }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.65rem 1.5rem;
+        border-radius: var(--radius-md, 0.625rem);
+        font-weight: 700;
+        font-size: 0.875rem;
+        border: none;
+        color: #ffffff;
+        background: var(--color-primary, #4f46e5);
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+        transition: all 0.15s;
+    }
+    .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+
+    /* Dark Mode */
+    body.dark-mode .form-card { background: var(--color-bg-card); border-color: var(--color-border); }
+    body.dark-mode .file-upload-area { background: var(--color-bg-hover); border-color: var(--color-border); }
 </style>
 
 <div class="create-container">
-    <a href="{% url 'classroom_assignments' classroom.id %}" style="color: #6366f1; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Assignments
+    <a href="{% url 'classroom_assignments' classroom.id %}" class="back-link">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Assignments
     </a>
 
     <div class="form-card">
         <h1 class="form-title">Create New Assignment</h1>
-        <p class="form-subtitle">Create an assignment for your students in {{ classroom.title }}</p>
+        <p class="form-subtitle">Create an assignment for your students in <strong>{{ classroom.title }}</strong></p>
 
         <form method="post" enctype="multipart/form-data" data-turbo="false">
             {% csrf_token %}
             
             <div class="form-group">
-                <label for="title">Assignment Title</label>
-                <input type="text" name="title" id="title" class="form-control" required placeholder="e.g., Chapter 5 Homework">
+                <label for="title">Assignment Title *</label>
+                <input type="text" name="title" id="title" class="form-control" required placeholder="e.g., Chapter 5 Homework & Case Study">
             </div>
             
             <div class="form-group">
-                <label for="description">Description</label>
-                <textarea name="description" id="description" class="form-control" placeholder="Brief description of the assignment"></textarea>
+                <label for="description">Summary / Overview</label>
+                <textarea name="description" id="description" class="form-control" placeholder="Brief summary displayed on assignment card list"></textarea>
             </div>
             
             <div class="form-group">
-                <label for="instructions">Instructions</label>
-                <textarea name="instructions" id="instructions" class="form-control" placeholder="Detailed instructions for students"></textarea>
+                <label for="instructions">Detailed Instructions</label>
+                <textarea name="instructions" id="instructions" class="form-control" style="min-height: 140px;" placeholder="Detailed step-by-step instructions for students"></textarea>
             </div>
             
             <div class="date-time-grid">
@@ -49,35 +199,44 @@
             </div>
             
             <div class="form-group">
-                <label for="total_marks">Total Points</label>
+                <label for="total_marks">Total Points / Marks</label>
                 <input type="number" name="total_marks" id="total_marks" class="form-control" value="100" min="1">
             </div>
             
             <div class="form-group">
-                <label for="question_files">Attach Files (Questions, Images, PDFs, etc.)</label>
+                <label for="question_files">Attach Files (Questions, PDFs, Templates)</label>
                 <div class="file-upload-area">
-                    <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 0.75rem;"></i>
-                    <p style="margin: 0 0 0.5rem 0;">Drag and drop files here or click to browse</p>
-                    <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;">
-                    <button type="button" onclick="document.getElementById('question_files').click()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">Choose Files</button>
+                    <i data-lucide="upload-cloud" style="width: 44px; height: 44px; color: var(--color-primary, #4f46e5); margin-bottom: 0.75rem;"></i>
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-text-main);">Upload question documents or reference files</p>
+                    <p style="margin: 0 0 0.75rem 0; font-size: 0.8125rem; color: var(--color-text-muted);">PDFs, Word docs, Images, ZIP files up to 50MB</p>
+                    <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;" onchange="updateFileCountLabel(this)">
+                    <button type="button" onclick="document.getElementById('question_files').click()" class="btn-secondary">
+                        <i data-lucide="folder-open" style="width:15px;height:15px;"></i> <span id="fileChooseText">Choose Files</span>
+                    </button>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="question_links">Add Links (URLs)</label>
+                <label>Add Links (URLs)</label>
                 <div id="links-container">
                     <div class="link-input" style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;">
-                        <input type="text" name="link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
+                        <input type="text" name="link_text[]" class="form-control" placeholder="Link Label (e.g., Reference Slides)" style="flex: 1;">
                         <input type="url" name="link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
                     </div>
                 </div>
-                <button type="button" onclick="addLinkInput()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">+ Add Another Link</button>
+                <button type="button" onclick="addLinkInput()" class="btn-secondary" style="font-size: 0.8125rem; padding: 0.45rem 1.0rem;">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Another Link
+                </button>
             </div>
             
             <div class="btn-group">
                 <a href="{% url 'classroom_assignments' classroom.id %}" class="btn-secondary">Cancel</a>
-                <button type="submit" name="action" value="draft" class="btn-draft">Save as Draft</button>
-                <button type="submit" name="action" value="publish" class="btn-primary">Publish Assignment</button>
+                <button type="submit" name="action" value="draft" class="btn-draft">
+                    <i data-lucide="save" style="width: 15px; height: 15px;"></i> Save as Draft
+                </button>
+                <button type="submit" name="action" value="publish" class="btn-primary">
+                    <i data-lucide="send" style="width: 15px; height: 15px;"></i> Publish Assignment
+                </button>
             </div>
         </form>
     </div>
@@ -90,10 +249,10 @@ function addLinkInput() {
     newLink.className = 'link-input';
     newLink.style.cssText = 'display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;';
     newLink.innerHTML = `
-        <input type="text" name="link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
+        <input type="text" name="link_text[]" class="form-control" placeholder="Link Label (e.g., Reference Slides)" style="flex: 1;">
         <input type="url" name="link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
-        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;">
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem; display: flex; align-items: center;">
+            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
     `;
     container.appendChild(newLink);
@@ -101,5 +260,16 @@ function addLinkInput() {
         lucide.createIcons();
     }
 }
+
+function updateFileCountLabel(input) {
+    var txt = document.getElementById('fileChooseText');
+    if (!txt) return;
+    if (input.files && input.files.length > 0) {
+        txt.textContent = input.files.length + ' file(s) selected';
+    } else {
+        txt.textContent = 'Choose Files';
+    }
+}
 </script>
 {% endblock %}
+

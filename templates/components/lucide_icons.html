@@ -11,7 +11,10 @@
     }
     
     initIcons();
-    document.addEventListener('DOMContentLoaded', initIcons);
-    document.addEventListener('turbo:load', initIcons);
-    document.addEventListener('turbo:render', initIcons);
+    if (!window._lucideListenersAdded) {
+        window._lucideListenersAdded = true;
+        document.addEventListener('DOMContentLoaded', initIcons);
+        document.addEventListener('turbo:load', initIcons);
+        document.addEventListener('turbo:render', initIcons);
+    }
 </script>

@@ -59,7 +59,7 @@ def login_view(request):
             return render(request, 'accounts/auth/login.html', {
                 'error': 'Please enter both username/email and password.',
                 'entered_username': username_or_email,
-            }, status=400)
+            })
 
         # High-performance single-pass authentication
         user = None
@@ -115,14 +115,14 @@ def login_view(request):
                     'unverified_error': True,
                     'unverified_email': user.email,
                     'entered_username': username_or_email,
-                }, status=400)
+                })
 
             # Check if user is active
             if not user.is_active:
                 return render(request, 'accounts/auth/login.html', {
                     'error': 'This account has been disabled. Please contact support.',
                     'entered_username': username_or_email,
-                }, status=400)
+                })
 
             # Validated & Verified -> Log in
             login(request, user)
@@ -137,7 +137,7 @@ def login_view(request):
         return render(request, 'accounts/auth/login.html', {
             'error': 'Invalid username/email or password.',
             'entered_username': username_or_email,
-        }, status=400)
+        })
 
     return render(request, 'accounts/auth/login.html')
 
@@ -179,7 +179,7 @@ def register(request):
             return render(request, 'accounts/auth/register.html', {
                 'errors': serializer.errors,
                 'form_data': data,
-            }, status=400)
+            })
 
         # Valid registration data -> create user and profile (is_verified=False)
         try:
@@ -211,7 +211,7 @@ def register(request):
             return render(request, 'accounts/auth/register.html', {
                 'errors': error_dict,
                 'form_data': data,
-            }, status=400)
+            })
 
     return render(request, 'accounts/auth/register.html')
 

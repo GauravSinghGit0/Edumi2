@@ -67,7 +67,7 @@
             </div>
 
             <!-- OTP Submission Form -->
-            <form method="post" action="{% url 'verify_email' %}" class="auth-form" id="otpForm">
+            <form method="post" action="{% url 'verify_email' %}" class="auth-form" id="otpForm" data-turbo="false">
                 {% csrf_token %}
                 <input type="hidden" name="email" id="emailHidden" value="{{ email }}">
                 <input type="hidden" name="otp_code" id="otpCodeHidden" value="">

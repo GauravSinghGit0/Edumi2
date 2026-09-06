@@ -63,17 +63,23 @@
             document.body.style.overflow = '';
         }
 
-        // Graceful handling of aborted requests during rapid navigation
+        // Graceful handling of server errors and redirects during Turbo visits
+        document.addEventListener('turbo:before-fetch-response', (event) => {
+            const fetchResponse = event.detail && event.detail.fetchResponse;
+            if (fetchResponse && fetchResponse.response) {
+                const status = fetchResponse.response.status;
+                if (status >= 500) {
+                    // Fallback cleanly to full page navigation on server error
+                    event.preventDefault();
+                    window.location.href = fetchResponse.response.url || window.location.href;
+                }
+            }
+        });
+
+        // Graceful handling of network aborts during rapid navigation
         document.addEventListener('turbo:fetch-request-error', (event) => {
-            // If request was aborted by user clicking another link rapidly, suppress the error
             if (event.detail && event.detail.error && event.detail.error.name === 'AbortError') {
                 event.preventDefault();
-                return;
-            }
-            // If server returned a 500 error during fast clicking, fallback cleanly to full page visit
-            if (event.detail && event.detail.response && event.detail.response.status >= 500) {
-                event.preventDefault();
-                window.location.href = event.detail.url;
             }
         });
 
@@ -88,47 +94,41 @@
             const currentSidebar = document.getElementById('sidebar');
             const newSidebar = event.detail.newBody.querySelector('#sidebar');
             if (currentSidebar && newSidebar) {
-                // Use requestAnimationFrame to prevent visible layout shifts
-                requestAnimationFrame(() => {
-                    const currentItems = currentSidebar.querySelectorAll('.sidebar-nav-item');
-                    const newActiveItems = newSidebar.querySelectorAll('.sidebar-nav-item.active');
+                const currentItems = currentSidebar.querySelectorAll('.sidebar-nav-item');
+                const newActiveItems = newSidebar.querySelectorAll('.sidebar-nav-item.active');
 
-                    // Clear active states on all items first (in a single batch)
-                    currentItems.forEach(item => item.classList.remove('active'));
+                // Clear active states on all items first
+                currentItems.forEach(item => item.classList.remove('active'));
 
-                    // Apply active state to the matching items
-                    newActiveItems.forEach(newActiveItem => {
-                        const activeHref = newActiveItem.getAttribute('href');
-                        const match = Array.from(currentItems).find(item => item.getAttribute('href') === activeHref);
-                        if (match) {
-                            match.classList.add('active');
-                        }
-                    });
+                // Apply active state to the matching items
+                newActiveItems.forEach(newActiveItem => {
+                    const activeHref = newActiveItem.getAttribute('href');
+                    const match = Array.from(currentItems).find(item => item.getAttribute('href') === activeHref);
+                    if (match) {
+                        match.classList.add('active');
+                    }
+                });
 
-                    // Sync all badges by matching href (more reliable than index)
-                    const newItems = newSidebar.querySelectorAll('.sidebar-nav-item');
-                    currentItems.forEach((item) => {
-                        const itemHref = item.getAttribute('href');
-                        const matchingNewItem = Array.from(newItems).find(ni => ni.getAttribute('href') === itemHref);
+                // Sync all badges by matching href
+                const newItems = newSidebar.querySelectorAll('.sidebar-nav-item');
+                currentItems.forEach((item) => {
+                    const itemHref = item.getAttribute('href');
+                    const matchingNewItem = Array.from(newItems).find(ni => ni.getAttribute('href') === itemHref);
+                    
+                    if (matchingNewItem) {
+                        const curBadge = item.querySelector('.sidebar-nav-badge');
+                        const newBadge = matchingNewItem.querySelector('.sidebar-nav-badge');
                         
-                        if (matchingNewItem) {
-                            const curBadge = item.querySelector('.sidebar-nav-badge');
-                            const newBadge = matchingNewItem.querySelector('.sidebar-nav-badge');
-                            
-                            if (curBadge && newBadge) {
-                                // Update existing badge
-                                if (curBadge.textContent !== newBadge.textContent) {
-                                    curBadge.textContent = newBadge.textContent;
-                                }
-                            } else if (curBadge && !newBadge) {
-                                // Remove badge if no longer needed
-                                curBadge.remove();
-                            } else if (!curBadge && newBadge) {
-                                // Add new badge
-                                item.appendChild(newBadge.cloneNode(true));
+                        if (curBadge && newBadge) {
+                            if (curBadge.textContent !== newBadge.textContent) {
+                                curBadge.textContent = newBadge.textContent;
                             }
+                        } else if (curBadge && !newBadge) {
+                            curBadge.remove();
+                        } else if (!curBadge && newBadge) {
+                            item.appendChild(newBadge.cloneNode(true));
                         }
-                    });
+                    }
                 });
             }
 
@@ -136,18 +136,16 @@
             const currentTopbar = document.getElementById('topbar');
             const newTopbar = event.detail.newBody.querySelector('#topbar');
             if (currentTopbar && newTopbar) {
-                requestAnimationFrame(() => {
-                    const curBadge = currentTopbar.querySelector('#notificationBadge');
-                    const newBadge = newTopbar.querySelector('#notificationBadge');
-                    if (curBadge && newBadge) {
-                        if (curBadge.textContent !== newBadge.textContent) {
-                            curBadge.textContent = newBadge.textContent;
-                        }
-                        if (curBadge.style.display !== newBadge.style.display) {
-                            curBadge.style.display = newBadge.style.display;
-                        }
+                const curBadge = currentTopbar.querySelector('#notificationBadge');
+                const newBadge = newTopbar.querySelector('#notificationBadge');
+                if (curBadge && newBadge) {
+                    if (curBadge.textContent !== newBadge.textContent) {
+                        curBadge.textContent = newBadge.textContent;
                     }
-                });
+                    if (curBadge.style.display !== newBadge.style.display) {
+                        curBadge.style.display = newBadge.style.display;
+                    }
+                }
             }
         });
 
@@ -167,8 +165,25 @@
 
         document.addEventListener('turbo:frame-missing', (event) => {
             event.preventDefault();
-            // Do a full page visit instead of ignoring the response
-            event.detail.visit(event.detail.response.url, { action: 'replace' });
+            // Fallback cleanly to full page visit when a frame target isn't found in response
+            const targetUrl = (event.detail && event.detail.response && event.detail.response.url) 
+                || (event.detail && event.detail.visit && typeof event.detail.visit === 'string' ? event.detail.visit : null)
+                || (event.detail && event.detail.url);
+            if (targetUrl) {
+                window.location.href = targetUrl;
+            }
+        });
+
+        // Ensure forms with file uploads bypass Turbo Drive safely
+        document.addEventListener('turbo:submit-start', (event) => {
+            const form = event.target;
+            if (form && (form.enctype === 'multipart/form-data' || form.querySelector('input[type="file"]'))) {
+                if (form.getAttribute('data-turbo') !== 'true') {
+                    event.preventDefault();
+                    form.setAttribute('data-turbo', 'false');
+                    form.submit();
+                }
+            }
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -630,6 +645,7 @@
             }
         }
     </script>
+    {% endcompress %}
     <style>
         .toast-container {
             position: fixed;
@@ -692,7 +708,6 @@
             }
         }
     </style>
-    {% endcompress %}
     {% else %}
     <!-- Not authenticated - redirect to login -->
     <script>window.location.href = "{% url 'login' %}";</script>
@@ -700,6 +715,7 @@
     <script src="{% static 'js/identity_sync.js' %}"></script>
     <script src="{% static 'js/classroom-card.js' %}"></script>
     {% block extra_js %}{% endblock %}
+    {% include 'components/reusable_popup.html' %}
     {% include 'components/lucide_icons.html' %}
 </body>
 

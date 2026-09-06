@@ -4,7 +4,7 @@
 {% block page_title %}{{ project.display_title }} — Video Editor{% endblock %}
 
 {% block ve_content %}
-<div class="ve-editor-page">
+<div class="ve-editor-page" data-turbo="false">
     <!-- Topbar (Theme: System of Edumi) -->
     <header class="ve-editor-head">
         <div class="ve-editor-head-left">
@@ -42,17 +42,21 @@
             {% if request.GET.recording_id %}
             <form method="POST"
                 action="{% url 'publish_to_lecture' project.pk %}?recording_id={{ request.GET.recording_id }}"
-                style="display:inline-block;" onsubmit="return confirm('Publish this edited video to your lectures?');">
+                style="display:inline-block;">
                 {% csrf_token %}
                 <button type="submit" class="ve-btn ve-btn-success"
-                    title="Publish to Lectures">
+                    title="Publish to Lectures"
+                    data-confirm="Publish this edited video to your lectures for classroom students?"
+                    data-confirm-title="Publish to Lectures"
+                    data-confirm-type="success"
+                    data-confirm-btn="Publish">
                     <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Publish
                 </button>
             </form>
             {% else %}
             <button type="button" class="ve-btn ve-btn-success"
                 title="Publish to Lectures"
-                onclick="alert('This project is not linked to a class recording. Use Export to download the video.')">
+                onclick="EdumiPopup.info({ title: 'Notice', message: 'This project is not linked to a class recording. Use Export to download the video.' })">
                 <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Publish
             </button>
             {% endif %}
@@ -583,10 +587,13 @@
                 <!-- Reset button -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
                     <form id="reset-form" action="{% url 'op_reset' project.pk %}" method="post" class="inline-form"
-                        onsubmit="return confirm('Discard all edits and revert to the original upload?');"
                         style="margin: 0;">
                         {% csrf_token %}
-                        <button type="submit" class="ve-btn ve-btn-danger" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        <button type="submit" class="ve-btn ve-btn-danger" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;"
+                            data-confirm="Discard all edits and revert to the original upload? All unsaved trims, crops, and edits will be lost."
+                            data-confirm-title="Reset Project"
+                            data-confirm-type="danger"
+                            data-confirm-btn="Reset to Original">
                             <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Reset to Original
                         </button>
                     </form>

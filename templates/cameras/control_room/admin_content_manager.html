@@ -6,9 +6,10 @@
 {% block extra_css %}
 <style>
     .manager-container {
-        padding: 1.5rem 2rem;
-        max-width: 1400px;
+        padding: var(--space-md) var(--space-lg);
+        max-width: var(--container-max-width);
         margin: 0 auto;
+        font-family: var(--font-family-base, 'Inter', sans-serif);
     }
     .mgmt-header {
         margin-bottom: 1.5rem;
@@ -429,8 +430,13 @@
         .catch(err => console.error('Error toggling publish:', err));
     };
 
-    window.deleteItem = function(type, id, url) {
-        if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+    window.deleteItem = async function(type, id, url) {
+        const confirmed = await EdumiPopup.danger({
+            title: `Delete ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+            message: `Are you sure you want to delete this ${type}? This action cannot be undone.`,
+            confirmText: `Delete ${type.charAt(0).toUpperCase() + type.slice(1)}`
+        });
+        if (!confirmed) return;
 
         fetch(url, {
             method: 'POST',

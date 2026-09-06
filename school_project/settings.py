@@ -380,6 +380,7 @@ if REDIS_URL and _is_redis_reachable(REDIS_URL) and not IS_TESTING:
             'LOCATION': REDIS_URL,
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {'protocol': 2},
                 'SOCKET_CONNECT_TIMEOUT': 5,
                 'SOCKET_TIMEOUT': 5,
                 'IGNORE_EXCEPTIONS': True,   # Don't crash if Redis is briefly down

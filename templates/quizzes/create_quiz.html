@@ -1,82 +1,262 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Create Quiz{% endblock %}
+{% block page_title %}Create Quiz - {{ classroom.title }}{% endblock %}
 
 {% block content %}
 <style>
-    .create-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: 'Inter', sans-serif; }
-    
-    .form-card { background: white; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid #e2e8f0; }
-    .form-title { font-size: 1.875rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
-    .form-subtitle { color: #64748b; margin-bottom: 2rem; }
-    
-    .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; font-weight: 600; color: #0f172a; margin-bottom: 0.5rem; font-size: 0.9375rem; }
-    .form-control { width: 100%; padding: 0.875rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.875rem; font-size: 1rem; transition: all 0.2s; }
-    .form-control:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); outline: none; }
-    textarea.form-control { min-height: 120px; resize: vertical; }
-    
-    .date-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    
-    .btn-primary { background: #7c3aed; color: white; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { background: #6d28d9; transform: translateY(-2px); }
-    .btn-secondary { background: #f1f5f9; color: #0f172a; border: none; padding: 0.875rem 2rem; border-radius: 1rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
+    .create-quiz-page {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+    }
+
+    /* ── Glass Card (Matches Edit Quiz & Dashboard Exactly) ── */
+    .glass-card {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: var(--space-lg);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: var(--space-sm);
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+
+    .card-title {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+
+    .card-title i { color: var(--color-primary); }
+
+    .card-subtitle {
+        font-size: var(--font-size-xs);
+        color: var(--color-text-muted);
+        margin-top: 0.2rem;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .status-badge.draft {
+        background: rgba(245, 158, 11, 0.15);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Notice Banner */
+    .notice-banner {
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+        margin-bottom: var(--space-md);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        font-size: var(--font-size-sm);
+    }
+
+    .notice-banner.draft {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        color: #92400e;
+    }
+
+    /* Form Controls */
+    .form-group {
+        margin-bottom: var(--space-md);
+    }
+
+    .form-label {
+        display: block;
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-main);
+        margin-bottom: var(--space-2xs);
+        font-size: var(--font-size-sm);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-md);
+        color: var(--color-text-main);
+        background: var(--color-bg-main);
+        transition: border-color 0.15s ease-in-out;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-bg);
+        outline: none;
+    }
+
+    textarea.form-control {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    .form-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
+    }
+
+    @media (max-width: 640px) {
+        .form-grid-2 {
+            grid-template-columns: 1fr;
+            gap: var(--space-sm);
+        }
+    }
+
+    /* Action Buttons Row */
+    .btn-action-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: var(--space-lg);
+        padding-top: var(--space-md);
+        border-top: 1px solid var(--color-border);
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+    }
+
+    .btn-lms {
+        padding: 0 1.25rem;
+        height: var(--btn-height-md);
+        border-radius: var(--radius-md);
+        font-weight: var(--font-weight-semibold);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        border: none;
+    }
+
+    .btn-lms-secondary {
+        background: var(--color-bg-main);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-main);
+    }
+
+    .btn-lms-secondary:hover {
+        background: var(--color-bg-hover);
+    }
+
+    .btn-lms-save {
+        background: var(--color-primary);
+        color: #ffffff;
+    }
+
+    .btn-lms-save:hover {
+        background: var(--color-primary-hover);
+    }
 </style>
 
-<div class="create-container">
-    <a href="{% url 'classroom_quizzes' classroom.id %}" style="color: #7c3aed; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Quizzes
-    </a>
+<div class="create-quiz-page">
+    <!-- Quiz Settings Glass Card (Matches Edit Quiz Exactly) -->
+    <div class="glass-card">
+        <div class="card-header">
+            <div>
+                <h1 class="card-title">
+                    <i data-lucide="plus-circle"></i> Create New Quiz
+                </h1>
+                <div class="card-subtitle">Configure quiz details, points, deadlines, and publishing visibility for <strong>{{ classroom.title }}</strong>.</div>
+            </div>
+            <div>
+                <span class="status-badge draft">
+                    <i data-lucide="lock" style="width: 13px; height: 13px;"></i> Draft (Private)
+                </span>
+            </div>
+        </div>
 
-    <div class="form-card">
-        <h1 class="form-title">Create New Quiz</h1>
-        <p class="form-subtitle">Create a quiz for your students in {{ classroom.title }}</p>
+        <div class="notice-banner draft">
+            <i data-lucide="lock" style="width: 18px; height: 18px; flex-shrink: 0; color: #d97706;"></i>
+            <div>
+                <strong>Private Draft:</strong> This quiz will start as a private draft. Students cannot see it until you add questions and choose to publish.
+            </div>
+        </div>
 
-        <form method="post" data-turbo="false">
+        <form method="post" data-turbo="false" id="createQuizForm">
             {% csrf_token %}
-            
+
             <div class="form-group">
-                <label for="title">Quiz Title</label>
-                <input type="text" name="title" id="title" class="form-control" required placeholder="e.g., Midterm Quiz">
+                <label for="title" class="form-label">Quiz Title</label>
+                <input type="text" name="title" id="title" class="form-control" required placeholder="e.g., Module 3 Quiz: Network Fundamentals">
             </div>
-            
+
             <div class="form-group">
-                <label for="description">Description</label>
-                <textarea name="description" id="description" class="form-control" placeholder="Brief description of the quiz"></textarea>
+                <label for="description" class="form-label">Description & Instructions (Optional)</label>
+                <textarea name="description" id="description" class="form-control" placeholder="Provide instructions, topics covered, or rules for this quiz"></textarea>
             </div>
-            
-            <div class="date-time-grid">
+
+            <div class="form-grid-2">
                 <div class="form-group">
-                    <label for="due_date">Due Date (Optional)</label>
+                    <label for="due_date" class="form-label">Due Date (Optional)</label>
                     <input type="date" name="due_date" id="due_date" class="form-control" value="{{ default_due_date }}">
                 </div>
                 <div class="form-group">
-                    <label for="due_time">Due Time (Optional)</label>
+                    <label for="due_time" class="form-label">Due Time (Optional)</label>
                     <input type="time" name="due_time" id="due_time" class="form-control" value="{{ default_due_time }}">
                 </div>
             </div>
-            
-            <div class="date-time-grid">
+
+            <div class="form-grid-2">
                 <div class="form-group">
-                    <label for="total_marks">Total Points</label>
+                    <label for="total_marks" class="form-label">Total Points (Score Scale)</label>
                     <input type="number" name="total_marks" id="total_marks" class="form-control" value="100" min="1">
                 </div>
                 <div class="form-group">
-                    <label for="time_limit">Time Limit (minutes, Optional)</label>
-                    <input type="number" name="time_limit" id="time_limit" class="form-control" min="1" placeholder="e.g., 30">
+                    <label for="time_limit" class="form-label">Time Limit (minutes, Optional)</label>
+                    <input type="number" name="time_limit" id="time_limit" class="form-control" min="1" placeholder="e.g., 30 for 30 minutes">
                 </div>
             </div>
-            
-            <div class="btn-group">
-                <a href="{% url 'classroom_quizzes' classroom.id %}" class="btn-secondary">Cancel</a>
-                <button type="submit" name="action" value="draft" class="btn-secondary" style="background: #ede9fe; color: #5b21b6;">Save as Draft</button>
-                <button type="submit" name="action" value="publish" class="btn-primary">Create & Add Questions</button>
+
+            <div class="btn-action-row">
+                <a href="{% url 'classroom_quizzes' classroom.id %}" class="btn-lms btn-lms-secondary">
+                    Cancel
+                </a>
+                <button type="submit" class="btn-lms btn-lms-save">
+                    Create & Add Questions <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('turbo:load', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
 {% endblock %}

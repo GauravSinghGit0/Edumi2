@@ -23,7 +23,7 @@ def get_available_classroom_quizzes(request, meeting_code):
     if not meeting.classroom:
         return JsonResponse({'status': 'error', 'message': 'This meeting is not linked to a classroom'}, status=400)
 
-    quizzes = meeting.classroom.quizzes.filter(status='published').prefetch_related('questions')
+    quizzes = meeting.classroom.quizzes.exclude(status='archived').prefetch_related('questions')
     quiz_data = []
     for q in quizzes:
         q_count = q.questions.count()
@@ -33,6 +33,7 @@ def get_available_classroom_quizzes(request, meeting_code):
             'description': q.description or '',
             'total_marks': q.total_marks,
             'time_limit': q.time_limit,
+            'status': q.status,
             'question_count': q_count,
             'created_at': q.created_at.strftime('%Y-%m-%d %H:%M')
         })
@@ -64,6 +65,12 @@ def start_meeting_quiz(request, meeting_code):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     if meeting.classroom and quiz.classroom_id != meeting.classroom_id:
         return JsonResponse({'status': 'error', 'message': 'Quiz does not belong to this meeting classroom'}, status=400)
+
+    if quiz.status == 'archived':
+        return JsonResponse({'status': 'error', 'message': 'Cannot launch an archived quiz'}, status=400)
+
+    if quiz.questions.count() == 0:
+        return JsonResponse({'status': 'error', 'message': 'Cannot launch a quiz with no questions. Please add questions in the Classroom first.'}, status=400)
 
     questions = quiz.questions.all().order_by('order', 'id').prefetch_related('choices')
     questions_payload = []
@@ -191,6 +198,9 @@ def submit_meeting_quiz(request, meeting_code):
                 total_obtained_marks += marks_for_q
 
         submission.marks_obtained = total_obtained_marks
+        has_text_questions = any(q.question_type == 'text' for q in questions.values())
+        if not has_text_questions:
+            submission.evaluated_at = timezone.now()
         submission.save()
 
     is_auto_submitted = data.get('is_auto_submitted', False)

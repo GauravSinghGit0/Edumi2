@@ -42,7 +42,7 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER="edumi"
 DB_NAME="edumi_db"
 DB_USER="edumi_admin"
-DB_PASS="edumi_pass_2026"
+DB_PASS=""
 
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
@@ -50,10 +50,19 @@ while [[ $# -gt 0 ]]; do
         --domain)       DOMAIN="$2";  shift 2 ;;
         --email)        EMAIL="$2";   shift 2 ;;
         --db-host)      DB_HOST="$2"; shift 2 ;;
+        --db-pass)      DB_PASS="$2"; shift 2 ;;
         --letsencrypt)  USE_LETSENCRYPT=true; shift ;;
         *) warn "Unknown argument: $1"; shift ;;
     esac
 done
+
+# Resolve DB_PASS: Use CLI arg -> existing .env -> generate secure random
+if [ -z "$DB_PASS" ]; then
+    DB_PASS=$(grep '^POSTGRES_PASSWORD=' "$APP_DIR/.env" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+fi
+if [ -z "$DB_PASS" ]; then
+    DB_PASS=$(openssl rand -hex 16 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(16))" 2>/dev/null || echo "edumi_$(date +%s)_dbpass")
+fi
 
 # Detect Ubuntu Server LAN IP Address
 LAN_IP=$(ip route get 8.8.8.8 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}')
@@ -194,9 +203,14 @@ if [ ! -f "$LIVEKIT_DIR/livekit-server" ]; then
         rm -f "$LIVEKIT_DIR/livekit-server.exe"
     fi
 
-    info "Downloading LiveKit Server Linux (amd64) binary from GitHub releases..."
+    ARCH=$(uname -m)
+    LK_ARCH_PATTERN="linux_amd64.tar.gz"
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+        LK_ARCH_PATTERN="linux_arm64.tar.gz"
+    fi
+    info "Downloading LiveKit Server Linux ($ARCH) binary from GitHub releases..."
     LIVEKIT_DL_URL=$(curl -s https://api.github.com/repos/livekit/livekit/releases/latest \
-        | grep "browser_download_url" | grep "linux_amd64.tar.gz" | head -1 \
+        | grep "browser_download_url" | grep "$LK_ARCH_PATTERN" | head -1 \
         | cut -d '"' -f 4 || echo "")
 
     if [ -n "$LIVEKIT_DL_URL" ]; then
@@ -221,14 +235,14 @@ LK_KEY=$(grep '^LIVEKIT_API_KEY=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2-
 LK_SECRET=$(grep '^LIVEKIT_API_SECRET=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 
 if [ -z "$LK_KEY" ]; then
-    LK_KEY="devkey"
+    LK_KEY="edumi_lk_$(openssl rand -hex 6 2>/dev/null || date +%s)"
     if [ -f "$APP_DIR/.env" ]; then
         echo "LIVEKIT_API_KEY=$LK_KEY" >> "$APP_DIR/.env"
     fi
 fi
 
 if [ -z "$LK_SECRET" ]; then
-    LK_SECRET="devsecret_must_be_32_characters_long_1234"
+    LK_SECRET=$(openssl rand -hex 20 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(20))" 2>/dev/null || echo "edumi_sec_$(date +%s)_32chars")
     if [ -f "$APP_DIR/.env" ]; then
         echo "LIVEKIT_API_SECRET=$LK_SECRET" >> "$APP_DIR/.env"
     fi
@@ -330,7 +344,7 @@ fi
 if [ -n "$EXISTING_FACE" ]; then
     FACE_KEY=$EXISTING_FACE
 else
-    FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || echo "ZxYxWvUtSrQpOnMlKjIhGfEdCbA9876543210")
+    FACE_KEY=$($VENV_PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null || openssl rand -base64 32 2>/dev/null || echo "")
 fi
 
 DATABASE_URL_STR="postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
@@ -419,35 +433,9 @@ log "SSL Certificates generated in ./certs/"
 # ------------------------------------------------------------------------------
 step "STEP 8: Django Database Migrations & Static Collection"
 # ------------------------------------------------------------------------------
-info "Running database migrations & seeding default camera..."
+info "Running database migrations..."
 $VENV_PYTHON manage.py migrate --noinput
-$VENV_PYTHON -c "
-import os, django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'school_project.settings')
-django.setup()
-from cameras.models import Camera
-camera, created = Camera.objects.get_or_create(
-    id=1,
-    defaults={
-        'name': 'Default Classroom Camera (10.7.16.48)',
-        'ip_address': '10.7.16.48',
-        'port': 554,
-        'username': 'test',
-        'password': 'dei@12@12',
-        'stream_path': '/h264Preview_01_main',
-        'location': 'Classroom 1',
-        'is_active': True
-    }
-)
-if not created:
-    camera.ip_address = '10.7.16.48'
-    camera.username = 'test'
-    camera.password = 'dei@12@12'
-    camera.stream_path = '/h264Preview_01_main'
-    camera.is_active = True
-    camera.save()
-" 2>/dev/null || true
-log "Database schema initialized & Camera 1 configured."
+log "Database schema initialized successfully."
 
 info "Collecting static files & compressing template assets..."
 $VENV_PYTHON manage.py collectstatic --noinput --clear

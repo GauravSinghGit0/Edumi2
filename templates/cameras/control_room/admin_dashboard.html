@@ -4,9 +4,10 @@
 {% block extra_css %}
 <style>
     .camera-mgmt-container {
-        padding: 1.5rem 2rem;
-        max-width: 1400px;
+        padding: var(--space-md) var(--space-lg);
+        max-width: var(--container-max-width);
         margin: 0 auto;
+        font-family: var(--font-family-base, 'Inter', sans-serif);
     }
     .mgmt-header {
         display: flex;
@@ -524,7 +525,12 @@
     }
 
     async function deleteCamera(id) {
-        if (confirm('Are you sure you want to delete this camera?')) {
+        const confirmed = await EdumiPopup.danger({
+            title: 'Delete Camera',
+            message: 'Are you sure you want to delete this camera? This action cannot be undone.',
+            confirmText: 'Delete Camera'
+        });
+        if (confirmed) {
             var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
             try {
                 var res = await fetch(`/cameras/delete-camera/${id}/`, {
@@ -539,10 +545,10 @@
                     }
                 } else {
                     var errData = await res.json().catch(function() { return {}; });
-                    alert(errData.message || 'Failed to delete camera');
+                    EdumiPopup.alert({ title: 'Error', message: errData.message || 'Failed to delete camera', type: 'danger' });
                 }
             } catch (err) {
-                alert('Error deleting camera: ' + err.message);
+                EdumiPopup.alert({ title: 'Error', message: 'Error deleting camera: ' + err.message, type: 'danger' });
             }
         }
     }

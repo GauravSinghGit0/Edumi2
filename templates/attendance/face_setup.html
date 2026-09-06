@@ -411,7 +411,7 @@
 
         <!-- Upload Panel -->
         <div class="face-panel active" id="panelUpload">
-            <form id="uploadForm" method="post" action="{% url 'upload_face_photo' %}" enctype="multipart/form-data">
+            <form id="uploadForm" method="post" action="{% url 'upload_face_photo' %}" enctype="multipart/form-data" data-turbo="false">
                 {% csrf_token %}
                 <div class="upload-zone" id="uploadZone">
                     <input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/webp" onchange="previewImage(this)">

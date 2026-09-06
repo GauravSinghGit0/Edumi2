@@ -50,18 +50,22 @@ class Assignment(models.Model):
 
     def is_past_due(self):
         """Check if assignment is past due date"""
+        if not self.due_date:
+            return False
         return timezone.now() > self.due_date
 
     def get_submission_status(self, student):
         """Get submission status for a specific student"""
         try:
-            submission = self.submissions.get(student=student)
-            if submission.submitted_at > self.due_date:
+            submission = self.submissions.filter(student=student).first()
+            if not submission:
+                if self.is_past_due():
+                    return 'missing'
+                return 'pending'
+            if self.due_date and submission.submitted_at and submission.submitted_at > self.due_date:
                 return 'late'
             return 'submitted'
-        except AssignmentSubmission.DoesNotExist:
-            if self.is_past_due():
-                return 'missing'
+        except Exception:
             return 'pending'
 
 
@@ -116,8 +120,10 @@ class AssignmentSubmission(models.Model):
 
     def save(self, *args, **kwargs):
         """Set status to late if submitted after due date"""
-        if self.submitted_at and self.assignment.due_date:
-            if self.submitted_at > self.assignment.due_date:
+        if self.status != 'returned' and self.assignment.due_date:
+            # For new records: submitted_at (auto_now_add) isn't set yet, use now()
+            check_time = self.submitted_at if self.pk and self.submitted_at else timezone.now()
+            if check_time > self.assignment.due_date:
                 self.status = 'late'
             else:
                 self.status = 'submitted'

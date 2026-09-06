@@ -2,6 +2,13 @@
 
 // Confirm delete actions
 function confirmDelete(message) {
+    if (window.EdumiPopup) {
+        return window.EdumiPopup.danger({
+            title: 'Confirm Deletion',
+            message: message || 'Are you sure you want to delete this?',
+            confirmText: 'Delete'
+        });
+    }
     return confirm(message || 'Are you sure you want to delete this?');
 }
 

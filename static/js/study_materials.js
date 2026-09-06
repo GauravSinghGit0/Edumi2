@@ -182,8 +182,17 @@ function toggleBookmark(btn, materialId) {
     .catch(err => console.error('Error toggling bookmark:', err));
 }
 
-function deleteMaterial(materialId) {
-    if (!confirm('Are you sure you want to remove this study material?')) return;
+async function deleteMaterial(materialId) {
+    if (window.EdumiPopup) {
+        const confirmed = await EdumiPopup.danger({
+            title: 'Delete Material',
+            message: 'Are you sure you want to remove this study material?',
+            confirmText: 'Remove Material'
+        });
+        if (!confirmed) return;
+    } else if (!confirm('Are you sure you want to remove this study material?')) {
+        return;
+    }
     
     fetch(`/meetings/materials/${materialId}/delete/`, {
         method: 'POST',

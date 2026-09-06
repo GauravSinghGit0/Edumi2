@@ -4,7 +4,7 @@
 {% block page_title %}Manage Permissions{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="permissions-container">
     <div class="page-header">
         <h1>Manage Mobile Camera Permissions</h1>
         <p class="subtitle">📱 {{ mobile_camera.name }} ({{ mobile_camera.get_camera_type_display }})</p>
@@ -93,10 +93,11 @@
 </div>
 
 <style>
-.container {
-    max-width: 1400px;
+.permissions-container {
+    max-width: var(--container-max-width);
     margin: 0 auto;
-    padding: 2rem;
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-family-base, 'Inter', sans-serif);
 }
 
 .page-header {
@@ -297,8 +298,14 @@
 </style>
 
 <script>
-function grantPermission(mobileCameraId, teacherId, teacherName) {
-    if (!confirm(`Grant mobile camera access to ${teacherName}?`)) return;
+async function grantPermission(mobileCameraId, teacherId, teacherName) {
+    const confirmed = await EdumiPopup.confirm({
+        title: 'Grant Access',
+        message: `Grant mobile camera access to ${teacherName}?`,
+        type: 'info',
+        confirmText: 'Grant Access'
+    });
+    if (!confirmed) return;
     
     fetch(`/mobile-cameras/grant-permission/${mobileCameraId}/`, {
         method: 'POST',
@@ -311,20 +318,35 @@ function grantPermission(mobileCameraId, teacherId, teacherName) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
-            location.reload();
+            EdumiPopup.success({
+                title: 'Permission Granted',
+                message: data.message
+            }).then(() => location.reload());
         } else {
-            alert(data.message || 'Failed to grant permission');
+            EdumiPopup.alert({
+                title: 'Error',
+                message: data.message || 'Failed to grant permission',
+                type: 'danger'
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred');
+        EdumiPopup.alert({
+            title: 'Error',
+            message: 'An error occurred while granting permission',
+            type: 'danger'
+        });
     });
 }
 
-function revokePermission(mobileCameraId, teacherId, teacherName) {
-    if (!confirm(`Revoke mobile camera access from ${teacherName}?`)) return;
+async function revokePermission(mobileCameraId, teacherId, teacherName) {
+    const confirmed = await EdumiPopup.warning({
+        title: 'Revoke Access',
+        message: `Revoke mobile camera access from ${teacherName}?`,
+        confirmText: 'Revoke Access'
+    });
+    if (!confirmed) return;
     
     fetch(`/mobile-cameras/revoke-permission/${mobileCameraId}/${teacherId}/`, {
         method: 'POST',
@@ -335,15 +357,25 @@ function revokePermission(mobileCameraId, teacherId, teacherName) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
-            location.reload();
+            EdumiPopup.success({
+                title: 'Permission Revoked',
+                message: data.message
+            }).then(() => location.reload());
         } else {
-            alert(data.message || 'Failed to revoke permission');
+            EdumiPopup.alert({
+                title: 'Error',
+                message: data.message || 'Failed to revoke permission',
+                type: 'danger'
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred');
+        EdumiPopup.alert({
+            title: 'Error',
+            message: 'An error occurred while revoking permission',
+            type: 'danger'
+        });
     });
 }
 </script>

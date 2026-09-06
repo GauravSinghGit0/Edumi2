@@ -5,286 +5,798 @@
 
 {% block content %}
 <style>
-/* ── Layout ─────────────────────────────────────────────────────── */
-.quiz-container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; font-family: 'Inter', sans-serif; }
+    /* ── Parent Overflow Fix for CSS position: sticky ───────────────────── */
+    .content-area {
+        overflow-x: visible !important;
+    }
 
-/* ── Timer bar ───────────────────────────────────────────────────── */
-.timer-bar {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: #fff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.875rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
+    /* ── Root & Layout ─────────────────────────────────────────────────── */
+    .take-quiz-wrapper {
+        max-width: 920px;
+        margin: 0 auto;
+        padding-bottom: var(--space-3xl, 4rem);
+        position: relative;
+    }
 
-.timer-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-}
+    /* ── Quiz Overview Hero Banner ──────────────────────────────────────── */
+    .quiz-overview-banner {
+        background: linear-gradient(135deg, var(--color-primary, #4f46e5) 0%, #3730a3 100%);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 1.65rem 1.85rem;
+        color: white;
+        margin-bottom: var(--space-md, 1rem);
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.25);
+    }
 
-.timer-display {
-    font-size: 1.5rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    color: #0f172a;
-    min-width: 90px;
-    text-align: center;
-    transition: color 0.3s;
-}
-.timer-display.warning  { color: #d97706; }
-.timer-display.critical { color: #dc2626; animation: timer-pulse 1s ease-in-out infinite; }
+    .banner-sub {
+        font-size: 0.725rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.85);
+        display: block;
+        margin-bottom: 0.35rem;
+    }
 
-@keyframes timer-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.55; }
-}
+    .banner-title {
+        font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+        font-weight: 800;
+        margin: 0 0 0.85rem 0;
+        color: white;
+        line-height: 1.25;
+    }
 
-.timer-progress-wrap {
-    flex: 1;
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 99px;
-    overflow: hidden;
-    min-width: 80px;
-}
-.timer-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #7c3aed, #a78bfa);
-    border-radius: 99px;
-    transition: width 1s linear, background-color 0.3s;
-}
-.timer-progress-fill.warning  { background: linear-gradient(90deg, #d97706, #fbbf24); }
-.timer-progress-fill.critical { background: linear-gradient(90deg, #dc2626, #f87171); }
+    .banner-tags {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+    }
 
-/* ── Cards ───────────────────────────────────────────────────────── */
-.quiz-card { background: #fff; border-radius: 1.25rem; padding: 2rem; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
-.quiz-title { font-size: 1.625rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem; }
-.quiz-meta  { color: #64748b; font-size: 0.9rem; margin-bottom: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap; }
-.quiz-meta span { display: flex; align-items: center; gap: 0.3rem; }
+    .banner-pill {
+        background: rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: var(--radius-full, 9999px);
+        padding: 0.32rem 0.85rem;
+        font-size: 0.775rem;
+        font-weight: 600;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
 
-.question-card { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.25rem; }
-.question-card.answered { border-color: #a78bfa; background: #faf5ff; }
+    /* ── Persistent Sticky Exam Control Header ─────────────────────────── */
+    .exam-sticky-header {
+        position: sticky;
+        top: calc(var(--topbar-height, 56px) + 0.5rem);
+        z-index: 100;
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 0.9rem 1.25rem;
+        margin-bottom: var(--space-lg, 1.5rem);
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transition: box-shadow 0.25s ease;
+    }
 
-.question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.875rem; }
-.question-number { font-weight: 800; color: #7c3aed; font-size: 1rem; }
-.question-marks  { background: #ede9fe; color: #7c3aed; padding: 0.25rem 0.6rem; border-radius: 0.4rem; font-size: 0.8rem; font-weight: 700; }
+    .exam-header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
 
-.question-text { color: #0f172a; font-weight: 600; font-size: 1.05rem; margin-bottom: 1.25rem; }
+    .exam-info-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        min-width: 0;
+    }
 
-/* MCQ choices */
-.choice-option {
-    display: flex; align-items: center; gap: 0.875rem;
-    padding: 0.875rem 1rem;
-    border: 2px solid #e2e8f0; border-radius: 0.75rem; margin-bottom: 0.625rem;
-    cursor: pointer; transition: all 0.15s; user-select: none;
-}
-.choice-option:hover  { border-color: #a78bfa; background: #f5f3ff; }
-.choice-option.chosen { border-color: #7c3aed; background: #ede9fe; }
+    .exam-brand-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-md, 0.625rem);
+        background: rgba(99, 102, 241, 0.12);
+        color: var(--color-primary, #6366f1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
 
-.choice-radio {
-    width: 18px; height: 18px; cursor: pointer; accent-color: #7c3aed; flex-shrink: 0;
-}
-.choice-label { font-size: 0.95rem; color: #1e293b; }
+    .exam-title-text {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.25;
+    }
 
-/* Text answer */
-.text-answer {
-    width: 100%; min-height: 110px; padding: 0.875rem;
-    border: 2px solid #e2e8f0; border-radius: 0.75rem;
-    font-size: 0.95rem; font-family: inherit; resize: vertical;
-    transition: border-color 0.15s;
-}
-.text-answer:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); outline: none; }
+    .exam-classroom-tag {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+        display: block;
+    }
 
-/* Progress summary */
-.progress-summary {
-    background: #f8fafc; border: 1px solid #e2e8f0;
-    border-radius: 1rem; padding: 1.25rem 1.5rem;
-    margin-bottom: 1.5rem;
-    display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
-}
-.progress-count { font-size: 0.9rem; color: #64748b; font-weight: 600; }
-.progress-count strong { color: #7c3aed; }
+    /* Timer Widget */
+    .timer-widget {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        background: var(--color-bg-body, #f8fafc);
+        border: 1px solid var(--color-border, #e2e8f0);
+        padding: 0.45rem 0.95rem;
+        border-radius: var(--radius-full, 9999px);
+        flex-shrink: 0;
+    }
 
-/* Submit section */
-.submit-section {
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem;
-    padding: 1.5rem; text-align: center;
-}
-.btn-submit {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    color: #fff; border: none; padding: 0.9rem 2.5rem;
-    border-radius: 0.75rem; font-weight: 700; font-size: 1rem;
-    cursor: pointer; transition: all 0.2s;
-    display: inline-flex; align-items: center; gap: 0.5rem;
-}
-.btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
-.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .timer-label {
+        font-size: 0.725rem;
+        font-weight: 800;
+        color: var(--color-text-muted, #64748b);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
 
-.submit-hint { font-size: 0.825rem; color: #94a3b8; margin-top: 0.625rem; }
+    .timer-bar-track {
+        width: 110px;
+        height: 7px;
+        background: var(--color-border, #cbd5e1);
+        border-radius: 999px;
+        overflow: hidden;
+    }
 
-/* Expired overlay */
-.expired-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(15,23,42,0.75); backdrop-filter: blur(4px);
-    z-index: 500; align-items: center; justify-content: center;
-}
-.expired-overlay.show { display: flex; }
-.expired-card {
-    background: #fff; border-radius: 1.5rem; padding: 2.5rem;
-    max-width: 420px; width: 90%; text-align: center;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
-    animation: pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes pop-in { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.expired-icon { font-size: 3rem; margin-bottom: 1rem; }
-.expired-card h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem; }
-.expired-card p  { color: #64748b; margin-bottom: 1.5rem; }
+    .timer-bar-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, var(--color-primary, #6366f1), #a78bfa);
+        border-radius: 999px;
+        transition: width 1s linear, background 0.3s ease;
+    }
+    .timer-bar-fill.warning  { background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .timer-bar-fill.critical { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+    .timer-clock-val {
+        font-size: 1.2rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-main, #0f172a);
+        min-width: 62px;
+        text-align: right;
+    }
+    .timer-clock-val.warning  { color: #d97706; }
+    .timer-clock-val.critical { color: #ef4444; animation: timer-pulse 1s ease-in-out infinite; }
+
+    @keyframes timer-pulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.4; }
+    }
+
+    /* Bottom Row: Progress & Scrollable Question Navigator */
+    .exam-header-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .progress-counter-badge {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .progress-counter-badge strong {
+        color: var(--color-primary, #6366f1);
+        font-size: 0.9rem;
+    }
+
+    /* Scrollable Horizontal Question Navigator Track */
+    .question-nav-scroll {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        max-width: clamp(200px, 45vw, 420px);
+        overflow-x: auto;
+        padding: 0.2rem 0;
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border) transparent;
+        -webkit-overflow-scrolling: touch;
+        flex-shrink: 1;
+    }
+
+    .question-nav-scroll::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .question-nav-scroll::-webkit-scrollbar-thumb {
+        background: var(--color-border, #cbd5e1);
+        border-radius: 999px;
+    }
+
+    .q-jump-btn {
+        height: 30px;
+        min-width: 32px;
+        padding: 0 0.45rem;
+        border-radius: var(--radius-md, 0.45rem);
+        border: 1.5px solid var(--color-border, #cbd5e1);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.775rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        flex-shrink: 0;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .q-jump-btn:hover {
+        border-color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #6366f1);
+        transform: translateY(-1px);
+    }
+
+    .q-jump-btn.answered {
+        background: var(--color-primary, #6366f1);
+        border-color: var(--color-primary, #6366f1);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }
+
+    .q-jump-btn.active-focus {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+        border-color: var(--color-primary, #6366f1);
+    }
+
+    /* ── Question Cards ────────────────────────────────────────────────── */
+    .question-card-container {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 1.65rem 1.75rem;
+        margin-bottom: var(--space-lg, 1.5rem);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .question-card-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--color-border, #cbd5e1);
+        transition: background 0.25s ease;
+    }
+
+    .question-card-container.answered::before {
+        background: var(--color-primary, #6366f1);
+    }
+
+    .question-card-container.answered {
+        border-color: rgba(99, 102, 241, 0.35);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.08);
+    }
+
+    .q-meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .q-num-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--color-primary, #6366f1);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        padding: 0.3rem 0.75rem;
+        border-radius: var(--radius-md, 0.5rem);
+    }
+
+    .q-marks-badge {
+        background: var(--color-bg-body, #f8fafc);
+        border: 1px solid var(--color-border, #e2e8f0);
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.775rem;
+        font-weight: 700;
+        padding: 0.25rem 0.65rem;
+        border-radius: 0.4rem;
+    }
+
+    .q-prompt-heading {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 1.35rem 0;
+        line-height: 1.5;
+    }
+
+    /* MCQ Option Cards */
+    .choices-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .choice-card-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.95rem 1.25rem;
+        border: 1.5px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        background: var(--color-bg-card, #ffffff);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+        position: relative;
+    }
+
+    .choice-card-item:hover {
+        border-color: var(--color-primary, #6366f1);
+        background: rgba(99, 102, 241, 0.04);
+        transform: translateY(-1px);
+    }
+
+    .choice-card-item.chosen {
+        border-color: var(--color-primary, #6366f1);
+        background: rgba(99, 102, 241, 0.09);
+        box-shadow: 0 0 0 1px var(--color-primary, #6366f1), 0 4px 12px rgba(99, 102, 241, 0.1);
+    }
+
+    .choice-letter-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--color-bg-body, #f1f5f9);
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.85rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    .choice-card-item.chosen .choice-letter-avatar {
+        background: var(--color-primary, #6366f1);
+        color: #ffffff;
+    }
+
+    .choice-radio-input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--color-primary, #6366f1);
+        flex-shrink: 0;
+    }
+
+    .choice-text-content {
+        font-size: 0.95rem;
+        color: var(--color-text-main, #0f172a);
+        font-weight: 600;
+        line-height: 1.45;
+        flex: 1;
+    }
+
+    .choice-check-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--color-primary, #6366f1);
+        opacity: 0;
+        transform: scale(0.6);
+        transition: all 0.2s ease;
+    }
+
+    .choice-card-item.chosen .choice-check-icon {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    /* Open Text Response Area */
+    .text-response-wrap {
+        position: relative;
+    }
+
+    .text-response-input {
+        width: 100%;
+        min-height: 130px;
+        padding: 1rem 1.15rem;
+        border: 1.5px solid var(--color-border, #cbd5e1);
+        border-radius: var(--radius-lg, 0.75rem);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        font-size: 0.95rem;
+        font-family: inherit;
+        line-height: 1.5;
+        resize: vertical;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-sizing: border-box;
+    }
+
+    .text-response-input:focus {
+        border-color: var(--color-primary, #6366f1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+        outline: none;
+    }
+
+    .text-counter-hint {
+        font-size: 0.75rem;
+        color: var(--color-text-muted, #64748b);
+        text-align: right;
+        margin-top: 0.4rem;
+        font-weight: 500;
+    }
+
+    /* ── Submit Card ───────────────────────────────────────────────────── */
+    .quiz-submit-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        margin-top: 2rem;
+    }
+
+    .btn-submit-assessment {
+        background: linear-gradient(135deg, var(--color-primary, #4f46e5) 0%, #3730a3 100%);
+        color: #ffffff;
+        border: none;
+        padding: 0.95rem 2.5rem;
+        border-radius: var(--radius-lg, 0.75rem);
+        font-weight: 800;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-submit-assessment:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+    }
+
+    .btn-submit-assessment:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .submit-disclaimer {
+        font-size: 0.825rem;
+        color: var(--color-text-muted, #64748b);
+        margin-top: 0.75rem;
+    }
+
+    /* ── Expired Overlay Modal ─────────────────────────────────────────── */
+    .expired-modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .expired-modal-backdrop.show { display: flex; }
+
+    .expired-modal-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1.25rem);
+        padding: 2.5rem;
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+        animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pop-in {
+        from { transform: scale(0.85); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+    }
+
+    .expired-timer-icon {
+        font-size: 3rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .expired-modal-card h2 {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.5rem;
+    }
+
+    .expired-modal-card p {
+        color: var(--color-text-muted, #64748b);
+        font-size: 0.925rem;
+        margin-bottom: 1.5rem;
+    }
 </style>
 
-<!-- ── Time-expired overlay ───────────────────────────────────────── -->
-<div class="expired-overlay" id="expiredOverlay">
-    <div class="expired-card">
-        <div class="expired-icon">⏰</div>
-        <h2>Time's Up!</h2>
-        <p>Your time limit has been reached. Your answers are being submitted automatically.</p>
-        <button class="btn-submit" id="expiredSubmitBtn" disabled>
-            Submitting…
+<!-- ── Time Expired Modal Overlay ────────────────────────────────────── -->
+<div class="expired-modal-backdrop" id="expiredOverlay">
+    <div class="expired-modal-card">
+        <div class="expired-timer-icon">⏰</div>
+        <h2>Time Limit Reached!</h2>
+        <p>Your assessment time has expired. Your answers are automatically being submitted now.</p>
+        <button class="btn-submit-assessment" id="expiredSubmitBtn" disabled style="width:100%;justify-content:center;">
+            <i data-lucide="loader" class="animate-spin" style="width:18px;height:18px;"></i> Submitting Assessment…
         </button>
     </div>
 </div>
 
-<!-- ── Timer bar (only shown when quiz has time limit) ───────────── -->
-{% if quiz.time_limit %}
-<div class="timer-bar" id="timerBar">
-    <span class="timer-label">⏱ Time Remaining</span>
-    <div class="timer-progress-wrap">
-        <div class="timer-progress-fill" id="timerFill"></div>
-    </div>
-    <span class="timer-display" id="timerDisplay">--:--</span>
-</div>
-{% endif %}
+<div class="take-quiz-wrapper">
 
-<div class="quiz-container">
-    <a href="{% url 'quiz_detail' quiz.id %}"
-       style="color:#7c3aed;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1.5rem;">
-        ← Back to Quiz
-    </a>
-
-    <div class="quiz-card">
-        <h1 class="quiz-title">{{ quiz.title }}</h1>
-        <div class="quiz-meta">
-            <span>📝 {{ quiz.questions.count }} question{{ quiz.questions.count|pluralize }}</span>
-            <span>🏆 {{ quiz.total_marks }} points</span>
+    <!-- ── 1. Top Quiz Overview Banner (Placed FIRST so it never overlaps sticky header) ──── -->
+    <div class="quiz-overview-banner">
+        <span class="banner-sub">QUIZ ASSESSMENT • {{ quiz.classroom.title }}</span>
+        <h1 class="banner-title">{{ quiz.title }}</h1>
+        <div class="banner-tags">
+            <span class="banner-pill">
+                <i data-lucide="help-circle" style="width:14px;height:14px;"></i>
+                {{ quiz.questions.count }} Question{% if quiz.questions.count != 1 %}s{% endif %}
+            </span>
+            <span class="banner-pill">
+                <i data-lucide="award" style="width:14px;height:14px;"></i>
+                {{ quiz.total_marks }} Points Total
+            </span>
             {% if quiz.time_limit %}
-            <span>⏱ {{ quiz.time_limit }} min time limit</span>
+            <span class="banner-pill">
+                <i data-lucide="clock" style="width:14px;height:14px;"></i>
+                {{ quiz.time_limit }} min limit
+            </span>
+            {% endif %}
+            {% if quiz.due_date %}
+            <span class="banner-pill">
+                <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+                Due: {{ quiz.due_date|date:"M d, Y" }}
+            </span>
             {% endif %}
         </div>
-        {% if quiz.description %}
-        <p style="color:#64748b;margin:0;">{{ quiz.description }}</p>
-        {% endif %}
     </div>
 
-    <!-- Progress summary -->
-    <div class="progress-summary" id="progressSummary">
-        <span class="progress-count">
-            Answered: <strong id="answeredCount">0</strong> / {{ quiz.questions.count }}
-        </span>
-        <span class="progress-count" style="margin-left:auto;">
-            Unanswered: <strong id="unansweredCount">{{ quiz.questions.count }}</strong>
-        </span>
+    <!-- ── 2. Persistent Sticky Exam Control Header (Catches at top: 60px when scrolling) ───── -->
+    <div class="exam-sticky-header" id="examStickyHeader">
+        <div class="exam-header-top">
+            <div class="exam-info-brand">
+                <div class="exam-brand-icon">
+                    <i data-lucide="help-circle" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <h2 class="exam-title-text" title="{{ quiz.title }}">{{ quiz.title }}</h2>
+                    <span class="exam-classroom-tag">{{ quiz.classroom.title }}</span>
+                </div>
+            </div>
+
+            {% if quiz.time_limit %}
+            <div class="timer-widget" id="timerWidget">
+                <i data-lucide="clock" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                <span class="timer-label">Time Remaining</span>
+                <div class="timer-bar-track">
+                    <div class="timer-bar-fill" id="timerFill"></div>
+                </div>
+                <span class="timer-clock-val" id="timerDisplay">--:--</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="exam-header-bottom">
+            <div class="progress-counter-badge">
+                <i data-lucide="check-circle-2" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                Progress: <strong id="answeredCount">0</strong> / {{ quiz.questions.count }} Answered
+            </div>
+            <div class="question-nav-scroll">
+                {% for question in questions %}
+                <button type="button" 
+                        class="q-jump-btn" 
+                        id="qnav_{{ question.id }}" 
+                        onclick="scrollToQuestion({{ question.id }})" 
+                        title="Jump to Question {{ forloop.counter }}">
+                    {% if quiz.questions.count > 8 %}{{ forloop.counter }}{% else %}Q{{ forloop.counter }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
+    <!-- ── 3. Questions Form ─────────────────────────────────────────────── -->
     <form method="post" id="quizForm" data-turbo="false">
         {% csrf_token %}
 
         {% for question in questions %}
-        <div class="question-card" id="qcard_{{ question.id }}" data-qid="{{ question.id }}">
-            <div class="question-header">
-                <span class="question-number">Question {{ forloop.counter }}</span>
-                <span class="question-marks">{{ question.marks }} pt{{ question.marks|pluralize }}</span>
+        <div class="question-card-container" id="qcard_{{ question.id }}" data-qid="{{ question.id }}">
+            <div class="q-meta-row">
+                <span class="q-num-badge">
+                    <i data-lucide="help-circle" style="width:13px;height:13px;"></i>
+                    Question {{ forloop.counter }} of {{ quiz.questions.count }}
+                </span>
+                <span class="q-marks-badge">{{ question.marks }} pt{% if question.marks != 1 %}s{% endif %}</span>
             </div>
-            <p class="question-text">{{ question.question_text }}</p>
+
+            <h3 class="q-prompt-heading">{{ question.question_text }}</h3>
 
             {% if question.question_type == 'mcq' %}
-            {% for choice in question.choices.all %}
-            <label class="choice-option"
-                   onclick="selectChoice(this, {{ question.id }}, '{{ choice.id }}')">
-                <input type="radio"
-                       name="question_{{ question.id }}"
-                       value="{{ choice.id }}"
-                       class="choice-radio"
-                       onchange="markAnswered({{ question.id }})">
-                <span class="choice-label">{{ choice.choice_text }}</span>
-            </label>
-            {% endfor %}
+            <div class="choices-list">
+                {% for choice in question.choices.all %}
+                <label class="choice-card-item" onclick="selectChoice(this, {{ question.id }}, '{{ choice.id }}')">
+                    <input type="radio"
+                           name="question_{{ question.id }}"
+                           value="{{ choice.id }}"
+                           class="choice-radio-input"
+                           onchange="markAnswered({{ question.id }})">
+                    <span class="choice-letter-avatar">
+                        {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% else %}{{ forloop.counter }}{% endif %}
+                    </span>
+                    <span class="choice-text-content">{{ choice.choice_text }}</span>
+                    <i data-lucide="check-circle" class="choice-check-icon"></i>
+                </label>
+                {% endfor %}
+            </div>
 
             {% elif question.question_type == 'text' %}
-            <textarea name="question_{{ question.id }}"
-                      class="text-answer"
-                      placeholder="Type your answer here…"
-                      oninput="markAnswered({{ question.id }})"></textarea>
+            <div class="text-response-wrap">
+                <textarea name="question_{{ question.id }}"
+                          class="text-response-input"
+                          placeholder="Type your answer clearly here…"
+                          oninput="checkTextAnswered(this, {{ question.id }})"></textarea>
+                <div class="text-counter-hint" id="wordcount_{{ question.id }}">0 words</div>
+            </div>
             {% endif %}
         </div>
         {% endfor %}
 
-        <!-- Submit section -->
-        <div class="submit-section">
-            <button type="submit" class="btn-submit" id="submitBtn"
-                    onclick="return confirmSubmit()">
-                ✅ Submit Quiz
+        <!-- ── 4. Submit Card ────────────────────────────────────────────── -->
+        <div class="quiz-submit-card">
+            <button type="button" class="btn-submit-assessment" id="submitBtn" onclick="handleSubmitQuiz(event)">
+                <i data-lucide="send" style="width:18px;height:18px;"></i> Submit Quiz Assessment
             </button>
-            <p class="submit-hint">You cannot change your answers after submitting.</p>
+            <p class="submit-disclaimer">Please double check your responses before submitting. You cannot modify answers after submission.</p>
         </div>
     </form>
 </div>
 
 <script>
 (function() {
-    // ── Config from server ────────────────────────────────────────────────────────
     var QUIZ_ID         = {{ quiz.id }};
     var TIME_LIMIT_SECS = {% if quiz.time_limit %}{{ quiz.time_limit|floatformat:0 }} * 60{% else %}null{% endif %};
     var TOTAL_QUESTIONS = {{ quiz.questions.count }};
     var TIME_STATUS_URL = '{% url "quiz_time_status" quiz.id %}';
 
-    // ── Answer tracking ───────────────────────────────────────────────────────────
     var answered = new Set();
 
     window.selectChoice = function(labelEl, qId, choiceId) {
-        labelEl.closest('.question-card').querySelectorAll('.choice-option').forEach(l => l.classList.remove('chosen'));
-        labelEl.classList.add('chosen');
+        var card = labelEl.closest('.question-card-container');
+        if (card) {
+            card.querySelectorAll('.choice-card-item').forEach(l => l.classList.remove('chosen'));
+            labelEl.classList.add('chosen');
+        }
+        var radio = labelEl.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
         window.markAnswered(qId);
+    };
+
+    window.checkTextAnswered = function(textareaEl, qId) {
+        var val = textareaEl.value.trim();
+        var wordCount = val.length > 0 ? val.split(/\s+/).length : 0;
+        var countEl = document.getElementById('wordcount_' + qId);
+        if (countEl) countEl.textContent = wordCount + ' word' + (wordCount !== 1 ? 's' : '');
+
+        if (val.length > 0) {
+            window.markAnswered(qId);
+        } else {
+            window.unmarkAnswered(qId);
+        }
     };
 
     window.markAnswered = function(qId) {
         answered.add(qId);
+        updateProgressUI(qId, true);
+    };
+
+    window.unmarkAnswered = function(qId) {
+        answered.delete(qId);
+        updateProgressUI(qId, false);
+    };
+
+    function updateProgressUI(qId, isAnswered) {
         var ansEl = document.getElementById('answeredCount');
-        var unansEl = document.getElementById('unansweredCount');
         if (ansEl) ansEl.textContent = answered.size;
-        if (unansEl) unansEl.textContent = TOTAL_QUESTIONS - answered.size;
+
         var card = document.getElementById('qcard_' + qId);
-        if (card) card.classList.add('answered');
-    };
+        if (card) card.classList.toggle('answered', isAnswered);
 
-    // ── Confirm submit ────────────────────────────────────────────────────────────
-    window.confirmSubmit = function() {
-        var unanswered = TOTAL_QUESTIONS - answered.size;
-        if (unanswered > 0) {
-            return confirm(`You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Submit anyway?`);
+        var navBtn = document.getElementById('qnav_' + qId);
+        if (navBtn) navBtn.classList.toggle('answered', isAnswered);
+    }
+
+    window.scrollToQuestion = function(qId) {
+        var card = document.getElementById('qcard_' + qId);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.querySelectorAll('.q-jump-btn').forEach(b => b.classList.remove('active-focus'));
+            var navBtn = document.getElementById('qnav_' + qId);
+            if (navBtn) {
+                navBtn.classList.add('active-focus');
+                navBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
         }
-        return confirm('Submit your quiz? You cannot change your answers after submitting.');
     };
 
-    // ── Timer ─────────────────────────────────────────────────────────────────────
+    window.handleSubmitQuiz = async function(e) {
+        if (e) e.preventDefault();
+        var unansweredCount = TOTAL_QUESTIONS - answered.size;
+        var confirmed = false;
+
+        if (unansweredCount > 0) {
+            confirmed = await EdumiPopup.warning({
+                title: 'Unanswered Questions',
+                message: `You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}. Are you sure you want to submit anyway?`,
+                confirmText: 'Submit Anyway',
+                cancelText: 'Keep Answering'
+            });
+        } else {
+            confirmed = await EdumiPopup.confirm({
+                title: 'Submit Quiz Assessment',
+                message: 'Are you ready to submit your quiz? You cannot change your answers after submitting.',
+                type: 'info',
+                confirmText: 'Yes, Submit Quiz',
+                cancelText: 'Review Answers'
+            });
+        }
+
+        if (confirmed) {
+            var form = document.getElementById('quizForm');
+            if (form) {
+                var btn = document.getElementById('submitBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:18px;height:18px;"></i> Submitting…';
+                }
+                form.submit();
+            }
+        }
+    };
+
+    // ── Timer Logic ─────────────────────────────────────────────────────────
     var timerInterval = null;
     var syncInterval = null;
 
@@ -355,6 +867,12 @@
         timerInterval = setInterval(tick, 1000);
         syncInterval = setInterval(syncWithServer, 30000);
     }
+
+    document.addEventListener('turbo:load', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
 
     document.addEventListener('turbo:before-render', () => {
         if (timerInterval) clearInterval(timerInterval);

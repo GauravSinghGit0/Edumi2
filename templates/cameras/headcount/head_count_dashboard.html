@@ -208,11 +208,10 @@
     }
 
     .headcount-container {
-        max-width: 1400px;
+        max-width: var(--container-max-width);
         margin: 0 auto;
-        padding: 2rem;
-        background: #f8fafc;
-        min-height: 100vh;
+        padding: var(--space-md) var(--space-lg);
+        font-family: var(--font-family-base, 'Inter', sans-serif);
     }
 
     .page-header {
@@ -414,8 +413,8 @@
 </style>
 
 <script>
-    let currentCameraType = null;
-    let currentCameraId = null;
+    var currentCameraType = null;
+    var currentCameraId = null;
 
     // Load classrooms for modal
     function loadClassrooms() {
@@ -423,6 +422,7 @@
             .then(response => response.json())
             .then(data => {
                 const select = document.getElementById('classroom');
+                if (!select) return;
                 select.innerHTML = '<option value="">-- Select Classroom --</option>';
                 data.forEach(classroom => {
                     select.innerHTML += `<option value="${classroom.id}">${classroom.title}</option>`;
@@ -431,68 +431,104 @@
             .catch(err => console.log('Could not load classrooms'));
     }
 
-    // Start session buttons
-    document.querySelectorAll('.start-session').forEach(btn => {
-        btn.addEventListener('click', function() {
-            currentCameraType = this.dataset.cameraType;
-            currentCameraId = this.dataset.cameraId;
-            document.getElementById('modal-camera-name').textContent = this.dataset.cameraName;
-            document.getElementById('startModal').classList.add('active');
-            loadClassrooms();
+    function initHeadcountDashboard() {
+        // Start session buttons
+        document.querySelectorAll('.start-session').forEach(btn => {
+            if (btn._hcInit) return;
+            btn._hcInit = true;
+            btn.addEventListener('click', function() {
+                currentCameraType = this.dataset.cameraType;
+                currentCameraId = this.dataset.cameraId;
+                const nameEl = document.getElementById('modal-camera-name');
+                if (nameEl) nameEl.textContent = this.dataset.cameraName;
+                const modal = document.getElementById('startModal');
+                if (modal) modal.classList.add('active');
+                loadClassrooms();
+            });
         });
-    });
 
-    // Stop session buttons
-    document.querySelectorAll('.stop-session').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const cameraType = this.dataset.cameraType;
-            const cameraId = this.dataset.cameraId;
-            
-            if (confirm('Stop head counting for this camera?')) {
-                fetch(`/cameras/head-count/stop/${cameraType}/${cameraId}/`, {
+        // Stop session buttons
+        document.querySelectorAll('.stop-session').forEach(btn => {
+            if (btn._hcInit) return;
+            btn._hcInit = true;
+            btn.addEventListener('click', async function() {
+                const cameraType = this.dataset.cameraType;
+                const cameraId = this.dataset.cameraId;
+                
+                const confirmed = await EdumiPopup.warning({
+                    title: 'Stop Session',
+                    message: 'Stop head counting for this camera?',
+                    confirmText: 'Stop Session'
+                });
+                if (confirmed) {
+                    fetch(`/cameras/head-count/stop/${cameraType}/${cameraId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            EdumiPopup.alert({
+                                title: 'Error',
+                                message: data.error || 'Failed to stop session',
+                                type: 'danger'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Form submit
+        const startForm = document.getElementById('startSessionForm');
+        if (startForm && !startForm._hcInit) {
+            startForm._hcInit = true;
+            startForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch(`/cameras/head-count/start/${currentCameraType}/${currentCameraId}/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
-                    }
+                    },
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        closeModal();
                         location.reload();
                     } else {
-                        alert('Error: ' + data.error);
+                        EdumiPopup.alert({
+                            title: 'Error',
+                            message: data.error || 'Failed to start session',
+                            type: 'danger'
+                        });
                     }
                 });
-            }
-        });
-    });
+            });
+        }
 
-    // Form submit
-    document.getElementById('startSessionForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        
-        fetch(`/cameras/head-count/start/${currentCameraType}/${currentCameraId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                closeModal();
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        });
-    });
+        // Close modal on outside click
+        const startModal = document.getElementById('startModal');
+        if (startModal && !startModal._hcInit) {
+            startModal._hcInit = true;
+            startModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+        }
+    }
 
     function closeModal() {
-        document.getElementById('startModal').classList.remove('active');
+        const modal = document.getElementById('startModal');
+        if (modal) modal.classList.remove('active');
     }
 
     function getCookie(name) {
@@ -510,11 +546,7 @@
         return cookieValue;
     }
 
-    // Close modal on outside click
-    document.getElementById('startModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    });
+    document.addEventListener('DOMContentLoaded', initHeadcountDashboard);
+    document.addEventListener('turbo:load', initHeadcountDashboard);
 </script>
 {% endblock %}

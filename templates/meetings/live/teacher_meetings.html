@@ -271,64 +271,79 @@
 </div>
 
 <script>
-function endMeeting(meetingId) {
-    if (confirm('Are you sure you want to end this live meeting?')) {
-        fetch(`/meetings/end/${meetingId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to end meeting');
-            }
-        });
-    }
+async function endMeeting(meetingId) {
+    const confirmed = await EdumiPopup.warning({
+        title: 'End Live Meeting',
+        message: 'Are you sure you want to end this live meeting for all participants?',
+        confirmText: 'End Meeting'
+    });
+    if (!confirmed) return;
+
+    fetch(`/meetings/end/${meetingId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            EdumiPopup.alert({ title: 'Error', message: data.message || 'Failed to end meeting', type: 'danger' });
+        }
+    });
 }
 
-function cancelMeeting(meetingId) {
-    if (confirm('Are you sure you want to cancel this scheduled meeting?')) {
-        fetch(`/meetings/cancel/${meetingId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to cancel meeting');
-            }
-        });
-    }
+async function cancelMeeting(meetingId) {
+    const confirmed = await EdumiPopup.warning({
+        title: 'Cancel Scheduled Meeting',
+        message: 'Are you sure you want to cancel this scheduled meeting?',
+        confirmText: 'Cancel Meeting'
+    });
+    if (!confirmed) return;
+
+    fetch(`/meetings/cancel/${meetingId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            EdumiPopup.alert({ title: 'Error', message: data.message || 'Failed to cancel meeting', type: 'danger' });
+        }
+    });
 }
 
-function deleteMeeting(meetingId) {
-    if (confirm('Are you sure you want to permanently delete this meeting?')) {
-        fetch(`/meetings/delete/${meetingId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to delete meeting');
-            }
-        });
-    }
+async function deleteMeeting(meetingId) {
+    const confirmed = await EdumiPopup.danger({
+        title: 'Delete Meeting',
+        message: 'Are you sure you want to permanently delete this meeting? This cannot be undone.',
+        confirmText: 'Delete Meeting'
+    });
+    if (!confirmed) return;
+
+    fetch(`/meetings/delete/${meetingId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            EdumiPopup.alert({ title: 'Error', message: data.message || 'Failed to delete meeting', type: 'danger' });
+        }
+    });
 }
 
 function wakeUpMeeting(meetingCode) {
@@ -344,19 +359,22 @@ function wakeUpMeeting(meetingCode) {
         if (data.status === 'success') {
             location.reload();
         } else {
-            alert(data.error || 'Failed to wake up meeting');
+            EdumiPopup.alert({ title: 'Error', message: data.error || 'Failed to wake up meeting', type: 'danger' });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error waking up meeting');
+        EdumiPopup.alert({ title: 'Error', message: 'Error waking up meeting', type: 'danger' });
     });
 }
 
-function freezeMeeting(meetingCode) {
-    if (!confirm('Put meeting to sleep? No one will be able to join until you unfreeze it.')) {
-        return;
-    }
+async function freezeMeeting(meetingCode) {
+    const confirmed = await EdumiPopup.warning({
+        title: 'Sleep Meeting',
+        message: 'Put meeting to sleep? No one will be able to join until you unfreeze it.',
+        confirmText: 'Freeze Meeting'
+    });
+    if (!confirmed) return;
     
     fetch(`/meetings/sleep/${meetingCode}/`, {
         method: 'POST',
@@ -370,12 +388,12 @@ function freezeMeeting(meetingCode) {
         if (data.status === 'success') {
             location.reload();
         } else {
-            alert(data.error || 'Failed to freeze meeting');
+            EdumiPopup.alert({ title: 'Error', message: data.error || 'Failed to freeze meeting', type: 'danger' });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error freezing meeting');
+        EdumiPopup.alert({ title: 'Error', message: 'Error freezing meeting', type: 'danger' });
     });
 }
 

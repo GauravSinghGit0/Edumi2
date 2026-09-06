@@ -5,148 +5,474 @@
 
 {% block content %}
 <style>
-    .assignments-container { max-width: 1400px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
+    .assignments-container { 
+        max-width: var(--container-max-width); 
+        margin: 0 auto; 
+        padding: var(--space-md) var(--space-lg); 
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif); 
+    }
     
     .assignment-hero-card { 
-        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
-        border-radius: 1.5rem; 
-        padding: 2.5rem 3rem; 
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); 
+        border-radius: var(--radius-lg, 1.25rem); 
+        padding: 1.75rem 2rem; 
         color: white; 
-        margin-bottom: 2rem; 
-        box-shadow: 0 20px 25px -5px rgba(30, 64, 175, 0.25);
+        margin-bottom: 1.5rem; 
+        box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1.25rem;
         flex-wrap: wrap;
+        position: relative;
+        overflow: hidden;
     }
-    
-    .assignment-hero-card h1 { font-size: 2.5rem; font-weight: 800; margin: 0.25rem 0 0.5rem 0; color: #ffffff; line-height: 1.2; }
-    .assignment-hero-card p { margin: 0; color: rgba(255,255,255,0.9); font-size: 1.125rem; font-weight: 400; }
+    .assignment-hero-card::after {
+        content: '';
+        position: absolute;
+        top: -40px; right: -40px;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .assignment-hero-card h1 { 
+        font-size: 1.75rem; 
+        font-weight: 800; 
+        margin: 0.2rem 0 0.35rem 0; 
+        color: #ffffff !important; 
+        line-height: 1.2; 
+        letter-spacing: -0.02em;
+    }
+    .assignment-hero-card p { 
+        margin: 0; 
+        color: rgba(255,255,255,0.9); 
+        font-size: 0.9375rem; 
+    }
     
     .btn-hero-action { 
         background: #ffffff !important; 
-        color: #1e40af !important; 
-        padding: 0.875rem 1.75rem; 
-        border-radius: 1rem; 
+        color: #312e81 !important; 
+        padding: 0.65rem 1.25rem; 
+        border-radius: var(--radius-md, 0.75rem); 
         font-weight: 700; 
-        font-size: 1rem;
+        font-size: 0.875rem;
         text-decoration: none; 
         display: inline-flex; 
         align-items: center; 
-        gap: 0.625rem; 
+        gap: 0.5rem; 
         transition: all 0.2s ease-in-out; 
         border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         white-space: nowrap;
     }
     .btn-hero-action:hover { 
-        background: #f0f9ff !important; 
-        color: #1e3a8a !important; 
-        transform: translateY(-2px); 
-        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        background: #f5f3ff !important; 
+        color: #1e1b4b !important; 
+        transform: translateY(-1px); 
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     }
     
-    .assignments-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+    /* Search & Filter Bar */
+    .filter-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+    }
+    .search-box input {
+        width: 100%;
+        padding: 0.6rem 1rem 0.6rem 2.4rem;
+        border-radius: var(--radius-md, 0.625rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.15s;
+    }
+    .search-box input:focus {
+        border-color: var(--color-primary, #4f46e5);
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+    .search-box i {
+        position: absolute;
+        left: 0.8rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-muted, #94a3b8);
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+    }
+
+    .assignments-grid { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 0.875rem; 
+    }
     
     .assignment-card { 
-        background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; 
-        padding: 1.75rem; transition: all 0.2s;
+        background: var(--color-bg-card, #ffffff); 
+        border: 1px solid var(--color-border, #e2e8f0); 
+        border-radius: var(--radius-lg, 0.875rem); 
+        padding: 1.25rem 1.5rem; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
     }
-    .assignment-card:hover { border-color: #6366f1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-    
-    .assignment-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
-    .assignment-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; }
-    .assignment-status { 
-        padding: 0.35rem 0.875rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 700; 
-        text-transform: uppercase; letter-spacing: 0.05em;
+    .assignment-card:hover { 
+        border-color: var(--color-primary, #6366f1); 
+        box-shadow: 0 4px 16px -2px rgba(99, 102, 241, 0.12);
     }
-    .status-draft { background: #fef3c7; color: #92400e; }
-    .status-published { background: #dcfce7; color: #166534; }
-    .status-archived { background: #f1f5f9; color: #64748b; }
-    .status-submitted { background: #dbeafe; color: #1e40af; }
-    .status-late { background: #fee2e2; color: #991b1b; }
-    .status-missing { background: #fef2f2; color: #b91c1c; }
     
-    .assignment-meta { display: flex; gap: 1.5rem; color: #64748b; font-size: 0.875rem; flex-wrap: wrap; }
-    .meta-item { display: flex; align-items: center; gap: 0.5rem; }
-    
-    .assignment-footer { margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
-    .assignment-description { color: #475569; margin: 0.75rem 0; }
-    
-    .btn-view { padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; background: #f1f5f9; color: #0f172a; text-decoration: none; transition: all 0.2s; }
-    .btn-view:hover { background: #e2e8f0; }
+    .assignment-main-row { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-start; 
+        gap: 1rem;
+    }
+    .assignment-title-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .assignment-avatar-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 0.625rem;
+        background: rgba(79, 70, 229, 0.1);
+        color: var(--color-primary, #4f46e5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .assignment-title { 
+        font-size: 1.0625rem; 
+        font-weight: 700; 
+        color: var(--color-text-main, #0f172a); 
+        margin: 0; 
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+    }
+    .assignment-description { 
+        color: var(--color-text-muted, #64748b); 
+        margin: 0; 
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
 
-    /* Dark Mode */
-    body.dark-mode .assignment-card { background: var(--color-bg-card, #1e293b); border-color: var(--color-border, #334155); }
-    body.dark-mode .assignment-title { color: var(--color-text-main, #f8fafc); }
-    body.dark-mode .assignment-description { color: var(--color-text-muted, #94a3b8); }
-    body.dark-mode .assignment-meta { color: var(--color-text-muted, #94a3b8); }
-    body.dark-mode .assignment-footer { border-top-color: var(--color-border, #334155); }
-    body.dark-mode .btn-view { background: var(--color-bg-hover, #334155); color: var(--color-text-main, #f8fafc); }
-    body.dark-mode .btn-view:hover { background: var(--color-border, #475569); }
-    body.dark-mode .empty-card { background: var(--color-bg-card, #1e293b) !important; border: 1px solid var(--color-border, #334155); }
-    body.dark-mode .empty-card h3 { color: var(--color-text-main, #f8fafc) !important; }
-    body.dark-mode .empty-card p { color: var(--color-text-muted, #94a3b8) !important; }
+    .assignment-status { 
+        padding: 0.25rem 0.65rem; 
+        border-radius: 999px; 
+        font-size: 0.7rem; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        letter-spacing: 0.05em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-shrink: 0;
+    }
+    .status-draft { background: rgba(245, 158, 11, 0.12); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-published { background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-archived { background: var(--color-bg-hover, #f1f5f9); color: var(--color-text-muted, #64748b); border: 1px solid var(--color-border); }
+    .status-submitted { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-late { background: rgba(239, 68, 68, 0.12); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .status-missing { background: rgba(239, 68, 68, 0.12); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .status-pending { background: rgba(245, 158, 11, 0.12); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
+    
+    .assignment-meta-row { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 0.875rem; 
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--color-text-muted, #64748b);
+    }
+    .meta-item { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.35rem; 
+        font-weight: 500;
+    }
+    .meta-item i, .meta-item svg {
+        color: var(--color-text-muted, #64748b);
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+    .meta-item strong {
+        color: var(--color-text-main, #334155);
+        font-weight: 600;
+    }
+    .meta-sep {
+        color: var(--color-border, #cbd5e1);
+    }
+    
+    .assignment-footer-row { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding-top: 0.75rem; 
+        border-top: 1px solid var(--color-border, #f1f5f9); 
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .assignment-footer-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-left: auto;
+    }
+
+    .btn-card-action {
+        padding: 0.42rem 0.75rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.775rem;
+        background: #ffffff;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        line-height: 1.2;
+    }
+
+    .btn-card-action:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-card-unpublish {
+        color: #d97706;
+        border-color: rgba(245, 158, 11, 0.3);
+        background: rgba(245, 158, 11, 0.06);
+    }
+    .btn-card-unpublish:hover {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: #d97706;
+        color: #b45309;
+    }
+
+    .btn-card-publish {
+        color: #059669;
+        border-color: rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.06);
+    }
+    .btn-card-publish:hover {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: #059669;
+        color: #047857;
+    }
+
+    .btn-card-edit {
+        color: #4f46e5;
+        border-color: rgba(79, 70, 229, 0.25);
+        background: rgba(79, 70, 229, 0.04);
+    }
+    .btn-card-edit:hover {
+        background: rgba(79, 70, 229, 0.12);
+        border-color: #4f46e5;
+    }
+
+    .btn-card-delete {
+        color: #dc2626;
+        border-color: rgba(239, 68, 68, 0.25);
+        background: rgba(239, 68, 68, 0.04);
+        padding: 0.42rem 0.55rem;
+    }
+    .btn-card-delete:hover {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: #dc2626;
+        color: #b91c1c;
+    }
+    
+    .btn-view { 
+        padding: 0.45rem 1rem; 
+        border-radius: 0.5rem; 
+        font-weight: 600; 
+        font-size: 0.8125rem;
+        background: var(--color-bg-main, #f8fafc); 
+        color: var(--color-text-main, #334155); 
+        text-decoration: none; 
+        transition: all 0.15s ease; 
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: 1px solid var(--color-border, #e2e8f0);
+    }
+    .btn-view:hover { 
+        background: var(--color-primary, #4f46e5); 
+        color: #ffffff; 
+        border-color: var(--color-primary, #4f46e5);
+    }
+
+    /* Dark Mode overrides */
+    body.dark-mode .assignment-hero-card { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); }
+    body.dark-mode .assignment-avatar-icon { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+    body.dark-mode .btn-view { background: var(--color-bg-hover, #334155); color: var(--color-text-main, #cbd5e1); border-color: var(--color-border, #475569); }
+    body.dark-mode .btn-view:hover { background: var(--color-primary, #6366f1); color: #ffffff; border-color: var(--color-primary, #6366f1); }
+    body.dark-mode .btn-card-action { background: var(--color-bg-card, #1e293b); border-color: var(--color-border, #334155); color: var(--color-text-main, #f8fafc); }
+    body.dark-mode .btn-card-unpublish { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.1); }
+    body.dark-mode .btn-card-publish { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.1); }
+    body.dark-mode .btn-card-delete { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background: rgba(248, 113, 113, 0.1); }
 </style>
 
 <div class="assignments-container">
     <!-- Page Header -->
     <div class="assignment-hero-card">
         <div>
-            <span style="font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem;">{{ classroom.title }}</span>
-            <h1>Assignments</h1>
-            <p>Manage and track all course assignments</p>
+            <span style="font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.6875rem;">{{ classroom.title }} • Assignments</span>
+            <h1>Course Assignments</h1>
+            <p>Manage, submit, and track coursework seamlessly</p>
         </div>
         {% if is_teacher %}
-        <a href="{% url 'create_assignment' classroom.id %}" class="btn-hero-action">
-            <i data-lucide="plus-circle"></i> Create Assignment
+        <a href="{% url 'create_assignment' classroom.id %}" class="btn-hero-action" data-turbo-frame="_top">
+            <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+            <span>Create Assignment</span>
         </a>
         {% endif %}
     </div>
 
     <!-- Assignments List -->
     {% if assignments %}
-    <div class="assignments-grid">
+    <div class="assignments-grid" id="assignmentsList">
         {% for assignment in assignments %}
-        <div class="assignment-card">
-            <div class="assignment-header">
-                <h2 class="assignment-title">{{ assignment.title }}</h2>
-                <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <div class="assignment-card" data-title="{{ assignment.title|lower }}" data-desc="{{ assignment.description|default:''|lower }}">
+            <!-- Main Title & Status Row -->
+            <div class="assignment-main-row">
+                <div class="assignment-title-box">
+                    <div class="assignment-avatar-icon">
+                        <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                    </div>
+                    <h2 class="assignment-title">{{ assignment.title }}</h2>
+                </div>
+                <div>
                     {% if is_teacher %}
-                    <span class="assignment-status status-{{ assignment.status }}">{{ assignment.status }}</span>
+                    <span class="assignment-status status-{{ assignment.status }}">
+                        {% if assignment.status == 'published' %}<i data-lucide="check-circle" style="width: 11px; height: 11px;"></i>{% elif assignment.status == 'draft' %}<i data-lucide="lock" style="width: 11px; height: 11px;"></i>{% endif %}
+                        {{ assignment.status }}
+                    </span>
                     {% else %}
                     <span class="assignment-status status-{{ assignment.submission_status }}">
-                        {% if assignment.submission_status == 'submitted' %}Submitted{% elif assignment.submission_status == 'late' %}Late{% elif assignment.submission_status == 'missing' %}Missing{% else %}Pending{% endif %}
+                        {% if assignment.submission_status == 'submitted' %}<i data-lucide="check-circle-2" style="width: 11px; height: 11px;"></i> Submitted
+                        {% elif assignment.submission_status == 'late' %}<i data-lucide="alert-circle" style="width: 11px; height: 11px;"></i> Late
+                        {% elif assignment.submission_status == 'missing' %}<i data-lucide="x-circle" style="width: 11px; height: 11px;"></i> Missing
+                        {% else %}<i data-lucide="clock" style="width: 11px; height: 11px;"></i> Pending
+                        {% endif %}
                     </span>
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Description -->
             {% if assignment.description %}
             <p class="assignment-description">{{ assignment.description|truncatewords:30 }}</p>
             {% endif %}
-            <div class="assignment-meta">
-                <span class="meta-item"><i data-lucide="calendar"></i> Due: {{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}</span>
-                <span class="meta-item"><i data-lucide="award"></i> {{ assignment.total_marks }} points</span>
+
+            <!-- Clean Compact Metadata Row -->
+            <div class="assignment-meta-row">
+                <span class="meta-item">
+                    <i data-lucide="calendar"></i>
+                    <span>Due: <strong>{{ assignment.due_date|date:"M d, Y" }}</strong> at {{ assignment.due_date|time:"g:i A" }}</span>
+                </span>
+                <span class="meta-sep">•</span>
+
+                <span class="meta-item">
+                    <i data-lucide="award"></i>
+                    <span><strong>{{ assignment.total_marks }}</strong> pts</span>
+                </span>
+
                 {% if is_teacher %}
-                <span class="meta-item"><i data-lucide="file-text"></i> {{ assignment.submissions.count }} submissions</span>
+                <span class="meta-sep">•</span>
+                <span class="meta-item">
+                    <i data-lucide="users"></i>
+                    <span><strong>{{ assignment.submissions.count }}</strong> submission{{ assignment.submissions.count|pluralize }}</span>
+                </span>
                 {% endif %}
             </div>
-            <div class="assignment-footer">
-                <div></div>
-                <a href="{% url 'assignment_detail' assignment.id %}" class="btn-view">
-                    View Details
-                </a>
+
+            <!-- Compact Footer Row -->
+            <div class="assignment-footer-row">
+                <div class="assignment-footer-actions">
+                    {% if is_teacher %}
+                        {% if assignment.status == 'published' %}
+                        <form method="POST" action="{% url 'toggle_assignment_status' assignment.id %}" style="display: inline;" data-turbo="false">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <input type="hidden" name="target_status" value="draft">
+                            <button type="submit" class="btn-card-action btn-card-unpublish" title="Unpublish this assignment (hide from students)"
+                                data-confirm="Unpublish &quot;{{ assignment.title|escapejs }}&quot;? It will be moved to draft mode and hidden from classroom students."
+                                data-confirm-title="Unpublish Assignment"
+                                data-confirm-type="warning"
+                                data-confirm-btn="Unpublish">
+                                <i data-lucide="eye-off" style="width: 13px; height: 13px;"></i>
+                                <span>Unpublish</span>
+                            </button>
+                        </form>
+                        {% elif assignment.status == 'draft' %}
+                        <form method="POST" action="{% url 'toggle_assignment_status' assignment.id %}" style="display: inline;" data-turbo="false">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <input type="hidden" name="target_status" value="published">
+                            <button type="submit" class="btn-card-action btn-card-publish" title="Publish assignment to classroom students"
+                                data-confirm="Publish &quot;{{ assignment.title|escapejs }}&quot;? Enrolled students will immediately be able to see and submit this assignment."
+                                data-confirm-title="Publish Assignment"
+                                data-confirm-type="success"
+                                data-confirm-btn="Publish Now">
+                                <i data-lucide="send" style="width: 13px; height: 13px;"></i>
+                                <span>Publish</span>
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <a href="{% url 'edit_assignment' assignment.id %}" class="btn-card-action btn-card-edit" title="Edit assignment settings & files">
+                            <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i>
+                            <span>Edit</span>
+                        </a>
+
+                        <form method="POST" action="{% url 'delete_assignment' assignment.id %}" style="display: inline;" data-turbo="false">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-card-action btn-card-delete" title="Permanently delete assignment"
+                                data-confirm="Are you sure you want to permanently delete assignment &quot;{{ assignment.title|escapejs }}&quot;? All attached files and student submissions will be lost. This action cannot be undone."
+                                data-confirm-title="Delete Assignment"
+                                data-confirm-type="danger"
+                                data-confirm-btn="Delete Assignment">
+                                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <a href="{% url 'assignment_detail' assignment.id %}" class="btn-view" data-turbo-frame="_top">
+                        <span>View Details</span>
+                        <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                    </a>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="empty-card" style="background: white; border-radius: 1.5rem; padding: 4rem; text-align: center;">
-        <i data-lucide="inbox" style="width: 64px; height: 64px; color: #94a3b8; margin-bottom: 1rem;"></i>
-        <h3 style="color: #0f172a; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">No assignments yet</h3>
-        <p style="color: #64748b;">{% if is_teacher %}Create your first assignment to get started!{% else %}Check back later for assignments.{% endif %}</p>
+    <div class="empty-card" style="background: var(--color-bg-card, #ffffff); border-radius: 1.125rem; padding: 3.5rem; text-align: center; border: 1px solid var(--color-border, #e2e8f0);">
+        <i data-lucide="inbox" style="width: 48px; height: 48px; color: var(--color-text-muted, #94a3b8); margin-bottom: 0.75rem;"></i>
+        <h3 style="color: var(--color-text-main, #0f172a); font-size: 1.125rem; font-weight: 700; margin-bottom: 0.35rem;">No assignments yet</h3>
+        <p style="color: var(--color-text-muted, #64748b); font-size: 0.875rem;">{% if is_teacher %}Create your first assignment to get started!{% else %}Check back later for assignments.{% endif %}</p>
     </div>
     {% endif %}
 </div>
 {% endblock %}
+

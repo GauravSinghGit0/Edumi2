@@ -6,9 +6,10 @@
 {% block extra_css %}
 <style>
 .user-mgmt-container {
-    max-width: 1400px;
+    max-width: var(--container-max-width);
     margin: 0 auto;
-    padding: 1.5rem 2rem;
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-family-base, 'Inter', sans-serif);
 }
 
 .mgmt-header {
@@ -494,9 +495,13 @@
                                     <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Edit
                                 </a>
                                 {% if user != request.user %}
-                                <form method="POST" action="{% url 'delete_user' user.id %}" style="display: inline; margin: 0;" onsubmit="return confirm('Are you sure you want to permanently delete user {{ user.username }}?');">
+                                <form method="POST" action="{% url 'delete_user' user.id %}" style="display: inline; margin: 0;" data-turbo="false">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-tbl-action btn-tbl-delete">
+                                    <button type="submit" class="btn-tbl-action btn-tbl-delete" title="Delete User"
+                                        data-confirm="Are you sure you want to permanently delete user @{{ user.username }}? All account data and access will be removed."
+                                        data-confirm-title="Delete User"
+                                        data-confirm-type="danger"
+                                        data-confirm-btn="Delete User">
                                         <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                     </button>
                                 </form>
@@ -524,7 +529,7 @@
 </div>
 
 <script>
-let currentSelectedGroup = "{{ active_role|default:'all' }}";
+var currentSelectedGroup = "{{ active_role|default:'all' }}";
 
 function selectRoleGroup(group) {
     currentSelectedGroup = group;
@@ -549,7 +554,7 @@ function selectRoleGroup(group) {
 }
 
 function applyUserFilters() {
-    const searchInput = document.getElementById('userSearch').value.toLowerCase().trim();
+    const searchInput = (document.getElementById('userSearch')?.value || '').toLowerCase().trim();
     const rows = document.querySelectorAll('.user-row');
     const noResults = document.getElementById('noResults');
     const noResultsText = document.getElementById('noResultsText');
@@ -588,21 +593,28 @@ function applyUserFilters() {
         }
     });
 
-    if (visibleCount === 0) {
-        noResults.style.display = 'block';
-        if (currentSelectedGroup !== 'all') {
-            noResultsText.textContent = `No ${currentSelectedGroup}s found matching your search criteria.`;
+    if (noResults) {
+        if (visibleCount === 0) {
+            noResults.style.display = 'block';
+            if (noResultsText) {
+                if (currentSelectedGroup !== 'all') {
+                    noResultsText.textContent = `No ${currentSelectedGroup}s found matching your search criteria.`;
+                } else {
+                    noResultsText.textContent = 'No users found matching your search query.';
+                }
+            }
         } else {
-            noResultsText.textContent = 'No users found matching your search query.';
+            noResults.style.display = 'none';
         }
-    } else {
-        noResults.style.display = 'none';
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initUserManagement() {
     if (window.lucide) lucide.createIcons();
     selectRoleGroup(currentSelectedGroup);
-});
+}
+
+document.addEventListener('DOMContentLoaded', initUserManagement);
+document.addEventListener('turbo:load', initUserManagement);
 </script>
 {% endblock %}

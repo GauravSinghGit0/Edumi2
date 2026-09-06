@@ -49,7 +49,7 @@
         <h2>Class Schedule · {{ classroom.title }}</h2>
         <p>Select the days this class is held. Attendance will only be recorded on these days.</p>
 
-        <form method="post">
+        <form method="post" data-turbo="false">
             {% csrf_token %}
             {% for day_num, day_name in all_days %}
             {% with sched=schedules|dictsort:"day_of_week" %}
@@ -89,12 +89,14 @@
 
 <script>
 // Gray out time inputs when day is unchecked
-document.addEventListener('DOMContentLoaded', () => {
+function initClassSchedule() {
     {% for day_num, day_name in all_days %}
-    const cb{{ day_num }} = document.getElementById('day_{{ day_num }}');
-    toggleDay({{ day_num }}, cb{{ day_num }}.checked);
+    var cb{{ day_num }} = document.getElementById('day_{{ day_num }}');
+    if (cb{{ day_num }}) {
+        toggleDay({{ day_num }}, cb{{ day_num }}.checked);
+    }
     {% endfor %}
-});
+}
 
 function toggleDay(dayNum, checked) {
     const s = document.getElementById('start_' + dayNum);
@@ -103,5 +105,8 @@ function toggleDay(dayNum, checked) {
     if (e) e.disabled = !checked;
     if (!checked) { if(s) s.value=''; if(e) e.value=''; }
 }
+
+document.addEventListener('DOMContentLoaded', initClassSchedule);
+document.addEventListener('turbo:load', initClassSchedule);
 </script>
 {% endblock %}

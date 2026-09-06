@@ -17,7 +17,7 @@
             <span class="sidebar-nav-icon"><i data-lucide="log-out"></i></span>
             <span class="sidebar-nav-text">Logout</span>
         </a>
-        <form id="logout-form-sidebar" method="post" action="{% url 'logout' %}" style="display:none;">{% csrf_token %}
+        <form id="logout-form-sidebar" method="post" action="{% url 'logout' %}" data-turbo="false" style="display:none;">{% csrf_token %}
         </form>
     </div>
 </aside>

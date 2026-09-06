@@ -34,9 +34,13 @@
                     <p class="ve-card-meta ve-card-meta--small">Updated {{ project.updated_at|timesince }} ago</p>
                 </div>
             </a>
-            <form method="POST" action="{% url 'project_delete' project.pk %}" style="position: absolute; bottom: 15px; right: 15px; z-index: 10;" onsubmit="return confirm('Are you sure you want to delete this project?');">
+            <form method="POST" action="{% url 'project_delete' project.pk %}" style="position: absolute; bottom: 15px; right: 15px; z-index: 10;" data-turbo="false">
                 {% csrf_token %}
-                <button type="submit" title="Delete Project" class="ve-btn-delete-project">
+                <button type="submit" title="Delete Project" class="ve-btn-delete-project"
+                    data-confirm="Are you sure you want to delete project &quot;{{ project.title|escapejs }}&quot;? This cannot be undone."
+                    data-confirm-title="Delete Project"
+                    data-confirm-type="danger"
+                    data-confirm-btn="Delete Project">
                     <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
                 </button>
             </form>
@@ -78,7 +82,7 @@
         </div>
         <p class="ve-modal-sub">MP4, MOV, AVI, MKV, or WebM &middot; up to 500&nbsp;MB</p>
 
-        <form method="post" enctype="multipart/form-data" class="ve-form" id="upload-form" action="{% url 'project_upload' %}">
+        <form method="post" enctype="multipart/form-data" class="ve-form" id="upload-form" action="{% url 'project_upload' %}" data-turbo="false">
             {% csrf_token %}
             <div class="ve-field">
                 <label for="{{ form.title.id_for_label }}">

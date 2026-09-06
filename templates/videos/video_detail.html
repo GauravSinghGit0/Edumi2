@@ -129,13 +129,17 @@
         </div>
 
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            function initVideoPlayer() {
                 {% if video.is_processed %}
                 const video = document.getElementById('mainVideo');
                 const videoUrl = "{{ video.original_file.url }}";
-                video.src = videoUrl;
+                if (video && (!video.src || video.src === window.location.href)) {
+                    video.src = videoUrl;
+                }
                 {% endif %}
-            });
+            }
+            document.addEventListener('DOMContentLoaded', initVideoPlayer);
+            document.addEventListener('turbo:load', initVideoPlayer);
         </script>
 
         <h1 class="video-title">{{ video.title }}</h1>
@@ -165,9 +169,10 @@
             </div>
             
             <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            function initLikeButton() {
                 const likeBtn = document.querySelector('.like-btn');
-                if (likeBtn) {
+                if (likeBtn && !likeBtn._init) {
+                    likeBtn._init = true;
                     likeBtn.addEventListener('click', function() {
                         const id = this.dataset.id;
                         const type = this.dataset.type;
@@ -192,7 +197,9 @@
                         .catch(err => console.error('Error liking video:', err));
                     });
                 }
-            });
+            }
+            document.addEventListener('DOMContentLoaded', initLikeButton);
+            document.addEventListener('turbo:load', initLikeButton);
             </script>
         </div>
 
@@ -243,7 +250,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <form action="{% url 'delete_video' video.id %}" method="POST">
+                <form action="{% url 'delete_video' video.id %}" method="POST" data-turbo="false">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">Delete Permanently</button>
                 </form>

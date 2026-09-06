@@ -1,0 +1,604 @@
+<!-- templates/components/reusable_popup.html -->
+<!-- Reusable Modern Popup Modal for Alerts, Confirmations, and Warnings -->
+<div id="edumiPopupOverlay" class="edumi-popup-overlay" aria-hidden="true">
+    <div class="edumi-popup-card" role="dialog" aria-modal="true" aria-labelledby="edumiPopupTitle">
+        <!-- Top Row: Icon Badge & Close Button -->
+        <div class="edumi-popup-header-row">
+            <div class="edumi-popup-icon-badge" id="edumiPopupIconBadge">
+                <i data-lucide="alert-triangle" id="edumiPopupIcon"></i>
+            </div>
+            <button type="button" class="edumi-popup-close-x" id="edumiPopupCloseX" aria-label="Close dialog">
+                <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+            </button>
+        </div>
+
+        <!-- Dialog Content -->
+        <div class="edumi-popup-body">
+            <h3 class="edumi-popup-title" id="edumiPopupTitle">Confirmation</h3>
+            <div class="edumi-popup-message" id="edumiPopupMessage">Are you sure you want to proceed?</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="edumi-popup-actions" id="edumiPopupActions">
+            <button type="button" class="edumi-popup-btn edumi-popup-btn-cancel" id="edumiPopupCancelBtn">
+                Cancel
+            </button>
+            <button type="button" class="edumi-popup-btn edumi-popup-btn-confirm" id="edumiPopupConfirmBtn">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ── Overlay & Dialog Container ── */
+    .edumi-popup-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        background: rgba(15, 23, 42, 0.68);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        box-sizing: border-box;
+    }
+
+    .edumi-popup-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .edumi-popup-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 1.25rem;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        width: 100%;
+        max-width: 440px;
+        padding: 1.5rem;
+        transform: scale(0.94) translateY(10px);
+        transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .edumi-popup-overlay.active .edumi-popup-card {
+        transform: scale(1) translateY(0);
+    }
+
+    /* ── Header Icon Badge ── */
+    .edumi-popup-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .edumi-popup-icon-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s;
+    }
+
+    .edumi-popup-icon-badge.danger {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .edumi-popup-icon-badge.warning {
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .edumi-popup-icon-badge.success {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .edumi-popup-icon-badge.info {
+        background: rgba(79, 70, 229, 0.12);
+        color: #4f46e5;
+        border: 1px solid rgba(79, 70, 229, 0.25);
+    }
+
+    .edumi-popup-close-x {
+        background: none;
+        border: none;
+        color: var(--color-text-muted, #94a3b8);
+        cursor: pointer;
+        padding: 0.4rem;
+        border-radius: 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+    }
+
+    .edumi-popup-close-x:hover {
+        background: var(--color-bg-hover, rgba(0, 0, 0, 0.05));
+        color: var(--color-text-main, #0f172a);
+    }
+
+    /* ── Body ── */
+    .edumi-popup-body {
+        margin-bottom: 1.5rem;
+    }
+
+    .edumi-popup-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.5rem 0;
+        line-height: 1.35;
+        letter-spacing: -0.01em;
+    }
+
+    .edumi-popup-message {
+        font-size: 0.875rem;
+        line-height: 1.55;
+        color: var(--color-text-muted, #64748b);
+        word-break: break-word;
+    }
+
+    /* ── Action Buttons ── */
+    .edumi-popup-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .edumi-popup-btn {
+        height: 38px;
+        padding: 0 1.15rem;
+        border-radius: 0.625rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        transition: all 0.18s ease;
+        text-decoration: none;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    .edumi-popup-btn-cancel {
+        background: var(--color-bg-main, #f8fafc);
+        color: var(--color-text-main, #334155);
+        border: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .edumi-popup-btn-cancel:hover {
+        background: var(--color-bg-hover, #f1f5f9);
+        color: var(--color-text-main, #0f172a);
+    }
+
+    .edumi-popup-btn-confirm {
+        color: #ffffff;
+        border: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+
+    .edumi-popup-btn-confirm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    .edumi-popup-btn-confirm.danger {
+        background: #dc2626;
+    }
+    .edumi-popup-btn-confirm.danger:hover {
+        background: #b91c1c;
+    }
+
+    .edumi-popup-btn-confirm.warning {
+        background: #d97706;
+    }
+    .edumi-popup-btn-confirm.warning:hover {
+        background: #b45309;
+    }
+
+    .edumi-popup-btn-confirm.success {
+        background: #059669;
+    }
+    .edumi-popup-btn-confirm.success:hover {
+        background: #047857;
+    }
+
+    .edumi-popup-btn-confirm.info {
+        background: var(--color-primary, #4f46e5);
+    }
+    .edumi-popup-btn-confirm.info:hover {
+        background: var(--color-primary-hover, #4338ca);
+    }
+
+    /* ── Dark Mode ── */
+    body.dark-mode .edumi-popup-card {
+        background: var(--color-bg-card, #1e293b);
+        border-color: var(--color-border, #334155);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    body.dark-mode .edumi-popup-title {
+        color: var(--color-text-main, #f8fafc);
+    }
+
+    body.dark-mode .edumi-popup-message {
+        color: var(--color-text-muted, #94a3b8);
+    }
+
+    body.dark-mode .edumi-popup-close-x {
+        color: #94a3b8;
+    }
+    body.dark-mode .edumi-popup-close-x:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+    }
+
+    body.dark-mode .edumi-popup-btn-cancel {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--color-border, #334155);
+        color: var(--color-text-main, #cbd5e1);
+    }
+
+    body.dark-mode .edumi-popup-btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+</style>
+
+<script>
+(function() {
+    let currentResolve = null;
+
+    const iconMap = {
+        danger: 'trash-2',
+        warning: 'alert-triangle',
+        success: 'check-circle-2',
+        info: 'info'
+    };
+
+    function closePopup(result = false) {
+        const overlay = document.getElementById('edumiPopupOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+
+        if (currentResolve) {
+            const resolve = currentResolve;
+            currentResolve = null;
+            resolve(result);
+        }
+    }
+
+    function openPopup(config) {
+        return new Promise((resolve) => {
+            currentResolve = resolve;
+
+            const overlay = document.getElementById('edumiPopupOverlay');
+            const iconBadge = document.getElementById('edumiPopupIconBadge');
+            const iconEl = document.getElementById('edumiPopupIcon');
+            const titleEl = document.getElementById('edumiPopupTitle');
+            const msgEl = document.getElementById('edumiPopupMessage');
+            const cancelBtn = document.getElementById('edumiPopupCancelBtn');
+            const confirmBtn = document.getElementById('edumiPopupConfirmBtn');
+
+            if (!overlay) {
+                resolve(false);
+                return;
+            }
+
+            const type = config.type || 'info'; // 'danger' | 'warning' | 'success' | 'info'
+            const isAlert = config.isAlert || false;
+
+            // Update Icon & Colors
+            iconBadge.className = `edumi-popup-icon-badge ${type}`;
+            const iconName = config.icon || iconMap[type] || 'info';
+            iconEl.setAttribute('data-lucide', iconName);
+
+            // Update Content
+            titleEl.textContent = config.title || (type === 'danger' ? 'Confirm Action' : type === 'warning' ? 'Warning' : 'Notification');
+            
+            if (config.html) {
+                msgEl.innerHTML = config.html;
+            } else {
+                msgEl.textContent = config.message || '';
+            }
+
+            // Buttons
+            confirmBtn.className = `edumi-popup-btn edumi-popup-btn-confirm ${type}`;
+            confirmBtn.textContent = config.confirmText || (isAlert ? 'Got it' : 'Confirm');
+
+            if (isAlert) {
+                cancelBtn.style.display = 'none';
+            } else {
+                cancelBtn.style.display = 'inline-flex';
+                cancelBtn.textContent = config.cancelText || 'Cancel';
+            }
+
+            // Render lucide icons inside badge
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons({
+                    root: iconBadge
+                });
+            }
+
+            // Show Dialog
+            overlay.classList.add('active');
+            overlay.setAttribute('aria-hidden', 'false');
+
+            // Focus on confirm button or cancel button
+            setTimeout(() => {
+                if (type === 'danger' && !isAlert) {
+                    cancelBtn.focus();
+                } else {
+                    confirmBtn.focus();
+                }
+            }, 50);
+        });
+    }
+
+    // Exported global EdumiPopup Object
+    window.EdumiPopup = {
+        confirm: function(options) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            return openPopup(Object.assign({
+                isAlert: false,
+                type: 'warning',
+                title: 'Please Confirm',
+                confirmText: 'Confirm',
+                cancelText: 'Cancel'
+            }, options));
+        },
+
+        danger: function(options) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            return openPopup(Object.assign({
+                isAlert: false,
+                type: 'danger',
+                title: 'Delete Confirmation',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            }, options));
+        },
+
+        warning: function(options) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            return openPopup(Object.assign({
+                isAlert: false,
+                type: 'warning',
+                title: 'Warning',
+                confirmText: 'Proceed',
+                cancelText: 'Cancel'
+            }, options));
+        },
+
+        alert: function(options) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            return openPopup(Object.assign({
+                isAlert: true,
+                type: 'info',
+                title: 'Notice',
+                confirmText: 'Got it'
+            }, options));
+        },
+
+        success: function(options) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            return openPopup(Object.assign({
+                isAlert: true,
+                type: 'success',
+                title: 'Success',
+                confirmText: 'Continue'
+            }, options));
+        }
+    };
+
+    // Global helper shortcuts
+    window.showModernAlert = function(title, message, type = 'info') {
+        return window.EdumiPopup.alert({ title, message, type });
+    };
+
+    window.showModernConfirm = function(title, message, type = 'warning') {
+        return window.EdumiPopup.confirm({ title, message, type });
+    };
+
+    // ── Global window.alert Override (Eliminates default browser alert dialogs system-wide) ──
+    const _originalAlert = window.alert;
+    window.alert = function(message) {
+        const msg = (message !== undefined && message !== null) ? String(message) : '';
+        let type = 'info';
+        let title = 'Notice';
+        const lower = msg.toLowerCase();
+        if (/error|failed|failure|invalid|exception|interrupted|denied|wrong/.test(lower)) {
+            type = 'danger';
+            title = 'Error';
+        } else if (/warn|warning|please|required|limit|cannot|unanswered|missing|caution|attention/.test(lower)) {
+            type = 'warning';
+            title = 'Attention';
+        } else if (/success|saved|done|copied|published|complete|approved|granted/.test(lower)) {
+            type = 'success';
+            title = 'Success';
+        }
+        return window.EdumiPopup.alert({
+            title: title,
+            message: msg,
+            type: type,
+            confirmText: 'Got it'
+        });
+    };
+
+    // Event Listeners for dialog interactions
+    document.addEventListener('DOMContentLoaded', initPopupEvents);
+    document.addEventListener('turbo:load', initPopupEvents);
+
+    function initPopupEvents() {
+        const overlay = document.getElementById('edumiPopupOverlay');
+        const closeX = document.getElementById('edumiPopupCloseX');
+        const cancelBtn = document.getElementById('edumiPopupCancelBtn');
+        const confirmBtn = document.getElementById('edumiPopupConfirmBtn');
+
+        if (!overlay) return;
+
+        closeX.onclick = () => closePopup(false);
+        cancelBtn.onclick = () => closePopup(false);
+        confirmBtn.onclick = () => closePopup(true);
+
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                closePopup(false);
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (overlay.classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closePopup(false);
+                } else if (e.key === 'Enter') {
+                    const activeEl = document.activeElement;
+                    if (activeEl === cancelBtn) {
+                        e.preventDefault();
+                        closePopup(false);
+                    } else {
+                        e.preventDefault();
+                        closePopup(true);
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Global Form Submit Interceptor (data-confirm & legacy onsubmit="return confirm(...)") ──
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (!form || form.getAttribute('data-edumi-submitting') === 'true') return;
+
+        const onsubmitAttr = form.getAttribute('onsubmit') || '';
+        const confirmMatch = onsubmitAttr.match(/confirm\s*\(\s*(['"`])(.*?)\1\s*\)/);
+        
+        if (confirmMatch) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const msg = confirmMatch[2];
+            const isDanger = /delete|remove|discard|cancel|revoke|drop|unenroll|clear/i.test(msg);
+            const type = isDanger ? 'danger' : 'warning';
+            const title = isDanger ? 'Confirm Deletion' : 'Please Confirm';
+            const btnText = isDanger ? 'Delete' : 'Confirm';
+
+            window.EdumiPopup.confirm({
+                title: title,
+                message: msg,
+                type: type,
+                confirmText: btnText,
+                cancelText: 'Cancel'
+            }).then(confirmed => {
+                if (confirmed) {
+                    form.setAttribute('data-edumi-submitting', 'true');
+                    form.removeAttribute('onsubmit');
+                    form.submit();
+                }
+            });
+            return false;
+        }
+    }, true);
+
+    // ── Global Click Interceptor (data-confirm & legacy onclick="return confirm(...)") ──
+    document.addEventListener('click', function(e) {
+        const trigger = e.target.closest('[data-confirm], a[onclick*="confirm"], button[onclick*="confirm"]');
+        if (!trigger) return;
+
+        if (trigger.getAttribute('data-edumi-confirmed') === 'true') {
+            trigger.removeAttribute('data-edumi-confirmed');
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let message = trigger.getAttribute('data-confirm');
+        let title = trigger.getAttribute('data-confirm-title');
+        let type = trigger.getAttribute('data-confirm-type');
+        let confirmText = trigger.getAttribute('data-confirm-btn');
+        let cancelText = trigger.getAttribute('data-confirm-cancel') || 'Cancel';
+
+        // Legacy onclick="return confirm('...')" fallback
+        if (!message) {
+            const onclickAttr = trigger.getAttribute('onclick') || '';
+            const match = onclickAttr.match(/confirm\s*\(\s*(['"`])(.*?)\1\s*\)/);
+            if (match) {
+                message = match[2];
+            } else {
+                message = 'Are you sure you want to proceed?';
+            }
+        }
+
+        if (!type) {
+            const isDanger = /delete|remove|discard|cancel|revoke|drop|unenroll|clear|kick|end/i.test(message);
+            type = isDanger ? 'danger' : 'warning';
+        }
+        if (!title) {
+            title = (type === 'danger') ? 'Confirm Deletion' : 'Please Confirm';
+        }
+        if (!confirmText) {
+            confirmText = (type === 'danger') ? 'Delete' : 'Confirm';
+        }
+
+        window.EdumiPopup.confirm({
+            title: title,
+            message: message,
+            type: type,
+            confirmText: confirmText,
+            cancelText: cancelText
+        }).then(confirmed => {
+            if (confirmed) {
+                const form = trigger.closest('form');
+                if (trigger.type === 'submit' && form) {
+                    if (trigger.name && trigger.value) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = trigger.name;
+                        hidden.value = trigger.value;
+                        form.appendChild(hidden);
+                    }
+                    form.setAttribute('data-edumi-submitting', 'true');
+                    form.removeAttribute('onsubmit');
+                    form.submit();
+                } else if (trigger.tagName === 'A' && trigger.href && !trigger.href.startsWith('javascript:')) {
+                    window.location.href = trigger.href;
+                } else {
+                    trigger.setAttribute('data-edumi-confirmed', 'true');
+                    trigger.click();
+                }
+            }
+        });
+    }, true);
+})();
+</script>

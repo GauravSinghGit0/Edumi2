@@ -1295,7 +1295,7 @@ body.dark-mode .uv-divider, body.dark-mode .uv-actions { border-color: var(--col
 
             <!-- Modal Body -->
             <div class="uv-modal-body">
-                <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data">
+                <form id="lectureUploadForm" action="{% url 'camera_upload_video' %}" method="post" enctype="multipart/form-data" data-turbo="false">
                     {% csrf_token %}
 
                     <!-- Step 1: Drop Zone / File Picker -->

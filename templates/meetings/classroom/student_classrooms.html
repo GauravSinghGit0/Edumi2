@@ -82,7 +82,11 @@
                                     <i data-lucide="video" style="color: #ef4444;"></i> Join Live Meeting
                                 </a>
                                 {% endif %}
-                                <a href="{% url 'leave_classroom' classroom.id %}" class="gclass-dropdown-item text-danger" onclick="return confirm('Are you sure you want to unenroll from this classroom?')">
+                                <a href="{% url 'leave_classroom' classroom.id %}" class="gclass-dropdown-item text-danger"
+                                    data-confirm="Are you sure you want to unenroll from {{ classroom.title }}? You will lose access to classroom quizzes, assignments, and lectures."
+                                    data-confirm-title="Leave Classroom"
+                                    data-confirm-type="danger"
+                                    data-confirm-btn="Leave Classroom">
                                     <i data-lucide="log-out"></i> Leave Classroom
                                 </a>
                             </div>

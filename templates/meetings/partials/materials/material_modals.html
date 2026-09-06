@@ -8,7 +8,7 @@
             <button class="modal-close-btn" onclick="closeUploadModal()" type="button">&times;</button>
         </div>
 
-        <form id="uploadMaterialForm" action="{% url 'upload_study_material' classroom.id %}" method="POST" enctype="multipart/form-data">
+        <form id="uploadMaterialForm" action="{% url 'upload_study_material' classroom.id %}" method="POST" enctype="multipart/form-data" data-turbo="false">
             {% csrf_token %}
             
             <div class="modal-form-group">
@@ -99,7 +99,7 @@
             <button class="modal-close-btn" onclick="closeCreateUnitModal()" type="button">&times;</button>
         </div>
 
-        <form id="createUnitForm" action="{% url 'create_material_unit' classroom.id %}" method="POST">
+        <form id="createUnitForm" action="{% url 'create_material_unit' classroom.id %}" method="POST" data-turbo="false">
             {% csrf_token %}
             <div class="modal-form-group">
                 <label class="modal-label">Unit / Module Title *</label>

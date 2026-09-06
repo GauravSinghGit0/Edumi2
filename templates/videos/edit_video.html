@@ -12,7 +12,7 @@
                     <h5 class="mb-0 font-weight-bold">Edit Video Details</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" data-turbo="false">
                         {% csrf_token %}
                         <div class="mb-4">
                             <label class="form-label font-weight-bold">Title</label>

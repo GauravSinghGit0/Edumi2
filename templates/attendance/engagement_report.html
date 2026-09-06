@@ -140,7 +140,7 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+function initEngagementReport() {
   // Set engagement bar widths and colors from data-pct
   document.querySelectorAll('.engagement-bar').forEach(function(el) {
     var pct = parseFloat(el.dataset.pct) || 0;
@@ -160,6 +160,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var score = parseFloat(el.dataset.score) || 0;
     el.style.color = score >= 70 ? '#27ae60' : score >= 40 ? '#f39c12' : '#e74c3c';
   });
-});
+}
+
+document.addEventListener('DOMContentLoaded', initEngagementReport);
+document.addEventListener('turbo:load', initEngagementReport);
 </script>
 {% endblock %}

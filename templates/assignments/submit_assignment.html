@@ -1,99 +1,662 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Submit Assignment - {{ assignment.title }}{% endblock %}
+{% block page_title %}Submit — {{ assignment.title }}{% endblock %}
 
 {% block content %}
 <style>
-    .submit-container { max-width: 900px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
-    .deadline-warning { background: #fef3c7; color: #92400e; padding: 1rem 1.5rem; border-radius: 1rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem; }
-    .deadline-overdue { background: #fee2e2; color: #991b1b; }
-    body.dark-mode .deadline-warning { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
-    body.dark-mode .deadline-overdue { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .sub-page {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+    }
+
+    /* ── Back link ── */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-primary, #4f46e5);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        margin-bottom: var(--space-md);
+        transition: gap 0.15s;
+    }
+    .back-link:hover { gap: 0.65rem; }
+
+    /* ── Hero ── */
+    .asgn-hero {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%);
+        border-radius: var(--radius-lg, 1.25rem);
+        padding: 1.75rem 2rem;
+        color: #ffffff !important;
+        margin-bottom: var(--space-lg);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
+    }
+    .asgn-hero::after {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 280px; height: 280px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap; }
+    .hero-subtitle {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #a5b4fc;
+        margin-bottom: 0.35rem;
+    }
+    .asgn-hero h1 {
+        font-size: 1.85rem;
+        font-weight: 800;
+        margin: 0 0 1rem 0;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: #ffffff !important;
+    }
+    .hero-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .badge-glass {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 999px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #ffffff;
+        white-space: nowrap;
+    }
+    .badge-glass.overdue { background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.5); }
+    .badge-glass.published { background: rgba(16,185,129,0.25); border-color: rgba(16,185,129,0.4); }
+
+    /* ── 2-Column Grid Layout ── */
+    .asgn-grid {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: var(--space-lg);
+        align-items: start;
+    }
+    @media (max-width: 992px) { .asgn-grid { grid-template-columns: 1fr; } }
+
+    /* ── Section card ── */
+    .section-card {
+        background: var(--color-bg-card, #fff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 1.25rem);
+        padding: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: var(--space-lg);
+    }
+    .section-card:last-child { margin-bottom: 0; }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 1.25rem 0;
+        padding-bottom: 0.875rem;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+    }
+    .section-title i { color: var(--color-primary, #4f46e5); }
+
+    /* ── Description / Instructions ── */
+    .info-block { margin-bottom: 1.25rem; }
+    .info-block:last-child { margin-bottom: 0; }
+    .info-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-text-muted, #64748b);
+        margin-bottom: 0.4rem;
+    }
+    .info-text {
+        font-size: 0.9375rem;
+        color: var(--color-text-main, #334155);
+        line-height: 1.65;
+        white-space: pre-line;
+    }
+
+    /* ── Attached files ── */
+    .file-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+    .file-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: var(--color-bg-main, #f8fafc);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.75rem;
+        padding: 0.65rem 1rem;
+        transition: border-color 0.15s;
+    }
+    .file-row:hover { border-color: var(--color-primary, #4f46e5); }
+    .file-row-icon {
+        width: 34px; height: 34px;
+        border-radius: 0.5rem;
+        background: rgba(79,70,229,0.1);
+        color: var(--color-primary,#4f46e5);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .file-row-name { flex: 1; font-size: 0.875rem; font-weight: 600; color: var(--color-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-row-action { font-size: 0.8125rem; font-weight: 600; color: var(--color-primary, #4f46e5); text-decoration: none; white-space: nowrap; }
+    .file-row-action:hover { text-decoration: underline; }
+
+    /* ── Already submitted notice ── */
+    .sub-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        background: rgba(79,70,229,0.06);
+        border: 1px solid rgba(79,70,229,0.2);
+        border-radius: 0.875rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        color: var(--color-primary, #4f46e5);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    /* ── Drop Zone ── */
+    .drop-zone {
+        border: 2px dashed var(--color-border, #cbd5e1);
+        border-radius: 1rem;
+        padding: 2.25rem 1.25rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--color-bg-main, #f8fafc);
+        position: relative;
+        user-select: none;
+        margin-bottom: 1.25rem;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+        border-color: var(--color-primary, #4f46e5);
+        background: rgba(79,70,229,0.04);
+    }
+    .drop-zone.drag-over {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 4px rgba(79,70,229,0.12);
+    }
+    .drop-zone .dz-icon {
+        width: 48px;
+        height: 48px;
+        color: #94a3b8;
+        margin: 0 auto 0.6rem;
+        display: block;
+        transition: color 0.2s;
+    }
+    .drop-zone:hover .dz-icon,
+    .drop-zone.drag-over .dz-icon {
+        color: var(--color-primary, #4f46e5);
+    }
+    .drop-zone .dz-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 0.25rem 0;
+    }
+    .drop-zone .dz-hint {
+        font-size: 0.8125rem;
+        color: var(--color-text-muted, #64748b);
+        margin: 0 0 1rem 0;
+    }
+    .btn-choose {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--color-primary, #4f46e5);
+        color: #fff;
+        border: none;
+        border-radius: 0.625rem;
+        padding: 0.55rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-choose:hover { background: #4338ca; }
+    #submission_files { display: none; }
+
+    /* ── File preview list ── */
+    #file-preview-list {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .file-preview-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: var(--color-bg-card, #fff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.75rem;
+        padding: 0.65rem 1rem;
+        animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .file-preview-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 0.5rem;
+        background: rgba(79,70,229,0.1);
+        color: var(--color-primary, #4f46e5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .file-preview-name {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-main, #0f172a);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .file-preview-size {
+        font-size: 0.75rem;
+        color: var(--color-text-muted, #64748b);
+        white-space: nowrap;
+    }
+    .file-preview-remove {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 0.375rem;
+        line-height: 1;
+        transition: color 0.15s, background 0.15s;
+        display: flex;
+        align-items: center;
+    }
+    .file-preview-remove:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
+
+    /* ── Link inputs ── */
+    .link-row {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        align-items: center;
+    }
+    .link-row .form-control {
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.625rem;
+        padding: 0.55rem 0.875rem;
+        font-size: 0.875rem;
+        outline: none;
+        background: var(--color-bg-main, #f8fafc);
+        color: var(--color-text-main, #0f172a);
+        transition: border-color 0.15s;
+        width: 100%;
+    }
+    .link-row .form-control:focus { border-color: var(--color-primary, #4f46e5); background: var(--color-bg-card); }
+    .btn-add-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--color-bg-main, #f1f5f9);
+        color: var(--color-primary, #4f46e5);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.625rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        margin-top: 0.25rem;
+    }
+    .btn-add-link:hover { background: rgba(79,70,229,0.08); border-color: var(--color-primary,#4f46e5); }
+    .btn-remove-link {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0.4rem;
+        border-radius: 0.5rem;
+        flex-shrink: 0;
+        transition: color 0.15s, background 0.15s;
+        display: flex;
+        align-items: center;
+    }
+    .btn-remove-link:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
+
+    /* ── Action row ── */
+    .sub-actions {
+        display: flex;
+        gap: 0.875rem;
+        margin-top: 1.75rem;
+        align-items: center;
+    }
+    .btn-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.7rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        border: 1px solid var(--color-border, #e2e8f0);
+        color: var(--color-text-main, #0f172a);
+        background: var(--color-bg-main, #f8fafc);
+        transition: all 0.15s;
+    }
+    .btn-cancel:hover { background: var(--color-bg-hover); }
+    .btn-submit-main {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 2rem;
+        border-radius: 0.75rem;
+        font-weight: 700;
+        font-size: 0.9375rem;
+        background: var(--color-primary, #4f46e5);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s;
+        box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+        flex: 1;
+    }
+    .btn-submit-main:hover { background: #4338ca; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(79,70,229,0.35); }
+    .btn-submit-main:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── Dark mode ── */
+    body.dark-mode .section-card { background: var(--color-bg-card); border-color: var(--color-border); }
+    body.dark-mode .drop-zone { background: var(--color-bg-hover); border-color: var(--color-border); }
+    body.dark-mode .drop-zone:hover, body.dark-mode .drop-zone.drag-over { border-color: #818cf8; background: rgba(99,102,241,0.08); }
+    body.dark-mode .file-preview-item { background: var(--color-bg-hover); border-color: var(--color-border); }
+    body.dark-mode .file-row { background: var(--color-bg-hover); border-color: var(--color-border); }
+    body.dark-mode .link-row .form-control { background: var(--color-bg-hover); border-color: var(--color-border); color: var(--color-text-main); }
+    body.dark-mode .btn-cancel { background: var(--color-bg-hover); border-color: var(--color-border); color: var(--color-text-main); }
 </style>
 
-<div class="submit-container">
-    <a href="{% url 'assignment_detail' assignment.id %}" style="color: #6366f1; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Assignment
-    </a>
+<div class="sub-page">
 
-    <div class="form-card">
-        <h1 class="form-title">Submit Your Assignment</h1>
-        <p class="form-subtitle">{{ assignment.title }}</p>
-        
-        <div class="{% if assignment.is_past_due %}deadline-warning deadline-overdue{% else %}deadline-warning{% endif %}">
-            <i data-lucide="clock"></i>
-            {% if assignment.is_past_due %}
-            <div>
-                <strong>Overdue!</strong> This assignment was due on {{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}.
+    <!-- Hero Banner -->
+    <div class="asgn-hero">
+        <div class="hero-top">
+            <div style="flex:1;">
+                <div class="hero-subtitle">{{ assignment.classroom.title }} · Submission</div>
+                <h1 style="color: #ffffff !important;">{{ assignment.title }}</h1>
+                <div class="hero-badges">
+                    {% if assignment.due_date %}
+                    <span class="badge-glass {% if assignment.is_past_due %}overdue{% endif %}">
+                        <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+                        Due: {{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}
+                        {% if assignment.is_past_due %} · Overdue{% endif %}
+                    </span>
+                    {% endif %}
+                    <span class="badge-glass">
+                        <i data-lucide="award" style="width:13px;height:13px;"></i>
+                        {{ assignment.total_marks }} points
+                    </span>
+                </div>
             </div>
-            {% else %}
-            <div>
-                <strong>Deadline:</strong> {{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div style="padding:1rem 1.25rem; border-radius:0.875rem; margin-bottom:1.25rem; font-size:0.875rem; font-weight:500;
+        {% if message.tags == 'error' %}background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#b91c1c;
+        {% else %}background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#065f46;{% endif %}
+        display:flex;align-items:center;gap:0.5rem;">
+        <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}" style="width:16px;height:16px;flex-shrink:0;"></i>
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="asgn-grid">
+        <!-- Left: Assignment Questions & Instructions -->
+        <div>
+            <div class="section-card">
+                <h2 class="section-title"><i data-lucide="file-text"></i> Assignment Instructions</h2>
+
+                {% if assignment.description %}
+                <div class="info-block">
+                    <div class="info-label">Description</div>
+                    <div class="info-text">{{ assignment.description }}</div>
+                </div>
+                {% endif %}
+
+                {% if assignment.instructions %}
+                <div class="info-block">
+                    <div class="info-label">Instructions</div>
+                    <div class="info-text">{{ assignment.instructions }}</div>
+                </div>
+                {% endif %}
+
+                {% if not assignment.description and not assignment.instructions %}
+                <p style="color:var(--color-text-muted);font-size:0.875rem;">No additional instructions provided.</p>
+                {% endif %}
+            </div>
+
+            {% if assignment.question_files.all %}
+            <div class="section-card">
+                <h2 class="section-title"><i data-lucide="paperclip"></i> Question Files & Reference Links</h2>
+                <div class="file-grid">
+                    {% for file in assignment.question_files.all %}
+                    <div class="file-row">
+                        <div class="file-row-icon">
+                            <i data-lucide="{% if file.file_type == 'link' %}link-2{% else %}file-text{% endif %}" style="width:16px;height:16px;"></i>
+                        </div>
+                        <span class="file-row-name" title="{{ file.filename }}">{{ file.filename }}</span>
+                        {% if file.file_type == 'link' %}
+                        <a href="{{ file.link_url }}" class="file-row-action" target="_blank" rel="noopener">Open ↗</a>
+                        {% else %}
+                        <a href="{{ file.file.url }}" class="file-row-action" download>Download</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
         </div>
-        
-        {% if existing_submission %}
-        <div style="background: #dbeafe; color: #1e40af; padding: 1rem 1.5rem; border-radius: 1rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
-            <i data-lucide="info"></i>
-            <div>You already submitted this assignment on {{ existing_submission.submitted_at|date:"M d, Y" }} at {{ existing_submission.submitted_at|time:"g:i A" }}. Submitting again will update your submission.</div>
-        </div>
-        {% endif %}
 
-        <form method="post" enctype="multipart/form-data" data-turbo="false">
-            {% csrf_token %}
-            
-            <div class="form-group">
-                <label for="submission_files">Upload Your Files</label>
-                <div class="file-upload-area">
-                    <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 0.75rem;"></i>
-                    <p style="color: #475569; margin: 0 0 0.5rem 0;">Drag and drop your submission files here or click to browse</p>
-                    <p style="color: #94a3b8; font-size: 0.875rem; margin: 0;">Supports images, PDFs, Word documents, ZIP files, and more</p>
-                    <input type="file" name="submission_files" id="submission_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;">
-                    <button type="button" onclick="document.getElementById('submission_files').click()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 1rem;">Choose Files</button>
-                </div>
+        <!-- Right: Submit Form -->
+        <div>
+            {% if existing_submission %}
+            <div class="sub-notice">
+                <i data-lucide="info" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;"></i>
+                <div>Submitted on <strong>{{ existing_submission.submitted_at|date:"M d, Y" }} at {{ existing_submission.submitted_at|time:"g:i A" }}</strong>. Uploading new files will update your submission.</div>
             </div>
-            
-            <div class="form-group">
-                <label for="submission_links">Add Links (URLs)</label>
-                <div id="submission-links-container">
-                    <div class="link-input" style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;">
-                        <input type="text" name="submission_link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
-                        <input type="url" name="submission_link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" data-turbo="false" id="submit-form">
+                {% csrf_token %}
+
+                <!-- Upload Card -->
+                <div class="section-card">
+                    <h2 class="section-title">
+                        <i data-lucide="upload-cloud"></i> Upload Files
+                    </h2>
+
+                    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('submission_files').click()">
+                        <i data-lucide="upload-cloud" class="dz-icon"></i>
+                        <p class="dz-title">Drag & drop your files here</p>
+                        <p class="dz-hint">PDFs, Word, Images, Code, ZIP up to 50 MB</p>
+                        <button type="button" class="btn-choose" onclick="event.stopPropagation(); document.getElementById('submission_files').click();">
+                            <i data-lucide="folder-open" style="width:15px;height:15px;"></i> Choose Files
+                        </button>
+                        <input type="file" name="submission_files" id="submission_files" multiple
+                            accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi">
                     </div>
+
+                    <div id="file-preview-list"></div>
                 </div>
-                <button type="button" onclick="addSubmissionLinkInput()" class="btn-secondary" style="padding: 0.5rem 1.25rem; margin-top: 0.5rem;">+ Add Another Link</button>
-            </div>
-            
-            <div class="btn-group">
-                <a href="{% url 'assignment_detail' assignment.id %}" class="btn-secondary">Cancel</a>
-                <button type="submit" class="btn-primary">
-                    {% if existing_submission %}Update Submission{% else %}Submit Assignment{% endif %}
-                </button>
-            </div>
-        </form>
+
+                <!-- Links Card -->
+                <div class="section-card">
+                    <h2 class="section-title">
+                        <i data-lucide="link-2"></i> Add Links <span style="font-size:0.75rem;font-weight:500;color:var(--color-text-muted);margin-left:0.25rem;">(optional)</span>
+                    </h2>
+                    <div id="links-container">
+                        <div class="link-row">
+                            <input type="text" name="submission_link_text[]" class="form-control" placeholder="Label (e.g. Google Drive)">
+                            <input type="url" name="submission_link_url[]" class="form-control" placeholder="https://..." style="flex:2;">
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add-link" onclick="addLink()">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Another Link
+                    </button>
+                </div>
+
+                <!-- Actions -->
+                <div class="sub-actions">
+                    <a href="{% url 'assignment_detail' assignment.id %}" class="btn-cancel">Cancel</a>
+                    <button type="submit" class="btn-submit-main" id="submit-btn">
+                        <i data-lucide="send" style="width:16px;height:16px;"></i>
+                        {% if existing_submission %}Update Submission{% else %}Submit Assignment{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
-function addSubmissionLinkInput() {
-    const container = document.getElementById('submission-links-container');
-    const newLink = document.createElement('div');
-    newLink.className = 'link-input';
-    newLink.style.cssText = 'display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: center;';
-    newLink.innerHTML = `
-        <input type="text" name="submission_link_text[]" class="form-control" placeholder="Link text (e.g., Google Drive File)" style="flex: 1;">
-        <input type="url" name="submission_link_url[]" class="form-control" placeholder="https://example.com" style="flex: 2;">
-        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem;">
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-        </button>
-    `;
-    container.appendChild(newLink);
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+(function() {
+    // ── Drag & Drop ──────────────────────────────────────────────────────────
+    var dropZoneEl = document.getElementById('drop-zone');
+    var fileInput = document.getElementById('submission_files');
+    var previewList = document.getElementById('file-preview-list');
+
+    if (!dropZoneEl || !fileInput) return;
+
+    // Prevent browser from opening files on accident
+    ['dragenter','dragover','dragleave','drop'].forEach(function(e) {
+        document.body.addEventListener(e, function(ev) { ev.preventDefault(); });
+    });
+
+    dropZoneEl.addEventListener('dragenter', function(e) { e.preventDefault(); dropZoneEl.classList.add('drag-over'); });
+    dropZoneEl.addEventListener('dragover',  function(e) { e.preventDefault(); dropZoneEl.classList.add('drag-over'); });
+    dropZoneEl.addEventListener('dragleave', function(e) { e.preventDefault(); dropZoneEl.classList.remove('drag-over'); });
+    dropZoneEl.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZoneEl.classList.remove('drag-over');
+        var dt = e.dataTransfer;
+        if (dt && dt.files.length) {
+            var merged = mergeFileLists(fileInput.files, dt.files);
+            setFiles(merged);
+            renderPreviews(merged);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        renderPreviews(fileInput.files);
+    });
+
+    function mergeFileLists(existing, incoming) {
+        var arr = Array.from(existing || []);
+        Array.from(incoming).forEach(function(f) {
+            if (!arr.find(function(ex) { return ex.name === f.name && ex.size === f.size; })) arr.push(f);
+        });
+        return arr;
     }
-}
+
+    function setFiles(fileArr) {
+        var dt = new DataTransfer();
+        fileArr.forEach(function(f) { dt.items.add(f); });
+        fileInput.files = dt.files;
+    }
+
+    function renderPreviews(files) {
+        previewList.innerHTML = '';
+        if (!files || !files.length) return;
+        Array.from(files).forEach(function(file, idx) {
+            var ext = file.name.split('.').pop().toLowerCase();
+            var size = file.size < 1024*1024
+                ? (file.size/1024).toFixed(1)+' KB'
+                : (file.size/1024/1024).toFixed(1)+' MB';
+
+            var item = document.createElement('div');
+            item.className = 'file-preview-item';
+            item.innerHTML =
+                '<div class="file-preview-icon"><i data-lucide="'+getFileIcon(ext)+'" style="width:18px;height:18px;"></i></div>' +
+                '<span class="file-preview-name" title="'+file.name+'">'+file.name+'</span>' +
+                '<span class="file-preview-size">'+size+'</span>' +
+                '<button type="button" class="file-preview-remove" data-idx="'+idx+'" title="Remove file"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
+            item.querySelector('.file-preview-remove').addEventListener('click', function() {
+                var arr = Array.from(fileInput.files);
+                arr.splice(idx, 1);
+                setFiles(arr);
+                renderPreviews(fileInput.files);
+            });
+            previewList.appendChild(item);
+        });
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function getFileIcon(ext) {
+        var map = {
+            pdf:'file-text', doc:'file-text', docx:'file-text',
+            jpg:'image', jpeg:'image', png:'image', gif:'image', webp:'image',
+            mp4:'video', mov:'video', mkv:'video', avi:'video',
+            mp3:'music', wav:'music', m4a:'music',
+            zip:'archive', rar:'archive', '7z':'archive', tar:'archive', gz:'archive',
+            py:'code', js:'code', ts:'code', html:'code', css:'code', java:'code', c:'code', cpp:'code',
+            xls:'table', xlsx:'table', csv:'table',
+            ppt:'presentation', pptx:'presentation'
+        };
+        return map[ext] || 'file';
+    }
+
+    // ── Link rows (exposed to window for inline onclick) ─────────────────────
+    window.addLink = function() {
+        var container = document.getElementById('links-container');
+        var row = document.createElement('div');
+        row.className = 'link-row';
+        row.innerHTML =
+            '<input type="text" name="submission_link_text[]" class="form-control" placeholder="Label (e.g. Google Drive)">' +
+            '<input type="url" name="submission_link_url[]" class="form-control" placeholder="https://..." style="flex:2;">' +
+            '<button type="button" class="btn-remove-link" title="Remove"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
+        row.querySelector('.btn-remove-link').addEventListener('click', function() { row.remove(); });
+        container.appendChild(row);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    // ── Submit button loading state ──────────────────────────────────────────
+    var form = document.getElementById('submit-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var btn = document.getElementById('submit-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-circle" style="width:16px;height:16px;animation:spin 1s linear infinite;"></i> Submitting\u2026';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        });
+    }
+})();
 </script>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
 {% endblock %}

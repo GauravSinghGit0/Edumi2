@@ -151,7 +151,7 @@
         }
     </style>
 </head>
-<body>
+<body data-turbo="false">
     <div class="header">
         <h1>Edumi Remote Mic</h1>
         <div style="font-size: 0.75rem; color: #64748b;">{{ camera.name }}</div>
@@ -344,5 +344,6 @@
             }
         });
     </script>
+    {% include 'components/reusable_popup.html' %}
 </body>
 </html>

@@ -1,0 +1,468 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Submissions - {{ assignment.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .asgn-sub-page {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+        padding: var(--space-md) var(--space-lg);
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+    }
+
+    /* ── Hero Banner (Matches Classroom Hero & Dashboard) ── */
+    .classroom-hero {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+        border-radius: var(--radius-xl, 16px);
+        padding: var(--space-lg, 1.5rem) var(--space-xl, 2rem);
+        color: #ffffff !important;
+        margin-bottom: var(--space-lg, 1.5rem);
+        box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+        position: relative;
+        overflow: hidden;
+    }
+
+    .classroom-hero::after {
+        content: '';
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 280px;
+        height: 280px;
+        background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%);
+        pointer-events: none;
+    }
+
+    .hero-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--space-md);
+        flex-wrap: wrap;
+    }
+
+    .hero-subtitle {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-primary-light, #818cf8);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: var(--space-2xs);
+        display: block;
+    }
+
+    .hero-title {
+        font-size: var(--font-size-3xl, 1.75rem);
+        font-weight: var(--font-weight-bold);
+        margin: 0 0 var(--space-xs) 0;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        color: #ffffff !important;
+    }
+
+    .hero-badges {
+        display: flex;
+        gap: var(--space-xs);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .badge-glass {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius-full);
+        padding: 0.25rem 0.75rem;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .btn-hero-action {
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff !important;
+        padding: 0 var(--space-lg);
+        height: var(--btn-height-md);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        font-weight: var(--font-weight-semibold);
+        font-size: var(--font-size-md);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+    }
+
+    .btn-hero-action:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: #ffffff !important;
+    }
+
+    /* ── Glass Card Container ── */
+    .glass-card {
+        background: var(--color-bg-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        padding: var(--space-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: var(--space-lg);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: var(--space-sm);
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+
+    .card-title {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+
+    .card-title i { color: var(--color-primary); }
+
+    /* ── Table Controls (Filters & Search) ── */
+    .table-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        flex-wrap: wrap;
+        margin-bottom: var(--space-md);
+    }
+
+    .filter-pills {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        background: var(--color-bg-main, #f8fafc);
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-border);
+        padding: 0.35rem 0.85rem;
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+        background: rgba(79, 70, 229, 0.08);
+        color: var(--color-primary);
+    }
+
+    .filter-btn.active {
+        background: rgba(79, 70, 229, 0.12);
+        color: var(--color-primary);
+        border-color: rgba(79, 70, 229, 0.35);
+        font-weight: var(--font-weight-bold);
+    }
+
+    .search-input-wrap {
+        position: relative;
+        min-width: 250px;
+    }
+
+    .search-input-wrap input {
+        width: 100%;
+        padding: 0.45rem 0.85rem 0.45rem 2.2rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-xs);
+        outline: none;
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        transition: border-color 0.2s ease;
+    }
+
+    .search-input-wrap input:focus {
+        border-color: var(--color-primary);
+        background: var(--color-bg-card);
+    }
+
+    .search-input-wrap .search-icon {
+        position: absolute;
+        left: 0.7rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-muted);
+        width: 14px;
+        height: 14px;
+        pointer-events: none;
+    }
+
+    /* ── Submissions Table ── */
+    .sub-table-wrap {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--color-bg-card);
+    }
+    .sub-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--font-size-sm); }
+    .sub-table th {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted);
+        padding: var(--space-sm) var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg-main);
+    }
+    .sub-table td {
+        padding: var(--space-sm) var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+        vertical-align: middle;
+        color: var(--color-text-main);
+    }
+    .sub-table tbody tr:last-child td { border-bottom: none; }
+    .sub-table tbody tr:hover td { background: var(--color-bg-hover, rgba(0,0,0,0.015)); }
+
+    .student-cell { display: flex; align-items: center; gap: var(--space-sm); }
+    .student-avatar {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+        color: #fff;
+        font-weight: var(--font-weight-bold);
+        font-size: var(--font-size-xs);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    .student-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        text-transform: uppercase;
+    }
+    .status-chip.submitted { background: rgba(16, 185, 129, 0.15); color: var(--color-success); }
+    .status-chip.late      { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
+    .status-chip.missing   { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
+    .status-chip.pending   { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+
+    .btn-evaluate {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        text-decoration: none;
+        transition: all 0.15s;
+    }
+    .btn-evaluate.todo { background: var(--color-primary); color: #fff; }
+    .btn-evaluate.todo:hover { background: var(--color-primary-hover); color: #fff; }
+    .btn-evaluate.done { background: rgba(16, 185, 129, 0.1); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .btn-evaluate.done:hover { background: rgba(16, 185, 129, 0.2); }
+
+    .empty-state { text-align: center; padding: var(--space-xl) var(--space-md); color: var(--color-text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="asgn-sub-page">
+    <!-- Hero Banner (Dashboard Standard) -->
+    <div class="classroom-hero">
+        <div class="hero-top-row">
+            <div>
+                <span class="hero-subtitle">ASSIGNMENT SUBMISSIONS • {{ classroom.title }}</span>
+                <h1 class="hero-title">{{ assignment.title }}</h1>
+                <div class="hero-badges">
+                    {% if assignment.due_date %}
+                    <span class="badge-glass">
+                        <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+                        Due: {{ assignment.due_date|date:"M d, Y" }} at {{ assignment.due_date|time:"g:i A" }}
+                    </span>
+                    {% endif %}
+                    <span class="badge-glass">
+                        <i data-lucide="award" style="width:14px;height:14px;"></i>
+                        {{ assignment.total_marks }} Marks Total
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Submissions Table Section -->
+    <div class="glass-card">
+        <div class="card-header">
+            <h2 class="card-title"><i data-lucide="users"></i> Student Submissions & Gradebook</h2>
+        </div>
+
+        <div class="table-controls">
+            <div class="filter-pills">
+                <button class="filter-btn active" onclick="filterSubmissions('all', this)">All ({{ total_students_count }})</button>
+                <button class="filter-btn" onclick="filterSubmissions('submitted', this)">Submitted ({{ submitted_count }})</button>
+                <button class="filter-btn" onclick="filterSubmissions('pending-grade', this)">Needs Grading ({{ pending_grade_count }})</button>
+                <button class="filter-btn" onclick="filterSubmissions('missing', this)">Missing ({{ missing_count }})</button>
+            </div>
+            <div class="search-input-wrap">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="studentSearch" placeholder="Search student name..." onkeyup="searchStudents()">
+            </div>
+        </div>
+
+        {% if submissions %}
+        <div class="sub-table-wrap">
+            <table class="sub-table" id="submissionsTable">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Status</th>
+                        <th>Submitted At</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in submissions %}
+                    <tr class="submission-row" 
+                        data-status="{{ sub.status }}" 
+                        data-graded="{% if sub.submission and sub.submission.evaluated_at %}graded{% elif sub.submission %}pending-grade{% else %}none{% endif %}"
+                        data-name="{{ sub.student.get_full_name|default:sub.student.username|lower }}">
+                        <td>
+                            <div class="student-cell">
+                                <div class="student-avatar">
+                                    {% if sub.student.userprofile and sub.student.userprofile.profile_picture %}
+                                    <img src="{{ sub.student.userprofile.get_profile_picture_url }}" alt="">
+                                    {% else %}
+                                    {{ sub.student.get_full_name|default:sub.student.username|slice:":1"|upper }}
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div style="font-weight:var(--font-weight-semibold);font-size:var(--font-size-sm);">{% if sub.student.userprofile %}{{ sub.student.userprofile.get_display_name }}{% else %}{{ sub.student.get_full_name|default:sub.student.username }}{% endif %}</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">@{{ sub.student.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-chip {{ sub.status }}">
+                                <i data-lucide="{% if sub.status == 'submitted' %}check-circle{% elif sub.status == 'late' %}clock{% elif sub.status == 'missing' %}x-circle{% else %}hourglass{% endif %}" style="width:11px;height:11px;"></i>
+                                {{ sub.status|capfirst }}
+                            </span>
+                        </td>
+                        <td style="font-size:var(--font-size-xs);color:var(--color-text-muted);">
+                            {% if sub.submitted_at %}{{ sub.submitted_at|date:"M d, Y" }} · {{ sub.submitted_at|time:"g:i A" }}{% else %}—{% endif %}
+                        </td>
+                        <td style="font-weight:700;">
+                            {% if sub.submission and sub.submission.evaluated_at %}
+                                <span style="color:var(--color-success,#059669);">{{ sub.submission.marks_obtained|default:"0" }}</span>
+                                <span style="font-weight:400;color:var(--color-text-muted);font-size:0.75rem;">/ {{ assignment.total_marks }}</span>
+                            {% elif sub.submission %}
+                                <span style="font-size: 0.75rem; font-weight: 700; color: #d97706; background: rgba(245, 158, 11, 0.15); padding: 0.15rem 0.45rem; border-radius: 0.25rem;">
+                                    Needs Grading
+                                </span>
+                            {% else %}
+                                <span style="color:var(--color-text-muted);">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if sub.submission %}
+                                {% if sub.submission.evaluated_at %}
+                                <a href="{% url 'evaluate_submission' sub.submission.id %}" class="btn-evaluate done">
+                                    <i data-lucide="eye" style="width:12px;height:12px;"></i> Review
+                                </a>
+                                {% else %}
+                                <a href="{% url 'evaluate_submission' sub.submission.id %}" class="btn-evaluate todo">
+                                    <i data-lucide="check-square" style="width:12px;height:12px;"></i> Grade
+                                </a>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:var(--color-text-muted);font-size:var(--font-size-xs);">Not submitted</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i data-lucide="inbox" style="width:40px;height:40px;opacity:0.3;display:block;margin:0 auto 0.75rem;"></i>
+            <p style="margin:0;font-size:var(--font-size-md);">No students enrolled in this classroom yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    window.currentCategory = 'all';
+
+    window.filterSubmissions = function(category, btn) {
+        window.currentCategory = category;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        applySubmissionFilters();
+    };
+
+    window.searchStudents = function() {
+        applySubmissionFilters();
+    };
+
+    function applySubmissionFilters() {
+        const category = window.currentCategory || 'all';
+        const query = (document.getElementById('studentSearch')?.value || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#submissionsTable tbody .submission-row');
+
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status');
+            const graded = row.getAttribute('data-graded');
+            const name = row.getAttribute('data-name') || '';
+
+            let categoryMatch = false;
+            if (category === 'all') {
+                categoryMatch = true;
+            } else if (category === 'submitted') {
+                categoryMatch = (status === 'submitted' || status === 'late');
+            } else if (category === 'pending-grade') {
+                categoryMatch = (graded === 'pending-grade');
+            } else if (category === 'missing') {
+                categoryMatch = (status === 'missing' || status === 'pending');
+            }
+
+            let searchMatch = !query || name.includes(query);
+
+            if (categoryMatch && searchMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    document.addEventListener('turbo:load', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

@@ -5,7 +5,7 @@ Tests SMTP connection, STARTTLS / SSL handshake, authentication, and email deliv
 
 Usage:
     python scripts/test_smtp.py [recipient@example.com]
-    python scripts/test_smtp.py scarycrimson629@gmail.com --verbose
+    python scripts/test_smtp.py recipient@example.com --verbose
 """
 import sys
 import smtplib
@@ -14,17 +14,24 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate, make_msgid
 
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ==============================================================================
-# SMTP CONFIGURATION (Gmail Configuration — Verified & Operational)
+# SMTP CONFIGURATION (Reads from .env or environment variables)
 # ==============================================================================
-SMTP_HOST         = "smtp.gmail.com"
-SMTP_PORT         = 587
-SMTP_USE_TLS      = True
-SMTP_USE_SSL      = False
-SMTP_USER         = "your_email@gmail.com"
-SMTP_PASSWORD     = "your_app_specific_password_here"
-FROM_EMAIL        = "EduMi Support <your_email@gmail.com>"
-DEFAULT_RECIPIENT = "example_email@gmail.com"   # <-- Jisko email bhejni hai uska address yahan likhein
+SMTP_HOST         = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+SMTP_PORT         = int(os.environ.get("EMAIL_PORT", 587))
+SMTP_USE_TLS      = os.environ.get("EMAIL_USE_TLS", "True").lower() in ("true", "1")
+SMTP_USE_SSL      = os.environ.get("EMAIL_USE_SSL", "False").lower() in ("true", "1")
+SMTP_USER         = os.environ.get("EMAIL_HOST_USER", "")
+SMTP_PASSWORD     = os.environ.get("EMAIL_HOST_PASSWORD", "")
+FROM_EMAIL        = os.environ.get("DEFAULT_FROM_EMAIL", "EduMi Support <noreply@edumi.ac.in>")
+DEFAULT_RECIPIENT = os.environ.get("TEST_EMAIL_RECIPIENT", "")
 # ==============================================================================
 
 

@@ -1,33 +1,133 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Evaluate Submission{% endblock %}
+{% block page_title %}Evaluate Submission — {{ submission.student.get_full_name|default:submission.student.username }}{% endblock %}
 
 {% block content %}
 <style>
-    .evaluate-container { max-width: 1200px; margin: 0 auto; padding: 2rem; font-family: var(--font-family-base, 'Inter', sans-serif); }
-    .header-card { background: linear-gradient(135deg, #059669 0%, #10b981 100%); border-radius: 1.5rem; padding: 2rem; color: white; margin-bottom: 2rem; }
-    .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-    .btn-group { display: flex; gap: 1rem; margin-top: 2rem; }
+    .evaluate-container { 
+        max-width: var(--container-max-width); 
+        margin: 0 auto; 
+        padding: var(--space-md) var(--space-lg); 
+        font-family: var(--font-family-base, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif); 
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-primary, #4f46e5);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        margin-bottom: 1.5rem;
+        transition: gap 0.15s;
+    }
+    .back-link:hover { gap: 0.65rem; }
+
+    .header-card { 
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%); 
+        border-radius: var(--radius-lg, 1.25rem); 
+        padding: 1.75rem 2rem; 
+        color: white; 
+        margin-bottom: 1.75rem; 
+        box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+    }
+    
+    .grid-layout { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 1.5rem; 
+    }
+    @media (max-width: 860px) { .grid-layout { grid-template-columns: 1fr; } }
+
+    .section-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 1.25rem);
+        padding: 1.75rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: var(--color-text-main, #0f172a);
+        margin: 0 0 1.25rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-title i { color: #10b981; }
+
     .file-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--color-bg-main, #f8fafc);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 0.625rem;
+    }
+    .file-info { display: flex; align-items: center; gap: 0.6rem; font-size: 0.875rem; font-weight: 600; color: var(--color-text-main); }
+
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--color-text-main); margin-bottom: 0.4rem; }
+    .form-control {
+        width: 100%;
+        padding: 0.65rem 0.875rem;
+        border-radius: var(--radius-md, 0.625rem);
+        border: 1px solid var(--color-border, #cbd5e1);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.15s;
+    }
+    .form-control:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+    textarea.form-control { min-height: 120px; resize: vertical; }
+
+    .btn-group { display: flex; gap: 0.875rem; margin-top: 1.75rem; justify-content: flex-end; align-items: center; }
+    .btn-secondary {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.65rem 1.25rem; border-radius: var(--radius-md, 0.625rem);
+        font-weight: 600; font-size: 0.875rem; text-decoration: none;
+        border: 1px solid var(--color-border, #e2e8f0); color: var(--color-text-main, #334155);
+        background: var(--color-bg-main, #f8fafc); cursor: pointer; transition: all 0.15s;
+    }
+    .btn-secondary:hover { background: var(--color-bg-hover); }
+
+    .btn-primary {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.65rem 1.5rem; border-radius: var(--radius-md, 0.625rem);
+        font-weight: 700; font-size: 0.875rem; border: none;
+        color: #ffffff; background: #059669; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.15s;
+    }
+    .btn-primary:hover { background: #047857; transform: translateY(-1px); }
+
+    /* Dark Mode */
+    body.dark-mode .section-card { background: var(--color-bg-card); border-color: var(--color-border); }
+    body.dark-mode .file-item { background: var(--color-bg-hover); border-color: var(--color-border); }
 </style>
 
 <div class="evaluate-container">
-    <a href="{% url 'assignment_detail' assignment.id %}" style="color: #059669; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
-        <i data-lucide="arrow-left"></i> Back to Assignment
-    </a>
     
     <div class="header-card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h1 style="margin: 0; font-size: 1.875rem;">Evaluate Submission</h1>
-                <p style="margin-top: 0.5rem; opacity: 0.9;">
-                    {{ submission.student.get_full_name|default:submission.student.username }} - {{ assignment.title }}
+                <h1 style="margin: 0; font-size: 1.75rem; font-weight: 800;">Evaluate Submission</h1>
+                <p style="margin: 0.35rem 0 0 0; opacity: 0.95; font-size: 0.9375rem;">
+                    Student: <strong>{{ submission.student.get_full_name|default:submission.student.username }}</strong> — {{ assignment.title }}
                 </p>
             </div>
             <div style="text-align: right;">
-                <p style="margin:0; font-size: 0.875rem; opacity:0.8;">Submitted</p>
-                <p style="margin:0; font-weight: 700;">{{ submission.submitted_at|date:"M d, Y" }} at {{ submission.submitted_at|time:"g:i A" }}</p>
+                <p style="margin:0; font-size: 0.75rem; opacity:0.85; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Submitted On</p>
+                <p style="margin:0.2rem 0 0 0; font-weight: 700; font-size: 0.9375rem;">{{ submission.submitted_at|date:"M d, Y" }} at {{ submission.submitted_at|time:"g:i A" }}</p>
             </div>
         </div>
     </div>
@@ -35,48 +135,60 @@
     <div class="grid-layout">
         <!-- Left Column - Submission Files -->
         <div class="section-card">
-            <h2 class="section-title"><i data-lucide="file-text"></i> Submitted Files</h2>
+            <h2 class="section-title"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> Submitted Files & Content</h2>
             
             {% if submission.files.all %}
             <div class="file-list">
                 {% for file in submission.files.all %}
                 <div class="file-item">
                     <div class="file-info">
-                        <i data-lucide="file"></i>
+                        {% if file.file_type == 'link' %}
+                        <i data-lucide="link-2" style="width: 16px; height: 16px; color: #10b981;"></i>
+                        <a href="{{ file.url }}" target="_blank" style="color: var(--color-primary); text-decoration: none;">{{ file.filename }}</a>
+                        {% else %}
+                        <i data-lucide="file-text" style="width: 16px; height: 16px; color: #10b981;"></i>
                         <span>{{ file.filename }}</span>
+                        {% endif %}
                     </div>
-                    <a href="{{ file.file.url }}" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8125rem;" download>Download</a>
+                    {% if file.file %}
+                    <a href="{{ file.file.url }}" class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8125rem;" download>
+                        <i data-lucide="download" style="width: 14px; height: 14px;"></i> Download
+                    </a>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p style="color: #94a3b8; text-align: center; padding: 2rem 0;">No files submitted</p>
+            <p style="color: var(--color-text-muted); text-align: center; padding: 2.5rem 0;">No submission files uploaded</p>
             {% endif %}
         </div>
         
         <!-- Right Column - Evaluation Form -->
         <div class="section-card">
-            <h2 class="section-title"><i data-lucide="award"></i> Evaluation</h2>
+            <h2 class="section-title"><i data-lucide="award" style="width: 18px; height: 18px;"></i> Grade & Feedback</h2>
             
             <form method="post" data-turbo="false">
                 {% csrf_token %}
                 
                 <div class="form-group">
-                    <label for="marks">Points (Out of {{ assignment.total_marks }})</label>
-                    <input type="number" name="marks" id="marks" class="form-control" value="{{ submission.marks_obtained|default:'' }}" min="0" max="{{ assignment.total_marks }}" required>
+                    <label for="marks">Points / Marks (Out of {{ assignment.total_marks }}) *</label>
+                    <input type="number" name="marks" id="marks" class="form-control" value="{{ submission.marks_obtained|default:'' }}" min="0" max="{{ assignment.total_marks }}" required placeholder="e.g. 85">
                 </div>
                 
                 <div class="form-group">
-                    <label for="feedback">Feedback</label>
-                    <textarea name="feedback" id="feedback" class="form-control" placeholder="Provide feedback for the student...">{{ submission.feedback|default:'' }}</textarea>
+                    <label for="feedback">Instructor Feedback</label>
+                    <textarea name="feedback" id="feedback" class="form-control" placeholder="Provide constructive feedback for the student...">{{ submission.feedback|default:'' }}</textarea>
                 </div>
                 
                 <div class="btn-group">
                     <a href="{% url 'assignment_detail' assignment.id %}" class="btn-secondary">Cancel</a>
-                    <button type="submit" class="btn-primary">Publish Evaluation</button>
+                    <button type="submit" class="btn-primary">
+                        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Publish Evaluation
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 {% endblock %}
+

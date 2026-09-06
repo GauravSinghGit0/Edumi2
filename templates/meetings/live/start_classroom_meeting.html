@@ -151,7 +151,7 @@
         <h2>Start New Meeting</h2>
         <p class="subtitle">{{ classroom.title }}</p>
 
-        <form method="post">
+        <form method="post" data-turbo="false">
             {% csrf_token %}
 
             <div class="form-group">

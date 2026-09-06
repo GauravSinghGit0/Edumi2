@@ -49,7 +49,10 @@ def classroom_assignments(request, classroom_id):
         return redirect('student_classrooms')
     
     # Get assignments
-    assignments = classroom.assignments.all()
+    if is_teacher:
+        assignments = classroom.assignments.all()
+    else:
+        assignments = classroom.assignments.filter(status='published')
     
     if is_student:
         # Add submission status for each assignment for the student
@@ -201,8 +204,21 @@ def edit_assignment(request, assignment_id):
         action = request.POST.get('action')
         if action == 'publish':
             assignment.status = 'published'
+            messages.success(request, f'Assignment "{assignment.title}" published successfully!')
+        elif action in ['draft', 'unpublish']:
+            assignment.status = 'draft'
+            messages.success(request, f'Assignment "{assignment.title}" switched to draft.')
         elif action == 'archive':
             assignment.status = 'archived'
+            messages.success(request, f'Assignment "{assignment.title}" archived.')
+        elif action == 'delete':
+            title = assignment.title
+            classroom_id = assignment.classroom.id
+            assignment.delete()
+            messages.success(request, f'Assignment "{title}" has been permanently deleted.')
+            return redirect('classroom_assignments', classroom_id=classroom_id)
+        else:
+            messages.success(request, f'Assignment "{assignment.title}" updated successfully!')
         
         assignment.save()
         
@@ -228,12 +244,81 @@ def edit_assignment(request, assignment_id):
                     file_type='link'
                 )
         
-        messages.success(request, f'Assignment "{assignment.title}" updated successfully!')
         return redirect('classroom_assignments', classroom_id=assignment.classroom.id)
     
     return render(request, 'assignments/edit_assignment.html', {
         'assignment': assignment
     })
+
+
+@login_required
+def delete_assignment(request, assignment_id):
+    """Teacher permanently deletes an assignment"""
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+    classroom = assignment.classroom
+    
+    is_teacher = (
+        hasattr(request.user, 'userprofile') and 
+        request.user.userprofile.user_type == 'teacher' and 
+        (classroom.teacher == request.user or assignment.created_by == request.user)
+    )
+    if not is_teacher:
+        messages.error(request, 'Only the classroom teacher can delete this assignment.')
+        return redirect('classroom_assignments', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        title = assignment.title
+        classroom_id = classroom.id
+        assignment.delete()
+        messages.success(request, f'Assignment "{title}" has been permanently deleted.')
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+            return JsonResponse({'success': True, 'message': f'Assignment "{title}" deleted successfully.'})
+        return redirect('classroom_assignments', classroom_id=classroom_id)
+    
+    return redirect('assignment_detail', assignment_id=assignment.id)
+
+
+@login_required
+def toggle_assignment_status(request, assignment_id):
+    """Teacher toggles an assignment between published and draft (unpublish/publish)"""
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+    classroom = assignment.classroom
+    
+    is_teacher = (
+        hasattr(request.user, 'userprofile') and 
+        request.user.userprofile.user_type == 'teacher' and 
+        (classroom.teacher == request.user or assignment.created_by == request.user)
+    )
+    if not is_teacher:
+        messages.error(request, 'Only the classroom teacher can change the status of this assignment.')
+        return redirect('classroom_assignments', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        target_status = request.POST.get('target_status')
+        if not target_status:
+            target_status = 'draft' if assignment.status == 'published' else 'published'
+            
+        if target_status == 'published':
+            assignment.status = 'published'
+            messages.success(request, f'Assignment "{assignment.title}" is now published and visible to students!')
+        elif target_status in ['draft', 'unpublish']:
+            assignment.status = 'draft'
+            messages.success(request, f'Assignment "{assignment.title}" has been unpublished (set to draft).')
+        elif target_status == 'archived':
+            assignment.status = 'archived'
+            messages.success(request, f'Assignment "{assignment.title}" has been archived.')
+            
+        assignment.save()
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+            return JsonResponse({'success': True, 'status': assignment.status, 'status_display': assignment.get_status_display()})
+            
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
+        if next_url:
+            return redirect(next_url)
+        return redirect('assignment_detail', assignment_id=assignment.id)
+    
+    return redirect('assignment_detail', assignment_id=assignment.id)
 
 
 @login_required
@@ -257,28 +342,15 @@ def assignment_detail(request, assignment_id):
         messages.error(request, 'You do not have access to this assignment')
         return redirect('student_classrooms')
     
-    # Get submissions (for teacher)
-    submissions = []
+    # Get submission stats (for teacher)
+    total_students_count = 0
+    submitted_count = 0
+    not_submitted_count = 0
+
     if is_teacher:
-        # Get all approved students in the classroom
-        approved_students = [m.student for m in classroom.get_approved_memberships()]
-        for student in approved_students:
-            # Check if student has submitted
-            try:
-                submission = assignment.submissions.get(student=student)
-                submissions.append({
-                    'student': student,
-                    'submission': submission,
-                    'status': 'submitted' if submission.submitted_at <= assignment.due_date else 'late',
-                    'submitted_at': submission.submitted_at
-                })
-            except AssignmentSubmission.DoesNotExist:
-                submissions.append({
-                    'student': student,
-                    'submission': None,
-                    'status': 'missing' if assignment.is_past_due() else 'pending',
-                    'submitted_at': None
-                })
+        total_students_count = classroom.get_approved_memberships().count()
+        submitted_count = assignment.submissions.values('student').distinct().count()
+        not_submitted_count = max(0, total_students_count - submitted_count)
     
     # Get student's own submission (for student)
     student_submission = None
@@ -292,8 +364,10 @@ def assignment_detail(request, assignment_id):
         'assignment': assignment,
         'classroom': classroom,
         'is_teacher': is_teacher,
-        'submissions': submissions,
-        'student_submission': student_submission
+        'student_submission': student_submission,
+        'total_students_count': total_students_count,
+        'submitted_count': submitted_count,
+        'not_submitted_count': not_submitted_count,
     })
 
 
@@ -350,7 +424,11 @@ def submit_assignment(request, assignment_id):
             assignment=assignment,
             student=request.user
         )
-        
+
+        # On re-submission: trigger save() to update status and updated_at timestamp
+        if not created:
+            submission.save()
+
         # Handle file uploads
         for file in files:
             clean_name = sanitize_filename(file.name)
@@ -429,3 +507,68 @@ def delete_question_file(request, file_id):
         os.remove(file.file.path)
     file.delete()
     return JsonResponse({'success': True})
+
+
+@login_required
+def assignment_submissions(request, assignment_id):
+    """Dedicated view for teacher to view and manage all student submissions for an assignment"""
+    assignment = get_object_or_404(Assignment, id=assignment_id)
+    classroom = assignment.classroom
+
+    is_teacher = (
+        hasattr(request.user, 'userprofile') and
+        request.user.userprofile.user_type == 'teacher' and
+        classroom.teacher == request.user
+    )
+    if not is_teacher:
+        messages.error(request, 'Only classroom teachers can view all student submissions.')
+        return redirect('assignment_detail', assignment_id=assignment.id)
+
+    approved_students = [m.student for m in classroom.get_approved_memberships()]
+    total_students_count = len(approved_students)
+    submitted_count = 0
+    pending_grade_count = 0
+    missing_count = 0
+    submissions = []
+
+    for student in approved_students:
+        try:
+            submission = assignment.submissions.get(student=student)
+            submitted_count += 1
+            if submission.evaluated_at is None and submission.marks_obtained is None:
+                pending_grade_count += 1
+            is_late = (
+                assignment.due_date and
+                submission.submitted_at and
+                submission.submitted_at > assignment.due_date
+            )
+            submissions.append({
+                'student': student,
+                'submission': submission,
+                'status': 'late' if is_late else 'submitted',
+                'submitted_at': submission.submitted_at
+            })
+        except AssignmentSubmission.DoesNotExist:
+            is_missing = assignment.due_date and timezone.now() > assignment.due_date
+            if is_missing:
+                missing_count += 1
+            submissions.append({
+                'student': student,
+                'submission': None,
+                'status': 'missing' if is_missing else 'pending',
+                'submitted_at': None
+            })
+
+    not_submitted_count = max(0, total_students_count - submitted_count)
+
+    return render(request, 'assignments/assignment_submissions.html', {
+        'assignment': assignment,
+        'classroom': classroom,
+        'submissions': submissions,
+        'total_students_count': total_students_count,
+        'submitted_count': submitted_count,
+        'pending_grade_count': pending_grade_count,
+        'missing_count': missing_count,
+        'not_submitted_count': not_submitted_count,
+    })
+

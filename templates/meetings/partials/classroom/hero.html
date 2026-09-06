@@ -31,20 +31,20 @@
 
         <!-- Quick Action Links -->
         <div class="hero-nav-pills">
-            <a href="{% url 'classroom_assignments' classroom.id %}" class="hero-pill-link">
+            <a href="{% url 'classroom_assignments' classroom.id %}" class="hero-pill-link" data-turbo-frame="_top" data-turbo-action="advance">
                 <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
                 Assignments
             </a>
-            <a href="{% url 'classroom_quizzes' classroom.id %}" class="hero-pill-link">
+            <a href="{% url 'classroom_quizzes' classroom.id %}" class="hero-pill-link" data-turbo-frame="_top" data-turbo-action="advance">
                 <i data-lucide="clipboard-list" style="width: 16px; height: 16px;"></i>
                 Quizzes
             </a>
             {% if is_teacher %}
-            <a href="{% url 'classroom_attendance_overview' classroom.id %}" class="hero-pill-link">
+            <a href="{% url 'classroom_attendance_overview' classroom.id %}" class="hero-pill-link" data-turbo-frame="_top" data-turbo-action="advance">
                 <i data-lucide="calendar-check" style="width: 16px; height: 16px;"></i>
                 Attendance
             </a>
-            <a href="{% url 'classroom_attendance_detail' classroom.id %}" class="hero-pill-link">
+            <a href="{% url 'classroom_attendance_detail' classroom.id %}" class="hero-pill-link" data-turbo-frame="_top" data-turbo-action="advance">
                 <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
                 Meeting Logs
             </a>
