@@ -2609,9 +2609,11 @@ function onDataReceived(payload, participant) {
                 }
             }
         } else if (msg.type === 'teacher_ended_quiz' || msg.type === 'teacher_left_quiz_ended') {
-            if (!isHost && isQuizActive) {
+            try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(e){}
+            if (typeof showQuizToggleButton === 'function') showQuizToggleButton(false);
+            if (!isHost) {
                 showNotification('🛑 Teacher ended the quiz. Your quiz progress has been automatically saved and submitted.', 'warning');
-                submitQuizAnswers(false);
+                if (isQuizActive) submitQuizAnswers(false);
             }
         } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted' || msg.type === 'quiz_student_started') {
             if (participant && participant.identity) {
@@ -2665,9 +2667,11 @@ function handleSignalingMessage(data) {
             break;
         case 'teacher_ended_quiz':
         case 'teacher_left_quiz_ended':
-            if (!isHost && isQuizActive) {
+            try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(e){}
+            if (typeof showQuizToggleButton === 'function') showQuizToggleButton(false);
+            if (!isHost) {
                 showNotification('🛑 Teacher ended the quiz. Your quiz progress has been automatically saved and submitted.', 'warning');
-                submitQuizAnswers(false);
+                if (isQuizActive) submitQuizAnswers(false);
             }
             break;
         case 'kick_user':
@@ -4800,6 +4804,9 @@ function confirmAndEndQuiz() {
     }
 
     stopTeacherQuizTimer();
+    activeLiveQuiz = null;
+    isQuizActive = false;
+
     const btn = document.getElementById('endQuizBtn');
     if (btn) {
         btn.disabled = true;
@@ -4817,6 +4824,10 @@ function confirmAndEndQuiz() {
     showNotification('🛑 Live Quiz has been ended for all students. Current progress submitted.', 'info');
     showQuizToggleButton(false);
     try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(_) {}
+
+    if (typeof switchSidebarTab === 'function') {
+        switchSidebarTab('people');
+    }
 }
 
 function openTeacherQuizMonitor(quiz) {
@@ -5388,7 +5399,9 @@ function broadcastQuizEvent(payload) {
             const encoder = new TextEncoder();
             const data = encoder.encode(jsonStr);
             if (typeof window.room.localParticipant.publishData === 'function') {
-                window.room.localParticipant.publishData(data, 0); // 0 = RELIABLE
+                window.room.localParticipant.publishData(data, { reliable: true }).catch(err => {
+                    console.warn('LiveKit publishData async error:', err);
+                });
             }
         } catch(e) {
             console.warn('LiveKit publishData error:', e);
