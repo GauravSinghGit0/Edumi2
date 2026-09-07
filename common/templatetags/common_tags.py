@@ -156,8 +156,15 @@ NAV_ITEM_GROUPS = {
             'submit_assignment', 'evaluate_submission', 'delete_question_file',
             'classroom_quizzes', 'create_quiz', 'edit_quiz', 'quiz_detail', 'add_question',
             'delete_question', 'take_quiz', 'quiz_time_status', 'evaluate_quiz_submission',
+            'classroom_attendance_overview', 'daily_report', 'student_report', 'export_excel',
+            'set_class_schedule', 'attendance_settings', 'my_attendance', 'override_attendance',
+            'attendance_report',
         },
-        'path_prefixes': ('/meetings/classroom/', '/classroom/', '/classrooms/', '/assignments/'),
+        'path_prefixes': (
+            '/meetings/classroom/', '/classroom/', '/classrooms/', '/assignments/',
+            '/attendance/classroom/', '/attendance/schedule/', '/attendance/settings/',
+            '/attendance/my/', '/attendance/override/', '/attendance/report/',
+        ),
     },
     'meetings': {
         'url_names': {

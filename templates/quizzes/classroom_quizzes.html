@@ -333,18 +333,23 @@
 </style>
 
 <div class="quizzes-container">
-    <!-- Hero Header -->
-    <div class="quiz-hero-card">
-        <div>
-            <span style="font-weight: 700; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.6875rem;">{{ classroom.title }} • Quizzes</span>
-            <h1>Quizzes & Tests</h1>
-            <p>Create, manage, and assess interactive classroom evaluations</p>
+    <!-- Page Header Card -->
+    <div class="attendance-header-card">
+        <div class="attendance-header-left">
+            <a href="{% url 'classroom_detail' classroom.id %}" class="breadcrumb-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+                <span>{{ classroom.title }}</span>
+            </a>
+            <h1 class="attendance-header-title">{{ classroom.title }} — Quizzes & Tests</h1>
+            <p class="attendance-header-subtitle">Create, manage, and assess interactive classroom evaluations.</p>
         </div>
         {% if is_teacher %}
-        <a href="{% url 'create_quiz' classroom.id %}" class="btn-hero-action" data-turbo-frame="_top">
-            <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
-            <span>Create Quiz</span>
-        </a>
+        <div class="attendance-header-actions">
+            <a href="{% url 'create_quiz' classroom.id %}" class="btn-action btn-primary" data-turbo-frame="_top">
+                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+                <span>Create Quiz</span>
+            </a>
+        </div>
         {% endif %}
     </div>
 

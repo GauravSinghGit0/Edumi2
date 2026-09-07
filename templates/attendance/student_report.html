@@ -4,53 +4,15 @@
 {% block title %}{{ student.get_full_name|default:student.username }} — Attendance{% endblock %}
 {% block page_title %}Student Attendance{% endblock %}
 
-{% block extra_css %}
-<style>
-.report-page { max-width: 860px; margin: 0 auto; padding-bottom: 48px; }
-.card { background:var(--bg-card,#fff); border:1px solid var(--border-color,rgba(0,0,0,.08)); border-radius:20px; overflow:hidden; box-shadow:0 2px 16px rgba(0,0,0,.05); margin-bottom:20px; }
-.card-pad { padding: 24px; }
-.profile-header { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
-.profile-avatar { width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid rgba(102,126,234,.3); }
-.profile-info h2 { margin:0 0 4px; font-size:1.2rem; font-weight:800; }
-.profile-info p  { margin:0; opacity:.55; font-size:.875rem; }
-.stats-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap:14px; margin-top:20px; }
-.stat-mini { background:rgba(102,126,234,.06); border-radius:12px; padding:14px; text-align:center; }
-.stat-mini .sv { font-size:1.6rem; font-weight:800; }
-.stat-mini .sl { font-size:.72rem; opacity:.55; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-.green { color:#10b981; } .red { color:#ef4444; } .blue { color:#667eea; } .amber { color:#f59e0b; }
-
-/* Progress ring */
-.ring-wrap { display:flex; align-items:center; justify-content:center; margin: 20px 0 8px; }
-.ring { transform: rotate(-90deg); }
-.ring circle { fill: none; stroke-width: 8; }
-.ring-bg    { stroke: rgba(0,0,0,.08); }
-.ring-fill  { stroke: url(#ringGrad); stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
-.ring-text  { font-size:1.6rem; font-weight:800; text-anchor:middle; dominant-baseline:middle; fill:var(--text-main,#1a1a2e); }
-.ring-sub   { font-size:.65rem; text-anchor:middle; fill:var(--text-muted,#999); }
-
-table { width:100%; border-collapse:collapse; }
-thead th { padding:11px 16px; text-align:left; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; opacity:.45; background:rgba(0,0,0,.02); border-bottom:1px solid var(--border-color,rgba(0,0,0,.06)); }
-tbody td { padding:12px 16px; font-size:.875rem; border-bottom:1px solid var(--border-color,rgba(0,0,0,.04)); }
-tbody tr:last-child td { border-bottom:none; }
-tbody tr:hover { background:rgba(102,126,234,.04); }
-.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.73rem; font-weight:700; }
-.badge-present { background:rgba(16,185,129,.15); color:#10b981; }
-.badge-absent  { background:rgba(239,68,68,.12); color:#ef4444; }
-.badge-late    { background:rgba(245,158,11,.15); color:#f59e0b; }
-.badge-partial { background:rgba(99,102,241,.12); color:#6366f1; }
-.back-btn { display:inline-flex; align-items:center; gap:6px; color:var(--text-muted,#666); text-decoration:none; font-size:.875rem; margin-bottom:20px; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="report-page">
-    <a href="{% url 'classroom_attendance_overview' classroom.id %}" class="back-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="15 18 9 12 15 6"/></svg>
-        Back to {{ classroom.title }}
+<div class="attendance-container">
+    <a href="{% url 'classroom_detail' classroom.id %}" class="breadcrumb-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>{{ classroom.title }}</span>
     </a>
 
     <!-- Profile Card -->
-    <div class="card card-pad" style="margin-bottom:20px;">
+    <div class="attendance-table-card" style="padding: var(--space-lg) var(--space-xl);">
         <div class="profile-header">
             <img src="{{ student.userprofile.get_profile_picture_url }}" alt="{{ student.username }}" class="profile-avatar"
                  onerror="this.src='https://ui-avatars.com/api/?name={{ student.username }}&background=667eea&color=fff'">
@@ -61,41 +23,56 @@ tbody tr:hover { background:rgba(102,126,234,.04); }
         </div>
 
         <!-- Attendance donut + stats -->
-        <div style="display:flex; align-items:center; gap:32px; flex-wrap:wrap; margin-top:20px;">
-            <div style="text-align:center; flex-shrink:0;">
-                <svg class="ring" width="110" height="110" viewBox="0 0 110 110" data-pct="{{ percentage }}">
+        <div style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border, #e2e8f0);">
+            <div style="display:flex; align-items:center; justify-content:center;">
+                <svg class="ring" width="110" height="110" viewBox="0 0 110 110" data-pct="{{ percentage }}" style="transform: rotate(-90deg);">
                     <defs>
                         <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#667eea"/>
                             <stop offset="100%" stop-color="#764ba2"/>
                         </linearGradient>
                     </defs>
-                    <circle class="ring-bg" cx="55" cy="55" r="46"/>
-                    <circle class="ring-fill" cx="55" cy="55" r="46"
+                    <circle cx="55" cy="55" r="46" style="fill:none; stroke-width:8; stroke:var(--color-border, #e2e8f0);"/>
+                    <circle cx="55" cy="55" r="46" style="fill:none; stroke-width:8; stroke:url(#ringGrad); stroke-linecap:round; transition:stroke-dashoffset 1s ease;"
                         stroke-dasharray="289"
                         stroke-dashoffset="289"
                         id="ringFill"/>
-                    <text class="ring-text" x="55" y="50">{{ percentage }}%</text>
-                    <text class="ring-sub"  x="55" y="66">Attendance</text>
+                    <text x="55" y="50" style="font-size:1.6rem; font-weight:800; text-anchor:middle; dominant-baseline:middle; fill:var(--color-text-main, #0f172a); transform:rotate(90deg); transform-origin:center;">{{ percentage }}%</text>
+                    <text x="55" y="66" style="font-size:0.65rem; text-anchor:middle; fill:var(--color-text-muted, #64748b); transform:rotate(90deg); transform-origin:center;">Attendance</text>
                 </svg>
             </div>
 
-            <div class="stats-row" style="flex:1;">
-                <div class="stat-mini"><div class="sv blue">{{ total }}</div><div class="sl">Total</div></div>
-                <div class="stat-mini"><div class="sv green">{{ present }}</div><div class="sl">Present</div></div>
-                <div class="stat-mini"><div class="sv red">{{ absent }}</div><div class="sl">Absent</div></div>
+            <div class="attendance-stats-grid" style="flex: 1; margin-bottom: 0;">
+                <div class="attendance-stat-card">
+                    <div class="stat-content">
+                        <span class="stat-label">Total Sessions</span>
+                        <div class="stat-value text-blue">{{ total }}</div>
+                    </div>
+                </div>
+                <div class="attendance-stat-card">
+                    <div class="stat-content">
+                        <span class="stat-label">Present</span>
+                        <div class="stat-value text-green">{{ present }}</div>
+                    </div>
+                </div>
+                <div class="attendance-stat-card">
+                    <div class="stat-content">
+                        <span class="stat-label">Absent</span>
+                        <div class="stat-value text-red">{{ absent }}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Records Table -->
-    <div class="card">
-        <div style="padding:18px 24px; border-bottom:1px solid var(--border-color,rgba(0,0,0,.06));">
-            <strong>Session History</strong>
+    <div class="attendance-table-card">
+        <div class="table-card-header">
+            <h3 class="table-card-title">Session History</h3>
         </div>
-        <div style="overflow-x:auto;">
+        <div class="table-responsive">
             {% if records %}
-            <table>
+            <table class="attendance-data-table">
                 <thead>
                     <tr><th>Date</th><th>Meeting</th><th>Status</th><th>Time</th><th>Confidence</th><th>Method</th></tr>
                 </thead>
@@ -105,7 +82,7 @@ tbody tr:hover { background:rgba(102,126,234,.04); }
                         <td><strong>{{ rec.date|date:"M d, Y" }}</strong></td>
                         <td>{{ rec.meeting.title }}</td>
                         <td>
-                            <span class="badge badge-{{ rec.status }}">
+                            <span class="status-badge badge-{{ rec.status }}">
                                 {% if rec.status == 'present' %}✓ Present
                                 {% elif rec.status == 'absent' %}✗ Absent
                                 {% elif rec.status == 'late' %}⏰ Late
@@ -113,14 +90,14 @@ tbody tr:hover { background:rgba(102,126,234,.04); }
                             </span>
                         </td>
                         <td>{% if rec.marked_present_at %}{{ rec.marked_present_at|time:"H:i" }}{% else %}—{% endif %}</td>
-                        <td>{% if rec.face_match_confidence %}{{ rec.get_confidence_pct }}{% else %}—{% endif %}</td>
-                        <td style="opacity:.6; font-size:.8rem;">{{ rec.get_verification_method_display }}</td>
+                        <td>{% if rec.face_match_confidence %}<strong>{{ rec.get_confidence_pct }}</strong>{% else %}—{% endif %}</td>
+                        <td style="color:var(--color-text-muted,#64748b); font-size:13px;">{{ rec.get_verification_method_display }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <p style="text-align:center; padding:32px; opacity:.5;">No records found.</p>
+            <div class="attendance-empty-state">No session records found for this student.</div>
             {% endif %}
         </div>
     </div>
@@ -128,13 +105,17 @@ tbody tr:hover { background:rgba(102,126,234,.04); }
 
 <script>
 // Animate ring on load
-window.addEventListener('DOMContentLoaded', () => {
+function initStudentRing() {
     const svg = document.querySelector('.ring[data-pct]');
     const pct = svg ? parseFloat(svg.dataset.pct) : 0;
     const circumference = 289;
     const offset = circumference - (pct / 100) * circumference;
     const fill = document.getElementById('ringFill');
     if (fill) fill.style.strokeDashoffset = offset;
-});
+}
+
+document.addEventListener('DOMContentLoaded', initStudentRing);
+document.addEventListener('turbo:load', initStudentRing);
 </script>
 {% endblock %}
+

@@ -4,100 +4,73 @@
 {% block title %}Daily Attendance — EduMi{% endblock %}
 {% block page_title %}Daily Attendance{% endblock %}
 
-{% block extra_css %}
-<style>
-.report-page { max-width: 960px; margin: 0 auto; padding-bottom: 48px; }
-
-/* Toolbar */
-.report-toolbar {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    margin-bottom: 24px; background: var(--bg-card,#fff);
-    border: 1px solid var(--border-color, rgba(0,0,0,.08));
-    border-radius: 16px; padding: 16px 20px;
-}
-.report-toolbar h2 { margin: 0; font-size: 1.05rem; font-weight: 700; flex: 1; }
-.date-picker { padding: 8px 14px; border: 1px solid rgba(102,126,234,.3); border-radius: 10px; font-size: .875rem; background: transparent; color: inherit; cursor: pointer; }
-.export-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: rgba(16,185,129,.1); color: #10b981;
-    border: 1px solid rgba(16,185,129,.3); padding: 8px 18px;
-    border-radius: 10px; font-size: .875rem; font-weight: 600; text-decoration: none; transition: all .2s;
-}
-.export-btn:hover { background: rgba(16,185,129,.2); }
-.back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted,#666); text-decoration: none; font-size: .875rem; }
-
-/* Stats Row */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
-.stat-card {
-    background: var(--bg-card,#fff); border: 1px solid var(--border-color,rgba(0,0,0,.08));
-    border-radius: 14px; padding: 16px; text-align: center;
-}
-.stat-card .sval { font-size: 1.8rem; font-weight: 800; }
-.stat-card .slbl { font-size: .75rem; font-weight: 600; opacity: .5; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
-.green  { color: #10b981; } .amber { color: #f59e0b; } .red { color: #ef4444; } .blue { color: #667eea; }
-
-/* Table */
-.data-card {
-    background: var(--bg-card,#fff); border: 1px solid var(--border-color,rgba(0,0,0,.08));
-    border-radius: 20px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,.05);
-}
-table { width: 100%; border-collapse: collapse; }
-thead th { padding: 12px 16px; text-align: left; font-size: .77rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .5; background: rgba(0,0,0,.02); border-bottom: 1px solid var(--border-color,rgba(0,0,0,.06)); }
-tbody td { padding: 13px 16px; font-size: .875rem; border-bottom: 1px solid var(--border-color,rgba(0,0,0,.04)); vertical-align: middle; }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: rgba(102,126,234,.04); }
-
-.avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
-.student-cell { display: flex; align-items: center; gap: 10px; }
-.student-name { font-weight: 600; font-size: .875rem; }
-.student-id   { font-size: .75rem; opacity: .55; }
-
-.badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: .74rem; font-weight: 700; }
-.badge-present { background: rgba(16,185,129,.15); color: #10b981; }
-.badge-absent  { background: rgba(239,68,68,.12); color: #ef4444; }
-.badge-late    { background: rgba(245,158,11,.15); color: #f59e0b; }
-.badge-partial { background: rgba(99,102,241,.12); color: #6366f1; }
-
-.conf-bar { width: 80px; height: 6px; background: rgba(0,0,0,.08); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
-.conf-fill { height: 100%; background: linear-gradient(90deg,#667eea,#764ba2); border-radius: 3px; }
-
-/* Override button */
-.override-btn { background: none; border: none; cursor: pointer; opacity: .5; transition: opacity .2s; padding: 4px; }
-.override-btn:hover { opacity: 1; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="report-page">
+<div class="attendance-container">
 
-    <!-- Toolbar -->
-    <div class="report-toolbar">
-        <a href="{% url 'classroom_attendance_overview' classroom.id %}" class="back-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="15 18 9 12 15 6"/></svg>
-            Back
-        </a>
-        <h2>{{ classroom.title }} — {{ report_date|date:"F j, Y" }}</h2>
-        <form method="get" style="display:flex; gap:8px; align-items:center;">
-            <input type="date" name="date" value="{{ date_str }}" class="date-picker" onchange="this.form.submit()">
-        </form>
-        <a href="{% url 'export_excel' classroom.id %}" class="export-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Export Excel
-        </a>
+    <!-- Toolbar Header Card -->
+    <div class="attendance-header-card">
+        <div class="attendance-header-left">
+            <a href="{% url 'classroom_detail' classroom.id %}" class="breadcrumb-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+                <span>{{ classroom.title }}</span>
+            </a>
+            <h1 class="attendance-header-title">{{ classroom.title }} — Daily Attendance</h1>
+        </div>
+        <div class="attendance-header-actions">
+            <form method="get" style="display:flex; gap:8px; align-items:center;">
+                <input type="date" name="date" value="{{ date_str }}" class="date-picker" onchange="this.form.submit()">
+            </form>
+            <a href="{% url 'export_excel' classroom.id %}" class="btn-action btn-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Export Excel
+            </a>
+        </div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-row">
-        <div class="stat-card"><div class="sval blue">{{ total }}</div><div class="slbl">Total</div></div>
-        <div class="stat-card"><div class="sval green">{{ present_count }}</div><div class="slbl">Present</div></div>
-        <div class="stat-card"><div class="sval amber">{{ late_count }}</div><div class="slbl">Late</div></div>
-        <div class="stat-card"><div class="sval red">{{ absent_count }}</div><div class="slbl">Absent</div></div>
+    <!-- Stats Grid -->
+    <div class="attendance-stats-grid">
+        <div class="attendance-stat-card">
+            <div class="stat-icon-wrapper icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Total Enrolled</span>
+                <div class="stat-value text-blue">{{ total }}</div>
+            </div>
+        </div>
+        <div class="attendance-stat-card">
+            <div class="stat-icon-wrapper icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Present</span>
+                <div class="stat-value text-green">{{ present_count }}</div>
+            </div>
+        </div>
+        <div class="attendance-stat-card">
+            <div class="stat-icon-wrapper icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Late</span>
+                <div class="stat-value text-amber">{{ late_count }}</div>
+            </div>
+        </div>
+        <div class="attendance-stat-card">
+            <div class="stat-icon-wrapper icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Absent</span>
+                <div class="stat-value text-red">{{ absent_count }}</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Table -->
-    <div class="data-card">
-        <div style="overflow-x:auto;">
-            <table>
+    <!-- Table Card -->
+    <div class="attendance-table-card">
+        <div class="table-responsive">
+            <table class="attendance-data-table">
                 <thead>
                     <tr>
                         <th>Student</th>
@@ -105,7 +78,7 @@ tbody tr:hover { background: rgba(102,126,234,.04); }
                         <th>Time In</th>
                         <th>Confidence</th>
                         <th>Method</th>
-                        <th>Action</th>
+                        <th style="text-align: right;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,34 +86,36 @@ tbody tr:hover { background: rgba(102,126,234,.04); }
                     <tr id="row-{{ row.student.id }}">
                         <td>
                             <div class="student-cell">
-                                <img src="{{ row.student.userprofile.get_profile_picture_url }}" alt="{{ row.student.username }}" class="avatar"
+                                <img src="{{ row.student.userprofile.get_profile_picture_url }}" alt="{{ row.student.username }}" class="avatar-img"
                                      onerror="this.src='https://ui-avatars.com/api/?name={{ row.student.username }}&background=667eea&color=fff'">
                                 <div>
                                     <div class="student-name">{{ row.student.get_full_name|default:row.student.username }}</div>
-                                    <div class="student-id">{{ row.student.userprofile.student_id|default:"—" }}</div>
+                                    <div class="student-id">ID: {{ row.student.userprofile.student_id|default:"—" }}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <span class="badge badge-{{ row.status }}" id="badge-{{ row.student.id }}">
+                            <span class="status-badge badge-{{ row.status }}" id="badge-{{ row.student.id }}">
                                 {% if row.status == 'present' %}✓ Present
                                 {% elif row.status == 'absent' %}✗ Absent
                                 {% elif row.status == 'late' %}⏰ Late
                                 {% else %}Partial{% endif %}
                             </span>
                         </td>
-                        <td>{% if row.time_in %}{{ row.time_in|time:"H:i" }}{% else %}<span style="opacity:.4;">—</span>{% endif %}</td>
+                        <td>{% if row.time_in %}<strong>{{ row.time_in|time:"H:i" }}</strong>{% else %}<span style="opacity:.4;">—</span>{% endif %}</td>
                         <td>
                             {% if row.confidence %}
-                            <div class="conf-bar"><div class="conf-fill" style="width:{{ row.confidence }}%"></div></div>
-                            {{ row.confidence }}%
+                            <div class="conf-wrap">
+                                <div class="conf-bar"><div class="conf-fill" style="width:{{ row.confidence }}%"></div></div>
+                                <strong>{{ row.confidence }}%</strong>
+                            </div>
                             {% else %}<span style="opacity:.4;">—</span>{% endif %}
                         </td>
-                        <td style="opacity:.65; font-size:.8rem;">{{ row.method|default:"—" }}</td>
-                        <td>
+                        <td style="opacity:.7; font-size:13px;">{{ row.method|default:"—" }}</td>
+                        <td style="text-align: right;">
                             {% if row.record %}
                             <button class="override-btn" onclick="openOverride({{ row.record.id }}, '{{ row.record.status }}')" title="Override attendance">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
                             {% endif %}
                         </td>
@@ -157,12 +132,12 @@ tbody tr:hover { background: rgba(102,126,234,.04); }
     display:none; position:fixed; inset:0; z-index:9999;
     background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
     align-items:center; justify-content:center;">
-    <div style="background:var(--bg-card,#fff); border-radius:20px; padding:28px; max-width:420px; width:92%;">
-        <h3 style="margin:0 0 16px; font-size:1.05rem;">Override Attendance</h3>
+    <div style="background:var(--color-bg-card,#fff); color:var(--color-text-main,#0f172a); border:1px solid var(--color-border,#e2e8f0); border-radius:16px; padding:28px; max-width:420px; width:92%; box-shadow:var(--shadow-xl);">
+        <h3 style="margin:0 0 16px; font-size:1.1rem; font-weight:800;">Override Attendance</h3>
         <input type="hidden" id="overrideRecordId">
         <div style="margin-bottom:14px;">
-            <label style="display:block; font-size:.85rem; font-weight:600; margin-bottom:6px;">New Status</label>
-            <select id="overrideStatus" style="width:100%; padding:10px 14px; border:1px solid rgba(102,126,234,.3); border-radius:10px; background:transparent; color:inherit;">
+            <label style="display:block; font-size:.85rem; font-weight:600; margin-bottom:6px; color:var(--color-text-muted,#64748b);">New Status</label>
+            <select id="overrideStatus" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#e2e8f0); border-radius:10px; background:var(--color-bg-card,#fff); color:inherit;">
                 <option value="present">✓ Present</option>
                 <option value="late">⏰ Late</option>
                 <option value="absent">✗ Absent</option>
@@ -170,14 +145,14 @@ tbody tr:hover { background: rgba(102,126,234,.04); }
             </select>
         </div>
         <div style="margin-bottom:20px;">
-            <label style="display:block; font-size:.85rem; font-weight:600; margin-bottom:6px;">Reason</label>
-            <textarea id="overrideReason" rows="2" placeholder="e.g. Internet outage" style="width:100%; padding:10px 14px; border:1px solid rgba(102,126,234,.3); border-radius:10px; background:transparent; color:inherit; resize:none; font-family:inherit;"></textarea>
+            <label style="display:block; font-size:.85rem; font-weight:600; margin-bottom:6px; color:var(--color-text-muted,#64748b);">Reason</label>
+            <textarea id="overrideReason" rows="2" placeholder="e.g. Internet outage" style="width:100%; padding:10px 14px; border:1px solid var(--color-border,#e2e8f0); border-radius:10px; background:var(--color-bg-card,#fff); color:inherit; resize:none; font-family:inherit;"></textarea>
         </div>
         <div style="display:flex; gap:10px; justify-content:flex-end;">
             <button onclick="document.getElementById('overrideModal').style.display='none'"
-                style="padding:10px 20px; border-radius:10px; border:1px solid rgba(0,0,0,.12); background:none; cursor:pointer; font-weight:600;">Cancel</button>
+                style="padding:10px 20px; border-radius:10px; border:1px solid var(--color-border,#e2e8f0); background:none; cursor:pointer; font-weight:600; color:inherit;">Cancel</button>
             <button onclick="submitOverride()"
-                style="padding:10px 24px; border-radius:10px; border:none; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; font-weight:600; cursor:pointer;">Save</button>
+                style="padding:10px 24px; border-radius:10px; border:none; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; font-weight:700; cursor:pointer; box-shadow:var(--shadow-sm);">Save</button>
         </div>
     </div>
 </div>
@@ -216,3 +191,4 @@ function getCsrf() {
 }
 </script>
 {% endblock %}
+

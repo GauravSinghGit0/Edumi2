@@ -14,14 +14,13 @@
 
     /* ── Hero Banner Component (Matches Classroom Hero & Dashboard) ── */
     .classroom-hero {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-        border-radius: var(--radius-xl, 16px);
-        padding: var(--space-lg, 1.5rem) var(--space-xl, 2rem);
-        color: #ffffff !important;
-        margin-bottom: var(--space-lg, 1.5rem);
-        box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-        position: relative;
-        overflow: hidden;
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 12px);
+        padding: var(--space-lg) var(--space-xl);
+        color: var(--color-text-main, #0f172a);
+        margin-bottom: var(--space-lg);
+        box-shadow: var(--shadow-sm);
     }
 
     .classroom-hero::after {
@@ -46,7 +45,7 @@
     .hero-subtitle {
         font-size: var(--font-size-xs);
         font-weight: var(--font-weight-bold);
-        color: var(--color-primary-light, #818cf8);
+        color: var(--color-text-muted, #64748b);
         letter-spacing: 0.08em;
         text-transform: uppercase;
         margin-bottom: var(--space-2xs);
@@ -54,17 +53,17 @@
     }
 
     .hero-title {
-        font-size: var(--font-size-3xl, 1.75rem);
+        font-size: var(--font-size-3xl, 1.6rem);
         font-weight: var(--font-weight-bold);
         margin: 0 0 var(--space-xs) 0;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
         line-height: 1.25;
-        color: #ffffff !important;
+        color: var(--color-text-main, #0f172a) !important;
     }
 
     .hero-desc {
         font-size: var(--font-size-md);
-        color: rgba(255, 255, 255, 0.88);
+        color: var(--color-text-muted, #64748b);
         margin: 0 0 var(--space-md) 0;
         max-width: 820px;
         line-height: 1.5;
@@ -78,14 +77,13 @@
     }
 
     .badge-glass {
-        background: rgba(255, 255, 255, 0.12);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: var(--radius-full);
+        background: var(--color-bg-hover, #f1f5f9);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-full, 9999px);
         padding: 0.25rem 0.75rem;
         font-size: var(--font-size-xs);
         font-weight: var(--font-weight-semibold);
-        color: #ffffff;
+        color: var(--color-text-main, #334155);
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
@@ -406,6 +404,10 @@
 <div class="quiz-detail-page">
     <!-- Classroom Hero Banner (Standard Design Component) -->
     <div class="classroom-hero">
+        <a href="{% url 'classroom_quizzes' classroom.id %}" class="breadcrumb-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+            <span>Quizzes</span>
+        </a>
         <div class="hero-top-row">
             <div>
                 <span class="hero-subtitle">
