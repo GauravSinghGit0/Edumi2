@@ -1,12 +1,22 @@
 """
-Custom middleware for error handling
+Custom middleware for error handling and system performance logging.
 """
+import time
+import os
 import logging
+import traceback
 from django.http import JsonResponse
 from django.db import OperationalError
 from django.shortcuts import render
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 logger = logging.getLogger(__name__)
+perf_logger = logging.getLogger('performance')
+error_logger = logging.getLogger('django.request')
 
 
 class DatabaseErrorMiddleware:
@@ -45,13 +55,6 @@ class DatabaseErrorMiddleware:
                         'error': 'Database is temporarily locked. Please try again in a moment.',
                         'retry': True
                     }, status=503)
-import time
-import os
-import psutil
-import traceback
-
-perf_logger = logging.getLogger('performance')
-error_logger = logging.getLogger('django.request')
 
 
 class SystemPerformanceLoggingMiddleware:
@@ -62,7 +65,7 @@ class SystemPerformanceLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
         try:
-            self.process = psutil.Process(os.getpid())
+            self.process = psutil.Process(os.getpid()) if psutil else None
         except Exception:
             self.process = None
 
@@ -75,7 +78,6 @@ class SystemPerformanceLoggingMiddleware:
 
         # Gather system resource telemetry
         mem_mb = 0
-        cpu_pct = 0
         if self.process:
             try:
                 mem_mb = self.process.memory_info().rss / (1024 * 1024)
@@ -83,8 +85,12 @@ class SystemPerformanceLoggingMiddleware:
                 pass
 
         # Log performance metrics for requests
-        user_info = getattr(request.user, 'username', 'anonymous') if hasattr(request, 'user') else 'anonymous'
-        if duration_ms >= 50 or '/meetings/' in request.path or '/cameras/' in request.path or '/api/' in request.path:
+        try:
+            user_info = getattr(request.user, 'username', 'anonymous') if hasattr(request, 'user') else 'anonymous'
+        except Exception:
+            user_info = 'anonymous'
+
+        if duration_ms >= 50 or any(p in request.path for p in ('/meetings/', '/cameras/', '/api/')):
             perf_logger.info(
                 f"[PERF] path={request.path} method={request.method} status={response.status_code} "
                 f"duration={duration_ms:.1f}ms memory={mem_mb:.1f}MB user={user_info}"
@@ -94,10 +100,13 @@ class SystemPerformanceLoggingMiddleware:
 
     def process_exception(self, request, exception):
         tb = traceback.format_exc()
-        user_info = getattr(request.user, 'username', 'anonymous') if hasattr(request, 'user') else 'anonymous'
+        try:
+            user_info = getattr(request.user, 'username', 'anonymous') if hasattr(request, 'user') else 'anonymous'
+        except Exception:
+            user_info = 'anonymous'
+
         error_logger.error(
             f"[CRASH_LOG] path={request.path} method={request.method} user={user_info} "
             f"exception={type(exception).__name__}: {str(exception)}\nTraceback:\n{tb}"
         )
         return None
-

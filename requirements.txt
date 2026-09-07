@@ -79,3 +79,4 @@ whitenoise
 zope.interface
 dlib-bin
 face_recognition
+psutil>=5.9.0
