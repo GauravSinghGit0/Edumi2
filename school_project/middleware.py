@@ -34,11 +34,15 @@ class DatabaseErrorMiddleware:
                         'retry': True
                     }, status=503)
                 
-                # For regular requests, render an error page
                 try:
                     return render(request, 'error.html', {
                         'error_title': 'Database Temporarily Locked',
                         'error_message': 'The database is currently busy. Please wait a moment and try again.',
+                        'retry': True
+                    }, status=503)
+                except Exception:
+                    return JsonResponse({
+                        'error': 'Database is temporarily locked. Please try again in a moment.',
                         'retry': True
                     }, status=503)
 import time
