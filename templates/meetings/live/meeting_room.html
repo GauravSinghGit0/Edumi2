@@ -4940,8 +4940,8 @@ function updateTeacherMonitorStudentList() {
         const uid = String(p.identity);
         let name = p.name;
         if (window.IdentityDirectory) {
-            const dirName = window.IdentityDirectory.getName(uid);
-            if (dirName && dirName !== uid) name = dirName;
+            const userRec = window.IdentityDirectory.resolve(uid, name);
+            if (userRec && userRec.displayName) name = userRec.displayName;
         }
         if (!name) name = uid;
 
