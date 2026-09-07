@@ -853,7 +853,7 @@
                         <span>Chat</span>
                         <span class="chat-tab-badge" id="chatBadge" style="display: none;">0</span>
                     </button>
-                    <button class="sidebar-tab" onclick="switchSidebarTab('quiz')" id="quizTabBtn" role="tab" aria-selected="false">
+                    <button class="sidebar-tab" onclick="switchSidebarTab('quiz')" id="quizTabBtn" role="tab" aria-selected="false" style="display: none;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                         <span>Quiz</span>
                         <span class="chat-tab-badge" id="quizTabBadge" style="display: none;">!</span>
@@ -4736,9 +4736,23 @@ function toggleQuizPanel() {
     }
 }
 
+function showQuizTabButton(show) {
+    const btn = document.getElementById('quizTabBtn');
+    if (!btn) return;
+    if (show) {
+        btn.style.display = 'inline-flex';
+    } else {
+        btn.style.display = 'none';
+        if (btn.classList.contains('active')) {
+            switchSidebarTab('people');
+        }
+    }
+}
+
 function showQuizToggleButton(show) {
     const btn = document.getElementById('activeQuizToggleBtn');
     if (btn) btn.style.display = show ? 'flex' : 'none';
+    showQuizTabButton(show);
 }
 
 let teacherQuizStartTimestamp = null;
@@ -4801,6 +4815,7 @@ function confirmAndEndQuiz() {
     }
 
     showNotification('🛑 Live Quiz has been ended for all students. Current progress submitted.', 'info');
+    showQuizToggleButton(false);
     try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(_) {}
 }
 
