@@ -1010,7 +1010,7 @@
     right: 0;
     top: clamp(56px, 8vh, 72px);
     bottom: 0;
-    width: 300px;
+    width: 350px;
     background: #0f172a;
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
@@ -1038,10 +1038,11 @@
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     gap: 3px;
+    align-items: center;
 }
 
 .sidebar-tab {
-    padding: 5px 14px;
+    padding: 5px 10px;
     background: transparent;
     border: none;
     border-radius: 16px;
@@ -1052,7 +1053,7 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     font-family: inherit;
     position: relative;
 }

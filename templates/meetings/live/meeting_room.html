@@ -131,23 +131,15 @@
     }
 
     .quiz-side-panel {
-        position: fixed;
-        top: 75px;
-        right: 20px;
-        bottom: 85px;
-        width: 420px;
-        max-width: calc(100vw - 40px);
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
-        z-index: 99999;
-        display: flex;
+        width: 100%;
+        height: 100%;
+        display: none;
         flex-direction: column;
         overflow: hidden;
-        animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        background: transparent;
+    }
+    .quiz-side-panel.active {
+        display: flex;
     }
 
     .quiz-panel-close-btn {
@@ -338,22 +330,204 @@
         transition: background 0.2s;
     }
 
+    /* Teacher Quiz Monitor Segmented Status Bar & Active Card */
+    .quiz-active-card {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1.5px solid rgba(59, 130, 246, 0.25);
+        border-radius: 16px;
+        padding: 14px 16px;
+    }
+
+    .quiz-timer-pill-bar {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        border-radius: 30px;
+        padding: 7px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .btn-end-quiz-pill {
+        width: 100%;
+        padding: 11px 16px;
+        background: linear-gradient(135deg, #ff4b6e, #ef4444);
+        color: #ffffff;
+        border: none;
+        border-radius: 14px;
+        font-size: 13.5px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        transition: all 0.2s ease;
+    }
+
+    .btn-end-quiz-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+    }
+
+    .quiz-status-tabs-container {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1.5px solid rgba(59, 130, 246, 0.2);
+        border-radius: 16px;
+        padding: 5px 6px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .quiz-status-tab {
+        flex: 1;
+        padding: 7px 6px;
+        background: transparent;
+        color: #94a3b8;
+        border: none;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .quiz-status-tab:hover {
+        color: #f1f5f9;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .quiz-status-tab.active {
+        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.5) !important;
+    }
+
+    .quiz-status-tab.active#quizTabFlagged {
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5) !important;
+    }
+
+    .quiz-status-divider {
+        height: 18px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        flex-shrink: 0;
+    }
+
+    .quiz-status-tab.flagged-pulsing {
+        animation: flaggedPulse 1.5s infinite ease-in-out;
+        border: 1px solid rgba(239, 68, 68, 0.6) !important;
+    }
+
+    @keyframes flaggedPulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+            background: rgba(239, 68, 68, 0.15);
+        }
+        50% {
+            box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+            background: rgba(239, 68, 68, 0.3);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            background: rgba(239, 68, 68, 0.15);
+        }
+    }
+
+    .teacher-student-row {
+        background: rgba(30, 41, 59, 0.4);
+        padding: 7px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 2px;
+        transition: background 0.15s ease;
+    }
+
+    .teacher-student-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .teacher-student-row.completed-row {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .teacher-student-row.in-progress-row {
+        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.2);
+    }
+
+    .teacher-student-row.flagged-row {
+        background: rgba(244, 63, 94, 0.12);
+        border-color: rgba(244, 63, 94, 0.3);
+    }
+
     .btn-success-quiz:hover { background: #059669; }
+
+    /* ── Draggable Sidebar Resizer Handle ── */
+    .meet-sidebar {
+        min-width: 260px;
+        max-width: 80vw;
+    }
+
+    .sidebar-resizer {
+        position: absolute;
+        left: -5px;
+        top: 0;
+        bottom: 0;
+        width: 10px;
+        cursor: ew-resize;
+        z-index: 100;
+        background: transparent;
+        transition: background 0.2s ease;
+    }
+
+    .sidebar-resizer::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        transition: background 0.2s ease, width 0.2s ease;
+    }
+
+    .sidebar-resizer:hover::after,
+    .sidebar-resizer.is-resizing::after {
+        background: #6366f1;
+        width: 3px;
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.8);
+    }
+
+    body.sidebar-resizing {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        cursor: ew-resize !important;
+    }
+
+    body.sidebar-resizing * {
+        cursor: ew-resize !important;
+    }
 
     /* ── Adaptive Layout & Responsive Media Queries ── */
     @media (max-width: 768px) {
-        .quiz-side-panel {
-            width: 100vw !important;
-            max-width: 100vw !important;
-            left: 0 !important;
-            right: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            border-left: none !important;
-            border-radius: 0 !important;
-            z-index: 100005 !important;
-        }
-
         .quiz-panel-header {
             padding: 12px 14px;
         }
@@ -405,19 +579,7 @@
         }
     }
 
-    @media (min-width: 769px) and (max-width: 1024px) {
-        .quiz-side-panel {
-            width: 360px !important;
-            max-width: 100vw !important;
-        }
-    }
 
-    @media (min-width: 1025px) {
-        .quiz-side-panel {
-            width: 420px;
-            max-width: 100vw;
-        }
-    }
 
     .quiz-card-select-item {
         background: #1e293b;
@@ -678,6 +840,8 @@
 
         <!-- People / Chat Sidebar (Google Meet Style) -->
         <div class="meet-sidebar" id="meetSidebar" style="display:none;">
+            <!-- Draggable Sidebar Resizer Handle -->
+            <div class="sidebar-resizer" id="sidebarResizer" title="Drag left or right to resize sidebar width"></div>
             <div class="sidebar-header">
                 <div class="sidebar-tabs" role="tablist">
                     <button class="sidebar-tab active" onclick="switchSidebarTab('people')" id="peopleTabBtn" role="tab" aria-selected="true">
@@ -688,6 +852,11 @@
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         <span>Chat</span>
                         <span class="chat-tab-badge" id="chatBadge" style="display: none;">0</span>
+                    </button>
+                    <button class="sidebar-tab" onclick="switchSidebarTab('quiz')" id="quizTabBtn" role="tab" aria-selected="false">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span>Quiz</span>
+                        <span class="chat-tab-badge" id="quizTabBadge" style="display: none;">!</span>
                     </button>
                 </div>
                 <button class="close-sidebar" onclick="toggleSidebar()" title="Close panel" aria-label="Close panel">
@@ -756,26 +925,149 @@
                         </div>
                     </div>
                 </div>
+
+                {% if is_host %}
+                <!-- Live Meeting Teacher Quiz Monitoring Dashboard Side Panel -->
+                <div class="sidebar-panel quiz-side-panel" id="teacherQuizMonitorPanel" role="tabpanel">
+                    <div class="quiz-panel-header" style="background: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding: 12px 14px 6px 14px;">
+                        <div class="quiz-panel-title-box" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <h3 id="teacherMonitorTitle" style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8;"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                                <span>Live Quiz Dashboard</span>
+                            </h3>
+                            <span id="teacherMonitorSubCount" style="background: #10b981; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">0 Submitted</span>
+                        </div>
+                    </div>
+
+                    <div class="quiz-panel-body" style="padding: 12px; display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 12px; flex: 1; background: #0f172a;">
+                        <!-- Active Quiz Banner + Timer + End Quiz Button Card -->
+                        <div class="quiz-active-card">
+                            <div style="font-size: 11px; font-weight: 700; color: #818cf8; letter-spacing: 0.8px; text-transform: uppercase;">ACTIVE QUIZ</div>
+                            <div id="teacherMonitorQuizName" style="font-size: 18px; font-weight: 800; color: #ffffff; margin-top: 4px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                            
+                            <!-- Real-time Quiz Timer & Anti-cheating Pill Bar -->
+                            <div class="quiz-timer-pill-bar">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span style="color: #94a3b8; font-size: 12px; font-weight: 500;">Elapsed</span>
+                                    <span id="teacherQuizTimerText" style="color: #38bdf8; font-size: 15px; font-weight: 800; font-family: inherit;">00:00</span>
+                                </div>
+                                <div style="height: 16px; width: 1px; background: rgba(255, 255, 255, 0.15);"></div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                                    <span style="color: #f87171; font-size: 12px; font-weight: 600;">Anti-Cheating Active</span>
+                                </div>
+                            </div>
+
+                            <!-- Vibrant End Quiz Pill Button -->
+                            <button id="endQuizBtn" class="btn-end-quiz-pill" onclick="confirmAndEndQuiz()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="3" ry="3"/></svg>
+                                <span>End Quiz for All Students</span>
+                            </button>
+                        </div>
+
+                        <!-- Cheating Alerts Container -->
+                        <div id="teacherMonitorAlertsBox" style="display: flex; flex-direction: column; gap: 6px;"></div>
+
+                        <!-- Horizontal Segmented Status Tab Bar -->
+                        <div class="quiz-status-tabs-container">
+                            <button type="button" class="quiz-status-tab active" onclick="switchTeacherQuizTab('completed')" id="quizTabCompleted" title="Completed / Done Students">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                                <span id="badgeCatCompleted" style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                            </button>
+                            <div class="quiz-status-divider"></div>
+                            <button type="button" class="quiz-status-tab" onclick="switchTeacherQuizTab('in_progress')" id="quizTabInProgress" title="In Progress Students">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span id="badgeCatInProgress" style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                            </button>
+                            <div class="quiz-status-divider"></div>
+                            <button type="button" class="quiz-status-tab" onclick="switchTeacherQuizTab('not_started')" id="quizTabNotStarted" title="Not Started Students">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                                <span id="badgeCatNotStarted" style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                            </button>
+                            <div class="quiz-status-divider"></div>
+                            <button type="button" class="quiz-status-tab" onclick="switchTeacherQuizTab('flagged')" id="quizTabFlagged" title="Flagged / Suspicious Activity">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span id="badgeCatFlagged" style="background: rgba(239,68,68,0.25); color: #f87171; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Scrollable Active Tab Content Area -->
+                        <div id="teacherQuizTabContent" style="flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 6px; min-height: 100px;">
+                            <!-- Rendered list of students for active status tab -->
+                        </div>
+
+                        <!-- Hidden containers for backward compatibility -->
+                        <div id="teacherMonitorStudentsList" style="display: none;"></div>
+                        <span id="teacherMonitorTotalStudents" style="display: none;">0 Joined</span>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Live Meeting Student Quiz Side Panel -->
+                <div class="sidebar-panel quiz-side-panel" id="meetingQuizSidePanel" role="tabpanel">
+                    <!-- Full Panel Anti-Cheating Warning Overlay Modal -->
+                    <div id="studentQuizWarningModal" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+                        <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+                        <h3 id="quizWarningModalTitle" style="color: #ef4444; margin: 0 0 8px 0; font-size: 16px; font-weight: 700;">WARNING 1 / 2</h3>
+                        <p id="quizWarningModalText" style="color: #cbd5e1; font-size: 12px; margin: 0 0 14px 0; line-height: 1.5;">You switched tabs or window apps! Switching windows during a live test is strictly monitored.<br><strong style="color: #f87171;">3rd violation will AUTO-SUBMIT your test immediately!</strong></p>
+                        <button class="btn btn-primary-quiz" onclick="acknowledgeStudentQuizWarning()" style="padding: 8px 20px; font-weight: 600; background: #ef4444; border-color: #ef4444;">I Understand</button>
+                    </div>
+
+                    <div class="quiz-panel-header" style="padding: 12px 14px; background: #1e293b; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                        <div class="quiz-panel-title-box" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <h3 id="liveQuizPanelTitle" class="quiz-copy-protected" style="margin:0; font-size: 14px; font-weight: 700; color: #f8fafc;">Live Meeting Quiz</h3>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span id="studentWarningCountBadge" style="background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: 600;">⚠️ 0/2</span>
+                                <span id="liveQuizTimerBadge" style="display: none; background: #3b82f6; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 12px;">00:00</span>
+                            </div>
+                        </div>
+                        <div class="quiz-progress-text" id="liveQuizProgressText" style="margin-top:4px; font-size: 11px; color: #94a3b8;">Question 1 of 1</div>
+                    </div>
+
+                    <div class="quiz-panel-body" id="liveQuizPanelBody" style="flex: 1; padding: 14px; overflow-y: auto;">
+                        <!-- Anti-Cheating In-Panel Warning Box -->
+                        <div id="studentQuizWarningBox" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <span style="font-size: 16px;">⚠️</span>
+                                <div>
+                                    <div id="studentWarningBoxTitle" style="font-size: 12px; font-weight: 700; color: #fca5a5;">WARNING (1/2): Tab/Window Switch Detected!</div>
+                                    <div id="studentWarningBoxDesc" style="font-size: 11px; color: #f87171; margin-top: 2px;">Switching tabs or windows is strictly prohibited. 3rd violation auto-submits your test.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="quiz-question-container">
+                            <div class="quiz-question-badge" id="liveQuizQuestionMarks">1 Mark</div>
+                            <h4 class="quiz-question-text quiz-copy-protected" id="liveQuizQuestionText">Question text here...</h4>
+                            
+                            <!-- MCQ Choices Container -->
+                            <div id="liveQuizMcqContainer" class="quiz-options-list" style="display: none;"></div>
+
+                            <!-- Written Answer Container -->
+                            <div id="liveQuizWrittenContainer" style="display: none; margin-top: 12px;">
+                                <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">Your Written Answer:</label>
+                                <textarea id="liveQuizWrittenText" rows="5" class="quiz-textarea" placeholder="Type your answer here..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quiz-panel-footer" style="padding: 12px 14px; background: #1e293b; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between;">
+                        <div class="quiz-footer-left">
+                            <button id="liveQuizSkipBtn" class="btn btn-secondary-quiz" onclick="skipQuizQuestion()">Skip</button>
+                        </div>
+                        <div class="quiz-footer-right" style="display: flex; gap: 8px;">
+                            <button id="liveQuizNextBtn" class="btn btn-primary-quiz" onclick="nextQuizQuestion()">Next →</button>
+                            <button id="liveQuizSubmitBtn" class="btn btn-success-quiz" onclick="submitQuizAnswers()" style="display: none;">Submit Quiz</button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Controls -->
     <div class="meet-controls" role="toolbar" aria-label="Meeting Controls">
-
-        {% if is_host %}
-        <div class="meet-role-pill teacher" title="Host Controls Active">
-            <span class="role-pill-dot teacher"></span>
-            <span>HOST</span>
-        </div>
-        <div class="control-separator"></div>
-        {% else %}
-        <div class="meet-role-pill student" title="Student Session">
-            <span class="role-pill-dot student"></span>
-            <span>STUDENT</span>
-        </div>
-        <div class="control-separator"></div>
-        {% endif %}
 
         <!-- Mic -->
         <button class="control-button" id="micBtn" onclick="toggleMic()" title="Turn off microphone (Ctrl+D)" data-tooltip="Turn off microphone (Ctrl+D)">
@@ -795,12 +1087,6 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="7" fill="#ef4444" stroke="#ef4444"/></svg>
         </button>
         {% endif %}
-
-        <!-- Live Quiz Open/Close Toggle Button -->
-        <button class="control-button" id="activeQuizToggleBtn" onclick="toggleQuizPanel()" title="Live Quiz Panel" data-tooltip="Live Quiz Panel" style="display: none; background: #6366f1; color: #fff;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span class="notification-badge" id="quizActiveBadge" style="display:inline-block; background: #ef4444; width: 8px; height: 8px; border-radius: 50%; top: 4px; right: 4px;"></span>
-        </button>
 
         <!-- More Options Container -->
         <div class="more-options-container">
@@ -1010,102 +1296,9 @@
         </div>
     </div>
 </div>
-
-<!-- Live Meeting Teacher Quiz Monitoring Dashboard Side Panel -->
-<div id="teacherQuizMonitorPanel" class="quiz-side-panel" style="display: none;">
-    <div class="quiz-panel-header" style="background: linear-gradient(135deg, #1e1b4b, #312e81); border-bottom: 1px solid rgba(99,102,241,0.3); padding: 14px 16px;">
-        <div class="quiz-panel-title-box">
-            <h3 id="teacherMonitorTitle" style="color: #818cf8; font-size: 15px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
-                📊 Live Quiz Dashboard
-            </h3>
-            <span id="teacherMonitorSubCount" style="background: #10b981; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">0 Submitted</span>
-        </div>
-        <button onclick="closeTeacherQuizMonitor()" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;" title="Close Panel">✕</button>
-    </div>
-
-    <div class="quiz-panel-body" style="padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
-        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Active Quiz:</span>
-                <span id="teacherMonitorQuizName" style="font-size: 13px; color: #f8fafc; font-weight: 700;">-</span>
-            </div>
-            <div style="font-size: 11px; color: #f43f5e; font-weight: 500;">🔒 Anti-Cheating Active • Max 2 Warnings (3rd Auto-Submits)</div>
-        </div>
-
-        <div id="teacherMonitorAlertsBox" style="display: flex; flex-direction: column; gap: 6px;"></div>
-
-        <div>
-            <h4 style="font-size: 12px; color: #cbd5e1; font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
-                <span>Student Live Status</span>
-                <span id="teacherMonitorTotalStudents" style="font-size: 11px; color: #94a3b8; font-weight: 500;">0 Joined</span>
-            </h4>
-            <div id="teacherMonitorStudentsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        </div>
-    </div>
-</div>
 {% endif %}
 
-<!-- Live Meeting Student Quiz Side Panel -->
-<div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none;">
-    
-    <!-- Full Panel Anti-Cheating Warning Overlay Modal -->
-    <div id="studentQuizWarningModal" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;">
-        <div style="font-size: 44px; margin-bottom: 8px;">⚠️</div>
-        <h3 id="quizWarningModalTitle" style="color: #ef4444; margin: 0 0 8px 0; font-size: 18px; font-weight: 700;">WARNING 1 / 2</h3>
-        <p id="quizWarningModalText" style="color: #cbd5e1; font-size: 13px; margin: 0 0 16px 0; line-height: 1.5;">You switched tabs or window apps! Switching windows during a live test is strictly monitored.<br><strong style="color: #f87171;">3rd violation will AUTO-SUBMIT your test immediately!</strong></p>
-        <button class="btn btn-primary-quiz" onclick="acknowledgeStudentQuizWarning()" style="padding: 8px 24px; font-weight: 600; background: #ef4444; border-color: #ef4444;">I Understand</button>
-    </div>
 
-    <div class="quiz-panel-header">
-        <div class="quiz-panel-title-box" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <h3 id="liveQuizPanelTitle" class="quiz-copy-protected" style="margin:0;">Live Meeting Quiz</h3>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="studentWarningCountBadge" style="background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⚠️ Warnings: 0/2</span>
-                <span id="liveQuizTimerBadge" style="display: none; background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px;">00:00</span>
-                <button class="quiz-panel-close-btn" onclick="closeLiveQuizSidePanel()" title="Minimize / Close Quiz Panel">&times;</button>
-            </div>
-        </div>
-        <div class="quiz-progress-text" id="liveQuizProgressText" style="margin-top:4px;">Question 1 of 1</div>
-    </div>
-
-    <div class="quiz-panel-body" id="liveQuizPanelBody">
-
-        <!-- Anti-Cheating In-Panel Warning Box -->
-        <div id="studentQuizWarningBox" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
-            <div style="display: flex; align-items: flex-start; gap: 8px;">
-                <span style="font-size: 16px;">⚠️</span>
-                <div>
-                    <div id="studentWarningBoxTitle" style="font-size: 12px; font-weight: 700; color: #fca5a5;">WARNING (1/2): Tab/Window Switch Detected!</div>
-                    <div id="studentWarningBoxDesc" style="font-size: 11px; color: #f87171; margin-top: 2px;">Switching tabs or windows is strictly prohibited. 3rd violation auto-submits your test.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="quiz-question-container">
-            <div class="quiz-question-badge" id="liveQuizQuestionMarks">1 Mark</div>
-            <h4 class="quiz-question-text quiz-copy-protected" id="liveQuizQuestionText">Question text here...</h4>
-            
-            <!-- MCQ Choices Container -->
-            <div id="liveQuizMcqContainer" class="quiz-options-list" style="display: none;"></div>
-
-            <!-- Written Answer Container -->
-            <div id="liveQuizWrittenContainer" style="display: none; margin-top: 12px;">
-                <label style="display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 6px;">Your Written Answer:</label>
-                <textarea id="liveQuizWrittenText" rows="5" class="quiz-textarea" placeholder="Type your answer here..."></textarea>
-            </div>
-        </div>
-    </div>
-
-    <div class="quiz-panel-footer">
-        <div class="quiz-footer-left">
-            <button id="liveQuizSkipBtn" class="btn btn-secondary-quiz" onclick="skipQuizQuestion()">Skip</button>
-        </div>
-        <div class="quiz-footer-right" style="display: flex; gap: 8px;">
-            <button id="liveQuizNextBtn" class="btn btn-primary-quiz" onclick="nextQuizQuestion()">Next →</button>
-            <button id="liveQuizSubmitBtn" class="btn btn-success-quiz" onclick="submitQuizAnswers()" style="display: none;">Submit Quiz</button>
-        </div>
-    </div>
-</div>
 
 <script>
 // VERSION: TrackManager-v3 (2026-08-09) — if you don't see this in console, browser has cached old code
@@ -2415,12 +2608,12 @@ function onDataReceived(payload, participant) {
                     openTeacherQuizMonitor(msg.quiz);
                 }
             }
-        } else if (msg.type === 'teacher_left_quiz_ended') {
+        } else if (msg.type === 'teacher_ended_quiz' || msg.type === 'teacher_left_quiz_ended') {
             if (!isHost && isQuizActive) {
-                showNotification('🛑 Teacher left the meeting. Your quiz progress has been auto-submitted.', 'warning');
-                submitQuizAnswers(true);
+                showNotification('🛑 Teacher ended the quiz. Your quiz progress has been automatically saved and submitted.', 'warning');
+                submitQuizAnswers(false);
             }
-        } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted') {
+        } else if (msg.type === 'quiz_tab_switch_warning' || msg.type === 'quiz_copy_warning' || msg.type === 'quiz_submitted' || msg.type === 'quiz_student_started') {
             if (participant && participant.identity) {
                 if (!msg.student_id) msg.student_id = String(participant.identity);
                 if (!msg.student_name && participant.name) msg.student_name = participant.name;
@@ -2465,14 +2658,16 @@ function handleSignalingMessage(data) {
         case 'quiz_submitted':
         case 'quiz_tab_switch_warning':
         case 'quiz_copy_warning':
+        case 'quiz_student_started':
             if (isHost && typeof handleTeacherQuizEvent === 'function') {
                 handleTeacherQuizEvent(data);
             }
             break;
+        case 'teacher_ended_quiz':
         case 'teacher_left_quiz_ended':
             if (!isHost && isQuizActive) {
-                showNotification('🛑 Teacher left the meeting. Your quiz progress has been auto-submitted.', 'warning');
-                submitQuizAnswers(true);
+                showNotification('🛑 Teacher ended the quiz. Your quiz progress has been automatically saved and submitted.', 'warning');
+                submitQuizAnswers(false);
             }
             break;
         case 'kick_user':
@@ -3946,23 +4141,107 @@ async function leaveMeeting() {
     window.location.href = AFTER_LEAVE;
 }
 
-// ── Sidebar helpers ───────────────────────────────────────────────────────────
+// ── Sidebar helpers & Draggable Resizer ───────────────────────────────────────
+function getSidebarWidth() {
+    const s = document.getElementById('meetSidebar');
+    if (!s) return 350;
+    const w = parseFloat(s.style.width || window.getComputedStyle(s).width);
+    return isNaN(w) || w <= 0 ? 350 : w;
+}
+
 function openSidebar(tab) {
-    document.getElementById('meetSidebar').style.display = 'flex';
+    const s = document.getElementById('meetSidebar');
+    if (s) s.style.display = 'flex';
     document.getElementById('meetMain').classList.add('sidebar-open');
-    document.documentElement.style.setProperty('--face-badge-offset', '324px');
+    document.documentElement.style.setProperty('--face-badge-offset', (getSidebarWidth() + 24) + 'px');
     switchSidebarTab(tab);
     if (typeof updateLayout === 'function') updateLayout();
 }
 
 function toggleSidebar() {
     const s = document.getElementById('meetSidebar');
-    const isOpen = s.style.display !== 'none';
-    s.style.display = isOpen ? 'none' : 'flex';
+    const isOpen = s && s.style.display !== 'none';
+    if (s) s.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('meetMain').classList.toggle('sidebar-open', !isOpen);
-    document.documentElement.style.setProperty('--face-badge-offset', !isOpen ? '324px' : '24px');
+    document.documentElement.style.setProperty('--face-badge-offset', !isOpen ? (getSidebarWidth() + 24) + 'px' : '24px');
     if (typeof updateLayout === 'function') updateLayout();
 }
+
+(function initSidebarResizer() {
+    function setupResizer() {
+        const resizer = document.getElementById('sidebarResizer');
+        const sidebar = document.getElementById('meetSidebar');
+        if (!resizer || !sidebar) return;
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = parseFloat(sidebar.style.width || window.getComputedStyle(sidebar).width) || 350;
+            
+            resizer.classList.add('is-resizing');
+            document.body.classList.add('sidebar-resizing');
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+            // Dragging left increases width, dragging right decreases width
+            const dx = startX - e.clientX;
+            let newWidth = startWidth + dx;
+
+            // Bounds constraints: min 260px, max 700px (or 60% of viewport width)
+            const minWidth = 260;
+            const maxWidth = Math.min(700, window.innerWidth * 0.6);
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+            sidebar.style.width = newWidth + 'px';
+            document.documentElement.style.setProperty('--face-badge-offset', (newWidth + 24) + 'px');
+
+            if (typeof updateLayout === 'function') {
+                updateLayout();
+            }
+        }
+
+        function handleMouseUp() {
+            if (!isResizing) return;
+            isResizing = false;
+            resizer.classList.remove('is-resizing');
+            document.body.classList.remove('sidebar-resizing');
+
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+
+            try {
+                sessionStorage.setItem('meet_sidebar_width', sidebar.style.width);
+            } catch(_) {}
+        }
+
+        // Restore saved width if available
+        try {
+            const savedWidth = sessionStorage.getItem('meet_sidebar_width');
+            if (savedWidth) {
+                sidebar.style.width = savedWidth;
+                const numericWidth = parseFloat(savedWidth);
+                if (!isNaN(numericWidth)) {
+                    document.documentElement.style.setProperty('--face-badge-offset', (numericWidth + 24) + 'px');
+                }
+            }
+        } catch(_) {}
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupResizer);
+    } else {
+        setupResizer();
+    }
+})();
 
 // ── More Options ──────────────────────────────────────────────────────────────
 function toggleMoreOptions() {
@@ -4051,14 +4330,26 @@ document.addEventListener('keydown', function(e) {
 });
 
 function switchSidebarTab(tab) {
-    document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
-    // Use CSS class-based show/hide to match the .sidebar-panel / .sidebar-panel.active rules
+    document.querySelectorAll('.sidebar-tab').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+    });
     document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
-    document.querySelector(`.sidebar-tab[onclick*="${tab}"]`).classList.add('active');
-    const targetPanel = document.getElementById(tab + 'Panel');
+    
+    const targetBtn = document.getElementById(tab + 'TabBtn') || document.querySelector(`.sidebar-tab[onclick*="${tab}"]`);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.setAttribute('aria-selected', 'true');
+    }
+
+    let targetPanel = document.getElementById(tab + 'Panel');
+    if (!targetPanel && tab === 'quiz') {
+        targetPanel = isHost ? document.getElementById('teacherQuizMonitorPanel') : document.getElementById('meetingQuizSidePanel');
+    }
+
     if (targetPanel) {
         targetPanel.classList.add('active');
-        targetPanel.style.removeProperty('display'); // Clear any inline override
+        targetPanel.style.removeProperty('display');
     }
 
     if (tab === 'chat') {
@@ -4067,13 +4358,17 @@ function switchSidebarTab(tab) {
         if (badge) badge.style.display = 'none';
         const moreBadge = document.getElementById('moreBadge');
         if (moreBadge) moreBadge.style.display = 'none';
-        // Scroll chat to bottom on open
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
     } else if (tab === 'people') {
-        // Refresh participants and banned list when opening people tab
         updateParticipantsList();
         if (isHost) fetchBannedUsers();
+    } else if (tab === 'quiz') {
+        const quizBadge = document.getElementById('quizTabBadge');
+        if (quizBadge) quizBadge.style.display = 'none';
+        if (isHost) {
+            updateTeacherMonitorStudentList();
+        }
     }
 }
 
@@ -4429,16 +4724,15 @@ function getLocalStudentName() {
 }
 
 function toggleQuizPanel() {
-    if (isHost) {
-        const panel = document.getElementById('teacherQuizMonitorPanel');
-        if (panel) {
-            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
-        }
+    const sidebar = document.getElementById('meetSidebar');
+    const isSidebarOpen = sidebar && sidebar.style.display !== 'none';
+    const quizTab = document.getElementById('quizTabBtn');
+    const isQuizActiveTab = quizTab && quizTab.classList.contains('active');
+
+    if (isSidebarOpen && isQuizActiveTab) {
+        toggleSidebar();
     } else {
-        const panel = document.getElementById('meetingQuizSidePanel');
-        if (panel) {
-            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
-        }
+        openSidebar('quiz');
     }
 }
 
@@ -4447,19 +4741,91 @@ function showQuizToggleButton(show) {
     if (btn) btn.style.display = show ? 'flex' : 'none';
 }
 
-function openTeacherQuizMonitor(quiz) {
-    const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
-    if (!monitorPanel) return;
+let teacherQuizStartTimestamp = null;
+let teacherQuizTimerInterval = null;
 
-    document.getElementById('teacherMonitorQuizName').textContent = quiz.title;
-    monitorPanel.style.display = 'flex';
+function startTeacherQuizTimer() {
+    if (teacherQuizTimerInterval) clearInterval(teacherQuizTimerInterval);
+    teacherQuizStartTimestamp = Date.now();
+
+    const timerEl = document.getElementById('teacherQuizTimerText');
+    if (timerEl) timerEl.textContent = '00:00';
+
+    teacherQuizTimerInterval = setInterval(() => {
+        if (!teacherQuizStartTimestamp) return;
+        const elapsedSec = Math.floor((Date.now() - teacherQuizStartTimestamp) / 1000);
+        const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+        const secs = String(elapsedSec % 60).padStart(2, '0');
+        if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function stopTeacherQuizTimer() {
+    if (teacherQuizTimerInterval) {
+        clearInterval(teacherQuizTimerInterval);
+        teacherQuizTimerInterval = null;
+    }
+}
+
+function confirmAndEndQuiz() {
+    if (!isHost) return;
+    if (!confirm('Are you sure you want to end the live quiz for all students?\n\nAll students currently taking the quiz will have their answers automatically saved and submitted immediately.')) {
+        return;
+    }
+
+    const payload = {
+        type: 'teacher_ended_quiz',
+        quiz_id: activeLiveQuiz ? activeLiveQuiz.id : null,
+        timestamp: new Date().toLocaleTimeString()
+    };
+
+    broadcastQuizEvent(payload);
+
+    if (window.signalingWs && window.signalingWs.readyState === WebSocket.OPEN) {
+        try { window.signalingWs.send(JSON.stringify(payload)); } catch(_) {}
+    }
+
+    stopTeacherQuizTimer();
+    const btn = document.getElementById('endQuizBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.background = '#475569';
+        btn.style.cursor = 'not-allowed';
+        btn.innerHTML = '<span>Quiz Ended for Everyone</span>';
+    }
+
+    const subCount = document.getElementById('teacherMonitorSubCount');
+    if (subCount) {
+        subCount.textContent = 'Quiz Ended';
+        subCount.style.background = '#64748b';
+    }
+
+    showNotification('🛑 Live Quiz has been ended for all students. Current progress submitted.', 'info');
+    try { sessionStorage.removeItem(`active_live_quiz_${meetingCode}`); } catch(_) {}
+}
+
+function openTeacherQuizMonitor(quiz) {
+    const quizNameEl = document.getElementById('teacherMonitorQuizName');
+    if (quizNameEl && quiz) quizNameEl.textContent = quiz.title;
+    
+    const btn = document.getElementById('endQuizBtn');
+    if (btn) {
+        btn.disabled = false;
+        btn.style.background = '#ef4444';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+            <span>End Quiz for All Students</span>`;
+    }
+
     showQuizToggleButton(true);
+    startTeacherQuizTimer();
     updateTeacherMonitorStudentList();
+    openSidebar('quiz');
 }
 
 function closeTeacherQuizMonitor() {
-    const monitorPanel = document.getElementById('teacherQuizMonitorPanel');
-    if (monitorPanel) monitorPanel.style.display = 'none';
+    toggleSidebar();
 }
 
 function handleTeacherQuizEvent(msg) {
@@ -4469,23 +4835,37 @@ function handleTeacherQuizEvent(msg) {
     const studentName = String(msg.student_name || 'Student');
 
     let targetKey = studentId || studentName;
-    let sub = teacherLiveQuizSubmissions.get(targetKey) || { student_name: studentName, tab_switch_count: 0 };
+    let sub = teacherLiveQuizSubmissions.get(targetKey) || { 
+        student_name: studentName, 
+        student_id: studentId,
+        tab_switch_count: 0,
+        copy_attempts: 0,
+        in_progress: false,
+        submitted: false
+    };
 
     sub.student_name = studentName;
-    sub.student_id = studentId;
+    if (studentId) sub.student_id = studentId;
 
-    if (msg.type === 'quiz_submitted') {
+    if (msg.type === 'quiz_student_started') {
+        sub.in_progress = true;
+        sub.started_at = msg.timestamp || new Date().toLocaleTimeString();
+    } else if (msg.type === 'quiz_submitted') {
         sub.submitted = true;
+        sub.in_progress = false;
         sub.marks_obtained = msg.marks_obtained;
         sub.total_marks = msg.total_marks;
         sub.tab_switch_count = msg.tab_switch_count !== undefined ? msg.tab_switch_count : sub.tab_switch_count;
         sub.is_auto_submitted = msg.is_auto_submitted || sub.is_auto_submitted || false;
+        sub.submitted_at = new Date().toLocaleTimeString();
         showNotification(`📝 ${sub.student_name} submitted quiz! (${msg.marks_obtained}/${msg.total_marks} marks)`, 'info');
     } else if (msg.type === 'quiz_tab_switch_warning') {
+        sub.in_progress = true;
         sub.tab_switch_count = Math.max(sub.tab_switch_count || 0, msg.tab_switch_count || 1);
         if (msg.is_auto_submitted) sub.is_auto_submitted = true;
         displayTeacherQuizTabAlert(msg);
     } else if (msg.type === 'quiz_copy_warning') {
+        sub.in_progress = true;
         sub.copy_attempts = (sub.copy_attempts || 0) + 1;
         displayTeacherQuizTabAlert({
             student_name: sub.student_name,
@@ -4502,13 +4882,44 @@ function handleTeacherQuizEvent(msg) {
     updateTeacherMonitorStudentList();
 }
 
+let currentTeacherQuizTab = 'completed';
+
+function switchTeacherQuizTab(tabName) {
+    currentTeacherQuizTab = tabName || 'completed';
+    const tabs = [
+        { id: 'quizTabCompleted', name: 'completed' },
+        { id: 'quizTabInProgress', name: 'in_progress' },
+        { id: 'quizTabNotStarted', name: 'not_started' },
+        { id: 'quizTabFlagged', name: 'flagged' }
+    ];
+
+    tabs.forEach(t => {
+        const btn = document.getElementById(t.id);
+        if (!btn) return;
+        if (t.name === currentTeacherQuizTab) {
+            btn.classList.add('active');
+            if (t.name === 'flagged') {
+                btn.style.background = '#ef4444';
+            } else {
+                btn.style.background = '#4f46e5';
+            }
+            btn.style.color = '#ffffff';
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = 'transparent';
+            btn.style.color = '#94a3b8';
+        }
+    });
+
+    updateTeacherMonitorStudentList();
+}
+
 function updateTeacherMonitorStudentList() {
-    const container = document.getElementById('teacherMonitorStudentsList');
-    if (!container) return;
+    if (!isHost) return;
 
     let studentMap = new Map();
 
-    // 1. Gather connected remote participants
+    // 1. Gather connected remote participants (students only)
     let participants = typeof getRemoteParticipants === 'function' ? getRemoteParticipants() : [];
     participants.forEach(p => {
         const uid = String(p.identity);
@@ -4519,7 +4930,9 @@ function updateTeacherMonitorStudentList() {
         }
         if (!name) name = uid;
 
-        studentMap.set(uid, { identity: uid, name: name });
+        if (uid !== String(window.meetingConfig?.currentUserId)) {
+            studentMap.set(uid, { identity: uid, name: name });
+        }
     });
 
     // 2. Gather entries from teacherLiveQuizSubmissions
@@ -4530,10 +4943,10 @@ function updateTeacherMonitorStudentList() {
         }
     });
 
-    document.getElementById('teacherMonitorTotalStudents').textContent = `${studentMap.size} Active`;
-
-    let html = '';
-    let submittedCount = 0;
+    let completedArr = [];
+    let inProgressArr = [];
+    let notStartedArr = [];
+    let cheatingArr = [];
 
     studentMap.forEach((student, uid) => {
         let subInfo = teacherLiveQuizSubmissions.get(String(uid)) ||
@@ -4550,41 +4963,163 @@ function updateTeacherMonitorStudentList() {
             }
         }
 
-        let statusBadge = '<span style="background:#3b82f6; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔵 Taking Test</span>';
-        let violationInfo = '<span style="color:#64748b; font-size:11px;">0 Warnings</span>';
+        const studentData = {
+            id: uid,
+            name: student.name,
+            subInfo: subInfo
+        };
 
-        if (subInfo) {
-            if (subInfo.is_auto_submitted || (subInfo.tab_switch_count >= 3)) {
-                submittedCount++;
-                statusBadge = '<span style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🔴 AUTO-SUBMITTED</span>';
-                violationInfo = `<span style="color:#ef4444; font-size:11px; font-weight:600;">3 Violations (Limit Exceeded)</span>`;
-            } else if (subInfo.submitted) {
-                submittedCount++;
-                statusBadge = `<span style="background:#10b981; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">🟢 Score: ${subInfo.marks_obtained}/${subInfo.total_marks}</span>`;
-                violationInfo = `<span style="color:#94a3b8; font-size:11px;">Submitted • ${subInfo.tab_switch_count || 0} Tab Switches</span>`;
-            } else if (subInfo.tab_switch_count > 0) {
-                const count = subInfo.tab_switch_count;
-                statusBadge = `<span style="background:#f59e0b; color:#fff; font-size:10px; padding:2px 6px; border-radius:10px;">⚠️ Warning ${count}/2</span>`;
-                violationInfo = `<span style="color:#f59e0b; font-size:11px; font-weight:600;">${count} Tab/Window Switches</span>`;
+        if (subInfo && (subInfo.submitted || subInfo.is_auto_submitted)) {
+            completedArr.push(studentData);
+            if (subInfo.tab_switch_count > 0 || subInfo.copy_attempts > 0 || subInfo.is_auto_submitted) {
+                cheatingArr.push(studentData);
             }
+        } else if (subInfo && (subInfo.in_progress || subInfo.tab_switch_count > 0 || subInfo.copy_attempts > 0)) {
+            inProgressArr.push(studentData);
+            if (subInfo.tab_switch_count > 0 || subInfo.copy_attempts > 0) {
+                cheatingArr.push(studentData);
+            }
+        } else {
+            notStartedArr.push(studentData);
         }
-
-        html += `
-            <div style="background: rgba(30,41,59,0.7); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <div>
-                    <div style="font-size: 13px; font-weight: 600; color: #f1f5f9;">${student.name}</div>
-                    <div style="margin-top: 2px;">${violationInfo}</div>
-                </div>
-                <div>${statusBadge}</div>
-            </div>`;
     });
 
-    if (studentMap.size === 0) {
-        html = '<p style="color:#64748b; font-size:12px; text-align:center; padding:10px 0;">No active students connected.</p>';
+    // Update live count badges on horizontal status tabs
+    const bCompleted = document.getElementById('badgeCatCompleted');
+    if (bCompleted) bCompleted.textContent = completedArr.length;
+
+    const bInProgress = document.getElementById('badgeCatInProgress');
+    if (bInProgress) bInProgress.textContent = inProgressArr.length;
+
+    const bNotStarted = document.getElementById('badgeCatNotStarted');
+    if (bNotStarted) bNotStarted.textContent = notStartedArr.length;
+
+    const bFlagged = document.getElementById('badgeCatFlagged');
+    if (bFlagged) bFlagged.textContent = cheatingArr.length;
+
+    // Flagged tab red accent & subtle pulse when count > 0
+    const flaggedBtn = document.getElementById('quizTabFlagged');
+    if (flaggedBtn) {
+        if (cheatingArr.length > 0) {
+            flaggedBtn.classList.add('flagged-pulsing');
+        } else {
+            flaggedBtn.classList.remove('flagged-pulsing');
+        }
     }
 
-    container.innerHTML = html;
-    document.getElementById('teacherMonitorSubCount').textContent = `${submittedCount} Submitted`;
+    // Populate active tab content container (#teacherQuizTabContent)
+    const container = document.getElementById('teacherQuizTabContent');
+    if (!container) return;
+
+    let targetArray = completedArr;
+    let currentTab = currentTeacherQuizTab || 'completed';
+
+    if (currentTab === 'in_progress') targetArray = inProgressArr;
+    else if (currentTab === 'not_started') targetArray = notStartedArr;
+    else if (currentTab === 'flagged') targetArray = cheatingArr;
+
+    if (targetArray.length === 0) {
+        let emptyMsg = 'No students in this category';
+        if (currentTab === 'completed') emptyMsg = 'No students completed yet';
+        else if (currentTab === 'in_progress') emptyMsg = 'No students currently answering';
+        else if (currentTab === 'not_started') emptyMsg = 'All students have started';
+        if (currentTab === 'completed') emptyMsg = 'No students completed yet';
+        else if (currentTab === 'in_progress') emptyMsg = 'No students currently answering';
+        else if (currentTab === 'not_started') emptyMsg = 'All students have started';
+        else if (currentTab === 'flagged') emptyMsg = 'No suspicious activity detected';
+
+        container.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; font-style: italic; padding: 24px 10px;">${emptyMsg}</div>`;
+        return;
+    }
+
+    container.innerHTML = targetArray.map(s => {
+        const uid = String(s.id);
+        const sub = s.subInfo || {};
+
+        // Resolve profile & avatar from IdentityDirectory
+        let user = { displayName: s.name, color: '#6366f1' };
+        let fallbackSvg = '';
+        if (window.IdentityDirectory) {
+            user = window.IdentityDirectory.resolve(uid, s.name);
+            fallbackSvg = window.IdentityDirectory.getAvatarSvg(user.displayName, user.color);
+        }
+        const pfpSrc = user.pfp || fallbackSvg;
+        const avatarHtml = `<div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: ${user.color || '#334155'}; display: flex; align-items: center; justify-content: center;">
+            <img src="${pfpSrc}" alt="${user.displayName}" onerror="this.onerror=null; this.src='${fallbackSvg}';" style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>`;
+
+        if (currentTab === 'completed') {
+            const isAuto = sub.is_auto_submitted || (sub.tab_switch_count >= 3);
+            const badgeBg = isAuto ? '#ef4444' : '#10b981';
+            const statusLabel = isAuto ? 'Auto-Submitted' : `Score: ${sub.marks_obtained !== undefined ? sub.marks_obtained + '/' + sub.total_marks : 'Submitted'}`;
+            const timeText = sub.submitted_at ? `At ${sub.submitted_at}` : (isAuto ? 'Auto-Submitted (3 Violations)' : 'Submitted');
+
+            return `
+                <div class="teacher-student-row completed-row">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                        ${avatarHtml}
+                        <div style="min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.displayName}</div>
+                            <div style="font-size: 10px; color: #94a3b8; margin-top: 1px;">${timeText} • ${sub.tab_switch_count || 0} Warnings</div>
+                        </div>
+                    </div>
+                    <span style="background: ${badgeBg}; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">${statusLabel}</span>
+                </div>`;
+        } else if (currentTab === 'in_progress') {
+            const warnings = sub.tab_switch_count || 0;
+            const startTimeText = sub.started_at ? `Started at ${sub.started_at}` : 'Answering questions...';
+            const warningBadge = warnings ? ` • <span style="color:#f43f5e; font-weight:600;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${warnings} warning(s)</span>` : '';
+
+            return `
+                <div class="teacher-student-row in-progress-row">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                        ${avatarHtml}
+                        <div style="min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.displayName}</div>
+                            <div style="font-size: 10px; color: #94a3b8; margin-top: 1px;">${startTimeText}${warningBadge}</div>
+                        </div>
+                    </div>
+                    <span style="background: #0284c7; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">Answering</span>
+                </div>`;
+        } else if (currentTab === 'not_started') {
+            return `
+                <div class="teacher-student-row">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                        ${avatarHtml}
+                        <div style="min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 500; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.displayName}</div>
+                            <div style="font-size: 10px; color: #64748b; margin-top: 1px;">Awaiting student start</div>
+                        </div>
+                    </div>
+                    <span style="background: #475569; color: #cbd5e1; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; white-space: nowrap; flex-shrink: 0;">Not Started</span>
+                </div>`;
+        } else if (currentTab === 'flagged') {
+            let details = [];
+            if (sub.tab_switch_count > 0) details.push(`Tab Switches: ${sub.tab_switch_count}/2`);
+            if (sub.copy_attempts > 0) details.push(`Copy Attempts: ${sub.copy_attempts}`);
+            if (sub.is_auto_submitted) details.push(`Auto-Submitted (Violation Limit)`);
+
+            const detailsStr = details.length > 0 ? details.join(' • ') : 'Suspicious behavior detected';
+
+            return `
+                <div class="teacher-student-row flagged-row">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                        ${avatarHtml}
+                        <div style="min-width: 0;">
+                            <div style="font-size: 12px; font-weight: 700; color: #fca5a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span>${user.displayName}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #f87171; margin-top: 1px;">${detailsStr}</div>
+                        </div>
+                    </div>
+                    <span style="background: #ef4444; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 700; white-space: nowrap; flex-shrink: 0;">Alert</span>
+                </div>`;
+        }
+    }).join('');
+
+    const subCount = document.getElementById('teacherMonitorSubCount');
+    if (subCount) subCount.textContent = `${completedArr.length} Submitted`;
 }
 
 function openStartQuizModal() {
@@ -4686,7 +5221,15 @@ function startLiveMeetingQuiz(quiz) {
     if (!panel) return;
 
     document.getElementById('liveQuizPanelTitle').textContent = quiz.title;
-    panel.style.display = 'flex';
+    openSidebar('quiz');
+
+    // Notify teacher that student has started the quiz
+    broadcastQuizEvent({
+        type: 'quiz_student_started',
+        student_id: getLocalStudentIdentity(),
+        student_name: getLocalStudentName(),
+        timestamp: new Date().toLocaleTimeString()
+    });
 
     // Reset student warning badge
     const badge = document.getElementById('studentWarningCountBadge');
@@ -5068,10 +5611,12 @@ function submitQuizAnswers(isAutoSubmit = false) {
 
 function closeLiveQuizSidePanel() {
     isQuizActive = false;
-    const panel = document.getElementById('meetingQuizSidePanel');
-    if (panel) panel.style.display = 'none';
     const modal = document.getElementById('studentQuizWarningModal');
     if (modal) modal.style.display = 'none';
+    const sidebar = document.getElementById('meetSidebar');
+    if (sidebar && sidebar.style.display !== 'none') {
+        toggleSidebar();
+    }
 }
 
 function restoreActiveQuizState() {
@@ -5110,6 +5655,9 @@ window.closeTeacherQuizMonitor = closeTeacherQuizMonitor;
 window.toggleQuizPanel = toggleQuizPanel;
 window.handleTeacherQuizEvent = handleTeacherQuizEvent;
 window.acknowledgeStudentQuizWarning = acknowledgeStudentQuizWarning;
+window.switchTeacherQuizTab = switchTeacherQuizTab;
+window.updateTeacherMonitorStudentList = updateTeacherMonitorStudentList;
+window.confirmAndEndQuiz = confirmAndEndQuiz;
 </script>
 {% include 'components/reusable_popup.html' %}
 </body>
