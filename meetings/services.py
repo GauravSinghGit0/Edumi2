@@ -23,7 +23,7 @@ def get_classroom_detail_context(classroom, user):
     
     # Get or create group conversation and fetch messages
     conversation = classroom.get_or_create_conversation()
-    messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
+    messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('-created_at'))
 
     from django.utils import timezone
     now_local = timezone.localtime(timezone.now())

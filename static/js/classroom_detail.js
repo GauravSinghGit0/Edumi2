@@ -350,8 +350,24 @@ function appendStreamPost(data) {
         ${fileHtml}
     `;
 
-    // Prepend new post to the top of the stream
-    feed.insertBefore(card, feed.firstChild);
+    // Ensure "Today" date separator exists at the top of the stream feed
+    let topSeparator = feed.querySelector('.stream-date-separator');
+    let hasTodaySeparator = topSeparator && topSeparator.textContent.trim() === 'Today';
+
+    if (!hasTodaySeparator) {
+        const sep = document.createElement('div');
+        sep.className = 'stream-date-separator';
+        sep.innerHTML = '<span>Today</span>';
+        feed.insertBefore(sep, feed.firstChild);
+        topSeparator = sep;
+    }
+
+    // Insert new post directly after the Today date separator
+    if (topSeparator.nextSibling) {
+        feed.insertBefore(card, topSeparator.nextSibling);
+    } else {
+        feed.appendChild(card);
+    }
 
     // If stream is not the currently active tab, show unread indicator
     const streamPanel = document.getElementById('tabContentStream');

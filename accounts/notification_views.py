@@ -1,22 +1,35 @@
 """
-Views for notification management
+Production-grade notification management views following Django best practices.
+Includes structured logging, query optimizations, and standardized JSON error responses.
 """
+import logging
+import json
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from .notification_models import Notification
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
 def notifications_list(request):
-    """Display all notifications for the current user"""
-    notifications = Notification.objects.filter(recipient=request.user)
-    total_count = notifications.count()
-    unread_count = Notification.get_unread_count(request.user)
-    
+    """Display all notifications for the current user with pagination/slice."""
+    try:
+        notifications_qs = Notification.objects.filter(recipient=request.user).select_related('related_user')
+        total_count = notifications_qs.count()
+        unread_count = Notification.get_unread_count(request.user)
+        notifications_slice = list(notifications_qs[:100])
+    except Exception as e:
+        logger.exception("Error loading notifications list for user %s: %s", request.user.id, e)
+        notifications_slice = []
+        unread_count = 0
+        total_count = 0
+
     return render(request, 'accounts/messaging/notifications.html', {
-        'notifications': notifications[:100],
+        'notifications': notifications_slice,
         'unread_count': unread_count,
         'total_count': total_count
     })
@@ -25,92 +38,129 @@ def notifications_list(request):
 @login_required
 @require_http_methods(["POST"])
 def mark_notification_read(request, notification_id):
-    """Mark a single notification as read"""
-    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
-    notification.mark_as_read()
-    
-    return JsonResponse({
-        'status': 'success',
-        'unread_count': Notification.get_unread_count(request.user)
-    })
+    """Mark a single notification as read."""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+        notification.mark_as_read()
+        unread_count = Notification.get_unread_count(request.user)
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        logger.exception("Failed to mark notification %s as read for user %s: %s", notification_id, request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to update notification status'
+        }, status=500)
 
 
 @login_required
 @require_http_methods(["POST"])
 def mark_notification_unread(request, notification_id):
-    """Mark a single notification as unread"""
-    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
-    if notification.is_read:
-        notification.is_read = False
-        notification.save(update_fields=['is_read'])
-    
-    return JsonResponse({
-        'status': 'success',
-        'unread_count': Notification.get_unread_count(request.user)
-    })
+    """Mark a single notification as unread."""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+        if notification.is_read:
+            notification.is_read = False
+            notification.save(update_fields=['is_read'])
+        unread_count = Notification.get_unread_count(request.user)
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        logger.exception("Failed to mark notification %s as unread for user %s: %s", notification_id, request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to update notification status'
+        }, status=500)
 
 
 @login_required
 @require_http_methods(["POST"])
 def mark_all_notifications_read(request):
-    """Mark all notifications as read for the current user"""
-    Notification.mark_all_as_read(request.user)
-    
-    return JsonResponse({
-        'status': 'success',
-        'unread_count': 0
-    })
+    """Mark all notifications as read for the current user."""
+    try:
+        Notification.mark_all_as_read(request.user)
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': 0
+        })
+    except Exception as e:
+        logger.exception("Failed to mark all notifications as read for user %s: %s", request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to mark all notifications as read'
+        }, status=500)
 
 
 @login_required
 def get_unread_count(request):
-    """Get unread notification count (for AJAX polling)"""
-    count = Notification.get_unread_count(request.user)
-    
-    return JsonResponse({'count': count})
+    """Get unread notification count for user (used for polling & initial load)."""
+    try:
+        count = Notification.get_unread_count(request.user)
+        return JsonResponse({
+            'status': 'success',
+            'count': count
+        })
+    except Exception as e:
+        logger.exception("Error getting unread notification count for user %s: %s", request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'count': 0,
+            'message': 'Unable to retrieve notification count'
+        }, status=500)
 
 
 @login_required
 def get_recent_notifications(request):
-    """Get recent notifications (for dropdown)"""
-    notifications = Notification.objects.filter(recipient=request.user)[:10]
-    
-    data = [{
-        'id': n.id,
-        'type': n.notification_type,
-        'title': n.title,
-        'message': n.message,
-        'link': n.link,
-        'is_read': n.is_read,
-        'created_at': n.created_at.strftime('%b %d, %I:%M %p')
-    } for n in notifications]
-    
-    return JsonResponse({
-        'notifications': data,
-        'unread_count': Notification.get_unread_count(request.user)
-    })
+    """Get recent notifications for topbar dropdown menu."""
+    try:
+        notifications = list(
+            Notification.objects.filter(recipient=request.user)
+            .select_related('related_user')[:10]
+        )
+        data = [{
+            'id': n.id,
+            'type': n.notification_type or 'system',
+            'title': n.title or 'Notification',
+            'message': n.message or '',
+            'link': n.link or '#',
+            'is_read': bool(n.is_read),
+            'created_at': n.created_at.strftime('%b %d, %I:%M %p') if n.created_at else ''
+        } for n in notifications]
+        unread_count = Notification.get_unread_count(request.user)
+        return JsonResponse({
+            'status': 'success',
+            'notifications': data,
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        logger.exception("Error loading recent notifications for user %s: %s", request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'notifications': [],
+            'unread_count': 0,
+            'message': 'Unable to retrieve notifications'
+        }, status=500)
 
-
-from django.contrib.auth.models import User
-from django.views.decorators.http import require_POST
 
 @login_required
 @require_POST
 def send_broadcast(request):
-    """Send broadcast message to all users (admin only)"""
+    """Send broadcast message to all users (admin only)."""
     if not request.user.is_superuser:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    import json
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized access'}, status=403)
+
     try:
         data = json.loads(request.body)
-        title = data.get('title', 'Broadcast Message')
-        message = data.get('message', '')
-        
-        if not message.strip():
-            return JsonResponse({'error': 'Message cannot be empty'}, status=400)
-        
-        # Create notification for all users
+        title = data.get('title', 'Broadcast Message').strip()
+        message = data.get('message', '').strip()
+
+        if not message:
+            return JsonResponse({'status': 'error', 'message': 'Message body cannot be empty'}, status=400)
+
         count = 0
         for user in User.objects.filter(is_active=True):
             Notification.create_broadcast_notification(
@@ -120,25 +170,36 @@ def send_broadcast(request):
                 sender=request.user
             )
             count += 1
-        
+
         return JsonResponse({
-            'success': True,
+            'status': 'success',
             'message': f'Broadcast sent to {count} users',
             'recipient_count': count
         })
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON request payload'}, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.exception("Broadcast failure by user %s: %s", request.user.id, e)
+        return JsonResponse({'status': 'error', 'message': 'Internal server error while broadcasting'}, status=500)
+
 
 @login_required
 @require_http_methods(["POST", "DELETE"])
 def delete_notification(request, notification_id):
-    """Delete a single notification"""
-    notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
-    notification.delete()
-    return JsonResponse({
-        'status': 'success',
-        'unread_count': Notification.get_unread_count(request.user),
-        'total_count': Notification.objects.filter(recipient=request.user).count()
-    })
+    """Delete a single notification."""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
+        notification.delete()
+        unread_count = Notification.get_unread_count(request.user)
+        total_count = Notification.objects.filter(recipient=request.user).count()
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': unread_count,
+            'total_count': total_count
+        })
+    except Exception as e:
+        logger.exception("Failed to delete notification %s for user %s: %s", notification_id, request.user.id, e)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to delete notification'
+        }, status=500)

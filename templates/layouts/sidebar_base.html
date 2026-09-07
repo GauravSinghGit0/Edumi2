@@ -280,21 +280,58 @@
             }
         }
 
+        // Robust Industry Standard API Client Helper
+        async function fetchJSON(url, options = {}) {
+            const defaultHeaders = {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            const method = (options.method || 'GET').toUpperCase();
+            if (method !== 'GET') {
+                const csrfToken = getCookie('csrftoken');
+                if (csrfToken) {
+                    defaultHeaders['X-CSRFToken'] = csrfToken;
+                }
+            }
+            options.headers = { ...defaultHeaders, ...options.headers };
+
+            const response = await fetch(url, options);
+            const contentType = response.headers.get('content-type') || '';
+            let data = null;
+            if (contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = null;
+                }
+            }
+
+            if (!response.ok) {
+                const message = (data && data.message) || `HTTP Error ${response.status}`;
+                const err = new Error(message);
+                err.status = response.status;
+                err.data = data;
+                throw err;
+            }
+
+            return data || {};
+        }
+
         // Load recent notifications via AJAX
         function loadRecentNotifications() {
             const list = document.getElementById('notificationList');
-            list.innerHTML = '<div class="notification-loading">Loading...</div>';
+            if (list) list.innerHTML = '<div class="notification-loading">Loading...</div>';
 
-            fetch('/notifications/recent/')
-                .then(response => response.json())
+            fetchJSON('/notifications/recent/')
                 .then(data => {
                     const badge = document.getElementById('notificationBadge');
-                    // Update count while we're at it
-                    if (data.unread_count > 0) {
-                        badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-                        badge.style.display = 'flex';
-                    } else {
-                        badge.style.display = 'none';
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                            badge.style.display = 'flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
                     }
 
                     const unreadNotifications = data.notifications ? data.notifications.filter(n => !n.is_read) : [];
@@ -339,31 +376,21 @@
         function handleNotificationClick(event, link, id) {
             if (event) event.stopPropagation();
 
-            // Mark as read then navigate
-            fetch(`/notifications/mark-read/${id}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                }
-            }).finally(() => {
-                if (link && link !== '#') {
-                    window.location.href = link;
-                } else {
-                    loadRecentNotifications();
-                    updateNotificationCount();
-                }
-            });
+            fetchJSON(`/notifications/mark-read/${id}/`, { method: 'POST' })
+                .catch(err => console.warn('Error marking notification read:', err))
+                .finally(() => {
+                    if (link && link !== '#') {
+                        window.location.href = link;
+                    } else {
+                        loadRecentNotifications();
+                        updateNotificationCount();
+                    }
+                });
         }
 
         function markAllNotificationsRead(event) {
             if (event) event.stopPropagation();
-            fetch('/notifications/mark-all-read/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                }
-            })
-                .then(response => response.json())
+            fetchJSON('/notifications/mark-all-read/', { method: 'POST' })
                 .then(data => {
                     if (data.status === 'success') {
                         loadRecentNotifications();
@@ -422,8 +449,7 @@
                 }
                 return;
             }
-            fetch('/notifications/unread-count/')
-                .then(response => response.json())
+            fetchJSON('/notifications/unread-count/')
                 .then(data => {
                     if (data.count > 0) {
                         badge.textContent = data.count > 99 ? '99+' : data.count;
