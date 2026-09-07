@@ -404,30 +404,31 @@
             background: rgba(15, 23, 42, 0.85);
             border: 1px solid rgba(59, 130, 246, 0.25);
             border-radius: 30px;
-            padding: 7px 14px;
+            padding: 6px 10px 6px 14px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
         }
 
         .btn-end-quiz-pill {
-            width: 100%;
-            padding: 11px 16px;
+            padding: 6px 14px;
             background: linear-gradient(135deg, #ff4b6e, #ef4444);
             color: #ffffff;
             border: none;
-            border-radius: 14px;
-            font-size: 13.5px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+            gap: 6px;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .btn-end-quiz-pill:hover {
@@ -1226,9 +1227,7 @@
                                     ACTIVE QUIZ</div>
                                 <div id="teacherMonitorQuizName"
                                     style="font-size: 18px; font-weight: 800; color: #ffffff; margin-top: 4px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    -</div>
-
-                                <!-- Real-time Quiz Timer & Anti-cheating Pill Bar -->
+                                                        <!-- Real-time Quiz Timer & End Quiz Button Side-by-Side Pill Bar -->
                                 <div class="quiz-timer-pill-bar">
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8"
@@ -1240,17 +1239,17 @@
                                         <span id="teacherQuizTimerText"
                                             style="color: #38bdf8; font-size: 15px; font-weight: 800; font-family: inherit;">00:00</span>
                                     </div>
-                                </div>
 
-                                <!-- Vibrant End Quiz Pill Button -->
-                                <button id="endQuizBtn" class="btn-end-quiz-pill" onclick="confirmAndEndQuiz()">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5">
-                                        <rect x="4" y="4" width="16" height="16" rx="3" ry="3" />
-                                    </svg>
-                                    <span>End Quiz for All Students</span>
-                                </button>
-                            </div>
+                                    <!-- Vibrant End Quiz Pill Button (Side-by-Side) -->
+                                    <button id="endQuizBtn" class="btn-end-quiz-pill" onclick="confirmAndEndQuiz()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5">
+                                            <rect x="4" y="4" width="16" height="16" rx="3" ry="3" />
+                                        </svg>
+                                        <span>End Quiz</span>
+                                    </button>
+                                </div>
+                            </div>                  </div>
 
                             <!-- Cheating Alerts Container -->
                             <div id="teacherMonitorAlertsBox" style="display: flex; flex-direction: column; gap: 6px;">
@@ -5322,8 +5321,8 @@
                 btn.style.background = 'linear-gradient(135deg, #ff4b6e, #ef4444)';
                 btn.style.cursor = 'pointer';
                 btn.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="3" ry="3"/></svg>
-            <span>End Quiz for All Students</span>`;
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="3" ry="3"/></svg>
+            <span>End Quiz</span>`;
             }
 
             showQuizToggleButton(true);

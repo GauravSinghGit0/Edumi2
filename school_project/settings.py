@@ -173,6 +173,7 @@ except ImportError:
 
 MIDDLEWARE += [
     'school_project.middleware.DatabaseErrorMiddleware',
+    'school_project.middleware.SystemPerformanceLoggingMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -540,9 +541,9 @@ LOGGING = {
             'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] %(message)s',
             'datefmt': '%H:%M:%S',
         },
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+        'file_verbose': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
     'handlers': {
@@ -551,59 +552,88 @@ LOGGING = {
             'formatter': 'clean_console',
             'level': 'INFO',
         },
+        'performance_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'performance.log',
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'file_verbose',
+            'level': 'INFO',
+            'encoding': 'utf-8',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'system_errors.log',
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'file_verbose',
+            'level': 'ERROR',
+            'encoding': 'utf-8',
+        },
+        'meetings_quiz_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'meetings_quiz.log',
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'file_verbose',
+            'level': 'INFO',
+            'encoding': 'utf-8',
+        },
         'null': {
             'class': 'logging.NullHandler',
         },
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['console', 'error_file'],
         'level': LOG_LEVEL,
     },
     'loggers': {
-        # Core Django request & security logs
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.server': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.security': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'WARNING',
             'propagate': False,
         },
-        # App-specific loggers
+        'performance': {
+            'handlers': ['console', 'performance_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'accounts': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'cameras': {
-            'handlers': ['console'],
+            'handlers': ['console', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'meetings': {
-            'handlers': ['console'],
+            'handlers': ['console', 'meetings_quiz_file', 'error_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'recording_engine': {
-            'handlers': ['console'],
+            'handlers': ['console', 'performance_file'],
             'level': 'INFO',
             'propagate': False,
         },
-        # Suppress noisy external libraries
-        'daphne':       {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'daphne':       {'handlers': ['console', 'error_file'], 'level': 'INFO', 'propagate': False},
         'asyncio':      {'handlers': ['null'],    'level': 'CRITICAL', 'propagate': False},
         'PIL':          {'handlers': ['null'],    'level': 'CRITICAL', 'propagate': False},
         'urllib3':      {'handlers': ['null'],    'level': 'WARNING', 'propagate': False},
