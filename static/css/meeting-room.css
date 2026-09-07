@@ -1816,28 +1816,64 @@
 /* ── Controls Bar ──────────────────────────────────────────────────────────── */
 .meet-controls {
     position: fixed;
-    bottom: 16px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    padding: 6px 14px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 6px 16px;
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
-    border-radius: 28px;
-    z-index: 100;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    height: 52px;
+    border-radius: 30px;
+    z-index: 1000;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    height: 56px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.meet-role-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    user-select: none;
+    flex-shrink: 0;
+}
+.meet-role-pill.teacher {
+    background: rgba(99, 102, 241, 0.18);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+}
+.meet-role-pill.student {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.role-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6366f1;
+    box-shadow: 0 0 8px #6366f1;
+}
+.role-pill-dot.student {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
 }
 
 .control-separator {
     width: 1px;
     height: 24px;
-    background: rgba(255, 255, 255, 0.12);
-    margin: 0 4px;
+    background: rgba(255, 255, 255, 0.14);
+    margin: 0 2px;
     flex-shrink: 0;
 }
 
@@ -1854,35 +1890,35 @@
 }
 
 .control-button {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     flex-shrink: 0;
     outline: none;
 }
 
 .control-button svg {
-    width: 19px;
-    height: 19px;
+    width: 20px;
+    height: 20px;
     stroke: #ffffff;
     fill: none;
     stroke-width: 2;
-    transition: stroke 0.18s, transform 0.18s;
+    transition: stroke 0.2s, transform 0.2s;
 }
 
 .control-button:hover {
     background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-2px) scale(1.05);
 }
 
 .control-button:focus-visible {
@@ -1896,9 +1932,10 @@
 
 /* Clear muted/off state - Google Meet style solid red button with slash icon */
 .control-button.off {
-    background: #ea4335 !important;
-    border: 1px solid rgba(234, 67, 53, 0.6) !important;
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border: 1px solid rgba(239, 68, 68, 0.6) !important;
     color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
 }
 
 .control-button.off svg {
@@ -1906,9 +1943,8 @@
 }
 
 .control-button.off:hover {
-    background: #d93025 !important;
-    border-color: rgba(217, 48, 37, 0.8) !important;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transform: translateY(-2px) scale(1.05);
 }
 
 /* Active mic/camera state */
@@ -1927,12 +1963,12 @@
 
 /* Red is strictly reserved for Leave/End Call - solid red button without excessive glow */
 .control-button.danger {
-    width: 56px;
-    height: 40px;
-    border-radius: 20px;
-    background: #ea4335 !important;
+    width: 60px;
+    height: 42px;
+    border-radius: 21px;
+    background: linear-gradient(135deg, #ea4335, #c5221f) !important;
     border: 1px solid rgba(234, 67, 53, 0.6) !important;
-    box-shadow: 0 2px 8px rgba(234, 67, 53, 0.3) !important;
+    box-shadow: 0 4px 16px rgba(234, 67, 53, 0.4) !important;
 }
 
 .control-button.danger svg {
@@ -1940,10 +1976,11 @@
 }
 
 .control-button.danger:hover {
-    background: #d93025 !important;
-    box-shadow: 0 4px 12px rgba(234, 67, 53, 0.4) !important;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #d93025, #a50e0e) !important;
+    box-shadow: 0 6px 20px rgba(234, 67, 53, 0.5) !important;
+    transform: translateY(-2px) scale(1.05);
 }
+
 
 /* Tooltip on hover */
 .control-button[data-tooltip] {
