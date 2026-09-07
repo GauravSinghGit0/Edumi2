@@ -132,18 +132,44 @@
 
     .quiz-side-panel {
         position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
+        top: 75px;
+        right: 20px;
+        bottom: 85px;
         width: 420px;
-        max-width: 100vw;
-        background: #0f172a;
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+        max-width: calc(100vw - 40px);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
         z-index: 99999;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
         animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .quiz-panel-close-btn {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #94a3b8;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        font-size: 16px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 0;
+    }
+    .quiz-panel-close-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.4);
     }
 
     @keyframes slideInRight {
@@ -1006,10 +1032,10 @@
 {% endif %}
 
 <!-- Live Meeting Student Quiz Side Panel -->
-<div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none; position: relative;">
+<div id="meetingQuizSidePanel" class="quiz-side-panel" style="display: none;">
     
     <!-- Full Panel Anti-Cheating Warning Overlay Modal -->
-    <div id="studentQuizWarningModal" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;">
+    <div id="studentQuizWarningModal" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;">
         <div style="font-size: 44px; margin-bottom: 8px;">⚠️</div>
         <h3 id="quizWarningModalTitle" style="color: #ef4444; margin: 0 0 8px 0; font-size: 18px; font-weight: 700;">WARNING 1 / 2</h3>
         <p id="quizWarningModalText" style="color: #cbd5e1; font-size: 13px; margin: 0 0 16px 0; line-height: 1.5;">You switched tabs or window apps! Switching windows during a live test is strictly monitored.<br><strong style="color: #f87171;">3rd violation will AUTO-SUBMIT your test immediately!</strong></p>
@@ -1022,6 +1048,7 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <span id="studentWarningCountBadge" style="background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⚠️ Warnings: 0/2</span>
                 <span id="liveQuizTimerBadge" style="display: none; background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px;">00:00</span>
+                <button class="quiz-panel-close-btn" onclick="closeLiveQuizSidePanel()" title="Minimize / Close Quiz Panel">&times;</button>
             </div>
         </div>
         <div class="quiz-progress-text" id="liveQuizProgressText" style="margin-top:4px;">Question 1 of 1</div>
@@ -4945,18 +4972,31 @@ function submitQuizAnswers(isAutoSubmit = false) {
     if (submitBtn) submitBtn.style.display = 'none';
 
     if (panelBody) {
+        const statusColor = isAutoSubmit ? '#ef4444' : '#10b981';
+        const statusIcon = isAutoSubmit ? '🚨' : '✅';
+        const statusTitle = isAutoSubmit ? 'TEST AUTO-SUBMITTED' : 'QUIZ SUBMITTED';
+        const statusMsg = isAutoSubmit 
+            ? 'Your test was automatically submitted because you exceeded 2 window/tab switch warnings.'
+            : 'Your quiz responses have been recorded successfully.';
+
         panelBody.innerHTML = `
-            <div style="text-align: center; padding: 40px 15px;">
-                <div style="font-size: 50px; margin-bottom: 15px;">🔒</div>
-                <h3 style="color: ${isAutoSubmit ? '#ef4444' : '#10b981'}; font-weight: 700; margin-bottom: 10px;">
-                    ${isAutoSubmit ? 'TEST AUTO-SUBMITTED' : 'QUIZ SUBMITTED'}
+            <div style="text-align: center; padding: 32px 16px; animation: fadeIn 0.4s ease;">
+                <div style="font-size: 48px; margin-bottom: 12px;">${statusIcon}</div>
+                <h3 style="color: ${statusColor}; font-weight: 800; font-size: 20px; margin: 0 0 10px 0;">
+                    ${statusTitle}
                 </h3>
-                <p style="color: #94a3b8; font-size: 13px; line-height: 1.6;">
-                    ${isAutoSubmit ? 'Your test was automatically submitted because you exceeded 2 window/tab switch warnings.' : 'Your quiz responses have been recorded successfully.'}
+                <p style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin: 0 0 18px 0;">
+                    ${statusMsg}
                 </p>
-                <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #cbd5e1; font-size: 12px;">
-                    Status: <strong style="color: ${isAutoSubmit ? '#f87171' : '#34d399'}">${isAutoSubmit ? 'Auto-Submitted (Limit Exceeded)' : 'Completed'}</strong>
+                <div style="margin-bottom: 20px; padding: 12px 16px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); color: #e2e8f0; font-size: 13px;">
+                    Status: <strong style="color: ${statusColor}">${isAutoSubmit ? 'Auto-Submitted (Limit Exceeded)' : 'Completed'}</strong>
                 </div>
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 14px;">
+                    Closing popup automatically in <span id="autoCloseCountdown" style="color: #f1f5f9; font-weight: 700;">4</span>s...
+                </div>
+                <button class="btn btn-primary-quiz" onclick="closeLiveQuizSidePanel()" style="width: 100%; padding: 10px; font-weight: 700; border-radius: 10px; background: ${isAutoSubmit ? '#ef4444' : '#4f46e5'}; border: none; cursor: pointer; color: #fff;">
+                    Return to Meeting Screen
+                </button>
             </div>`;
     }
 
@@ -4971,12 +5011,24 @@ function submitQuizAnswers(isAutoSubmit = false) {
                 mTitle.style.color = '#ef4444';
             }
             if (mText) {
-                mText.innerHTML = 'Your test has been AUTO-SUBMITTED due to 3 cheating policy violations!<br><strong style="color:#ef4444;">No further answers can be edited or submitted.</strong>';
+                mText.innerHTML = 'Your test has been AUTO-SUBMITTED due to 3 window/tab switch violations!<br><strong style="color:#ef4444;">Closing popup automatically...</strong>';
             }
         } else {
             modal.style.display = 'none';
         }
     }
+
+    // Auto-dismiss countdown timer (4 seconds)
+    let secondsLeft = 4;
+    const autoCloseTimer = setInterval(() => {
+        secondsLeft--;
+        const timerEl = document.getElementById('autoCloseCountdown');
+        if (timerEl) timerEl.textContent = secondsLeft;
+        if (secondsLeft <= 0) {
+            clearInterval(autoCloseTimer);
+            closeLiveQuizSidePanel();
+        }
+    }, 1000);
 
     const timeTaken = Math.round((Date.now() - (quizStartTime || Date.now())) / 1000);
 
@@ -5004,6 +5056,8 @@ function closeLiveQuizSidePanel() {
     isQuizActive = false;
     const panel = document.getElementById('meetingQuizSidePanel');
     if (panel) panel.style.display = 'none';
+    const modal = document.getElementById('studentQuizWarningModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function restoreActiveQuizState() {
