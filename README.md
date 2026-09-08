@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 EduMi 2 — Enterprise AI-Powered Educational Platform
+# 🎓 EduMi — Enterprise AI-Powered Educational Platform
 
 **A next-generation, self-hosted academic operating system integrating ultra-low latency WebRTC virtual classrooms, facial biometric attendance, crowd head-counting, automated homework & quizzes, real-time messaging, and an in-browser non-destructive video editing studio.**
 
