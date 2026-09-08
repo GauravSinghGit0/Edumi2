@@ -92,6 +92,11 @@ build/
 .coverage
 htmlcov/
 .tox/
+# LOAD TESTING ONLY - REMOVE AFTER TEST
+load_testing/credentials.json
+load_testing/.env.loadtest
+load_testing/reports/
+# LOAD TESTING ONLY - REMOVE AFTER TEST
 
 # ================================================
 # OPERATING SYSTEM FILES
