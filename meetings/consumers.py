@@ -278,6 +278,16 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                         'username': self.user.username
                     }
                 )
+
+            elif message_type == 'av_sync_package':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'av_sync_package',
+                        'package': data.get('package'),
+                        'from_user_id': self.user.id,
+                    }
+                )
             
             elif message_type == 'request_participants':
                 active_participants = await self.get_active_participants()
@@ -484,6 +494,16 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             'user_id': event['user_id'],
             'username': event['username']
         }))
+
+    async def av_sync_package(self, event):
+        """Relay client A/V lip-sync package to other participants"""
+        if event.get('from_user_id') != self.user.id:
+            await self.send(text_data=json.dumps({
+                'type': 'av_sync_package',
+                'package': event.get('package'),
+                'from_user_id': event.get('from_user_id')
+            }))
+
 
     async def quiz_started(self, event):
         await self.send(text_data=json.dumps({

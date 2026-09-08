@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/meeting-room.css' %}">
     <script src="{% static 'js/video_quality_manager.js' %}"></script>
+    <script src="{% static 'js/lip_sync_manager.js' %}"></script>
 
     <!-- LiveKit JS SDK (browser bundle) - Multiple CDNs for reliability -->
     <script id="livekit-sdk" src="https://cdn.jsdelivr.net/npm/livekit-client@1.15.11/dist/livekit-client.umd.min.js"
@@ -2242,6 +2243,11 @@
                     box.classList.remove('cam-off');
                 }
 
+                // Register with LipSyncManager to pair audio and video tracks and unpack/synchronize them
+                if (window.LipSyncManager && participant?.identity) {
+                    window.LipSyncManager.registerRemoteTrack(participant.identity, track, publication);
+                }
+
                 console.log(`TrackManager: attached ${track.kind} [${source}] from ${participant.identity} key=${key}`);
             },
 
@@ -2254,6 +2260,11 @@
                 const entry = key ? this._attached.get(key) : null;
                 const source = publication?.source || track?.source || '';
                 const isScreen = this._isScreen(source);
+
+                // Unregister from LipSyncManager
+                if (window.LipSyncManager && participant?.identity) {
+                    window.LipSyncManager.unregisterRemoteTrack(participant.identity, track, publication);
+                }
 
                 // Detach all elements this track was attached to via LiveKit SDK
                 try { track.detach().forEach(el => el.remove()); } catch (_) { }
@@ -2295,6 +2306,9 @@
 
             /** Full reset on room disconnect */
             clear() {
+                if (window.LipSyncManager) {
+                    window.LipSyncManager.stop();
+                }
                 this._attached.forEach(({ el }) => { try { el.remove(); } catch (_) { } });
                 this._attached.clear();
                 document.querySelectorAll('[id^="screen-box-"]').forEach(b => b.remove());
@@ -2430,6 +2444,11 @@
                         container.appendChild(ui);
                     }
                     window.VideoQualityManager.startBitrateMonitor(window.room);
+                }
+
+                // Initialize Lip-Sync Manager (audio-video synchronization package engine)
+                if (window.LipSyncManager) {
+                    window.LipSyncManager.start(window.room, window.signalingWs);
                 }
 
                 // Initial desired media state
@@ -2783,6 +2802,11 @@
                             setTimeout(() => clearInterval(checkTrack), 5000);
                         }
                     }
+
+                    // Package and send A/V sync metadata to peers
+                    if (window.LipSyncManager) {
+                        window.LipSyncManager.makePackageAndSend();
+                    }
                 });
             }
         }
@@ -2967,6 +2991,12 @@
                     }
                 });
             }
+
+            // Transmit A/V sync package to newly joined peer and attempt early sync
+            if (window.LipSyncManager) {
+                window.LipSyncManager.makePackageAndSend();
+                window.LipSyncManager.synchronizeParticipant(participant.identity);
+            }
         }
 
         function onParticipantDisconnected(participant) {
@@ -3077,6 +3107,10 @@
                     if (isHost && typeof handleTeacherQuizEvent === 'function') {
                         handleTeacherQuizEvent(msg);
                     }
+                } else if (msg.type === 'av_sync_package') {
+                    if (window.LipSyncManager) {
+                        window.LipSyncManager.unpackPackage(msg.package || msg);
+                    }
                 }
             } catch (e) { console.warn('Data parse error:', e); }
         }
@@ -3085,6 +3119,9 @@
             showNotification('Disconnected from meeting', 'error');
             if (window.TrackManager) {
                 window.TrackManager.clear();
+            }
+            if (window.LipSyncManager) {
+                window.LipSyncManager.stop();
             }
         }
 
@@ -3095,6 +3132,11 @@
         // ── Signaling Handlers ────────────────────────────────────────────────────────
         function handleSignalingMessage(data) {
             switch (data.type) {
+                case 'av_sync_package':
+                    if (window.LipSyncManager && (data.package || data)) {
+                        window.LipSyncManager.unpackPackage(data.package || data);
+                    }
+                    break;
                 case 'chat':
                     appendChatMessage(data.username, data.message, data.user_id == currentUserId, data.display_name, data.pfp_url);
                     break;
@@ -3759,6 +3801,9 @@
                 }
                 if (label) label.textContent = isMicOn ? 'Unmuted' : 'Muted';
                 showNotification(isMicOn ? 'Microphone unmuted.' : 'Microphone muted.', 'info');
+                if (window.LipSyncManager) {
+                    window.LipSyncManager.makePackageAndSend();
+                }
             } catch (e) {
                 console.error('Mic toggle error:', e);
                 isMicOn = !isMicOn; // Revert state
@@ -3795,6 +3840,9 @@
                 const localBox = (window.room) ? document.getElementById(`video-box-${window.room.localParticipant.identity}`) : null;
                 if (localBox) localBox.classList.toggle('cam-off', !isCameraOn);
                 if (isCameraOn) renderLocalParticipant();
+                if (window.LipSyncManager) {
+                    window.LipSyncManager.makePackageAndSend();
+                }
             } catch (e) {
                 console.error('Camera toggle error:', e);
                 isCameraOn = !isCameraOn; // Revert state
