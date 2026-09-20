@@ -62,15 +62,47 @@ def extract_metadata_and_proxies_task(project_id):
         project.has_audio = meta.get("has_audio", True)
         project.status = "ready"
         
-        # Initialize clips_json
-        orig_filename = os.path.basename(project.original_file.name)
-        if len(orig_filename) > 32:
-            orig_filename = project.title + ".mp4"
-        project.clips_json = json.dumps([
-            {"title": orig_filename, "duration": meta.get("duration", 0.0)}
-        ])
+        # Initialize timeline_state if empty
+        if not project.timeline_state:
+            orig_filename = os.path.basename(project.original_file.name)
+            if len(orig_filename) > 32:
+                orig_filename = (project.title or "Clip") + ".mp4"
+            has_aud = meta.get("has_audio", True)
+            dur = meta.get("duration", 0.0) or 0.0
+            bg_audios = []
+            if has_aud and dur > 0:
+                bg_audios.append({
+                    "name": f"Audio Stream — {orig_filename}",
+                    "filename": orig_filename,
+                    "path": project.original_file.path if project.original_file else "",
+                    "start": 0.0,
+                    "end": dur,
+                    "trimStart": 0.0,
+                    "trimEnd": dur,
+                    "bg_volume": 1.0,
+                    "video_volume": 0.0,
+                    "is_detached": True
+                })
+
+            project.timeline_state = {
+                "trim": {"start": 0.0, "end": dur, "mode": "extract", "fade_in": False, "fade_out": False},
+                "speed": 1.0,
+                "audio": {"volume": 1.0, "muted": False},
+                "text_overlays": [],
+                "background_audios": bg_audios,
+                "resize": None,
+                "effects": {"grayscale": False, "rotate": 0, "fade": None},
+                "clips": [{
+                    "title": orig_filename,
+                    "start": 0.0,
+                    "end": dur,
+                    "trimStart": 0.0,
+                    "trimEnd": dur,
+                    "duration": dur
+                }]
+            }
         
-        project.save(update_fields=["duration_seconds", "width", "height", "has_audio", "status", "clips_json"])
+        project.save(update_fields=["duration_seconds", "width", "height", "has_audio", "status", "timeline_state"])
         logger.info(f"Asynchronous metadata extraction success for project {project_id}")
     except Exception as e:
         logger.error(f"Asynchronous metadata extraction failed for project {project_id}: {str(e)}")

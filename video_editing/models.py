@@ -65,9 +65,20 @@ class VideoProject(models.Model):
     proxy_status = models.CharField(max_length=20, choices=PROXY_STATUS_CHOICES, default="none")
     proxy_url = models.CharField(max_length=500, blank=True, null=True)
     
-    # NEW: JSON state of the timeline (clips, tracks, splits, overlays)
+    # JSON state of the timeline (clips, tracks, splits, overlays)
     timeline_state = models.JSONField(blank=True, null=True)
-    clips_json = models.TextField(blank=True, default="[]")
+
+    @property
+    def clips_json(self):
+        """
+        Backward-compatible property returning JSON string of timeline clips from timeline_state.
+        Eliminates duplicate database state storage while preserving API compatibility.
+        """
+        import json
+        if self.timeline_state and isinstance(self.timeline_state, dict):
+            clips = self.timeline_state.get('clips', [])
+            return json.dumps(clips)
+        return "[]"
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -28,6 +28,7 @@ urlpatterns = [
     path("project/<int:pk>/speed/", views.op_speed, name="op_speed"),
     path("project/<int:pk>/split/", views.op_split, name="op_split"),
     path("project/<int:pk>/reset/", views.op_reset, name="op_reset"),
+    path("project/<int:pk>/save-timeline/", views.save_timeline, name="save_timeline"),
     path("project/<int:pk>/export/", views.export_project, name="export_project"),
     path("project/<int:pk>/publish/", views.publish_to_lecture, name="publish_to_lecture"),
     path("project/<int:pk>/upload-audio/", views.upload_audio_temp, name="upload_audio_temp"),
