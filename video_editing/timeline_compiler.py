@@ -62,11 +62,17 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
 
     # Map extra audio files to FFmpeg inputs
     audio_inputs_start_idx = len(inputs)
-    for ac in audio_clips:
+    audio_input_index_map = {}
+    next_audio_input_idx = audio_inputs_start_idx
+    for idx, ac in enumerate(audio_clips):
         audio_path = ac.get('temp_path') or ac.get('path')
+        if not audio_path and ac.get('is_detached'):
+            audio_path = project.original_file.path
         if audio_path and os.path.exists(audio_path):
             inputs.append(audio_path)
             cmd.extend(['-i', audio_path])
+            audio_input_index_map[idx] = next_audio_input_idx
+            next_audio_input_idx += 1
 
     filter_complex = []
     video_outs = []
@@ -304,21 +310,24 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     
     # Process multiple audio inputs
     for idx, ac in enumerate(audio_clips):
-        audio_path = ac.get('temp_path') or ac.get('path')
-        if audio_path and os.path.exists(audio_path):
-            input_idx = audio_inputs_start_idx + idx
-            ac_start = float(ac.get('start', 0.0))
-            ac_end = float(ac.get('end', 10.0))
-            ac_dur = max(0.5, ac_end - ac_start)
-            
-            # Trim background audio, add delay offset
-            start_ms = int(ac_start * 1000)
-            delay_str = f",adelay={start_ms}|{start_ms}" if start_ms > 0 else ""
-            vol = float(ac.get('bg_volume', ac.get('volume', 0.5)))
-            
-            label_trim = f"[a_trimmed_{idx}]"
-            filter_complex.append(f"[{input_idx}:a]atrim=0:{ac_dur},asetpts=PTS-STARTPTS{delay_str},volume={vol}{label_trim}")
-            audio_mix_labels.append(label_trim)
+        if idx not in audio_input_index_map:
+            continue
+        input_idx = audio_input_index_map[idx]
+        ac_start = float(ac.get('start', 0.0))
+        ac_end = float(ac.get('end', 10.0))
+        ac_dur = max(0.01, ac_end - ac_start)
+        
+        ac_trim_start = float(ac.get('trimStart', 0.0))
+        ac_trim_end = float(ac.get('trimEnd', ac_trim_start + ac_dur))
+        
+        # Trim background audio, add delay offset
+        start_ms = int(ac_start * 1000)
+        delay_str = f",adelay={start_ms}|{start_ms}" if start_ms > 0 else ""
+        vol = float(ac.get('bg_volume', ac.get('volume', 0.5)))
+        
+        label_trim = f"[a_trimmed_{idx}]"
+        filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start}:{ac_trim_end},asetpts=PTS-STARTPTS{delay_str},volume={vol}{label_trim}")
+        audio_mix_labels.append(label_trim)
 
     # Perform amix if multiple audio streams are active
     if len(audio_mix_labels) > 1:

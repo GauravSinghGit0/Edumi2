@@ -143,7 +143,6 @@
                 <button class="ve-tool-tab tool-tab" data-tab="text">Text</button>
                 <button class="ve-tool-tab tool-tab" data-tab="audio">Audio</button>
                 <button class="ve-tool-tab tool-tab" data-tab="effects">Effects</button>
-                <button class="ve-tool-tab tool-tab" data-tab="export">Export</button>
             </div>
 
             <div class="ve-tool-panels">
@@ -349,26 +348,6 @@
                         <button type="submit" class="ve-btn ve-btn-secondary ve-btn-full">Apply Fade Effects</button>
                     </form>
                 </div>
-
-                <!-- Export Panel -->
-                <div class="ve-tool-section tool-section" data-panel="export">
-                    <h3 class="ve-section-title">Download &amp; Export</h3>
-
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <a href="{% url 'project_download' project.pk %}"
-                            class="ve-btn ve-btn-secondary ve-btn-full">Download (Original Container)</a>
-                        <a href="{% url 'project_download_mkv' project.pk %}"
-                            class="ve-btn ve-btn-secondary ve-btn-full"
-                            style="border-color: #22c55e; color: #22c55e;">Download MKV (Lossless Container)</a>
-                    </div>
-
-                    <div style="height: 1px; background: var(--ve-border); margin: 16px 0;"></div>
-
-                    <h3 class="ve-section-title">Compile &amp; Export</h3>
-                    <button class="ve-btn ve-btn-primary ve-btn-full"
-                        onclick="document.getElementById('btn-master-export').click();">Process &amp; Export
-                        Video</button>
-                </div>
             </div>
         </aside>
     </main>
@@ -397,26 +376,22 @@
                     <i data-lucide="copy" style="width:13px;height:13px;"></i>
                     <span>Duplicate</span>
                 </button>
-                <button type="button" class="tb-btn" id="tb-copy" title="Copy Selected Item (Ctrl+C)" disabled>
-                    <i data-lucide="clipboard-copy" style="width:13px;height:13px;"></i>
-                    <span>Copy</span>
-                </button>
-                <button type="button" class="tb-btn" id="tb-paste" title="Paste Item at Playhead (Ctrl+V)" disabled>
-                    <i data-lucide="clipboard-paste" style="width:13px;height:13px;"></i>
-                    <span>Paste</span>
-                </button>
 
                 <!-- Speed controls in the timeline toolbar -->
-                <div class="timeline-speed-control"
+                <div class="timeline-speed-control" id="timeline-speed-control"
                     style="display: flex; align-items: center; gap: 6px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--ve-border);">
-                    <form action="{% url 'op_speed' project.pk %}" method="post"
-                        style="display: flex; align-items: center; gap: 6px; margin: 0;">
-                        {% csrf_token %}
-                        <span
-                            style="font-size: 12px; font-weight: 500; color: var(--ve-text-muted); white-space: nowrap;">Speed:</span>
-                        {{ speed_form.speed_factor }}
-                        <button type="submit" class="tb-btn tb-btn-primary" title="Apply Speed">Apply</button>
-                    </form>
+                    <span style="font-size: 12px; font-weight: 500; color: var(--ve-text-muted); white-space: nowrap;">Speed</span>
+                    <div class="speed-dropdown-wrapper" style="position: relative; display: inline-block;">
+                        <select id="speed-dropdown" class="ve-select" style="font-size: 12px; height: 26px; padding: 2px 20px 2px 8px; border-radius: 4px; border: 1px solid var(--ve-border, #333); background: var(--ve-bg-card, #1e1e1e); color: var(--ve-text, #fff); cursor: pointer; appearance: none; -webkit-appearance: none;">
+                            <option value="0.5">0.5×</option>
+                            <option value="0.75">0.75×</option>
+                            <option value="1.0" selected>1×</option>
+                            <option value="1.25">1.25×</option>
+                            <option value="1.5">1.5×</option>
+                            <option value="2.0">2×</option>
+                        </select>
+                        <span style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--ve-text-muted);">▾</span>
+                    </div>
                 </div>
             </div>
 
@@ -647,6 +622,7 @@
     window.REEL_PROJECT_ID = "{{ project.pk }}";
     window.REEL_CHUNKED_UPLOAD_URL = "{% url 'chunked_upload' %}";
     window.REEL_STATUS_URL = "{% url 'project_status' project.pk %}";
+    window.REEL_PROJECT_SAVE_TIMELINE_URL = "{% url 'save_timeline' project.pk %}";
     window.REEL_PROJECT_STATUS = "{{ project.status }}";
     window.REEL_UPLOAD_ASSET_URL = "{% url 'upload_asset' project.pk %}";
     window.REEL_CSRF_TOKEN = "{{ csrf_token }}";
@@ -654,8 +630,8 @@
     window.REEL_PROJECT_TRIM_START = Number("{{ project.trim_start|default:0.0 }}");
     window.REEL_PROJECT_TRIM_END = JSON.parse("{{ project.trim_end|default_if_none:'null' }}");
     window.REEL_PROJECT_HEIGHT = Number("{{ project.height|default:720 }}");
-    window.REEL_PROJECT_CLIPS = JSON.parse('{{ project.clips_json|default:"[]"|escapejs }}');
     window.REEL_PROJECT_TIMELINE_STATE = JSON.parse('{{ timeline_state_json|default:"null"|escapejs }}');
+    window.REEL_PROJECT_CLIPS = (window.REEL_PROJECT_TIMELINE_STATE && window.REEL_PROJECT_TIMELINE_STATE.clips) ? window.REEL_PROJECT_TIMELINE_STATE.clips : JSON.parse('{{ project.clips_json|default:"[]"|escapejs }}');
     window.REEL_PROJECT_PROXY_STATUS = "{{ project.proxy_status }}";
     window.REEL_PROJECT_PROXY_URL = "{{ project.proxy_url|default:'' }}";
     window.REEL_PROJECT_OPERATIONS = [
@@ -670,30 +646,50 @@
         {% endfor %}
     ];
 
-    // Client-side high performance SVG waveform visualizer
-    window.generateWaveformSvg = function(width, height, seed) {
-        var barWidth = 3;
-        var barGap = 2;
+    // Client-side high performance SVG waveform visualizer (CapCut style centered waveform)
+    window.generateWaveformSvg = function(width, height, seed, clipStartRatio, clipEndRatio) {
+        var barWidth = 2.5;
+        var barGap = 1.5;
         var totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
-        var halfHeight = height / 2;
+        var centerY = height / 2;
+        var maxBarHeight = height - 8;
         var paths = [];
 
-        var s = (seed || 12345) % 2147483647;
-        function rnd() {
-            s = (s * 16807) % 2147483647;
-            return (s - 1) / 2147483646;
+        var peaks = window.audioPeaksCache;
+        var startR = (clipStartRatio !== undefined) ? clipStartRatio : 0.0;
+        var endR = (clipEndRatio !== undefined) ? clipEndRatio : 1.0;
+
+        if (peaks && peaks.length > 0) {
+            var len = peaks.length;
+            for (var i = 0; i < totalBars; i++) {
+                var x = i * (barWidth + barGap);
+                var ratio = startR + (i / totalBars) * (endR - startR);
+                var idx = Math.min(len - 1, Math.max(0, Math.floor(ratio * len)));
+                var amp = Math.max(0.04, peaks[idx] || 0.04);
+                var barH = Math.max(2, amp * maxBarHeight);
+                var topY = centerY - (barH / 2);
+                paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.9"/>`);
+            }
+        } else {
+            var s = (seed || 12345) % 2147483647;
+            function rnd() {
+                s = (s * 16807) % 2147483647;
+                return (s - 1) / 2147483646;
+            }
+
+            for (var i = 0; i < totalBars; i++) {
+                var x = i * (barWidth + barGap);
+                var t = startR + (i / totalBars) * (endR - startR);
+                var wave = Math.abs(Math.sin(t * 40.0) * Math.cos(t * 15.0) + Math.sin(t * 80.0) * 0.3);
+                var noise = 0.2 + 0.8 * rnd();
+                var amp = Math.max(0.05, Math.min(0.95, (0.3 + 0.7 * wave) * noise));
+                var barH = Math.max(2, amp * maxBarHeight);
+                var topY = centerY - (barH / 2);
+                paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.85"/>`);
+            }
         }
 
-        for (var i = 0; i < totalBars; i++) {
-            var x = i * (barWidth + barGap);
-            var envelope = 0.3 + 0.7 * Math.abs(Math.sin(i / 15.0) * Math.cos(i / 35.0));
-            var randomFactor = 0.2 + 0.8 * rnd();
-            var barH = Math.max(4, Math.min(height - 4, (halfHeight * 1.6) * envelope * randomFactor));
-            var y = halfHeight - (barH / 2);
-            paths.push(`<rect x="${x}" y="${y.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1.5" fill="currentColor" opacity="0.6"/>`);
-        }
-
-        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="color: var(--ve-primary, #6366f1); display: block;">${paths.join('')}</svg>`;
+        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: 100%;"><line x1="0" y1="${centerY}" x2="${width}" y2="${centerY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>${paths.join('')}</svg>`;
     };
 
     function initProjectDetail() {
@@ -785,7 +781,10 @@
                 formVideoVol.value = val;
                 if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
                 var mainVid = document.getElementById('main-video');
-                if (mainVid) mainVid.volume = Math.min(1.0, parseFloat(val));
+                if (mainVid) {
+                    mainVid.volume = Math.min(1.0, parseFloat(val));
+                    if (parseFloat(val) > 0) mainVid.muted = false;
+                }
             });
 
             formVideoVol.addEventListener('input', function (e) {
@@ -793,7 +792,10 @@
                 timelineVideoVol.value = val;
                 if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
                 var mainVid = document.getElementById('main-video');
-                if (mainVid) mainVid.volume = Math.min(1.0, parseFloat(val));
+                if (mainVid) {
+                    mainVid.volume = Math.min(1.0, parseFloat(val));
+                    if (parseFloat(val) > 0) mainVid.muted = false;
+                }
             });
         }
 

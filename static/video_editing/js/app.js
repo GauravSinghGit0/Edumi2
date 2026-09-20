@@ -32,21 +32,19 @@
     if (!editorState.video_clips || editorState.video_clips.length === 0) {
       return tTimeline;
     }
-    let acc = 0;
+    tTimeline = Math.max(0, Math.min(tTimeline, duration || 0));
     for (let i = 0; i < editorState.video_clips.length; i++) {
       const clip = editorState.video_clips[i];
       const dur = parseFloat(clip.duration || 0);
-      if (tTimeline >= acc && tTimeline <= acc + dur) {
-        const offset = tTimeline - acc;
+      if (tTimeline >= clip.start && (tTimeline < clip.end || i === editorState.video_clips.length - 1)) {
+        const offset = Math.max(0, tTimeline - clip.start);
         const trimStart = parseFloat(clip.trimStart !== undefined ? clip.trimStart : 0);
-        return trimStart + offset;
+        return trimStart + Math.min(offset, dur);
       }
-      acc += dur;
     }
     const lastClip = editorState.video_clips[editorState.video_clips.length - 1];
     if (lastClip) {
-      const trimEnd = parseFloat(lastClip.trimEnd !== undefined ? lastClip.trimEnd : (lastClip.trimStart + lastClip.duration));
-      return trimEnd;
+      return parseFloat(lastClip.trimEnd !== undefined ? lastClip.trimEnd : (lastClip.trimStart + lastClip.duration));
     }
     return tTimeline;
   }
@@ -55,17 +53,22 @@
     if (!editorState.video_clips || editorState.video_clips.length === 0) {
       return tSource;
     }
-    let acc = 0;
     for (let i = 0; i < editorState.video_clips.length; i++) {
       const clip = editorState.video_clips[i];
       const trimStart = parseFloat(clip.trimStart !== undefined ? clip.trimStart : 0);
       const trimEnd = parseFloat(clip.trimEnd !== undefined ? clip.trimEnd : (trimStart + clip.duration));
       if (tSource >= trimStart && tSource <= trimEnd) {
-        return acc + (tSource - trimStart);
+        return clip.start + (tSource - trimStart);
       }
-      acc += parseFloat(clip.duration || 0);
     }
-    return tSource;
+    for (let i = 0; i < editorState.video_clips.length; i++) {
+      const clip = editorState.video_clips[i];
+      const trimStart = parseFloat(clip.trimStart !== undefined ? clip.trimStart : 0);
+      if (tSource < trimStart) {
+        return clip.start;
+      }
+    }
+    return duration;
   }
 
   async function autoSaveTimeline() {
@@ -758,21 +761,54 @@
       editorState.video_clips = JSON.parse(JSON.stringify(clipsData));
     }
 
+    function ensureOriginalAudioTrackClip() {
+      const hasOriginalAudio = window.REEL_PROJECT_HAS_AUDIO &&
+        (window.REEL_PROJECT_HAS_AUDIO === "True" ||
+         window.REEL_PROJECT_HAS_AUDIO === "true" ||
+         window.REEL_PROJECT_HAS_AUDIO === true);
+      if (hasOriginalAudio && duration > 0) {
+        if (!editorState.background_audios) {
+          editorState.background_audios = [];
+        }
+        if (editorState.background_audios.length === 0) {
+          editorState.background_audios.push({
+            name: "Audio Track (A1)",
+            filename: "Audio Track (A1)",
+            start: 0,
+            end: duration,
+            trimStart: 0,
+            trimEnd: duration,
+            bg_volume: 1.0,
+            video_volume: 1.0,
+            is_detached: true
+          });
+        }
+      }
+    }
+
     function recalculateVideoClipsTimeline() {
       let acc = 0.0;
       (editorState.video_clips || []).forEach(clip => {
-        const dur = parseFloat(clip.duration || 0.0);
+        const trimStart = parseFloat(clip.trimStart !== undefined ? clip.trimStart : 0.0);
+        let trimEnd = parseFloat(clip.trimEnd !== undefined ? clip.trimEnd : (clip.duration ? trimStart + parseFloat(clip.duration) : trimStart));
+        if (trimEnd <= trimStart) {
+          trimEnd = trimStart + (parseFloat(clip.duration) || 1.0);
+        }
+        const dur = trimEnd - trimStart;
+        clip.trimStart = trimStart;
+        clip.trimEnd = trimEnd;
+        clip.duration = dur;
         clip.start = acc;
         clip.end = acc + dur;
-        if (clip.trimStart === undefined) clip.trimStart = 0;
-        if (clip.trimEnd === undefined) clip.trimEnd = dur;
         acc += dur;
       });
       duration = acc;
       window.duration = acc;
       if (typeof endSeconds !== 'undefined') {
+        startSeconds = 0;
         endSeconds = acc;
       }
+      ensureOriginalAudioTrackClip();
     }
     recalculateVideoClipsTimeline();
 
@@ -794,8 +830,11 @@
         if (foutInput) foutInput.value = editorState.fade.out;
       }
       if (editorState.speed) {
-        const speedInput = document.querySelector('form[action*="/speed/"] #id_speed_factor, .timeline-speed-control form select');
-        if (speedInput) speedInput.value = editorState.speed;
+        const speedDropdown = document.getElementById("speed-dropdown");
+        const spdStr = editorState.speed.toString();
+        if (speedDropdown && Array.from(speedDropdown.options).some((o) => o.value === spdStr)) {
+          speedDropdown.value = spdStr;
+        }
       }
     };
 
@@ -1315,8 +1354,8 @@
       audio: {
         stateKey: "background_audios",
         containerId: "audio-track",
-        color: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-        borderColor: "#34d399",
+        color: "#152a20",
+        borderColor: "#22c55e",
         icon: "music",
       },
       effect: {
@@ -1343,16 +1382,18 @@
     function selectTimelineItem(trackType, index, item, options = {}) {
       globalSelection = { track: trackType, index };
 
-      if (
-        item &&
-        typeof item.start === "number" &&
-        typeof item.end === "number"
-      ) {
-        startSeconds = options.start ?? item.start;
-        endSeconds = options.end ?? item.end;
-      } else if (typeof duration !== "undefined" && duration) {
-        startSeconds = options.start ?? startSeconds ?? 0;
-        endSeconds = options.end ?? endSeconds ?? duration;
+      if (trackType === "video") {
+        if (
+          item &&
+          typeof item.start === "number" &&
+          typeof item.end === "number"
+        ) {
+          startSeconds = options.start ?? item.start;
+          endSeconds = options.end ?? item.end;
+        } else if (typeof duration !== "undefined" && duration) {
+          startSeconds = options.start ?? startSeconds ?? 0;
+          endSeconds = options.end ?? endSeconds ?? duration;
+        }
       }
 
       if (options.syncForm !== false && trackType === "text") {
@@ -1386,6 +1427,7 @@
     }
 
     function renderAllTimelineTracks() {
+      ensureOriginalAudioTrackClip();
       if (window.dynamicTrackManager) {
         window.dynamicTrackManager.updateTrackVisibilities();
       }
@@ -1411,7 +1453,7 @@
           const widthPx = Math.max(20, (endSec - startSec) * pxPerSecond);
 
           const el = document.createElement("div");
-          el.className = `timeline-generic-block`;
+          el.className = `timeline-generic-block${trackType === 'audio' ? ' timeline-audio-block' : ''}${trackType === 'text' ? ' timeline-text-block' : ''}`;
           el.style.position = "absolute";
           el.style.left = `${leftPx}px`;
           el.style.width = `${widthPx}px`;
@@ -1441,7 +1483,28 @@
           }
 
           let name = item.name || item.text || "Item";
-          el.innerHTML = `<i data-lucide="${config.icon}" style="width:14px;height:14px;margin-right:6px;flex-shrink:0;"></i> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>`;
+          el.innerHTML = `<i data-lucide="${config.icon}" style="width:14px;height:14px;margin-right:6px;flex-shrink:0;position:relative;z-index:2;"></i> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,0.7);">${name}</span>`;
+
+          if (trackType === "audio") {
+            const waveformDiv = document.createElement("div");
+            waveformDiv.className = "audio-track-waveform-bg";
+            waveformDiv.style.position = "absolute";
+            waveformDiv.style.inset = "0";
+            waveformDiv.style.display = "flex";
+            waveformDiv.style.alignItems = "center";
+            waveformDiv.style.opacity = "0.75";
+            waveformDiv.style.pointerEvents = "none";
+            waveformDiv.style.zIndex = "1";
+            const itemTrimStart = item.trimStart != null ? item.trimStart : (item.start || 0);
+            const itemTrimEnd = item.trimEnd != null ? item.trimEnd : (item.end || duration);
+            const srcDur = duration || 1;
+            const startR = itemTrimStart / srcDur;
+            const endR = itemTrimEnd / srcDur;
+            if (typeof window.generateWaveformSvg === "function") {
+              waveformDiv.innerHTML = window.generateWaveformSvg(widthPx, 44, (name.length + index * 7), startR, endR);
+            }
+            el.appendChild(waveformDiv);
+          }
 
           const handleL = document.createElement("div");
           handleL.style.position = "absolute";
@@ -1557,13 +1620,6 @@
     function syncEffectsToTrack() {
       editorState.active_effects = editorState.active_effects || [];
       if (editorState.active_effects.length === 0) {
-        if (editorState.speed && editorState.speed !== 1.0)
-          editorState.active_effects.push({
-            name: `Speed (${editorState.speed}x)`,
-            type: "speed",
-            start: 0,
-            end: duration,
-          });
         if (editorState.grayscale)
           editorState.active_effects.push({
             name: "Grayscale",
@@ -1811,38 +1867,49 @@
       return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
     }
 
-    function generateWaveformSvg(width, height, seed = Math.random()) {
-      // Generate professional-looking audio waveform with vertical bars
-      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
-      // Pure white gradient for audio wave pattern
-      svg += `<defs><linearGradient id="waveGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ffffff;stop-opacity:1"/><stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.9"/><stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.75"/></linearGradient></defs>`;
-
+    function generateWaveformSvg(width, height, seed = 12345, clipStartRatio = 0.0, clipEndRatio = 1.0) {
+      const barWidth = 2.5;
+      const barGap = 1.5;
+      const totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
       const centerY = height / 2;
-      const barWidth = 3;
-      const gap = 2;
-      const numBars = Math.floor(width / (barWidth + gap));
-      const baseline = centerY;
+      const maxBarHeight = height - 8;
+      const paths = [];
 
-      for (let i = 0; i < numBars; i++) {
-        const x = i * (barWidth + gap);
-        // Create semi-random but realistic waveform pattern
-        const wave1 = Math.sin(i * 0.15 + seed * 20) * 0.35;
-        const wave2 = Math.sin(i * 0.06 + seed * 15) * 0.3;
-        const wave3 = Math.sin(i * 0.25 + seed * 10) * 0.25;
-        const randomFactor = Math.random() * 0.3;
-        const amplitude = Math.max(
-          0.1,
-          Math.abs(wave1 + wave2 + wave3 + randomFactor),
-        );
-        const barHeight = Math.max(3, amplitude * height * 0.9);
+      const peaks = window.audioPeaksCache;
+      const startR = (clipStartRatio !== undefined) ? clipStartRatio : 0.0;
+      const endR = (clipEndRatio !== undefined) ? clipEndRatio : 1.0;
 
-        // Draw bar above and below center for symmetric look
-        const topY = centerY - barHeight / 2;
+      if (peaks && peaks.length > 0) {
+        const len = peaks.length;
+        for (let i = 0; i < totalBars; i++) {
+          const x = i * (barWidth + barGap);
+          const ratio = startR + (i / totalBars) * (endR - startR);
+          const idx = Math.min(len - 1, Math.max(0, Math.floor(ratio * len)));
+          const amp = Math.max(0.04, peaks[idx] || 0.04);
+          const barH = Math.max(2, amp * maxBarHeight);
+          const topY = centerY - (barH / 2);
+          paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.9"/>`);
+        }
+      } else {
+        let s = (seed || 12345) % 2147483647;
+        function rnd() {
+          s = (s * 16807) % 2147483647;
+          return (s - 1) / 2147483646;
+        }
 
-        svg += `<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barHeight.toFixed(1)}" rx="1.5" fill="url(#waveGrad)"/>`;
+        for (let i = 0; i < totalBars; i++) {
+          const x = i * (barWidth + barGap);
+          const t = startR + (i / totalBars) * (endR - startR);
+          const wave = Math.abs(Math.sin(t * 40.0) * Math.cos(t * 15.0) + Math.sin(t * 80.0) * 0.3);
+          const noise = 0.2 + 0.8 * rnd();
+          const amp = Math.max(0.05, Math.min(0.95, (0.3 + 0.7 * wave) * noise));
+          const barH = Math.max(2, amp * maxBarHeight);
+          const topY = centerY - (barH / 2);
+          paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.85"/>`);
+        }
       }
-      svg += `</svg>`;
-      return svg;
+
+      return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: 100%;"><line x1="0" y1="${centerY}" x2="${width}" y2="${centerY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>${paths.join('')}</svg>`;
     }
     window.generateWaveformSvg = generateWaveformSvg;
 
@@ -2156,6 +2223,19 @@
         if (block) {
           block.style.left = `${blockLeft}px`;
           block.style.width = `${blockWidth}px`;
+          const clipSpeed = clip.speed || editorState.speed || 1.0;
+          let speedBadge = block.querySelector(".clip-speed-badge");
+          if (clipSpeed !== 1.0) {
+            if (!speedBadge) {
+              speedBadge = document.createElement("span");
+              speedBadge.className = "clip-speed-badge";
+              speedBadge.style.cssText = "position: absolute; top: 3px; right: 4px; background: rgba(0,0,0,0.7); border: 1px solid var(--ve-border, #444); border-radius: 3px; font-size: 10px; font-weight: 600; padding: 1px 4px; color: #38bdf8; z-index: 5; pointer-events: none;";
+              block.appendChild(speedBadge);
+            }
+            speedBadge.textContent = `${clipSpeed}x`;
+          } else if (speedBadge) {
+            speedBadge.remove();
+          }
         }
 
         const clipStart = parseFloat(
@@ -2247,7 +2327,8 @@
       const pxPerSecond = basePxPerSecond * zoomFactor;
       const leftPx = startSeconds * pxPerSecond;
       const rightPx = endSeconds * pxPerSecond;
-      const playheadPx = video.currentTime * pxPerSecond;
+      const timelineTime = sourceToTimelineTime(video.currentTime);
+      const playheadPx = timelineTime * pxPerSecond;
 
       // Position and size trim thumbnails to only cover selected range
       trimThumbnails.style.left = `${leftPx}px`;
@@ -2273,12 +2354,12 @@
       trimPlayhead.style.left = `${trackLabelWidth + playheadPx}px`;
       const playheadTooltip = document.getElementById("playhead-tooltip");
       if (playheadTooltip) {
-        playheadTooltip.textContent = formatTime(video.currentTime);
+        playheadTooltip.textContent = formatTime(timelineTime);
       }
 
       // Time displays
       if (currentDisplay)
-        currentDisplay.textContent = formatTime(video.currentTime);
+        currentDisplay.textContent = formatTime(timelineTime);
       if (totalDisplay) totalDisplay.textContent = formatTime(duration);
 
       const tooltipL = document.getElementById("handle-tooltip-left");
@@ -2447,16 +2528,33 @@
         if (activeClipIndex !== -1) {
           const clip = editorState.video_clips[activeClipIndex];
           const trimEnd = parseFloat(clip.trimEnd !== undefined ? clip.trimEnd : (clip.trimStart + clip.duration));
-          if (t >= trimEnd - 0.1) {
+          if (t >= trimEnd - 0.08) {
             if (activeClipIndex + 1 < editorState.video_clips.length) {
               const nextClip = editorState.video_clips[activeClipIndex + 1];
               video.currentTime = parseFloat(nextClip.trimStart !== undefined ? nextClip.trimStart : 0);
               return;
             } else {
               video.pause();
-              video.currentTime = parseFloat(editorState.video_clips[0].trimStart !== undefined ? editorState.video_clips[0].trimStart : 0);
+              video.currentTime = timelineToSourceTime(0);
               return;
             }
+          }
+        } else {
+          // Video timestamp is inside a deleted clip gap
+          let jumped = false;
+          for (let i = 0; i < editorState.video_clips.length; i++) {
+            const clip = editorState.video_clips[i];
+            const trimStart = parseFloat(clip.trimStart !== undefined ? clip.trimStart : 0);
+            if (t < trimStart) {
+              video.currentTime = trimStart;
+              jumped = true;
+              break;
+            }
+          }
+          if (!jumped) {
+            video.pause();
+            video.currentTime = timelineToSourceTime(0);
+            return;
           }
         }
       }
@@ -2594,6 +2692,8 @@
         const val = parseFloat(e.target.value);
         video.volume = val;
         video.muted = val === 0;
+        editorState.volume = val;
+        editorState.muted = video.muted;
         syncVolumeUI();
       });
     }
@@ -2601,11 +2701,50 @@
     if (btnMute) {
       btnMute.addEventListener("click", () => {
         video.muted = !video.muted;
+        editorState.muted = video.muted;
         syncVolumeUI();
       });
     }
 
-    video.addEventListener("volumechange", syncVolumeUI);
+    video.addEventListener("volumechange", () => {
+      editorState.muted = video.muted;
+      editorState.volume = video.volume;
+      syncVolumeUI();
+    });
+
+    // --- Speed Dropdown Listener ---
+    const speedDropdown = document.getElementById("speed-dropdown");
+
+    const applySpeedChange = (spdVal) => {
+      const spd = parseFloat(spdVal);
+      if (!Number.isFinite(spd) || spd <= 0) return;
+      editorState.speed = spd;
+      video.playbackRate = spd;
+
+      if (globalSelection.track === "video" && globalSelection.index !== undefined) {
+        const clip = editorState.video_clips?.[globalSelection.index];
+        if (clip) {
+          clip.speed = spd;
+        }
+      }
+
+      if (window.updateLocalState) {
+        window.updateLocalState("Speed", `Changed speed to ${spd}x`);
+      } else if (typeof autoSaveTimeline === "function") {
+        autoSaveTimeline();
+      }
+    };
+
+    if (speedDropdown) {
+      const currentSpd = (editorState.speed || 1.0).toString();
+      if (Array.from(speedDropdown.options).some((o) => o.value === currentSpd)) {
+        speedDropdown.value = currentSpd;
+      }
+
+      speedDropdown.addEventListener("change", (e) => {
+        applySpeedChange(e.target.value);
+      });
+    }
 
     if (btnSkipStart) {
       btnSkipStart.addEventListener("click", () => {
@@ -2829,6 +2968,70 @@
       tbBottomFullscreen.addEventListener("click", toggleTimelineFullscreen);
     if (fsTimelineBtn)
       fsTimelineBtn.addEventListener("click", toggleTimelineFullscreen);
+
+    // --- Real Web Audio API PCM Peak Extraction & Detach Audio Action ---
+    let audioPeaksCache = null;
+    let isExtractingAudioPeaks = false;
+
+    async function extractAudioPeaks() {
+      if (audioPeaksCache) {
+        window.audioPeaksCache = audioPeaksCache;
+        return audioPeaksCache;
+      }
+      if (isExtractingAudioPeaks) return null;
+      if (window.REEL_PROJECT_HAS_AUDIO === "False" || window.REEL_PROJECT_HAS_AUDIO === false) return null;
+
+      const videoEl = document.getElementById("main-video");
+      if (!videoEl) return null;
+
+      let mediaUrl = videoEl.currentSrc || videoEl.src;
+      if (!mediaUrl || mediaUrl.startsWith("blob:")) return null;
+
+      try {
+        isExtractingAudioPeaks = true;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const resp = await fetch(mediaUrl);
+        const buf = await resp.arrayBuffer();
+        const audioBuf = await audioCtx.decodeAudioData(buf);
+        const rawData = audioBuf.getChannelData(0);
+        const numSamples = 2000;
+        const blockSize = Math.floor(rawData.length / numSamples);
+        const peaks = new Float32Array(numSamples);
+        let maxPeak = 0.0001;
+
+        for (let i = 0; i < numSamples; i++) {
+          let maxVal = 0;
+          const startIdx = i * blockSize;
+          const endIdx = Math.min(rawData.length, startIdx + blockSize);
+          for (let j = startIdx; j < endIdx; j++) {
+            const val = Math.abs(rawData[j]);
+            if (val > maxVal) maxVal = val;
+          }
+          peaks[i] = maxVal;
+          if (maxVal > maxPeak) maxPeak = maxVal;
+        }
+
+        for (let i = 0; i < numSamples; i++) {
+          peaks[i] = Math.min(1.0, peaks[i] / maxPeak);
+        }
+
+        audioPeaksCache = peaks;
+        window.audioPeaksCache = peaks;
+        isExtractingAudioPeaks = false;
+
+        renderAllTimelineTracks();
+        if (typeof renderAudioOverlay === "function") {
+          renderAudioOverlay();
+        }
+        return peaks;
+      } catch (err) {
+        console.warn("[AudioWaveform] Peak extraction fallback initialized:", err);
+        isExtractingAudioPeaks = false;
+        return null;
+      }
+    }
+
+
 
     // --- Modular Track Manager & Dynamic Timeline Architecture ---
     class DynamicTrackManager {
@@ -3545,11 +3748,8 @@
     // Click on the video track to select a segment
     if (trimTrack) {
       trimTrack.addEventListener("click", (e) => {
-        // If clicking handles, ignore to prevent selection reset during drag
-        if (
-          e.target.classList.contains("trim-handle") ||
-          e.target.closest(".trim-handle")
-        ) {
+        // Only select video clip if clicking directly on a video clip block
+        if (!e.target.closest(".timeline-clip-block")) {
           return;
         }
         const t = getSecondsFromX(e.clientX);
@@ -3571,7 +3771,7 @@
     function splitSelectedTimelineItem() {
       if (!globalSelection.track) return;
 
-      const curT = parseFloat(video.currentTime.toFixed(2));
+      const curT = parseFloat(sourceToTimelineTime(video.currentTime).toFixed(2));
       if (!Number.isFinite(curT) || curT <= 0 || curT >= duration) return;
 
       if (globalSelection.track === "video") {
@@ -3610,6 +3810,47 @@
 
         if (window.updateLocalState)
           window.updateLocalState("Video", "Split video clip");
+        return;
+      }
+
+      if (globalSelection.track === "audio") {
+        const items = editorState.background_audios || [];
+        const index = globalSelection.index;
+        const item = items[index];
+        if (!item || curT <= (item.start || 0) || curT >= (item.end || duration)) return;
+
+        const relOffset = curT - item.start;
+        const origEnd = item.end;
+        const origTrimStart = parseFloat(item.trimStart || 0.0);
+        const origTrimEnd = parseFloat(item.trimEnd || (origTrimStart + (origEnd - item.start)));
+
+        // Update first part of audio clip
+        item.end = curT;
+        item.trimStart = origTrimStart;
+        item.trimEnd = origTrimStart + relOffset;
+
+        // Create second part of audio clip
+        const newItem = JSON.parse(JSON.stringify(item));
+        newItem.start = curT;
+        newItem.end = origEnd;
+        newItem.trimStart = origTrimStart + relOffset;
+        newItem.trimEnd = origTrimEnd;
+
+        items.splice(index + 1, 0, newItem);
+        clearGlobalSelection();
+
+        renderClipBlocks();
+        renderAllTimelineTracks();
+        updateRuler();
+        renderTrim();
+        generateThumbnails();
+        if (typeof renderAudioOverlay === "function") {
+          renderAudioOverlay();
+        }
+        updateVideoProgress();
+
+        if (window.updateLocalState)
+          window.updateLocalState("audio", "Split audio clip");
         return;
       }
 
@@ -3662,6 +3903,25 @@
         return;
       }
 
+      if (globalSelection.track === "audio") {
+        editorState.background_audios?.splice(globalSelection.index, 1);
+        clearGlobalSelection();
+
+        renderClipBlocks();
+        renderAllTimelineTracks();
+        updateRuler();
+        renderTrim();
+        generateThumbnails();
+        if (typeof renderAudioOverlay === "function") {
+          renderAudioOverlay();
+        }
+        updateVideoProgress();
+
+        if (window.updateLocalState)
+          window.updateLocalState("audio", "Deleted audio clip");
+        return;
+      }
+
       const config = TRACK_CONFIG[globalSelection.track];
       if (!config) return;
 
@@ -3695,17 +3955,22 @@
     }
 
     // Initialization
-    video.addEventListener("loadedmetadata", initTrim);
+    video.addEventListener("loadedmetadata", () => {
+      initTrim();
+      extractAudioPeaks();
+    });
     video.addEventListener("timeupdate", onTimeUpdate);
 
     function onTimeUpdate() {
       if (!duration) return;
       const t = video.currentTime;
+      const timelineTime = sourceToTimelineTime(t);
 
-      // Trim loop
-      if (t > endSeconds && !video.paused) {
-        video.currentTime = startSeconds;
-        video.play();
+      // Trim loop based on timeline time
+      if (!video.paused && (timelineTime >= endSeconds - 0.05 || timelineTime >= duration - 0.05)) {
+        video.pause();
+        video.currentTime = timelineToSourceTime(startSeconds);
+        return;
       }
 
       // Text overlays visibility
@@ -3714,7 +3979,7 @@
         const textElements = textContainer.children;
         editorState.text_overlays.forEach((overlay, i) => {
           if (textElements[i]) {
-            if (t >= overlay.start && t <= overlay.end) {
+            if (timelineTime >= overlay.start && timelineTime <= overlay.end) {
               textElements[i].style.display = "block";
             } else {
               textElements[i].style.display = "none";
@@ -3723,40 +3988,98 @@
         });
       }
 
-      // Background Audio sync
+      // Background / Detached Audio Track sync
       if (editorState.background_audios) {
-        editorState.background_audios.forEach((bg, i) => {
-          let audioEl = document.getElementById(`preview-bg-audio-${i}`);
-          if (!audioEl) {
-            audioEl = document.createElement("audio");
-            audioEl.id = `preview-bg-audio-${i}`;
-            audioEl.src = bg.url;
-            document.body.appendChild(audioEl);
-          }
+        if (editorState.muted) {
+          if (!video.muted) video.muted = true;
+        } else {
+          // Check if there is an active detached audio clip at current timelineTime
+          let activeDetachedClip = null;
+          let anyDetachedClipsExist = false;
 
-          audioEl.volume = bg.bg_volume;
-          const bgEnd = bg.end || duration;
+          editorState.background_audios.forEach((bg) => {
+            const isDetached = bg.is_detached || (!bg.url && !bg.path);
+            if (isDetached) {
+              anyDetachedClipsExist = true;
+              const bgStart = parseFloat(bg.start !== undefined ? bg.start : 0);
+              const bgEnd = parseFloat(bg.end !== undefined ? bg.end : (bgStart + parseFloat(bg.duration || 0)));
+              if (timelineTime >= bgStart && timelineTime <= bgEnd) {
+                activeDetachedClip = bg;
+              }
+            }
+          });
 
-          if (t >= bg.start && t <= bgEnd) {
-            // Need to play it and keep it synced
-            if (audioEl.paused) {
-              audioEl.currentTime = t - bg.start;
-              audioEl.play().catch((e) => console.log("Audio play blocked", e));
-            } else {
-              // Drift correction
-              if (Math.abs(audioEl.currentTime - (t - bg.start)) > 0.3) {
-                audioEl.currentTime = t - bg.start;
+          // Always resolve mute state fresh every tick — never leave a stale
+          // value behind after a split/delete edit or when the detached
+          // track becomes empty at the current position.
+          if (anyDetachedClipsExist) {
+            video.muted = !activeDetachedClip;
+            if (activeDetachedClip) {
+              const vol = editorState.volume !== undefined ? editorState.volume : 1.0;
+              if (Number.isFinite(vol) && video.volume !== vol) {
+                video.volume = Math.max(0, Math.min(1.0, vol));
               }
             }
           } else {
-            if (!audioEl.paused) audioEl.pause();
+            // No detached (baked-in) audio segments left at all — fall back
+            // to the user's own manual mute toggle instead of leaving
+            // whatever mute state happened to be set last.
+            video.muted = !!editorState.muted;
           }
 
-          // Stop audio if video is paused
-          if (video.paused && !audioEl.paused) {
-            audioEl.pause();
-          }
-        });
+          // External music clips sync (e.g. background music MP3s)
+          editorState.background_audios.forEach((bg, i) => {
+            if (bg.is_detached || (!bg.url && !bg.path)) {
+              return;
+            }
+            let audioEl = document.getElementById(`preview-bg-audio-${i}`);
+            const targetSrc = bg.url;
+            if (!targetSrc) return;
+
+            if (!audioEl) {
+              audioEl = document.createElement("audio");
+              audioEl.id = `preview-bg-audio-${i}`;
+              audioEl.src = targetSrc;
+              document.body.appendChild(audioEl);
+            } else if (audioEl.src !== targetSrc && targetSrc) {
+              audioEl.src = targetSrc;
+            }
+
+            audioEl.volume = bg.bg_volume ?? 1.0;
+            const bgStart = parseFloat(bg.start || 0);
+            const bgEnd = parseFloat(bg.end || duration);
+            const bgTrimStart = parseFloat(bg.trimStart || 0.0);
+
+            if (timelineTime >= bgStart && timelineTime <= bgEnd) {
+              const expectedTime = (timelineTime - bgStart) + bgTrimStart;
+              if (audioEl.paused && !video.paused) {
+                audioEl.currentTime = expectedTime;
+                audioEl.play().catch((e) => console.log("Audio play blocked", e));
+              } else {
+                if (Math.abs(audioEl.currentTime - expectedTime) > 0.3) {
+                  audioEl.currentTime = expectedTime;
+                }
+              }
+            } else {
+              if (!audioEl.paused) audioEl.pause();
+            }
+
+            if (video.paused && !audioEl.paused) {
+              audioEl.pause();
+            }
+          });
+        }
+
+        // Clean up surplus audio preview elements if audio clips were deleted
+        let surplusIdx = editorState.background_audios.length;
+        while (document.getElementById(`preview-bg-audio-${surplusIdx}`)) {
+          const surplusEl = document.getElementById(`preview-bg-audio-${surplusIdx}`);
+          surplusEl.pause();
+          surplusEl.removeAttribute("src");
+          if (typeof surplusEl.load === "function") surplusEl.load();
+          surplusEl.remove();
+          surplusIdx++;
+        }
       }
     }
 
@@ -3822,7 +4145,8 @@
             e.target.closest(".audio-resize-handle") ||
             e.target.closest(".timeline-clip-block") ||
             e.target.closest(".timeline-text-block") ||
-            e.target.closest(".timeline-audio-block")
+            e.target.closest(".timeline-audio-block") ||
+            e.target.closest(".timeline-generic-block")
           ) {
             return;
           }

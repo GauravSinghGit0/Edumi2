@@ -126,9 +126,8 @@ def project_list(request):
                     project.height = meta.get("height", 1080)
                     project.has_audio = meta.get("has_audio", True)
                     project.status = "ready"
-                    orig_filename = os.path.basename(project.original_file.name)
-                    project.clips_json = json.dumps([{"title": orig_filename, "duration": meta.get("duration", 0.0)}])
                     project.save()
+                    convert_legacy_project_to_timeline(project)
                 except Exception:
                     pass
 
@@ -174,25 +173,35 @@ def convert_legacy_project_to_timeline(project):
         }
     }
     
-    try:
-        clips = json.loads(project.clips_json) if project.clips_json else []
-    except Exception:
-        clips = []
+    orig_filename = os.path.basename(project.original_file.name) if project.original_file else "Clip"
+    if len(orig_filename) > 32:
+        orig_filename = (project.title or "Clip") + ".mp4"
+    dur = float(project.duration_seconds or 0.0)
     
-    normalized_clips = []
-    acc = 0.0
-    for clip in clips:
-        dur = float(clip.get("duration", 0.0))
-        normalized_clips.append({
-            "title": clip.get("title", "Clip"),
-            "start": acc,
-            "end": acc + dur,
-            "trimStart": acc,
-            "trimEnd": acc + dur,
-            "duration": dur
-        })
-        acc += dur
+    normalized_clips = [{
+        "title": orig_filename,
+        "start": 0.0,
+        "end": dur,
+        "trimStart": 0.0,
+        "trimEnd": dur,
+        "duration": dur
+    }]
     state["clips"] = normalized_clips
+
+    if project.has_audio and dur > 0:
+        state["background_audios"] = [{
+            "name": f"Audio Stream — {orig_filename}",
+            "filename": orig_filename,
+            "path": project.original_file.path if project.original_file else "",
+            "start": 0.0,
+            "end": dur,
+            "trimStart": 0.0,
+            "trimEnd": dur,
+            "bg_volume": 1.0,
+            "video_volume": 1.0,
+            "is_detached": True
+        }]
+        state["audio"]["muted"] = False
 
     ops = project.operations.filter(active=True).order_by('created_at')
     for op in ops:
@@ -271,15 +280,7 @@ def project_detail(request, pk):
     if project is None:
         return HttpResponseForbidden("You do not have access to this project.")
 
-    # Ensure clips_json is initialized for existing projects
-    if not project.clips_json or project.clips_json.strip() == "":
-        orig_filename = os.path.basename(project.original_file.name)
-        if len(orig_filename) > 32:
-            orig_filename = project.title + ".mp4"
-        project.clips_json = json.dumps([
-            {"title": orig_filename, "duration": float(project.duration_seconds or 0.0)}
-        ])
-        project.save(update_fields=["clips_json"])
+
 
     # Convert legacy project metadata to timeline JSON if timeline_state is empty
     if project.timeline_state is None:
@@ -385,13 +386,11 @@ def _apply_new_working_file(project, tmp_output_path, operation_type, descriptio
 
 
 def _insert_clip_to_sequence(project, asset_title, asset_duration, timestamp):
-    try:
-        clips = json.loads(project.clips_json) if project.clips_json else []
-    except Exception:
-        clips = []
+    state = project.timeline_state or {}
+    clips = state.get("clips", [])
     
     if not clips:
-        orig_filename = project.title + ".mp4"
+        orig_filename = (project.title or "Clip") + ".mp4"
         clips = [{"title": orig_filename, "duration": project.duration_seconds or 0.0}]
 
     new_clips = []
@@ -431,8 +430,23 @@ def _insert_clip_to_sequence(project, asset_title, asset_duration, timestamp):
         # Append to the end
         new_clips.append({"title": asset_title, "duration": asset_duration})
         
-    project.clips_json = json.dumps(new_clips)
-    project.save(update_fields=["clips_json"])
+    acc = 0.0
+    normalized_clips = []
+    for c in new_clips:
+        dur = float(c.get("duration", 0.0))
+        normalized_clips.append({
+            "title": c.get("title", "Clip"),
+            "start": acc,
+            "end": acc + dur,
+            "trimStart": c.get("trimStart", 0.0),
+            "trimEnd": c.get("trimEnd", dur),
+            "duration": dur
+        })
+        acc += dur
+
+    state["clips"] = normalized_clips
+    project.timeline_state = state
+    project.save(update_fields=["timeline_state"])
 
 
 
@@ -666,14 +680,8 @@ def op_reset(request, pk):
     project.status = "ready"
     project.error_message = ""
     
-    # Reset clips_json
-    orig_filename = os.path.basename(project.original_file.name)
-    if len(orig_filename) > 32:
-        orig_filename = project.title + ".mp4"
-    project.clips_json = json.dumps([
-        {"title": orig_filename, "duration": meta["duration"]}
-    ])
-    project.save()
+    # Reset timeline state
+    convert_legacy_project_to_timeline(project)
 
     EditOperation.objects.create(project=project, operation_type="reset", description="Reset to original upload")
     messages.success(request, "Project reset to the original uploaded video.")
@@ -762,6 +770,23 @@ def project_status(request, pk):
 
 @login_required
 @require_POST
+def save_timeline(request, pk):
+    project = _get_owned_project(request, pk)
+    if project is None:
+        return JsonResponse({"error": "forbidden"}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    project.timeline_state = data
+    project.save(update_fields=["timeline_state"])
+    return JsonResponse({"status": "ok"})
+
+
+@login_required
+@require_POST
 def export_project(request, pk):
     project = _get_owned_project(request, pk)
     if project is None:
@@ -774,8 +799,6 @@ def export_project(request, pk):
 
     # Save current timeline state in DB
     project.timeline_state = data
-    if "clips" in data:
-        project.clips_json = json.dumps(data["clips"])
     project.status = "processing"
     project.save()
 
@@ -1130,9 +1153,9 @@ def chunked_upload_view(request):
                 project.height = client_height
                 project.has_audio = True
                 project.status = "ready"
-                project.clips_json = json.dumps([{"title": orig_filename, "duration": client_duration}])
                 project.proxy_status = 'pending'
                 project.save()
+                convert_legacy_project_to_timeline(project)
                 
                 # Record upload edit operation
                 try:
@@ -1167,9 +1190,9 @@ def chunked_upload_view(request):
                             p.width = meta.get("width", p.width or 1920)
                             p.height = meta.get("height", p.height or 1080)
                             p.has_audio = meta.get("has_audio", True)
-                            if not p.clips_json or p.clips_json == "[]":
-                                p.clips_json = json.dumps([{"title": os.path.basename(p.original_file.name), "duration": p.duration_seconds}])
-                            p.save(update_fields=["duration_seconds", "width", "height", "has_audio", "clips_json"])
+                            p.save(update_fields=["duration_seconds", "width", "height", "has_audio"])
+                            if not p.timeline_state:
+                                convert_legacy_project_to_timeline(p)
                         except Exception:
                             pass
                     threading.Thread(target=_async_bg_probe, args=(project.id, project.original_file.path), daemon=True).start()
