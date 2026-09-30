@@ -31,7 +31,9 @@ from common.validators import (
     MAX_VIDEO_SIZE,
     MAX_AUDIO_SIZE,
     MAX_IMAGE_SIZE,
+    get_safe_temp_upload_dir,
 )
+
 
 
 import mimetypes
@@ -1037,8 +1039,11 @@ def chunked_upload_view(request):
             return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
             
         clean_filename = sanitize_filename(filename)
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
-        os.makedirs(temp_dir, exist_ok=True)
+        try:
+            temp_dir = get_safe_temp_upload_dir(os.path.join(settings.MEDIA_ROOT, 'temp_uploads'), upload_id)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
         
         # Write chunk with atomic temp file to avoid partial reads across worker threads
         chunk_path = os.path.join(temp_dir, f'chunk_{chunk_index}')

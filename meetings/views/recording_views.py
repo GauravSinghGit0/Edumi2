@@ -16,8 +16,9 @@ from django.utils import timezone
 
 from common.validators import (
     sanitize_filename, get_file_extension, ALLOWED_VIDEO_EXTENSIONS,
-    MAX_VIDEO_SIZE, DANGEROUS_EXTENSIONS
+    MAX_VIDEO_SIZE, DANGEROUS_EXTENSIONS, get_safe_temp_upload_dir
 )
+
 from meetings.models import Meeting
 from cameras.models import CameraRecording
 from cameras.ffmpeg_helpers import get_video_duration, get_ffmpeg_binary
@@ -50,8 +51,11 @@ def meeting_chunked_upload(request):
         base_name, _ = os.path.splitext(clean_filename)
         final_mkv_filename = f"{base_name}.mkv"
 
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_recordings', upload_id)
-        os.makedirs(temp_dir, exist_ok=True)
+        try:
+            temp_dir = get_safe_temp_upload_dir(os.path.join(settings.MEDIA_ROOT, 'temp_recordings'), upload_id)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
 
         chunk_path = os.path.join(temp_dir, f'chunk_{chunk_index}')
         with open(chunk_path, 'wb+') as f:

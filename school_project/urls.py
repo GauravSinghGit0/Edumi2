@@ -8,6 +8,7 @@ from django.db import connection
 from django.views.static import serve
 from meetings.livekit_http_proxy import livekit_http_proxy
 from cameras.views_logic.streaming_views import camera_feed_proxy
+from common.media_views import protected_media_serve
 
 def health_check(request):
     """Health check endpoint for watchdog, load balancers and monitoring."""
@@ -43,6 +44,7 @@ urlpatterns = [
     path('videos/', include('videos.urls')),  # <-- Video URLs
     path('video-editing/', include('video_editing.urls')),  # <-- Video editing URLs
     path('assignments/', include('assignments.urls')),  # <-- Assignments URLs
+    path('', include('common.urls')),  # <-- Common & Telemetry URLs
 ]
 
 # Error handlers
@@ -53,6 +55,7 @@ handler500 = 'accounts.views.error_500'
 # WhiteNoise handles static files from STATIC_ROOT, but django.views.static.serve
 # is required to serve uploaded media files from MEDIA_ROOT regardless of DEBUG setting.
 urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^media/(?P<path>.*)$', protected_media_serve, name='protected_media'),
 ]
+
 

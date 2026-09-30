@@ -190,3 +190,212 @@ class SidebarNavActiveTests(TestCase):
         self.assertEqual(is_active_nav(context, 'manage_recordings'), '')
 
 
+class TelemetryAndLoggingTests(TestCase):
+    def test_client_ip_extraction(self):
+        from common.telemetry import get_client_ip
+        from django.test.client import RequestFactory
+
+        rf = RequestFactory()
+
+        # Direct remote addr
+        req1 = rf.get('/test/', REMOTE_ADDR='192.168.1.50')
+        self.assertEqual(get_client_ip(req1), '192.168.1.50')
+
+        # X-Forwarded-For (client, proxy1, proxy2)
+        req2 = rf.get('/test/', HTTP_X_FORWARDED_FOR='203.0.113.195, 70.41.3.18, 150.172.238.178')
+        self.assertEqual(get_client_ip(req2), '203.0.113.195')
+
+        # Cloudflare connecting IP
+        req3 = rf.get('/test/', HTTP_CF_CONNECTING_IP='198.51.100.4')
+        self.assertEqual(get_client_ip(req3), '198.51.100.4')
+
+    def test_user_agent_parsing(self):
+        from common.telemetry import parse_user_agent
+
+        chrome_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        res = parse_user_agent(chrome_ua)
+        self.assertEqual(res['browser'], 'Chrome')
+        self.assertEqual(res['os'], 'Windows 10/11')
+        self.assertEqual(res['device_type'], 'Desktop')
+        self.assertFalse(res['is_bot'])
+
+        iphone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        res_iphone = parse_user_agent(iphone_ua)
+        self.assertEqual(res_iphone['os'], 'iOS')
+        self.assertEqual(res_iphone['device_type'], 'Mobile')
+
+        bot_ua = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        res_bot = parse_user_agent(bot_ua)
+        self.assertTrue(res_bot['is_bot'])
+        self.assertEqual(res_bot['device_type'], 'Bot')
+
+    def test_telemetry_events_ingestion_api(self):
+        import json
+        from common.models import UserActivityLog
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user = User.objects.create_user(username='telemetry_tester', password='password123')
+        self.client.force_login(user)
+
+        payload = {
+            'device_id': 'did_12345',
+            'session_id': 'sid_67890',
+            'events': [
+                {
+                    'type': 'page_view',
+                    'name': 'view_page',
+                    'url': 'http://testserver/meetings/',
+                    'title': 'Meetings',
+                    'viewport': {'width': 1920, 'height': 1080}
+                },
+                {
+                    'type': 'click',
+                    'name': 'element_click',
+                    'target': 'button#joinMeetingBtn',
+                    'text': 'Join Live Lecture',
+                    'coordinates': {'x': 350, 'y': 210},
+                    'metadata': {'meeting_id': 'RELATIVITY1'}
+                }
+            ]
+        }
+
+        response = self.client.post(
+            '/api/telemetry/events/',
+            data=json.dumps(payload),
+            content_type='application/json',
+            REMOTE_ADDR='10.0.0.42'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data.get('status'), 'ok')
+        self.assertEqual(data.get('processed'), 2)
+
+        # Verify records created in database
+        logs = UserActivityLog.objects.filter(username='telemetry_tester').order_by('created_at')
+        self.assertEqual(logs.count(), 2)
+
+        pv = logs.filter(event_type='page_view').first()
+        self.assertIsNotNone(pv)
+        self.assertEqual(pv.page_title, 'Meetings')
+
+        clk = logs.filter(event_type='click').first()
+        self.assertIsNotNone(clk)
+        self.assertEqual(clk.target_element, 'button#joinMeetingBtn')
+        self.assertEqual(clk.target_text, 'Join Live Lecture')
+        self.assertEqual(clk.metadata.get('meeting_id'), 'RELATIVITY1')
+        self.assertEqual(clk.metadata.get('coordinates', {}).get('x'), 350)
+
+    def test_dated_folder_structure(self):
+        from common.telemetry import get_dated_log_dir, get_current_date_str
+        folder = get_dated_log_dir()
+        self.assertTrue(folder.exists())
+        self.assertEqual(folder.name, get_current_date_str())
+
+    def test_attack_detection_and_security_audit_logging(self):
+        from django.test.client import RequestFactory
+        from common.telemetry import detect_attack_signatures, write_security_alert, get_dated_log_dir
+
+        rf = RequestFactory()
+
+        # 1. SQL Injection attempt
+        sqli_req = rf.get('/meetings/?search=1%27%20OR%20%271%27=%271', REMOTE_ADDR='198.51.100.99')
+        threats = detect_attack_signatures(sqli_req)
+        self.assertTrue(len(threats) > 0)
+        self.assertEqual(threats[0]['type'], 'SQL_INJECTION')
+
+        # 2. Path Traversal attempt
+        lfi_req = rf.get('/media/download/?file=../../../../etc/passwd', REMOTE_ADDR='198.51.100.99')
+        threats_lfi = detect_attack_signatures(lfi_req)
+        self.assertTrue(len(threats_lfi) > 0)
+        self.assertEqual(threats_lfi[0]['type'], 'PATH_TRAVERSAL')
+
+        # 3. Malicious scanner User-Agent
+        scanner_req = rf.get('/test/', HTTP_USER_AGENT='sqlmap/1.5#stable (http://sqlmap.org)', REMOTE_ADDR='198.51.100.99')
+        threats_scan = detect_attack_signatures(scanner_req)
+        self.assertTrue(len(threats_scan) > 0)
+        self.assertEqual(threats_scan[0]['type'], 'MALICIOUS_SCANNER_USER_AGENT')
+
+        # Write security alert and verify log in dated directory
+        write_security_alert(sqli_req, threats)
+        sec_log = get_dated_log_dir() / 'security_audit.log'
+        self.assertTrue(sec_log.exists())
+        with open(sec_log, 'r', encoding='utf-8') as f:
+            content = f.read()
+            self.assertIn('SECURITY_THREAT_DETECTED', content)
+            self.assertIn('198.51.100.99', content)
+            self.assertIn('SQL_INJECTION', content)
+
+    def test_crash_forensics_post_mortem_logging(self):
+        from django.test.client import RequestFactory
+        from common.telemetry import log_crash_forensics, get_dated_log_dir
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user = User.objects.create_user(username='crasher_user', password='password123')
+
+        rf = RequestFactory()
+        req = rf.post('/meetings/continue/99/?mode=live', data={'action': 'start_quiz', 'secret_key': 'hidden123'}, REMOTE_ADDR='172.16.0.5')
+        req.user = user
+
+        try:
+            # Deliberately raise an exception to simulate a bug in meeting view
+            raise ValueError("Invalid meeting configuration state for room 99")
+        except Exception as e:
+            log_crash_forensics(req, e)
+
+        crash_log = get_dated_log_dir() / 'crash_reports.log'
+        self.assertTrue(crash_log.exists())
+        with open(crash_log, 'r', encoding='utf-8') as f:
+            content = f.read()
+            self.assertIn('[CRASH_POST_MORTEM]', content)
+            self.assertIn('crasher_user', content)
+            self.assertIn('172.16.0.5', content)
+            self.assertIn('Invalid meeting configuration state for room 99', content)
+            self.assertIn('action', content)
+            # Ensure sensitive key was sanitized
+            self.assertIn('***REDACTED***', content)
+
+    def test_upload_id_path_traversal_defense(self):
+        import os
+        from common.validators import validate_safe_upload_id, get_safe_temp_upload_dir
+        from django.core.exceptions import ValidationError
+        from django.conf import settings
+
+        # 1. Valid upload IDs
+        self.assertEqual(validate_safe_upload_id("upload_abc123_456"), "upload_abc123_456")
+        self.assertEqual(validate_safe_upload_id("a1b2c3d4e5f67890"), "a1b2c3d4e5f67890")
+
+        # 2. Path Traversal attempts
+        with self.assertRaises(ValidationError):
+            validate_safe_upload_id("../../../etc/passwd")
+
+        with self.assertRaises(ValidationError):
+            validate_safe_upload_id("..\\..\\windows\\system32")
+
+        with self.assertRaises(ValidationError):
+            validate_safe_upload_id("upload/test")
+
+        with self.assertRaises(ValidationError):
+            validate_safe_upload_id("id with spaces")
+
+        # 3. get_safe_temp_upload_dir resolves cleanly
+        safe_dir = get_safe_temp_upload_dir(os.path.join(settings.MEDIA_ROOT, 'temp_uploads'), "valid_token_12345")
+        self.assertTrue(os.path.exists(safe_dir))
+
+    def test_protected_media_access_control(self):
+        # 1. Unauthenticated request to private biometric face profile
+        resp = self.client.get('/media/face_profiles/student_secret_face.jpg')
+        self.assertIn(resp.status_code, [302, 403])
+
+        # 2. Authenticated superuser request -> allowed past auth check (returns 404 because file is not on disk)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(username='media_admin', password='password123', email='admin@test.com')
+        self.client.force_login(admin_user)
+        resp2 = self.client.get('/media/face_profiles/student_secret_face.jpg')
+        self.assertEqual(resp2.status_code, 404)
+
+
+
+

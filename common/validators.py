@@ -287,3 +287,34 @@ def validate_assignment_submission_file(file_obj):
     )
     if not is_valid:
         raise ValidationError(_(error))
+
+
+def validate_safe_upload_id(upload_id):
+    """
+    Validate and sanitize uploadId tokens to completely prevent Path Traversal attacks.
+    Enforces strict token pattern: alphanumeric, hyphen, underscore, 8 to 64 chars.
+    """
+    if not upload_id:
+        raise ValidationError(_("Upload identifier cannot be empty."))
+    clean_id = str(upload_id).strip()
+    if not re.match(r'^[a-zA-Z0-9_-]{8,64}$', clean_id):
+        raise ValidationError(_("Invalid upload identifier format."))
+    return clean_id
+
+
+def get_safe_temp_upload_dir(base_dir, upload_id):
+    """
+    Safely construct and verify temporary upload directory.
+    Uses canonical path resolution to guarantee target directory is strictly within base_dir.
+    """
+    clean_id = validate_safe_upload_id(upload_id)
+    base_path = os.path.abspath(str(base_dir))
+    target_path = os.path.abspath(os.path.join(base_path, clean_id))
+    
+    # Canonical boundary check
+    if not target_path.startswith(base_path + os.sep) and target_path != base_path:
+        raise ValidationError(_("Path traversal attempt detected in upload identifier."))
+    
+    os.makedirs(target_path, exist_ok=True)
+    return target_path
+

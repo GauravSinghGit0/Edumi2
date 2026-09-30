@@ -24,7 +24,9 @@ from common.validators import (
     DANGEROUS_EXTENSIONS,
     MAX_VIDEO_SIZE,
     MAX_IMAGE_SIZE,
+    get_safe_temp_upload_dir,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -226,8 +228,11 @@ def camera_chunked_upload(request):
             if not is_thumb_valid:
                 return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
 
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads', upload_id)
-        os.makedirs(temp_dir, exist_ok=True)
+        try:
+            temp_dir = get_safe_temp_upload_dir(os.path.join(settings.MEDIA_ROOT, 'temp_uploads'), upload_id)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
 
         chunk_path = os.path.join(temp_dir, f'chunk_{chunk_index}')
         with open(chunk_path, 'wb+') as f:

@@ -173,25 +173,23 @@ def edit_camera(request, camera_id):
 @login_required
 def delete_camera(request, camera_id):
     if not is_admin(request.user):
-        return JsonResponse({"status": "error", "message": "Permission denied"})
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
 
     if request.method == "POST":
         camera = get_object_or_404(Camera, id=camera_id)
         try:
-            camera.delete()
+            from django.db import transaction
+            from ..models import CameraPermission, CameraRecording
+            with transaction.atomic():
+                CameraRecording.objects.filter(camera=camera).update(camera=None)
+                CameraPermission.objects.filter(camera=camera).delete()
+                camera.delete()
             return JsonResponse({"status": "success"})
         except Exception as exc:
             logger.error(f"delete_camera: {exc}")
-            from django.db import connection
-            try:
-                with connection.cursor() as cur:
-                    cur.execute("PRAGMA foreign_keys = OFF;")
-                    camera.delete()
-                    cur.execute("PRAGMA foreign_keys = ON;")
-                return JsonResponse({"status": "success"})
-            except Exception as exc2:
-                return JsonResponse({"status": "error", "message": str(exc2)}, status=500)
+            return JsonResponse({"status": "error", "message": str(exc)}, status=500)
     return redirect("admin_dashboard")
+
 
 
 # ===========================================================================

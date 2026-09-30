@@ -84,11 +84,13 @@ for _ip in _detected_ips:
 # SECURITY
 # ==============================================================================
 
+IS_TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+
 # HTTPS / SSL
-SECURE_SSL_REDIRECT          = env_bool('SECURE_SSL_REDIRECT', 'False')
+SECURE_SSL_REDIRECT          = env_bool('SECURE_SSL_REDIRECT', 'False' if (DEBUG or IS_TESTING) else 'True')
 SECURE_PROXY_SSL_HEADER      = ('HTTP_X_FORWARDED_PROTO', 'https')
-SESSION_COOKIE_SECURE        = env_bool('SESSION_COOKIE_SECURE', 'True')
-CSRF_COOKIE_SECURE           = env_bool('CSRF_COOKIE_SECURE', 'True')
+SESSION_COOKIE_SECURE        = env_bool('SESSION_COOKIE_SECURE', 'False' if (DEBUG or IS_TESTING) else 'True')
+CSRF_COOKIE_SECURE           = env_bool('CSRF_COOKIE_SECURE', 'False' if (DEBUG or IS_TESTING) else 'True')
 SESSION_COOKIE_HTTPONLY      = True
 CSRF_COOKIE_HTTPONLY         = False   # Must be False for JS to read the token
 SESSION_COOKIE_SAMESITE      = 'Lax'
@@ -96,10 +98,11 @@ CSRF_COOKIE_SAMESITE         = 'Lax'
 SESSION_COOKIE_AGE           = 60 * 60 * 8   # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-# HSTS (0 in dev, 31536000 in prod)
-SECURE_HSTS_SECONDS             = int(env('SECURE_HSTS_SECONDS', '0'))
+# HSTS (0 in dev/test, 31536000 in prod)
+SECURE_HSTS_SECONDS             = int(env('SECURE_HSTS_SECONDS', '0' if (DEBUG or IS_TESTING) else '31536000'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS  = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True')
-SECURE_HSTS_PRELOAD             = env_bool('SECURE_HSTS_PRELOAD', 'False')
+SECURE_HSTS_PRELOAD             = env_bool('SECURE_HSTS_PRELOAD', 'False' if (DEBUG or IS_TESTING) else 'True')
+
 
 # Additional security headers
 SECURE_BROWSER_XSS_FILTER    = True
@@ -173,15 +176,16 @@ except ImportError:
 
 MIDDLEWARE += [
     'school_project.middleware.DatabaseErrorMiddleware',
-    'school_project.middleware.SystemPerformanceLoggingMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'accounts.middleware.CentralizedIdentityMiddleware',
+    'school_project.middleware.SystemPerformanceLoggingMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 
 # ==============================================================================
@@ -355,7 +359,8 @@ else:
 
 
 # ==============================================================================
-IS_TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+# CACHES
+
 
 def _is_redis_reachable(redis_url):
     if not redis_url:
@@ -553,28 +558,36 @@ LOGGING = {
             'level': 'INFO',
         },
         'performance_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'performance.log',
-            'maxBytes': 10 * 1024 * 1024,
-            'backupCount': 5,
+            'class': 'common.telemetry.DatedFolderRotatingFileHandler',
+            'filename': 'performance.log',
             'formatter': 'file_verbose',
             'level': 'INFO',
             'encoding': 'utf-8',
         },
         'error_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'system_errors.log',
-            'maxBytes': 10 * 1024 * 1024,
-            'backupCount': 5,
+            'class': 'common.telemetry.DatedFolderRotatingFileHandler',
+            'filename': 'system_errors.log',
             'formatter': 'file_verbose',
             'level': 'ERROR',
             'encoding': 'utf-8',
         },
         'meetings_quiz_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR / 'meetings_quiz.log',
-            'maxBytes': 10 * 1024 * 1024,
-            'backupCount': 5,
+            'class': 'common.telemetry.DatedFolderRotatingFileHandler',
+            'filename': 'meetings_quiz.log',
+            'formatter': 'file_verbose',
+            'level': 'INFO',
+            'encoding': 'utf-8',
+        },
+        'access_file': {
+            'class': 'common.telemetry.DatedFolderRotatingFileHandler',
+            'filename': 'access.log',
+            'formatter': 'file_verbose',
+            'level': 'INFO',
+            'encoding': 'utf-8',
+        },
+        'user_interactions_file': {
+            'class': 'common.telemetry.DatedFolderRotatingFileHandler',
+            'filename': 'user_interactions.log',
             'formatter': 'file_verbose',
             'level': 'INFO',
             'encoding': 'utf-8',
@@ -583,6 +596,7 @@ LOGGING = {
             'class': 'logging.NullHandler',
         },
     },
+
     'root': {
         'handlers': ['console', 'error_file'],
         'level': LOG_LEVEL,
@@ -613,6 +627,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'telemetry': {
+            'handlers': ['console', 'user_interactions_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'accounts': {
             'handlers': ['console', 'error_file'],
             'level': 'INFO',
@@ -638,6 +657,7 @@ LOGGING = {
         'PIL':          {'handlers': ['null'],    'level': 'CRITICAL', 'propagate': False},
         'urllib3':      {'handlers': ['null'],    'level': 'WARNING', 'propagate': False},
     },
+
 }
 
 
