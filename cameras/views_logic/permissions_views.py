@@ -2,6 +2,7 @@
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from ..models import Camera, CameraPermission, CameraRecording
@@ -32,10 +33,15 @@ def admin_content_manager(request):
 @login_required
 def delete_recording_admin(request, recording_id):
     """Admin deletes a recording"""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     if not is_admin(request.user):
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        messages.error(request, 'Unauthorized.')
+        return redirect('admin_panel')
 
     recording = get_object_or_404(CameraRecording, id=recording_id)
+    title = recording.title
 
     # Delete file from storage
     if recording.video_file and os.path.exists(recording.video_file.path):
@@ -44,18 +50,29 @@ def delete_recording_admin(request, recording_id):
         os.remove(recording.thumbnail.path)
 
     recording.delete()
-    return JsonResponse({'status': 'success', 'message': 'Recording deleted successfully'})
+    if is_ajax:
+        return JsonResponse({'status': 'success', 'message': 'Recording deleted successfully'})
+    messages.success(request, f"Recording '{title}' deleted successfully.")
+    return redirect(request.META.get('HTTP_REFERER') or 'admin_panel')
 
 
 @login_required
 def delete_meeting_admin(request, meeting_id):
     """Admin deletes a meeting"""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     if not is_admin(request.user):
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        messages.error(request, 'Unauthorized.')
+        return redirect('admin_panel')
 
     meeting = get_object_or_404(Meeting, id=meeting_id)
+    title = meeting.title
     meeting.delete()
-    return JsonResponse({'status': 'success', 'message': 'Meeting deleted successfully'})
+    if is_ajax:
+        return JsonResponse({'status': 'success', 'message': 'Meeting deleted successfully'})
+    messages.success(request, f"Meeting '{title}' deleted successfully.")
+    return redirect(request.META.get('HTTP_REFERER') or 'admin_panel')
 
 
 @login_required

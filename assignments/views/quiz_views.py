@@ -451,15 +451,21 @@ def edit_question(request, question_id):
 @login_required
 def delete_question(request, question_id):
     """Delete a question from a quiz"""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     question = get_object_or_404(Question, id=question_id)
     quiz = question.quiz
     
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher' or quiz.created_by != request.user:
         messages.error(request, 'Only the quiz creator can delete questions')
-        return JsonResponse({'success': False}, status=403)
+        if is_ajax:
+            return JsonResponse({'success': False}, status=403)
+        return redirect('edit_quiz', quiz_id=quiz.id)
     
     question.delete()
-    return JsonResponse({'success': True})
+    if is_ajax:
+        return JsonResponse({'success': True})
+    messages.success(request, 'Question deleted successfully.')
+    return redirect('edit_quiz', quiz_id=quiz.id)
 
 
 @login_required

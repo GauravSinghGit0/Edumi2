@@ -494,19 +494,25 @@ def evaluate_submission(request, submission_id):
 @login_required
 def delete_question_file(request, file_id):
     """Delete a question file from an assignment"""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     file = get_object_or_404(AssignmentQuestionFile, id=file_id)
     assignment = file.assignment
     classroom = assignment.classroom
     
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher' or assignment.created_by != request.user:
         messages.error(request, 'Only the assignment creator can delete files')
-        return JsonResponse({'success': False}, status=403)
+        if is_ajax:
+            return JsonResponse({'success': False}, status=403)
+        return redirect('edit_assignment', assignment_id=assignment.id)
     
     # Delete the file from storage
     if file.file and os.path.exists(file.file.path):
         os.remove(file.file.path)
     file.delete()
-    return JsonResponse({'success': True})
+    if is_ajax:
+        return JsonResponse({'success': True})
+    messages.success(request, 'Question file deleted successfully.')
+    return redirect('edit_assignment', assignment_id=assignment.id)
 
 
 @login_required

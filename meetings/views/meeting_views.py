@@ -594,21 +594,37 @@ def get_participants(request, meeting_id):
 @require_http_methods(["POST"])
 def delete_meeting(request, meeting_id):
     """Teacher/admin permanently deletes a meeting."""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     meeting = get_object_or_404(Meeting, id=meeting_id)
     if meeting.teacher != request.user and not request.user.is_superuser:
-        return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        messages.error(request, 'Permission denied.')
+        return redirect('teacher_meetings')
+    title = meeting.title
     meeting.delete()
-    return JsonResponse({'status': 'success'})
+    if is_ajax:
+        return JsonResponse({'status': 'success'})
+    messages.success(request, f"Meeting '{title}' has been deleted.")
+    return redirect(request.META.get('HTTP_REFERER') or 'teacher_meetings')
 
 
 @login_required
 @require_http_methods(["POST"])
 def cancel_meeting(request, meeting_id):
     """Teacher/admin cancels a scheduled meeting and notifies participants."""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     meeting = get_object_or_404(Meeting, id=meeting_id)
     if meeting.teacher != request.user and not request.user.is_superuser:
-        return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied'})
+        messages.error(request, 'Permission denied.')
+        return redirect('teacher_meetings')
+    title = meeting.title
     meeting.status = 'cancelled'
     meeting.save()
     notify_meeting_cancelled(meeting, meeting.classroom)
-    return JsonResponse({'status': 'success'})
+    if is_ajax:
+        return JsonResponse({'status': 'success'})
+    messages.success(request, f"Meeting '{title}' has been cancelled.")
+    return redirect(request.META.get('HTTP_REFERER') or 'teacher_meetings')

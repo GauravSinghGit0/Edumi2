@@ -5,6 +5,7 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.http import StreamingHttpResponse, JsonResponse, HttpResponse
@@ -99,6 +100,7 @@ def upload_video(request):
         logger.info("POST request received!")
         logger.debug(f"POST keys: {request.POST.keys()}")
         logger.debug(f"FILES keys: {request.FILES.keys()}")
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
         
         try:
             title = request.POST.get('title')
@@ -108,10 +110,16 @@ def upload_video(request):
             camera_id = request.POST.get('camera')
 
             if not title:
-                return JsonResponse({'status': 'error', 'message': 'Title is required.'})
+                if is_ajax:
+                    return JsonResponse({'status': 'error', 'message': 'Title is required.'})
+                messages.error(request, 'Title is required.')
+                return redirect('manage_recordings')
                 
             if not video_file:
-                return JsonResponse({'status': 'error', 'message': 'Please select a video file.'})
+                if is_ajax:
+                    return JsonResponse({'status': 'error', 'message': 'Please select a video file.'})
+                messages.error(request, 'Please select a video file.')
+                return redirect('manage_recordings')
 
             # Validate video file
             is_valid, err_msg = check_uploaded_file(
@@ -121,7 +129,10 @@ def upload_video(request):
                 file_category="video"
             )
             if not is_valid:
-                return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+                if is_ajax:
+                    return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+                messages.error(request, err_msg)
+                return redirect('manage_recordings')
 
             # Validate thumbnail if provided
             if thumbnail_file:
@@ -132,7 +143,10 @@ def upload_video(request):
                     file_category="thumbnail"
                 )
                 if not is_thumb_valid:
-                    return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
+                    if is_ajax:
+                        return JsonResponse({'status': 'error', 'message': f"Thumbnail error: {thumb_err}"}, status=400)
+                    messages.error(request, f"Thumbnail error: {thumb_err}")
+                    return redirect('manage_recordings')
 
             camera = None
             if camera_id:
@@ -179,12 +193,18 @@ def upload_video(request):
             
             logger.info("Upload successful!")
             redirect_url = reverse('edit_recording', args=[recording.id])
-            return JsonResponse({'status': 'success', 'redirect_url': redirect_url})
+            if is_ajax:
+                return JsonResponse({'status': 'success', 'redirect_url': redirect_url})
+            messages.success(request, f"Lecture '{title}' uploaded successfully.")
+            return redirect('edit_recording', recording.id)
             
         except Exception as e:
             logger.error(f"Error in upload: {str(e)}")
             logger.exception("Upload exception traceback")
-            return JsonResponse({'status': 'error', 'message': f'Error: {str(e)}'})
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': f'Error: {str(e)}'})
+            messages.error(request, f"Error uploading video: {e}")
+            return redirect('manage_recordings')
 
     cameras = Camera.objects.all() if request.user.is_superuser else Camera.objects.filter(camerapermission__teacher=request.user)
     return render(request, 'cameras/recordings/upload_video.html', {'cameras': cameras})
@@ -670,13 +690,21 @@ def recording_playlist(request, recording_id):
 @require_http_methods(["POST"])
 def delete_recording(request, recording_id):
     """Allow teachers to delete their own recordings"""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
     recording = get_object_or_404(CameraRecording, id=recording_id)
     
     if not (request.user.is_superuser or recording.teacher == request.user):
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+        messages.error(request, 'Unauthorized.')
+        return redirect('manage_recordings')
         
+    title = recording.title
     recording.delete()
-    return JsonResponse({'status': 'success', 'message': 'Recording deleted successfully'})
+    if is_ajax:
+        return JsonResponse({'status': 'success', 'message': 'Recording deleted successfully'})
+    messages.success(request, f"Recording '{title}' deleted successfully.")
+    return redirect(request.META.get('HTTP_REFERER') or 'manage_recordings')
 
 
 @login_required
