@@ -129,6 +129,8 @@ def delete_user(request, user_id):
             CameraPermission.objects.filter(teacher=user).delete()
             Meeting.objects.filter(teacher=user).delete()
             Classroom.objects.filter(teacher=user).delete()
+            from accounts.messaging_models import Conversation
+            Conversation.objects.filter(classroom__isnull=True, participants=user).delete()
             user.delete()
 
         if is_ajax:

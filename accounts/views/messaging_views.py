@@ -103,17 +103,27 @@ def get_user_contacts(user):
 def inbox(request):
     """View all conversations with optional user search."""
     search_query = request.GET.get('q', '').strip()
-    conversations = request.user.conversations.all().prefetch_related(
+    raw_conversations = request.user.conversations.all().prefetch_related(
         'participants', 'participants__userprofile', 'messages'
     )
-    for conv in conversations:
-        conv.other_user = conv.get_other_user(request.user)
+    conversations = []
+    for conv in raw_conversations:
+        if not conv.classroom_id:
+            other = conv.get_other_user(request.user)
+            if not other:
+                conv.delete()
+                continue
+            conv.other_user = other
+        else:
+            conv.other_user = None
+
         conv.display_title = conv.get_display_title(request.user)
         conv.is_classroom = conv.is_classroom_chat()
         conv.last_msg = conv.get_last_message()
         conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         if conv.last_msg:
             conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
+        conversations.append(conv)
 
     search_results = []
     if search_query:
@@ -144,8 +154,17 @@ def conversation_detail(request, conversation_id):
     if request.user not in conversation.participants.all():
         messages.error(request, 'You do not have access to this conversation')
         return redirect('inbox')
+
+    if not conversation.classroom_id:
+        other_user = conversation.get_other_user(request.user)
+        if not other_user:
+            conversation.delete()
+            messages.info(request, 'This conversation is no longer available as the other participant was deleted.')
+            return redirect('inbox')
+    else:
+        other_user = None
+
     conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
-    other_user = conversation.get_other_user(request.user)
     conversation.display_title = conversation.get_display_title(request.user)
     conversation.is_classroom = conversation.is_classroom_chat()
     messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
@@ -171,17 +190,27 @@ def conversation_detail(request, conversation_id):
 
     # Fetch data for sidebar
     search_query = request.GET.get('q', '').strip()
-    conversations = request.user.conversations.all().prefetch_related(
+    raw_conversations = request.user.conversations.all().prefetch_related(
         'participants', 'participants__userprofile', 'messages'
     )
-    for conv in conversations:
-        conv.other_user = conv.get_other_user(request.user)
+    conversations = []
+    for conv in raw_conversations:
+        if not conv.classroom_id:
+            other = conv.get_other_user(request.user)
+            if not other:
+                conv.delete()
+                continue
+            conv.other_user = other
+        else:
+            conv.other_user = None
+
         conv.display_title = conv.get_display_title(request.user)
         conv.is_classroom = conv.is_classroom_chat()
         conv.last_msg = conv.get_last_message()
         conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         if conv.last_msg:
             conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
+        conversations.append(conv)
 
     search_results = []
     if search_query:

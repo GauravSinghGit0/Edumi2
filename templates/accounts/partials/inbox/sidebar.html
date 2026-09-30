@@ -35,8 +35,8 @@
          class="conversation-item {% if conversation and conv.id == conversation.id %}active-conv{% endif %} {% if conv.unread_count > 0 %}unread-conv{% endif %}" 
          data-is-group="{% if conv.classroom %}true{% else %}false{% endif %}"
          data-participants="{{ conv.participants.count }}" 
-         data-username="{% if conv.classroom %}{{ conv.classroom.title|lower }}{% else %}{{ conv.other_user.username|lower|default:'' }}{% endif %}" 
-         data-display-name="{% if conv.classroom %}{{ conv.classroom.title|lower }}{% else %}{{ conv.other_user.userprofile.display_name|default:conv.other_user.get_full_name|default:conv.other_user.username|lower|default:'' }}{% endif %}" 
+         data-username="{% if conv.classroom %}{{ conv.classroom.title|lower }}{% elif conv.other_user %}{{ conv.other_user.username|lower }}{% else %}deleted{% endif %}" 
+         data-display-name="{{ conv.display_title|lower }}" 
          data-display-name-raw="{{ conv.display_title }}">
         <div class="avatar-container">
           {% if conv.classroom %}

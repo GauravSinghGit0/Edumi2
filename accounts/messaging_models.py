@@ -27,16 +27,25 @@ class Conversation(models.Model):
         """Get the other participant in the conversation (for 1-on-1 chats)"""
         return self.participants.exclude(id=current_user.id).first()
     
-    def get_display_title(self, current_user):
+    def get_display_title(self, current_user=None):
         """Get the human-readable display title for this conversation"""
         if self.classroom_id:
-            return f"{self.classroom.title}"
-        other = self.get_other_user(current_user)
+            try:
+                if self.classroom:
+                    return f"{self.classroom.title}"
+            except Exception:
+                pass
+            return "Classroom Chat"
+        if current_user:
+            other = self.get_other_user(current_user)
+        else:
+            other = self.participants.first()
         if other:
-            if hasattr(other, 'userprofile') and other.userprofile.display_name:
-                return other.userprofile.display_name
+            profile = getattr(other, 'userprofile', None)
+            if profile and getattr(profile, 'display_name', None):
+                return profile.display_name
             return other.get_full_name() or other.username
-        return f"Conversation {self.id}"
+        return "Deleted User"
     
     def get_last_message(self):
         """Get the most recent message"""
