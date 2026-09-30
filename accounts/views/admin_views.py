@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 
+from django.contrib import messages
 from meetings.models import Meeting, Classroom, ClassroomMembership
 from cameras.models import Camera, CameraPermission, CameraRecording
 
@@ -87,7 +88,6 @@ def admin_edit_user(request, user_id):
 
     if request.method == 'POST':
         from accounts.services import update_user_identity
-        from django.contrib import messages
         try:
             update_user_identity(target_user, request.user, request.POST, request.FILES)
             messages.success(request, f"User {target_user.username}'s identity and profile updated successfully.")
@@ -105,12 +105,23 @@ def admin_edit_user(request, user_id):
 @login_required
 def delete_user(request, user_id):
     """Delete a user account and clean up related objects."""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+
     if not request.user.is_superuser:
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+        messages.error(request, "Permission denied.")
         return redirect('admin_panel')
+
     user = get_object_or_404(User, id=user_id)
     if user == request.user:
-        return redirect('admin_panel')
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': 'You cannot delete your own account.'}, status=400)
+        messages.error(request, "You cannot delete your own account.")
+        return redirect('user_management')
+
     try:
+        username = user.username
         with transaction.atomic():
             ClassroomMembership.objects.filter(student=user).delete()
             ClassroomMembership.objects.filter(approved_by=user).update(approved_by=None)
@@ -119,10 +130,18 @@ def delete_user(request, user_id):
             Meeting.objects.filter(teacher=user).delete()
             Classroom.objects.filter(teacher=user).delete()
             user.delete()
-        return JsonResponse({'status': 'success', 'message': 'User deleted successfully'})
+
+        if is_ajax:
+            return JsonResponse({'status': 'success', 'message': f'User @{username} deleted successfully.'})
+
+        messages.success(request, f"User @{username} has been permanently deleted.")
+        return redirect('user_management')
     except Exception as e:
         logger.error(f"Failed to delete user {user_id}: {e}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        if is_ajax:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        messages.error(request, f"Failed to delete user: {e}")
+        return redirect('user_management')
 
 
 @login_required
