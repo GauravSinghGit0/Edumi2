@@ -566,6 +566,12 @@ server {
 
     client_max_body_size 500M;
 
+    # Block all hidden files (.env, .git, .htaccess)
+    location ~ /\. {
+        deny all;
+        return 404;
+    }
+
     # ---------------------------------------------------------------------
     # IMPORTANT: Use ^~ so these PREFIX locations beat the camera regex
     # below.  Without ^~ the regex ~ ^/(cameras/...) would run first and
