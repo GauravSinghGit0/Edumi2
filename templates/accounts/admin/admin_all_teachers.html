@@ -1,66 +1,212 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}All Teachers{% endblock %}
+{% block page_title %}Teacher Directory & Roster | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="page-section" style="max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+<div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">Teacher Roster</span>
+    </div>
+
+    <!-- Header Section -->
+    <div class="admin-header">
         <div>
-            <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--color-text-main, #0f172a); margin: 0 0 0.25rem 0;">All Teachers</h1>
-            <p style="color: var(--color-text-muted, #64748b); margin: 0; font-size: 0.9rem;">Total: {{ total_count }} registered teachers</p>
+            <h1>Teacher Roster</h1>
+            <p class="admin-subtitle">Monitor teaching staff performance, managed classrooms, and live sessions</p>
         </div>
-        <a href="{% url 'admin_panel' %}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem; background: var(--color-bg-hover, #f1f5f9); color: var(--color-text-main, #0f172a); text-decoration: none; border-radius: var(--radius-md, 0.5rem); font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border, #e2e8f0); transition: all 0.2s ease;">
-            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Admin Panel
-        </a>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <a href="{% url 'user_management' %}" class="btn-action btn-action-secondary">
+                <i data-lucide="users"></i> User Directory
+            </a>
+            <a href="{% url 'admin_all_classrooms' %}" class="btn-action btn-action-secondary">
+                <i data-lucide="book-open"></i> Classrooms
+            </a>
+        </div>
     </div>
-    
-    <div style="background: var(--color-bg-card, #ffffff); border-radius: var(--radius-xl, 1rem); border: 1px solid var(--color-border, #e2e8f0); box-shadow: var(--shadow-sm); overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead>
-                <tr style="background: var(--color-bg-hover, #f8fafc); border-bottom: 1px solid var(--color-border, #e2e8f0);">
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Username</th>
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Full Name</th>
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Email</th>
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Employee ID</th>
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Department</th>
-                    <th style="padding: 0.875rem 1.25rem; font-size: 0.8125rem; color: var(--color-text-muted, #64748b); font-weight: 600; text-transform: uppercase;">Date Joined</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for teacher in teachers %}
-                    <tr style="border-bottom: 1px solid var(--color-border, #f1f5f9);">
-                        <td style="padding: 1rem 1.25rem;">
-                            <a href="{% url 'profile_view' teacher.username %}" style="color: var(--color-primary, #6366f1); text-decoration: none; font-weight: 600; font-size: 0.875rem;">
-                                {{ teacher.username }}
-                            </a>
-                        </td>
-                        <td style="padding: 1rem 1.25rem; color: var(--color-text-main, #0f172a); font-size: 0.875rem;">
-                            {{ teacher.get_full_name|default:"-" }}
-                        </td>
-                        <td style="padding: 1rem 1.25rem; color: var(--color-text-muted, #64748b); font-size: 0.875rem;">
-                            {{ teacher.email|default:"-" }}
-                        </td>
-                        <td style="padding: 1rem 1.25rem; color: var(--color-text-muted, #64748b); font-size: 0.875rem; font-family: monospace;">
-                            {{ teacher.userprofile.employee_id|default:"-" }}
-                        </td>
-                        <td style="padding: 1rem 1.25rem; color: var(--color-text-muted, #64748b); font-size: 0.875rem;">
-                            {{ teacher.userprofile.department|default:"-" }}
-                        </td>
-                        <td style="padding: 1rem 1.25rem; color: var(--color-text-muted, #64748b); font-size: 0.8125rem;">
-                            {{ teacher.date_joined|date:"M d, Y" }}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="6" style="padding: 3.5rem 2rem; text-align: center; color: var(--color-text-muted);">
-                            <i data-lucide="graduation-cap" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.4;"></i>
-                            <p style="margin: 0; font-size: 0.95rem;">No teachers found.</p>
-                        </td>
-                    </tr>
+
+    <!-- KPI stats -->
+    <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+        {% include "components/admin/kpi_card.html" with icon="award" color_class="blue" label="Total Teachers" value=total_count|default:0 subtext=active_count|add:" Active" %}
+        {% include "components/admin/kpi_card.html" with icon="book-open" color_class="emerald" label="Total Classrooms" value=total_classrooms|default:0 subtext="Across all teachers" %}
+        {% include "components/admin/kpi_card.html" with icon="video" color_class="purple" label="Total Sessions Hosted" value=total_meetings|default:0 subtext="All time" %}
+    </div>
+
+    <!-- Search + Filter bar -->
+    <div class="admin-card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+        <form method="GET" action="" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <div style="position: relative; flex: 1; min-width: 220px;">
+                <i data-lucide="search"
+                    style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-text-muted);"></i>
+                <input type="text" name="q" value="{{ search_query|default:'' }}"
+                    placeholder="Search name, email, department..." class="filter-input"
+                    style="padding-left: 2.5rem; width: 100%;">
+            </div>
+            {% if departments %}
+            <select name="dept" class="filter-input" style="min-width: 180px;">
+                <option value="all" {% if selected_dept == 'all' %}selected{% endif %}>All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept }}" {% if selected_dept == dept %}selected{% endif %}>{{ dept }}</option>
                 {% endfor %}
-            </tbody>
-        </table>
+            </select>
+            {% endif %}
+            <button type="submit" class="btn-action-sm btn-action-primary" style="white-space: nowrap;">
+                <i data-lucide="filter" style="width: 13px; height: 13px;"></i> Filter
+            </button>
+            {% if search_query or selected_dept != 'all' %}
+            <a href="{% url 'admin_all_teachers' %}" class="btn-action-sm btn-action-secondary">Clear</a>
+            {% endif %}
+        </form>
     </div>
+
+    {% if teachers_data %}
+    <div id="bulkActionsBar"
+        style="display: none; justify-content: space-between; align-items: center; background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;">
+        <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">
+            <span id="selectedCount">0</span> teachers selected
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-action-sm btn-action-secondary"
+                onclick="alert('Bulk export selected teachers. (Backend logic required)')">
+                <i data-lucide="download"></i> Export Selected
+            </button>
+            <button type="button" class="btn-action-sm btn-action-danger"
+                onclick="alert('Bulk suspend selected teachers. (Backend logic required)')">
+                <i data-lucide="user-x"></i> Suspend Selected
+            </button>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem;">
+        {% for t in teachers_data %}
+        <div class="admin-card"
+            style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" class="admin-checkbox card-checkbox" value="{{ t.user.id }}">
+                        {% url 'admin_teacher_detail' t.user.id as url_teacher_detail %}
+                        {% include "components/admin/user_avatar.html" with user=t.user size=48 link=url_teacher_detail
+                        name_style="font-size: 1.05rem;" %}
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        {% if t.user.is_active %}
+                        {% include "components/admin/status_pill.html" with status="active" %}
+                        {% else %}
+                        {% include "components/admin/status_pill.html" with status="inactive" %}
+                        {% endif %}
+                        <div class="admin-dropdown">
+                            <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle"
+                                onclick="toggleDropdown(this)" style="padding: 0.35rem 0.5rem;">
+                                <i data-lucide="more-vertical"></i>
+                            </button>
+                            <div class="admin-dropdown-menu">
+                                <a href="{% url 'admin_teacher_detail' t.user.id %}" class="admin-dropdown-item"><i
+                                        data-lucide="eye"></i> View Profile</a>
+                                <a href="{% url 'admin_edit_user' t.user.id %}" class="admin-dropdown-item"><i
+                                        data-lucide="edit-3"></i> Edit Account</a>
+                                <form method="POST" action="{% url 'admin_toggle_user_active' t.user.id %}"
+                                    data-turbo="false" style="margin:0;"
+                                    onsubmit="return confirm('Change status for this teacher?');">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="admin-dropdown-item {% if t.user.is_active %}danger{% endif %}">
+                                        {% if t.user.is_active %}<i data-lucide="user-x"></i> Suspend{% else %}<i
+                                            data-lucide="user-check"></i> Activate{% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); padding: 0.85rem; border-radius: var(--radius-md, 0.5rem); margin-bottom: 1.25rem; text-align: center; border: 1px solid var(--color-border);">
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary);">{{
+                            t.classrooms_count|default:0 }}</div>
+                        <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
+                            Classrooms</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-secondary);">{{
+                            t.meetings_count|default:0 }}</div>
+                        <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
+                            Sessions</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-success);">{{
+                            t.students_count|default:0 }}</div>
+                        <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
+                            Students</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{% url 'admin_teacher_detail' t.user.id %}" class="btn-action-sm btn-action-primary"
+                    style="flex: 1; justify-content: center;">
+                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> View Dossier
+                </a>
+                <a href="{% url 'admin_edit_user' t.user.id %}" class="btn-action-sm btn-action-secondary"
+                    style="padding: 0.5rem 0.75rem;">
+                    <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="admin-card">
+        <div class="empty-state">
+            <div class="empty-icon"><i data-lucide="user-x"></i></div>
+            <h3>No Teachers Registered</h3>
+            <p>There are currently no active teacher profiles in the system.</p>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+    // Dropdown Logic
+    function toggleDropdown(btn) {
+        const parent = btn.closest('.admin-dropdown');
+        const wasOpen = parent.classList.contains('open');
+        document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        if (!wasOpen) parent.classList.add('open');
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.admin-dropdown')) {
+            document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // Checkbox Logic
+    const cardCheckboxes = document.querySelectorAll('.card-checkbox');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        if (!bulkActionsBar) return;
+        const count = document.querySelectorAll('.card-checkbox:checked').length;
+        if (count > 0) {
+            bulkActionsBar.style.display = 'flex';
+            selectedCountEl.textContent = count;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+    }
+    cardCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,103 @@
+﻿{% comment %}
+  Professional Pagination Component
+  Usage: {% include "components/admin/pagination.html" with page_obj=page_obj extra_params="" %}
+  extra_params: URL query string extras like "&role=admin&q=search" (without leading ?)
+{% endcomment %}
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination-wrapper">
+
+  <!-- Info -->
+  <div class="pagination-info">
+    Showing <strong>{{ page_obj.start_index }}</strong>&ndash;<strong>{{ page_obj.end_index }}</strong>
+    of <strong>{{ page_obj.paginator.count }}</strong>
+    {% if item_label %}{{ item_label }}{% else %}records{% endif %}
+  </div>
+
+  <!-- Controls -->
+  <div class="pagination-controls">
+
+    <!-- First -->
+    {% if page_obj.has_previous %}
+      <a href="?page=1{{ extra_params }}" class="page-btn page-btn--icon" title="First page" aria-label="First page">
+        &#171;
+      </a>
+      <a href="?page={{ page_obj.previous_page_number }}{{ extra_params }}" class="page-btn" aria-label="Previous page">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Prev
+      </a>
+    {% else %}
+      <span class="page-btn page-btn--icon page-btn--disabled" aria-disabled="true">&#171;</span>
+      <span class="page-btn page-btn--disabled" aria-disabled="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Prev
+      </span>
+    {% endif %}
+
+    <!-- Page number pills — smart windowed display -->
+    {% with current=page_obj.number total=page_obj.paginator.num_pages %}
+      {% if total <= 7 %}
+        {% for p in page_obj.paginator.page_range %}
+          {% if p == current %}
+            <span class="page-btn page-btn--active" aria-current="page">{{ p }}</span>
+          {% else %}
+            <a href="?page={{ p }}{{ extra_params }}" class="page-btn">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        {# Always show first #}
+        {% if current == 1 %}
+          <span class="page-btn page-btn--active" aria-current="page">1</span>
+        {% else %}
+          <a href="?page=1{{ extra_params }}" class="page-btn">1</a>
+        {% endif %}
+
+        {# Left ellipsis #}
+        {% if current > 3 %}
+          <span class="page-btn page-btn--ellipsis">&hellip;</span>
+        {% endif %}
+
+        {# Window around current: current-1, current, current+1 #}
+        {% if current > 2 %}
+          <a href="?page={{ current|add:"-1" }}{{ extra_params }}" class="page-btn">{{ current|add:"-1" }}</a>
+        {% endif %}
+        {% if current != 1 and current != total %}
+          <span class="page-btn page-btn--active" aria-current="page">{{ current }}</span>
+        {% endif %}
+        {% if current < total|add:"-1" %}
+          <a href="?page={{ current|add:"1" }}{{ extra_params }}" class="page-btn">{{ current|add:"1" }}</a>
+        {% endif %}
+
+        {# Right ellipsis #}
+        {% if current < total|add:"-2" %}
+          <span class="page-btn page-btn--ellipsis">&hellip;</span>
+        {% endif %}
+
+        {# Always show last #}
+        {% if current == total %}
+          <span class="page-btn page-btn--active" aria-current="page">{{ total }}</span>
+        {% else %}
+          <a href="?page={{ total }}{{ extra_params }}" class="page-btn">{{ total }}</a>
+        {% endif %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Next / Last -->
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{{ extra_params }}" class="page-btn" aria-label="Next page">
+        Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+      <a href="?page={{ page_obj.paginator.num_pages }}{{ extra_params }}" class="page-btn page-btn--icon" title="Last page" aria-label="Last page">
+        &#187;
+      </a>
+    {% else %}
+      <span class="page-btn page-btn--disabled" aria-disabled="true">
+        Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </span>
+      <span class="page-btn page-btn--icon page-btn--disabled" aria-disabled="true">&#187;</span>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}

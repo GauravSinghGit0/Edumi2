@@ -1,0 +1,22 @@
+<div class="user-avatar-cell">
+    <div class="avatar-circle" {% if size %}style="width: {{ size }}px; height: {{ size }}px; font-size: calc({{ size }}px * 0.4);"{% endif %}>
+        {{ user.username|slice:":1"|upper }}
+    </div>
+    {% if not avatar_only %}
+    <div class="user-meta">
+        <span class="user-name" {% if name_style %}style="{{ name_style }}"{% endif %}>
+            {% if link %}
+            <a href="{{ link }}" style="color: inherit; text-decoration: none;">
+                {{ user.get_full_name|default:user.username }}
+            </a>
+            {% else %}
+                {{ user.get_full_name|default:user.username }}
+            {% endif %}
+        </span>
+        <span class="user-email" {% if email_style %}style="{{ email_style }}"{% endif %}>
+            {% if show_username_instead %}@{{ user.username }}{% else %}{{ user.email|default:"—" }}{% endif %}
+            {% if subtext %}<br><span style="color: var(--color-text-muted);">{{ subtext }}</span>{% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>

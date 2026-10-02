@@ -10,8 +10,8 @@
     {% include 'components/lucide_icons.html' %}
     <style>
         :root {
-            --primary: #6366f1;
-            --bg: #0f172a;
+            --primary: #8b5cf6;
+            --bg: #000000;
         }
         body {
             background-color: var(--bg);
@@ -34,8 +34,8 @@
             width: 180px;
             height: 180px;
             border-radius: 50%;
-            background: #1e293b;
-            border: 8px solid #334155;
+            background: #111111;
+            border: 8px solid #222222;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -48,7 +48,7 @@
         .mic-button.active {
             background: var(--primary);
             border-color: #818cf8;
-            box-shadow: 0 0 50px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 50px rgba(139, 92, 246, 0.4);
             transform: scale(1.05);
         }
         .mic-button i {
@@ -79,7 +79,7 @@
             margin-top: 2rem;
             padding: 0.5rem 1.5rem;
             border-radius: 2rem;
-            background: #1e293b;
+            background: #111111;
             font-weight: 700;
             font-size: 0.875rem;
             color: #94a3b8;
@@ -93,7 +93,7 @@
         .level-meter {
             width: 240px;
             height: 8px;
-            background: #1e293b;
+            background: #111111;
             border-radius: 4px;
             margin-top: 3rem;
             overflow: hidden;
@@ -106,21 +106,21 @@
             transition: width 0.1s ease-out;
         }
         .settings-card {
-            background: #1e293b;
+            background: #111111;
             border-radius: 1.5rem;
             padding: 1.5rem;
             margin: 1rem;
-            border: 1px solid #334155;
+            border: 1px solid #222222;
         }
         .form-select {
-            background-color: #0f172a;
-            border-color: #334155;
+            background-color: #000000;
+            border-color: #222222;
             color: white;
             border-radius: 0.75rem;
             padding: 0.75rem;
         }
         .form-select:focus {
-            background-color: #0f172a;
+            background-color: #000000;
             color: white;
             border-color: var(--primary);
             box-shadow: none;
@@ -128,7 +128,7 @@
         .header {
             padding: 1.5rem;
             text-align: center;
-            border-bottom: 1px solid #1e293b;
+            border-bottom: 1px solid #111111;
             position: relative;
         }
         .logout-btn {

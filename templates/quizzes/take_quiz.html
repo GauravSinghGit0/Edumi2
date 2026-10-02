@@ -20,7 +20,7 @@
 
     /* ── Quiz Overview Hero Banner ──────────────────────────────────────── */
     .quiz-overview-banner {
-        background: linear-gradient(135deg, var(--color-primary, #4f46e5) 0%, #3730a3 100%);
+        background: linear-gradient(135deg, var(--color-primary, #7c3aed) 0%, #3730a3 100%);
         border-radius: var(--radius-xl, 1rem);
         padding: 1.65rem 1.85rem;
         color: white;
@@ -104,8 +104,8 @@
         width: 36px;
         height: 36px;
         border-radius: var(--radius-md, 0.625rem);
-        background: rgba(99, 102, 241, 0.12);
-        color: var(--color-primary, #6366f1);
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--color-primary, #8b5cf6);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -115,7 +115,7 @@
     .exam-title-text {
         font-size: 1.05rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -162,7 +162,7 @@
     .timer-bar-fill {
         height: 100%;
         width: 100%;
-        background: linear-gradient(90deg, var(--color-primary, #6366f1), #a78bfa);
+        background: linear-gradient(90deg, var(--color-primary, #8b5cf6), #a78bfa);
         border-radius: 999px;
         transition: width 1s linear, background 0.3s ease;
     }
@@ -173,7 +173,7 @@
         font-size: 1.2rem;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         min-width: 62px;
         text-align: right;
     }
@@ -207,7 +207,7 @@
     }
 
     .progress-counter-badge strong {
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
         font-size: 0.9rem;
     }
 
@@ -254,21 +254,21 @@
     }
 
     .q-jump-btn:hover {
-        border-color: var(--color-primary, #6366f1);
-        color: var(--color-primary, #6366f1);
+        border-color: var(--color-primary, #8b5cf6);
+        color: var(--color-primary, #8b5cf6);
         transform: translateY(-1px);
     }
 
     .q-jump-btn.answered {
-        background: var(--color-primary, #6366f1);
-        border-color: var(--color-primary, #6366f1);
+        background: var(--color-primary, #8b5cf6);
+        border-color: var(--color-primary, #8b5cf6);
         color: #ffffff;
-        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
     }
 
     .q-jump-btn.active-focus {
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
-        border-color: var(--color-primary, #6366f1);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+        border-color: var(--color-primary, #8b5cf6);
     }
 
     /* ── Question Cards ────────────────────────────────────────────────── */
@@ -296,12 +296,12 @@
     }
 
     .question-card-container.answered::before {
-        background: var(--color-primary, #6366f1);
+        background: var(--color-primary, #8b5cf6);
     }
 
     .question-card-container.answered {
-        border-color: rgba(99, 102, 241, 0.35);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.08);
+        border-color: rgba(139, 92, 246, 0.35);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.08);
     }
 
     .q-meta-row {
@@ -315,8 +315,8 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
-        background: rgba(99, 102, 241, 0.1);
-        color: var(--color-primary, #6366f1);
+        background: rgba(139, 92, 246, 0.1);
+        color: var(--color-primary, #8b5cf6);
         font-size: 0.8125rem;
         font-weight: 700;
         padding: 0.3rem 0.75rem;
@@ -336,7 +336,7 @@
     .q-prompt-heading {
         font-size: 1.1rem;
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 1.35rem 0;
         line-height: 1.5;
     }
@@ -363,15 +363,15 @@
     }
 
     .choice-card-item:hover {
-        border-color: var(--color-primary, #6366f1);
-        background: rgba(99, 102, 241, 0.04);
+        border-color: var(--color-primary, #8b5cf6);
+        background: rgba(139, 92, 246, 0.04);
         transform: translateY(-1px);
     }
 
     .choice-card-item.chosen {
-        border-color: var(--color-primary, #6366f1);
-        background: rgba(99, 102, 241, 0.09);
-        box-shadow: 0 0 0 1px var(--color-primary, #6366f1), 0 4px 12px rgba(99, 102, 241, 0.1);
+        border-color: var(--color-primary, #8b5cf6);
+        background: rgba(139, 92, 246, 0.09);
+        box-shadow: 0 0 0 1px var(--color-primary, #8b5cf6), 0 4px 12px rgba(139, 92, 246, 0.1);
     }
 
     .choice-letter-avatar {
@@ -390,7 +390,7 @@
     }
 
     .choice-card-item.chosen .choice-letter-avatar {
-        background: var(--color-primary, #6366f1);
+        background: var(--color-primary, #8b5cf6);
         color: #ffffff;
     }
 
@@ -398,13 +398,13 @@
         width: 18px;
         height: 18px;
         cursor: pointer;
-        accent-color: var(--color-primary, #6366f1);
+        accent-color: var(--color-primary, #8b5cf6);
         flex-shrink: 0;
     }
 
     .choice-text-content {
         font-size: 0.95rem;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         font-weight: 600;
         line-height: 1.45;
         flex: 1;
@@ -413,7 +413,7 @@
     .choice-check-icon {
         width: 20px;
         height: 20px;
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
         opacity: 0;
         transform: scale(0.6);
         transition: all 0.2s ease;
@@ -436,7 +436,7 @@
         border: 1.5px solid var(--color-border, #cbd5e1);
         border-radius: var(--radius-lg, 0.75rem);
         background: var(--color-bg-card, #ffffff);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         font-size: 0.95rem;
         font-family: inherit;
         line-height: 1.5;
@@ -446,8 +446,8 @@
     }
 
     .text-response-input:focus {
-        border-color: var(--color-primary, #6366f1);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+        border-color: var(--color-primary, #8b5cf6);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.16);
         outline: none;
     }
 
@@ -471,7 +471,7 @@
     }
 
     .btn-submit-assessment {
-        background: linear-gradient(135deg, var(--color-primary, #4f46e5) 0%, #3730a3 100%);
+        background: linear-gradient(135deg, var(--color-primary, #7c3aed) 0%, #3730a3 100%);
         color: #ffffff;
         border: none;
         padding: 0.95rem 2.5rem;
@@ -541,7 +541,7 @@
     .expired-modal-card h2 {
         font-size: 1.4rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 0.5rem;
     }
 

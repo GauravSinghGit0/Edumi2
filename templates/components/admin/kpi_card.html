@@ -1,0 +1,12 @@
+<div class="kpi-card" {% if href %}onclick="window.location.href='{{ href }}'" style="cursor: pointer;"{% endif %}>
+    <div class="kpi-icon {{ color_class|default:'blue' }}" {% if custom_icon_style %}style="{{ custom_icon_style }}"{% endif %}>
+        <i data-lucide="{{ icon|default:'activity' }}"></i>
+    </div>
+    <div class="kpi-details">
+        <span class="kpi-value" {% if value_style %}style="{{ value_style }}"{% endif %}>{{ value|default:0 }}</span>
+        <span class="kpi-label">{{ label }}</span>
+        {% if subtext %}
+            <span class="kpi-subtext" {% if subtext_style %}style="{{ subtext_style }}"{% endif %}>{{ subtext }}</span>
+        {% endif %}
+    </div>
+</div>

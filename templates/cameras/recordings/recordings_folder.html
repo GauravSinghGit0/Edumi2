@@ -19,7 +19,7 @@
     .mgmt-title {
         font-size: 1.75rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 0.25rem 0;
         letter-spacing: -0.01em;
     }
@@ -29,13 +29,13 @@
         font-size: 0.9rem;
     }
     .badge-count {
-        background: var(--color-primary-bg, rgba(99, 102, 241, 0.12));
-        color: var(--color-primary, #6366f1);
+        background: var(--color-primary-bg, rgba(139, 92, 246, 0.12));
+        color: var(--color-primary, #8b5cf6);
         font-size: 0.8125rem;
         font-weight: 700;
         padding: 0.45rem 0.9rem;
         border-radius: var(--radius-full, 9999px);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        border: 1px solid rgba(139, 92, 246, 0.2);
     }
 
     .folder-grid {
@@ -59,13 +59,13 @@
     .folder-item:hover {
         transform: translateY(-4px);
         box-shadow: var(--shadow-lg);
-        border-color: var(--color-primary, #6366f1);
+        border-color: var(--color-primary, #8b5cf6);
     }
     .folder-icon {
         width: 52px;
         height: 52px;
-        background: var(--color-primary-bg, rgba(99, 102, 241, 0.1));
-        color: var(--color-primary, #6366f1);
+        background: var(--color-primary-bg, rgba(139, 92, 246, 0.1));
+        color: var(--color-primary, #8b5cf6);
         border-radius: var(--radius-lg, 12px);
         display: inline-flex;
         align-items: center;
@@ -78,7 +78,7 @@
     }
     .folder-name {
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         font-size: 1rem;
         display: block;
         margin-bottom: 0.25rem;
@@ -100,7 +100,7 @@
     .no-data-card h3 {
         font-size: 1.25rem;
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 0.5rem 0;
     }
     .no-data-card p {
@@ -120,7 +120,7 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
         font-weight: 600;
         font-size: 0.9rem;
         cursor: pointer;
@@ -161,14 +161,14 @@
         box-shadow: var(--shadow-sm);
     }
     .video-row:hover {
-        border-color: var(--color-primary, #6366f1);
+        border-color: var(--color-primary, #8b5cf6);
         background: var(--color-bg-hover, #f8fafc);
         transform: translateY(-1px);
     }
     .video-row-thumb {
         width: 120px;
         aspect-ratio: 16/9;
-        background: var(--color-bg-hover, #1e293b);
+        background: var(--color-bg-hover, #111111);
         border-radius: var(--radius-md, 0.5rem);
         overflow: hidden;
         flex-shrink: 0;
@@ -176,7 +176,7 @@
     }
     .video-row-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .video-row-info { flex: 1; }
-    .video-row-title { font-weight: 700; color: var(--color-text-main, #0f172a); margin-bottom: 0.25rem; font-size: 0.95rem; }
+    .video-row-title { font-weight: 700; color: var(--color-text-main, #000000); margin-bottom: 0.25rem; font-size: 0.95rem; }
     .video-row-meta { font-size: 0.8125rem; color: var(--color-text-muted, #64748b); }
     .video-row-actions { display: flex; gap: 0.5rem; }
 
@@ -189,7 +189,7 @@
         font-size: 0.875rem;
     }
     .breadcrumb-item-custom { color: var(--color-text-muted, #64748b); }
-    .breadcrumb-item-custom.active { color: var(--color-text-main, #0f172a); font-weight: 700; }
+    .breadcrumb-item-custom.active { color: var(--color-text-main, #000000); font-weight: 700; }
     .breadcrumb-separator { color: var(--color-border, #e2e8f0); }
 </style>
 {% endblock %}

@@ -1,0 +1,21 @@
+<div class="{% if use_section_empty %}section-empty{% else %}empty-state{% endif %}" {% if custom_style %}style="{{ custom_style }}"{% else %}{% if not use_section_empty %}style="padding: 2rem 1rem;"{% endif %}{% endif %}>
+    {% if not use_section_empty %}
+    <div class="empty-icon"><i data-lucide="{{ icon|default:'inbox' }}"></i></div>
+    {% else %}
+    <i data-lucide="{{ icon|default:'inbox' }}"></i>
+    {% endif %}
+    
+    {% if title %}
+    <h4 style="margin: 0.5rem 0 0.25rem 0; font-weight: 700;">{{ title }}</h4>
+    {% endif %}
+    
+    <p {% if not use_section_empty %}style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0;"{% endif %}>
+        {{ message|default:"No records found." }}
+    </p>
+    
+    {% if action_url and action_label %}
+    <a href="{{ action_url }}" class="btn-action-sm btn-action-primary" style="margin-top: 1rem;">
+        {{ action_label }}
+    </a>
+    {% endif %}
+</div>

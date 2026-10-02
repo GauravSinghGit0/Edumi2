@@ -13,7 +13,7 @@
     }
     
     .quiz-hero-card { 
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); 
+        background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%); 
         border-radius: 1.125rem; 
         padding: 1.75rem 2rem; 
         color: white; 
@@ -41,7 +41,7 @@
     
     .btn-hero-action { 
         background: #ffffff !important; 
-        color: #4f46e5 !important; 
+        color: #7c3aed !important; 
         padding: 0.65rem 1.25rem; 
         border-radius: 0.75rem; 
         font-weight: 700; 
@@ -101,7 +101,7 @@
         height: 32px;
         border-radius: 0.5rem;
         background: #eef2ff;
-        color: #4f46e5;
+        color: #7c3aed;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -110,7 +110,7 @@
     .quiz-title { 
         font-size: 1.0625rem; 
         font-weight: 700; 
-        color: #0f172a; 
+        color: #000000; 
         margin: 0;
         letter-spacing: -0.01em;
         line-height: 1.3;
@@ -156,7 +156,7 @@
     }
     .status-available { 
         background: #eef2ff; 
-        color: #4f46e5; 
+        color: #7c3aed; 
         border: 1px solid #e0e7ff; 
     }
     
@@ -181,7 +181,7 @@
         flex-shrink: 0;
     }
     .meta-item strong {
-        color: #334155;
+        color: #222222;
         font-weight: 600;
     }
     .meta-sep {
@@ -212,7 +212,7 @@
         font-weight: 600; 
         font-size: 0.8125rem;
         background: #f8fafc; 
-        color: #334155; 
+        color: #222222; 
         text-decoration: none; 
         transition: all 0.15s ease; 
         display: inline-flex;
@@ -221,9 +221,9 @@
         border: 1px solid #e2e8f0;
     }
     .btn-view:hover { 
-        background: #4f46e5; 
+        background: #7c3aed; 
         color: #ffffff; 
-        border-color: #4f46e5;
+        border-color: #7c3aed;
     }
 
     /* "Take Quiz" action button — visually distinct green to signal action */
@@ -254,7 +254,7 @@
         font-weight: 600;
         font-size: 0.775rem;
         background: #ffffff;
-        color: #334155;
+        color: #222222;
         border: 1px solid #e2e8f0;
         cursor: pointer;
         display: inline-flex;
@@ -292,13 +292,13 @@
     }
 
     .btn-card-edit {
-        color: #4f46e5;
+        color: #7c3aed;
         border-color: rgba(79, 70, 229, 0.25);
         background: rgba(79, 70, 229, 0.04);
     }
     .btn-card-edit:hover {
         background: rgba(79, 70, 229, 0.12);
-        border-color: #4f46e5;
+        border-color: #7c3aed;
     }
 
     .btn-card-delete {
@@ -314,20 +314,20 @@
     }
 
     /* Dark Mode */
-    body.dark-mode .quiz-card { background: var(--color-bg-card, #1e293b); border-color: var(--color-border, #334155); }
-    body.dark-mode .quiz-avatar-icon { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+    body.dark-mode .quiz-card { background: var(--color-bg-card, #111111); border-color: var(--color-border, #222222); }
+    body.dark-mode .quiz-avatar-icon { background: rgba(139, 92, 246, 0.2); color: #a5b4fc; }
     body.dark-mode .quiz-title { color: var(--color-text-main, #f8fafc); }
     body.dark-mode .quiz-description { color: var(--color-text-muted, #94a3b8); }
     body.dark-mode .meta-item strong { color: #e2e8f0; }
     body.dark-mode .meta-sep { color: #475569; }
-    body.dark-mode .quiz-footer-row { border-top-color: var(--color-border, #334155); }
-    body.dark-mode .btn-view { background: var(--color-bg-hover, #334155); color: #cbd5e1; border-color: var(--color-border, #475569); }
-    body.dark-mode .btn-view:hover { background: #4f46e5; color: #ffffff; border-color: #4f46e5; }
-    body.dark-mode .btn-card-action { background: var(--color-bg-card, #1e293b); border-color: var(--color-border, #334155); color: var(--color-text-main, #f8fafc); }
+    body.dark-mode .quiz-footer-row { border-top-color: var(--color-border, #222222); }
+    body.dark-mode .btn-view { background: var(--color-bg-hover, #222222); color: #cbd5e1; border-color: var(--color-border, #475569); }
+    body.dark-mode .btn-view:hover { background: #7c3aed; color: #ffffff; border-color: #7c3aed; }
+    body.dark-mode .btn-card-action { background: var(--color-bg-card, #111111); border-color: var(--color-border, #222222); color: var(--color-text-main, #f8fafc); }
     body.dark-mode .btn-card-unpublish { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.1); }
     body.dark-mode .btn-card-publish { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.1); }
     body.dark-mode .btn-card-delete { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background: rgba(248, 113, 113, 0.1); }
-    body.dark-mode .empty-card { background: var(--color-bg-card, #1e293b) !important; border: 1px solid var(--color-border, #334155); }
+    body.dark-mode .empty-card { background: var(--color-bg-card, #111111) !important; border: 1px solid var(--color-border, #222222); }
     body.dark-mode .empty-card h3 { color: var(--color-text-main, #f8fafc) !important; }
     body.dark-mode .empty-card p { color: var(--color-text-muted, #94a3b8) !important; }
 </style>
@@ -520,7 +520,7 @@
     {% else %}
     <div class="empty-card" style="background: white; border-radius: 1.125rem; padding: 3.5rem; text-align: center;">
         <i data-lucide="clipboard-list" style="width: 48px; height: 48px; color: #94a3b8; margin-bottom: 0.75rem;"></i>
-        <h3 style="color: #0f172a; font-size: 1.125rem; font-weight: 700; margin-bottom: 0.35rem;">No quizzes yet</h3>
+        <h3 style="color: #000000; font-size: 1.125rem; font-weight: 700; margin-bottom: 0.35rem;">No quizzes yet</h3>
         <p style="color: #64748b; font-size: 0.875rem;">{% if is_teacher %}Create your first quiz to get started!{% else %}Check back later for quizzes.{% endif %}</p>
     </div>
     {% endif %}

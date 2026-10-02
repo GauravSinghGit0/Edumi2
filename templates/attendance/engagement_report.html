@@ -99,7 +99,7 @@
 
 <style>
 .er-wrap { max-width:1100px; margin:0 auto; padding:24px 16px; }
-.er-header { background:linear-gradient(135deg,#667eea,#764ba2); border-radius:12px; padding:28px 32px; color:#fff; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.er-header { background:linear-gradient(135deg,#8b5cf6,#764ba2); border-radius:12px; padding:28px 32px; color:#fff; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
 .er-header h1 { margin:0 0 4px; font-size:24px; }
 .er-subtitle { margin:0; opacity:.85; font-size:15px; }
 .er-score-badge { text-align:center; background:rgba(255,255,255,.2); border-radius:12px; padding:16px 24px; }
@@ -107,12 +107,12 @@
 .er-score-label { font-size:13px; opacity:.85; }
 .er-summary-row { display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
 .er-stat-card { flex:1; min-width:140px; background:#fff; border-radius:10px; padding:20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-.er-stat-num { font-size:28px; font-weight:700; color:#667eea; }
+.er-stat-num { font-size:28px; font-weight:700; color:#8b5cf6; }
 .er-stat-label { font-size:13px; color:#888; margin-top:4px; }
 .er-students { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%, 300px), 1fr)); gap:16px; }
 .er-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 .er-card-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-.er-avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; }
+.er-avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#764ba2); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; }
 .er-card-info { flex:1; }
 .er-name { font-weight:600; font-size:15px; }
 .er-username { font-size:12px; color:#888; }
@@ -152,7 +152,7 @@ function initEngagementReport() {
   document.querySelectorAll('.presence-bar').forEach(function(el) {
     var pct = parseFloat(el.dataset.pct) || 0;
     el.style.width = pct + '%';
-    el.style.background = '#667eea';
+    el.style.background = '#8b5cf6';
   });
 
   // Color the score badge

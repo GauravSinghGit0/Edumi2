@@ -48,13 +48,13 @@
     --radius-xl: 1rem;      /* 16px */
     --radius-full: 9999px;
 
-    /* ── Colors (Light Mode Default) ── */
-    --color-primary: #667eea;
-    --color-primary-hover: #5568d3;
-    --color-primary-light: #818cf8;
-    --color-primary-bg: rgba(102, 126, 234, 0.08);
+    /* ── Colors (Light Mode Default - Violet Brand) ── */
+    --color-primary: #7c3aed;
+    --color-primary-hover: #6d28d9;
+    --color-primary-light: #a78bfa;
+    --color-primary-bg: rgba(124, 58, 237, 0.09);
 
-    --color-secondary: #764ba2;
+    --color-secondary: #8b5cf6;
     --color-success: #10b981;
     --color-success-hover: #059669;
     --color-danger: #ef4444;

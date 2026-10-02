@@ -145,7 +145,8 @@ if (-not (Test-Path "venv\Scripts\python.exe")) {
 }
 
 $VenvPython = Join-Path $ScriptDir "venv\Scripts\python.exe"
-$LogsDir    = Join-Path $ScriptDir "logs"
+$TodayStr   = Get-Date -Format "yyyy-MM-dd"
+$LogsDir    = Join-Path $ScriptDir (Join-Path "logs" $TodayStr)
 if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null }
 
 if (-not (Test-Path ".env")) {

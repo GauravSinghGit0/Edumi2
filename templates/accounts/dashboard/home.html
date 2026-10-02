@@ -29,7 +29,7 @@
     <div class="features-grid">
         {% if user.is_superuser %}
         <a href="{% url 'admin_panel' %}" class="feature-card">
-            <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #764ba2 100%);">
                 <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m18.2-5.2l-4.2 4.2m0 6l4.2 4.2"></path></svg></span>
             </div>
             <h3>Admin Panel</h3>
@@ -54,7 +54,7 @@
         
         {% elif user.userprofile.user_type == 'teacher' %}
         <a href="{% url 'teacher_dashboard' %}" class="feature-card">
-            <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #764ba2 100%);">
                 <span><span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg></span></span>
             </div>
             <h3>Dashboard</h3>
@@ -87,7 +87,7 @@
         
         {% elif user.userprofile.user_type == 'student' %}
         <a href="{% url 'student_dashboard' %}" class="feature-card">
-            <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #764ba2 100%);">
                 <span><span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg></span></span>
             </div>
             <h3>Dashboard</h3>

@@ -5,20 +5,48 @@
 
 {% if user.is_authenticated %}
     {% if user.is_superuser %}
+        <!-- Executive Control Center -->
         <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Management</div>
+            <div class="sidebar-nav-title">Executive Control</div>
             <a href="{% url 'admin_panel' %}" class="sidebar-nav-item {% is_active_nav request 'admin_panel' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
-                <span class="sidebar-nav-text">Admin Panel</span>
+                <span class="sidebar-nav-text">Control Center</span>
             </a>
+            <a href="{% url 'admin_activity_feed' %}" class="sidebar-nav-item {% is_active_nav request 'admin_activity_feed' %}">
+                <span class="sidebar-nav-icon"><i data-lucide="activity"></i></span>
+                <span class="sidebar-nav-text">Activity Audit Log</span>
+            </a>
+        </div>
+
+        <!-- User & Faculty Administration -->
+        <div class="sidebar-nav-section">
+            <div class="sidebar-nav-title">User & Staff Admin</div>
             <a href="{% url 'user_management' %}" class="sidebar-nav-item {% is_active_nav request 'user_management' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="users"></i></span>
-                <span class="sidebar-nav-text">User Manager</span>
+                <span class="sidebar-nav-text">User Directory</span>
             </a>
-            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_meetings' %}">
+            <a href="{% url 'admin_all_teachers' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_teachers' 'admin_teacher_detail' %}">
+                <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
+                <span class="sidebar-nav-text">Teacher Roster</span>
+            </a>
+        </div>
+
+        <!-- Academic & Live Sessions -->
+        <div class="sidebar-nav-section">
+            <div class="sidebar-nav-title">Academic & Live</div>
+            <a href="{% url 'admin_all_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_classrooms' 'admin_classroom_detail' %}">
+                <span class="sidebar-nav-icon"><i data-lucide="book-open"></i></span>
+                <span class="sidebar-nav-text">Classroom Catalog</span>
+            </a>
+            <a href="{% url 'admin_all_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_meetings' 'admin_meeting_detail' 'admin_live_meetings' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
-                <span class="sidebar-nav-text">Meeting Logs</span>
+                <span class="sidebar-nav-text">Meetings & Sessions</span>
             </a>
+        </div>
+
+        <!-- Infrastructure & Fleet -->
+        <div class="sidebar-nav-section">
+            <div class="sidebar-nav-title">Fleet & Content</div>
             <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'admin_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
                 <span class="sidebar-nav-text">Camera Fleet</span>
@@ -106,17 +134,6 @@
         <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% is_active_nav request 'notifications_list' %}">
             <span class="sidebar-nav-icon"><i data-lucide="bell"></i></span>
             <span class="sidebar-nav-text">Notifications</span>
-        </a>
-    </div>
-    <div class="sidebar-nav-section">
-        <div class="sidebar-nav-title">Account</div>
-        <a href="{% url 'profile_view' user.username %}" class="sidebar-nav-item {% is_active_nav request 'profile_view' %}">
-            <span class="sidebar-nav-icon"><i data-lucide="user"></i></span>
-            <span class="sidebar-nav-text">Profile</span>
-        </a>
-        <a href="{% url 'settings' %}" class="sidebar-nav-item {% is_active_nav request 'settings' %}">
-            <span class="sidebar-nav-icon"><i data-lucide="settings"></i></span>
-            <span class="sidebar-nav-text">Settings</span>
         </a>
     </div>
 {% endif %}

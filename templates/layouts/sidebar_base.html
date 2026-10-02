@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <link rel="stylesheet" href="{% static 'css/classroom-card.css' %}">
     <link rel="stylesheet" href="{% static 'css/attendance.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
     {% endcompress %}
     {% block extra_css %}{% endblock %}
 
@@ -213,14 +214,17 @@
 
             <div class="content-area">
                 {% if messages %}
-                <div class="messages-container" style="max-width: 100%; margin: 0 auto 20px; padding: 0;">
-                    {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
-                        <i data-lucide="{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}alert-circle{% else %}info{% endif %}"></i>
-                        <span>{{ message }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        {% for message in messages %}
+                            showToast(
+                                "{% if message.tags == 'error' %}Error{% elif message.tags == 'success' %}Success{% elif message.tags == 'warning' %}Warning{% else %}Notice{% endif %}",
+                                "{{ message|escapejs }}",
+                                "{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}"
+                            );
+                        {% endfor %}
+                    });
+                </script>
                 {% endif %}
 
                 {% block content %}{% endblock %}
@@ -689,7 +693,7 @@
             padding: 15px 20px;
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #6366f1;
+            border-left: 4px solid #8b5cf6;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -702,7 +706,15 @@
         }
 
         .custom-toast.info {
-            border-left-color: #6366f1;
+            border-left-color: #8b5cf6;
+        }
+
+        .custom-toast.danger {
+            border-left-color: #ef4444;
+        }
+
+        .custom-toast.warning {
+            border-left-color: #f59e0b;
         }
 
         .custom-toast.fade-out {
@@ -714,7 +726,7 @@
         .toast-content strong {
             display: block;
             font-size: 0.9rem;
-            color: #1e293b;
+            color: #111111;
         }
 
         .toast-content p {

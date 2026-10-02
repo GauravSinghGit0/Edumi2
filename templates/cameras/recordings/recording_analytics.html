@@ -82,7 +82,7 @@
                         </div>
                         <div class="progress" style="height: 10px; border-radius: 5px; background: #e2e8f0;">
                             <div class="progress-bar bg-primary" role="progressbar" 
-                                 style="width: {% widthratio item.views total_views|default:1 100 %}%; border-radius: 5px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;">
+                                 style="width: {% widthratio item.views total_views|default:1 100 %}%; border-radius: 5px; background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%) !important;">
                             </div>
                         </div>
                     </div>
@@ -103,7 +103,7 @@
                 <div class="d-flex flex-column gap-3">
                     {% for rec in top_recordings %}
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 80px; aspect-ratio: 16/9; background: #0f172a; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
+                        <div style="width: 80px; aspect-ratio: 16/9; background: #000000; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
                             {% if rec.thumbnail %}
                             <img src="{{ rec.thumbnail.url }}" class="w-100 h-100 object-fit-cover">
                             {% else %}

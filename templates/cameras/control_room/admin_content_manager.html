@@ -17,7 +17,7 @@
     .mgmt-title {
         font-size: 1.75rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 0.25rem 0;
         letter-spacing: -0.01em;
     }
@@ -50,11 +50,11 @@
     }
     .tab-link.active {
         background: var(--color-bg-card, #ffffff);
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
         box-shadow: var(--shadow-sm);
     }
     .tab-link:hover:not(.active) {
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
     }
     
     .table-card {
@@ -84,7 +84,7 @@
         padding: 1rem 1.25rem;
         border-bottom: 1px solid var(--color-border, #f1f5f9);
         font-size: 0.875rem;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         vertical-align: middle;
     }
     .content-table tr:last-child td {
@@ -133,8 +133,8 @@
     }
     .btn-icon:hover {
         background: var(--color-bg-hover, #f8fafc);
-        color: var(--color-primary, #6366f1);
-        border-color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
+        border-color: var(--color-primary, #8b5cf6);
     }
     
     .dropdown { position: relative; display: inline-block; }
@@ -159,7 +159,7 @@
     .dropdown-content.show { display: block; }
     .dropdown-item {
         padding: 0.65rem 1rem;
-        color: var(--color-text-main, #334155);
+        color: var(--color-text-main, #222222);
         text-decoration: none;
         display: flex;
         align-items: center;
@@ -170,7 +170,7 @@
     }
     .dropdown-item:hover {
         background: var(--color-bg-hover, #f8fafc);
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
     }
     .dropdown-item.danger {
         color: var(--color-danger, #ef4444);
@@ -182,7 +182,7 @@
     /* Meeting Status Badges */
     .badge.status-live { background: rgba(16, 185, 129, 0.15); color: #10b981; }
     .badge.status-ended { background: var(--color-bg-hover, #e2e8f0); color: var(--color-text-muted, #64748b); }
-    .badge.status-scheduled { background: rgba(99, 102, 241, 0.15); color: #6366f1; }
+    .badge.status-scheduled { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
     .badge.status-cancelled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 </style>
 {% endblock %}

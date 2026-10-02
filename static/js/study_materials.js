@@ -12,7 +12,7 @@ function showToast(message, type = 'success') {
 
     const toast = document.createElement('div');
     toast.style.cssText = `
-        background: ${type === 'success' ? '#0f172a' : '#991b1b'};
+        background: ${type === 'success' ? '#000000' : '#991b1b'};
         color: white;
         padding: 0.875rem 1.25rem;
         border-radius: 0.875rem;
@@ -258,7 +258,7 @@ function insertMaterialCard(data) {
     card.id = `mat-card-${data.material_id}`;
     card.style.animation = 'fadeInPost 0.3s ease-out';
 
-    const badgeColor = data.badge_color || '#4f46e5';
+    const badgeColor = data.badge_color || '#7c3aed';
     const iconName = data.icon_name || 'file-text';
 
     let actionBtnHtml = '';

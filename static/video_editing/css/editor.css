@@ -10,8 +10,8 @@
 /* ---- Theme Bridge: Map ve- vars to global vars & full light/dark mode support ---- */
 :root {
   /* Primary Accent & Status */
-  --ve-primary: #667eea;
-  --ve-primary-dark: #5568d3;
+  --ve-primary: #8b5cf6;
+  --ve-primary-dark: #7c3aed;
   --ve-primary-light: #818cf8;
   --ve-danger: #ef4444;
   --ve-success: #10b981;
@@ -32,8 +32,8 @@
   --ve-clip-bg: #ffffff;
 
   /* Text — Light Mode */
-  --ve-text: #0f172a;
-  --ve-text-secondary: #334155;
+  --ve-text: #000000;
+  --ve-text-secondary: #222222;
   --ve-text-muted: #64748b;
 
   /* Borders — Light Mode */
@@ -58,18 +58,18 @@
 
 body.dark-mode {
   /* Backgrounds — Dark Mode (Matching Edumi Slate Navy Theme) */
-  --ve-bg: #1e293b;
-  --ve-bg-secondary: #0f172a;
-  --ve-bg-raised: #334155;
+  --ve-bg: #111111;
+  --ve-bg-secondary: #000000;
+  --ve-bg-raised: #222222;
   --ve-bg-hover: #475569;
-  --ve-stage-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-  --ve-toolbar-bg: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
-  --ve-track-bg: #0f172a;
-  --ve-track-label-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  --ve-ruler-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  --ve-resizer-bg: #0f172a;
+  --ve-stage-bg: linear-gradient(180deg, #000000 0%, #111111 100%);
+  --ve-toolbar-bg: linear-gradient(90deg, #111111 0%, #000000 100%);
+  --ve-track-bg: #000000;
+  --ve-track-label-bg: linear-gradient(135deg, #111111 0%, #000000 100%);
+  --ve-ruler-bg: linear-gradient(180deg, #111111 0%, #000000 100%);
+  --ve-resizer-bg: #000000;
   --ve-resizer-pill: #64748b;
-  --ve-clip-bg: #1e293b;
+  --ve-clip-bg: #111111;
 
   /* Text — Dark Mode */
   --ve-text: #f8fafc;
@@ -77,11 +77,11 @@ body.dark-mode {
   --ve-text-muted: #94a3b8;
 
   /* Borders — Dark Mode */
-  --ve-border: #334155;
+  --ve-border: #222222;
   --ve-border-strong: #475569;
 
   /* Playhead & Accent elements */
-  --ve-playhead-color: #6366f1;
+  --ve-playhead-color: #8b5cf6;
 
   /* Glassmorphism & Shadows */
   --ve-glass-bg: rgba(15, 23, 42, 0.92);
@@ -370,7 +370,7 @@ body.dark-mode {
 .ve-field textarea:focus {
   outline: none;
   border-color: var(--ve-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
 .ve-field-error {
@@ -418,7 +418,7 @@ body.dark-mode {
 .ve-dropzone:hover,
 .ve-dropzone.ve-dropzone-active {
   border-color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.05);
+  background: rgba(139, 92, 246, 0.05);
 }
 
 .ve-dropzone-hint {
@@ -495,7 +495,7 @@ body.dark-mode {
 .ve-btn-secondary:hover {
   border-color: var(--ve-primary);
   color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.05);
+  background: rgba(139, 92, 246, 0.05);
 }
 
 .ve-btn-ghost {
@@ -782,7 +782,7 @@ body #main-video {
   padding: 24px !important;
   background: radial-gradient(
     ellipse at center,
-    #1e293b 0%,
+    #111111 0%,
     #020617 100%
   ) !important;
   box-sizing: border-box !important;
@@ -857,17 +857,17 @@ body #main-video {
 .ve-ctrl-play {
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, #667eea 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   color: #ffffff !important;
   border: none;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ve-ctrl-play:hover {
   background: linear-gradient(135deg, #5a67d8 0%, #6d28d9 100%);
   transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.55);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.55);
 }
 
 .ve-ctrl-right {
@@ -1005,7 +1005,7 @@ body #main-video {
 .ve-tool-tab--active {
   color: #ffffff;
   background: linear-gradient(135deg, var(--ve-primary) 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .ve-tool-panels {
@@ -1026,7 +1026,7 @@ body #main-video {
 }
 
 .ve-tool-panels::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #667eea 0%, #8b5cf6 100%);
+  background: linear-gradient(180deg, #8b5cf6 0%, #8b5cf6 100%);
   border-radius: 6px;
 }
 
@@ -1091,7 +1091,7 @@ body #main-video {
 .ve-field select:focus {
   border-color: var(--ve-primary) !important;
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2) !important;
 }
 
 /* Custom File Upload styling for Audio File input */
@@ -1159,7 +1159,7 @@ body #main-video {
 
 .ve-drop-zone:hover {
   border-color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.04);
+  background: rgba(139, 92, 246, 0.04);
 }
 
 .ve-muted {
@@ -1182,7 +1182,7 @@ body #main-video {
 
 .ve-media-item:hover {
   border-color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.04);
+  background: rgba(139, 92, 246, 0.04);
 }
 
 .ve-media-thumb {
@@ -1244,7 +1244,7 @@ body #main-video {
 .ve-effect-btn.ve-effect-active {
   border-color: var(--ve-primary);
   color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.06);
+  background: rgba(139, 92, 246, 0.06);
 }
 
 /* ============================================================
@@ -1328,13 +1328,13 @@ body #main-video {
 }
 
 .ve-tb-btn.ve-tb-accent:hover {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(139, 92, 246, 0.1);
   border-color: var(--ve-primary);
 }
 
 /* Toggle button (Snap) */
 .ve-tb-btn.ve-tb-toggle[data-active="true"] {
-  background: rgba(102, 126, 234, 0.12);
+  background: rgba(139, 92, 246, 0.12);
   color: var(--ve-primary);
   border-color: var(--ve-primary);
 }
@@ -1431,7 +1431,7 @@ body #main-video {
 }
 
 .ve-tl-icon-video {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(139, 92, 246, 0.15);
   color: #818cf8;
 }
 
@@ -1478,7 +1478,7 @@ body #main-video {
 }
 
 .ve-tl-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #667eea 0%, #8b5cf6 100%);
+  background: linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 100%);
   border-radius: 8px;
 }
 
@@ -1535,7 +1535,7 @@ body #main-video {
 
 /* Alternating row tints */
 .ve-tl-track-video .ve-track-content {
-  background: rgba(102, 126, 234, 0.06);
+  background: rgba(139, 92, 246, 0.06);
 }
 
 .ve-tl-track-audio .ve-track-content {
@@ -1871,7 +1871,7 @@ body #main-video {
 .ve-text-modal-body .ve-field input:focus,
 .ve-text-modal-body .ve-field select:focus {
   border-color: var(--ve-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
 /* Text-clip list in the side panel */
@@ -1895,7 +1895,7 @@ body #main-video {
 
 .ve-text-clip-item.selected {
   border-color: var(--ve-primary);
-  background: rgba(102, 126, 234, 0.08);
+  background: rgba(139, 92, 246, 0.08);
 }
 
 .ve-text-clip-dot {
@@ -2783,7 +2783,7 @@ body:has(.ve-editor-page) .messages-container {
 .timeline-text-block.selected .text-resize-handle {
   width: 14px;
   background: #2dd4bf !important;
-  color: #0f172a !important;
+  color: #000000 !important;
   font-size: 8px;
   font-weight: 800;
 }
@@ -4198,7 +4198,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   padding-bottom: 8px !important;
   margin-top: 0 !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(102, 126, 234, 0.6) var(--ve-bg-secondary);
+  scrollbar-color: rgba(139, 92, 246, 0.6) var(--ve-bg-secondary);
 }
 
 /* Styled custom scrollbars for timeline scroll area */
@@ -4213,12 +4213,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .timeline-scroll-area::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.5) !important;
+  background: rgba(139, 92, 246, 0.5) !important;
   border-radius: 4px !important;
 }
 
 .timeline-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.9) !important;
+  background: rgba(139, 92, 246, 0.9) !important;
 }
 
 /* Resizer Handle at Top of Timeline */
@@ -4240,7 +4240,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .timeline-resizer:hover,
 .timeline-resizer.is-dragging {
-  background: rgba(102, 126, 234, 0.15) !important;
+  background: rgba(139, 92, 246, 0.15) !important;
 }
 
 .resizer-pill {
@@ -4257,7 +4257,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .timeline-resizer.is-dragging .resizer-pill {
   background: var(--ve-primary) !important;
   width: 54px !important;
-  box-shadow: 0 0 8px rgba(102, 126, 234, 0.6) !important;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6) !important;
 }
 
 /* Collapsed Timeline State */
@@ -4353,13 +4353,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
   ) !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4) !important;
   padding: 0 12px !important;
 }
 
 .tb-bottom-play:hover {
   background: linear-gradient(135deg, #5a67d8 0%, #7c3aed 100%) !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.6) !important;
 }
 
 .tb-bottom-badge {
@@ -4927,7 +4927,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--ve-bg-secondary) !important;
   border-top: 1px solid var(--ve-border) !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(102, 126, 234, 0.6) var(--ve-bg-secondary);
+  scrollbar-color: rgba(139, 92, 246, 0.6) var(--ve-bg-secondary);
 }
 
 .timeline-scroll-area::-webkit-scrollbar-track {

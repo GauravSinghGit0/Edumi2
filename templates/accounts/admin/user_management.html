@@ -1,620 +1,384 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}User Management{% endblock %}
+{% block page_title %}User Directory & Management | EduMi Admin{% endblock %}
 
 {% block extra_css %}
-<style>
-.user-mgmt-container {
-    max-width: var(--container-max-width);
-    margin: 0 auto;
-    padding: var(--space-md) var(--space-lg);
-    font-family: var(--font-family-base, 'Inter', sans-serif);
-}
-
-.mgmt-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.75rem;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-}
-
-.mgmt-title {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--color-text-main, #0f172a);
-    margin: 0 0 0.25rem 0;
-    letter-spacing: -0.01em;
-}
-
-.mgmt-subtitle {
-    color: var(--color-text-muted, #64748b);
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-.search-box-wrapper {
-    position: relative;
-    width: 320px;
-    max-width: 100%;
-}
-
-.search-box-wrapper .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    color: var(--color-text-muted, #94a3b8);
-    pointer-events: none;
-}
-
-.search-box-wrapper .search-input {
-    width: 100%;
-    padding: 0.65rem 1rem 0.65rem 2.5rem;
-    background: var(--color-bg-card, #ffffff);
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: var(--radius-lg, 0.5rem);
-    color: var(--color-text-main, #0f172a);
-    font-size: 0.875rem;
-    outline: none;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
-}
-
-.search-box-wrapper .search-input:focus {
-    border-color: var(--color-primary, #6366f1);
-    box-shadow: 0 0 0 3px var(--color-primary-bg, rgba(99, 102, 241, 0.15));
-}
-
-.user-table-card {
-    background: var(--color-bg-card, #ffffff);
-    border-radius: var(--radius-xl, 1rem);
-    border: 1px solid var(--color-border, #e2e8f0);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.custom-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-}
-
-.custom-table th {
-    background: var(--color-bg-hover, #f8fafc);
-    padding: 0.875rem 1.25rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--color-text-muted, #64748b);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-}
-
-.custom-table td {
-    padding: 0.875rem 1.25rem;
-    border-bottom: 1px solid var(--color-border, #f1f5f9);
-    font-size: 0.875rem;
-    color: var(--color-text-main, #0f172a);
-    vertical-align: middle;
-}
-
-.custom-table tr:last-child td {
-    border-bottom: none;
-}
-
-.custom-table tr.user-row {
-    transition: background-color 0.15s ease;
-}
-
-.custom-table tr.user-row:hover {
-    background: var(--color-bg-hover, #f8fafc);
-}
-
-.user-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.user-avatar-img {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-full, 9999px);
-    object-fit: cover;
-    border: 1px solid var(--color-border, #e2e8f0);
-    flex-shrink: 0;
-}
-
-.role-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: var(--radius-full, 9999px);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: capitalize;
-}
-
-.role-badge.badge-admin {
-    background: rgba(239, 68, 68, 0.12);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.role-badge.badge-teacher {
-    background: rgba(59, 130, 246, 0.12);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.role-badge.badge-student {
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.action-btn-group {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.btn-tbl-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: var(--radius-md, 0.375rem);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid transparent;
-    transition: all 0.15s ease;
-    cursor: pointer;
-}
-
-.btn-tbl-view {
-    background: var(--color-bg-hover, #f1f5f9);
-    color: var(--color-text-main, #0f172a);
-    border-color: var(--color-border, #e2e8f0);
-}
-
-.btn-tbl-view:hover {
-    background: var(--color-border, #e2e8f0);
-}
-
-.btn-tbl-edit {
-    background: var(--color-primary-bg, rgba(99, 102, 241, 0.1));
-    color: var(--color-primary, #6366f1);
-    border-color: rgba(99, 102, 241, 0.2);
-}
-
-.btn-tbl-edit:hover {
-    background: var(--color-primary, #6366f1);
-    color: white;
-}
-
-.btn-tbl-delete {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.2);
-}
-
-.btn-tbl-delete:hover {
-    background: #ef4444;
-    color: white;
-}
-
-.empty-users-box {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--color-text-muted, #64748b);
-}
-
-/* Group Theme & Filter Styling */
-.group-theme-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 1.75rem;
-}
-
-.group-card {
-    background: var(--color-bg-card, #ffffff);
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: var(--radius-xl, 1rem);
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-}
-
-.group-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-}
-
-.group-card.active {
-    border-color: var(--color-primary, #6366f1);
-    box-shadow: 0 0 0 2px var(--color-primary, #6366f1);
-}
-
-.group-card-info .group-label {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted, #64748b);
-    margin-bottom: 0.25rem;
-}
-
-.group-card-info .group-count {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--color-text-main, #0f172a);
-}
-
-.group-card-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.group-card-all .group-card-icon { background: rgba(99, 102, 241, 0.12); color: #6366f1; }
-.group-card-student .group-card-icon { background: rgba(16, 185, 129, 0.12); color: #10b981; }
-.group-card-teacher .group-card-icon { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
-.group-card-admin .group-card-icon { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
-
-.role-tabs-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--color-bg-hover, #f8fafc);
-    padding: 0.4rem;
-    border-radius: var(--radius-lg, 0.75rem);
-    border: 1px solid var(--color-border, #e2e8f0);
-    margin-bottom: 1.25rem;
-    flex-wrap: wrap;
-}
-
-.role-tab-btn {
-    padding: 0.5rem 1.15rem;
-    border-radius: var(--radius-md, 0.5rem);
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-text-muted, #64748b);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.15s ease;
-}
-
-.role-tab-btn:hover {
-    color: var(--color-text-main, #0f172a);
-    background: rgba(0, 0, 0, 0.03);
-}
-
-.role-tab-btn.active {
-    background: var(--color-bg-card, #ffffff);
-    color: var(--color-primary, #6366f1);
-    box-shadow: var(--shadow-sm);
-    font-weight: 700;
-}
-
-.role-tab-badge {
-    padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    background: rgba(0, 0, 0, 0.06);
-    color: var(--color-text-muted, #64748b);
-}
-
-.role-tab-btn.active .role-tab-badge {
-    background: var(--color-primary-bg, rgba(99, 102, 241, 0.12));
-    color: var(--color-primary, #6366f1);
-}
-</style>
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="user-mgmt-container">
-    <div class="mgmt-header">
+<div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">User Directory</span>
+    </div>
+
+    <!-- Header Section -->
+    <div class="admin-header">
         <div>
-            <h1 class="mgmt-title">User Management</h1>
-            <p class="mgmt-subtitle">Filter by groups, manage accounts, and assign roles across the school.</p>
+            <h1>User Directory</h1>
+            <p class="admin-subtitle">Manage students, teachers, and system administrators with role-based controls</p>
         </div>
-        
-        <div class="search-box-wrapper">
-            <i data-lucide="search" class="search-icon"></i>
-            <input type="text" 
-                   id="userSearch" 
-                   class="search-input" 
-                   placeholder="Search by name, username, or role..."
-                   onkeyup="applyUserFilters()">
-        </div>
-    </div>
-
-    <!-- Group Theme Summary Cards -->
-    <div class="group-theme-grid">
-        <div class="group-card group-card-all {% if active_role == 'all' or not active_role %}active{% endif %}" onclick="selectRoleGroup('all')">
-            <div class="group-card-info">
-                <div class="group-label">All Members</div>
-                <div class="group-count">{% if total_count != None %}{{ total_count }}{% else %}{{ users|length }}{% endif %}</div>
-            </div>
-            <div class="group-card-icon">
-                <i data-lucide="users"></i>
-            </div>
-        </div>
-
-        <div class="group-card group-card-student {% if active_role == 'student' %}active{% endif %}" onclick="selectRoleGroup('student')">
-            <div class="group-card-info">
-                <div class="group-label">Students Group</div>
-                <div class="group-count">{{ student_count|default:0 }}</div>
-            </div>
-            <div class="group-card-icon">
-                <i data-lucide="user"></i>
-            </div>
-        </div>
-
-        <div class="group-card group-card-teacher {% if active_role == 'teacher' %}active{% endif %}" onclick="selectRoleGroup('teacher')">
-            <div class="group-card-info">
-                <div class="group-label">Teachers Group</div>
-                <div class="group-count">{{ teacher_count|default:0 }}</div>
-            </div>
-            <div class="group-card-icon">
-                <i data-lucide="graduation-cap"></i>
-            </div>
-        </div>
-
-        <div class="group-card group-card-admin {% if active_role == 'admin' %}active{% endif %}" onclick="selectRoleGroup('admin')">
-            <div class="group-card-info">
-                <div class="group-label">Admins Group</div>
-                <div class="group-count">{{ admin_count|default:0 }}</div>
-            </div>
-            <div class="group-card-icon">
-                <i data-lucide="shield-check"></i>
-            </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="openModal('addUserModal')" class="btn-action btn-action-primary">
+                <i data-lucide="user-plus"></i> Add User
+            </button>
+            <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary"
+                title="Export Users CSV">
+                <i data-lucide="download"></i> Export CSV
+            </a>
         </div>
     </div>
 
-    <!-- Group Filter Tabs -->
-    <div class="role-tabs-bar">
-        <button class="role-tab-btn {% if active_role == 'all' or not active_role %}active{% endif %}" data-group="all" onclick="selectRoleGroup('all')">
-            <i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i>
-            All Users
-            <span class="role-tab-badge">{% if total_count != None %}{{ total_count }}{% else %}{{ users|length }}{% endif %}</span>
-        </button>
-
-        <button class="role-tab-btn {% if active_role == 'student' %}active{% endif %}" data-group="student" onclick="selectRoleGroup('student')">
-            <i data-lucide="user" style="width: 16px; height: 16px;"></i>
-            Students Only
-            <span class="role-tab-badge">{{ student_count|default:0 }}</span>
-        </button>
-
-        <button class="role-tab-btn {% if active_role == 'teacher' %}active{% endif %}" data-group="teacher" onclick="selectRoleGroup('teacher')">
-            <i data-lucide="graduation-cap" style="width: 16px; height: 16px;"></i>
-            Teachers Only
-            <span class="role-tab-badge">{{ teacher_count|default:0 }}</span>
-        </button>
-
-        <button class="role-tab-btn {% if active_role == 'admin' %}active{% endif %}" data-group="admin" onclick="selectRoleGroup('admin')">
-            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-            Admins Only
-            <span class="role-tab-badge">{{ admin_count|default:0 }}</span>
-        </button>
+    <!-- KPI Row -->
+    <div class="kpi-grid">
+        <a href="?role=all" class="kpi-card {% if active_role == 'all' or not active_role %}active-kpi{% endif %}"
+            style="text-decoration:none;">
+            <div class="kpi-icon indigo"><i data-lucide="users"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-value">{{ total_count|default:0 }}</span>
+                <span class="kpi-label">Total Users</span>
+            </div>
+        </a>
+        <a href="?role=student" class="kpi-card {% if active_role == 'student' %}active-kpi{% endif %}"
+            style="text-decoration:none;">
+            <div class="kpi-icon emerald"><i data-lucide="graduation-cap"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-value">{{ student_count|default:0 }}</span>
+                <span class="kpi-label">Students</span>
+            </div>
+        </a>
+        <a href="?role=teacher" class="kpi-card {% if active_role == 'teacher' %}active-kpi{% endif %}"
+            style="text-decoration:none;">
+            <div class="kpi-icon blue"><i data-lucide="user-check"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-value">{{ teacher_count|default:0 }}</span>
+                <span class="kpi-label">Teachers</span>
+            </div>
+        </a>
+        <a href="?role=admin" class="kpi-card {% if active_role == 'admin' %}active-kpi{% endif %}"
+            style="text-decoration:none;">
+            <div class="kpi-icon purple"><i data-lucide="shield-check"></i></div>
+            <div class="kpi-details">
+                <span class="kpi-value">{{ admin_count|default:0 }}</span>
+                <span class="kpi-label">Administrators</span>
+            </div>
+        </a>
     </div>
-    
-    <div class="user-table-card">
-        <div style="overflow-x: auto;">
-            <table class="custom-table" id="usersTable">
+
+    <!-- Filter Bar -->
+    <div class="admin-filter-bar" style="margin-bottom: 1.25rem;">
+        <div style="display: flex; gap: 0.5rem; overflow-x: auto;">
+            <a href="?role=all{% if search_query %}&q={{ search_query }}{% endif %}"
+                class="btn-action-sm {% if active_role == 'all' or not active_role %}btn-action-primary{% else %}btn-action-secondary{% endif %}">All
+                Roles</a>
+            <a href="?role=student{% if search_query %}&q={{ search_query }}{% endif %}"
+                class="btn-action-sm {% if active_role == 'student' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Students</a>
+            <a href="?role=teacher{% if search_query %}&q={{ search_query }}{% endif %}"
+                class="btn-action-sm {% if active_role == 'teacher' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Teachers</a>
+            <a href="?role=admin{% if search_query %}&q={{ search_query }}{% endif %}"
+                class="btn-action-sm {% if active_role == 'admin' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Admins</a>
+        </div>
+
+        <form method="GET" action=""
+            style="display: flex; gap: 0.5rem; align-items: center; min-width: 260px; max-width: 420px;">
+            {% if active_role %}<input type="hidden" name="role" value="{{ active_role }}">{% endif %}
+            <div class="admin-search-wrapper">
+                <i data-lucide="search"></i>
+                <input type="text" name="q" value="{{ search_query|default:'' }}"
+                    placeholder="Search name, email, username..." class="admin-search-input">
+            </div>
+            <button type="submit" class="btn-action-sm btn-action-primary" style="white-space: nowrap;">Search</button>
+        </form>
+    </div>
+
+    <!-- Table Card -->
+    <div class="admin-card">
+        {% if users_data %}
+
+        <!-- Table info bar -->
+        <div
+            style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid var(--color-border);">
+            <div style="font-size:.82rem;color:var(--color-text-muted);">
+                Showing <strong style="color:var(--color-text-main);">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
+                of <strong style="color:var(--color-text-main);">{{ page_obj.paginator.count }}</strong> users
+                {% if search_query %}<span style="color:var(--color-primary);margin-left:.5rem;">· filtered by "{{ search_query }}"</span>{% endif %}
+            </div>
+            <div style="font-size:.78rem;color:var(--color-text-muted);">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </div>
+        </div>
+
+        <div class="admin-table-wrapper">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>User</th>
-                        <th>Email</th>
                         <th>Role</th>
+                        <th>Status</th>
+                        <th>Activity</th>
                         <th>Joined</th>
-                        <th>Last Login</th>
-                        <th style="text-align: right;">Actions</th>
+                        <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="usersTableBody">
-                    {% for user in users %}
-                    <tr class="user-row" 
-                        data-user-type="{% if user.is_superuser %}admin{% else %}{{ user.userprofile.user_type|default:'student' }}{% endif %}"
-                        data-is-superuser="{% if user.is_superuser %}true{% else %}false{% endif %}">
+                <tbody>
+                    {% for item in users_data %}
+                    <tr>
                         <td>
-                            <div class="user-cell">
-                                <img src="{{ user.userprofile.get_profile_picture_url }}" 
-                                     alt="{{ user.username }}" 
-                                     class="user-avatar-img"
-                                     onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=6366f1&color=fff&size=50'">
-                                <div>
-                                    <div class="fw-bold searchable-name" style="font-weight: 700; color: var(--color-text-main);">
-                                        {{ user.first_name }} {{ user.last_name }}
-                                        {% if not user.first_name and not user.last_name %}{{ user.username }}{% endif %}
-                                    </div>
-                                    <div class="searchable-username" style="font-size: 0.75rem; color: var(--color-text-muted);">
-                                        @{{ user.username }}
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="searchable-email" style="color: var(--color-text-muted);">
-                            {{ user.email|default:"—" }}
+                            {% url 'admin_user_detail' item.user.id as url_user_detail %}
+                            {% include "components/admin/user_avatar.html" with user=item.user link=url_user_detail %}
                         </td>
                         <td>
-                            {% if user.is_superuser %}
-                            <span class="role-badge badge-admin searchable-type">
-                                <i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Admin
-                            </span>
-                            {% elif user.userprofile.user_type == 'teacher' %}
-                            <span class="role-badge badge-teacher searchable-type">
-                                <i data-lucide="graduation-cap" style="width: 12px; height: 12px;"></i> Teacher
-                            </span>
-                            {% elif user.userprofile.user_type == 'student' %}
-                            <span class="role-badge badge-student searchable-type">
-                                <i data-lucide="user" style="width: 12px; height: 12px;"></i> Student
-                            </span>
+                            {% if item.role == 'admin' %}
+                            <span class="role-badge role-badge-admin"><i data-lucide="shield-check"
+                                    style="width:11px;height:11px;display:inline;"></i> Admin</span>
+                            {% elif item.role == 'teacher' %}
+                            <span class="role-badge role-badge-teacher"><i data-lucide="user-check"
+                                    style="width:11px;height:11px;display:inline;"></i> Teacher</span>
                             {% else %}
-                            <span class="role-badge badge-admin searchable-type">
-                                {{ user.userprofile.get_user_type_display|default:"User" }}
-                            </span>
+                            <span class="role-badge role-badge-student"><i data-lucide="graduation-cap"
+                                    style="width:11px;height:11px;display:inline;"></i> Student</span>
                             {% endif %}
                         </td>
-                        <td style="color: var(--color-text-muted); font-size: 0.8125rem;">
-                            {{ user.date_joined|date:"M d, Y" }}
+                        <td>
+                            {% if item.user.is_active %}
+                            {% include "components/admin/status_pill.html" with status="active" %}
+                            {% else %}
+                            {% include "components/admin/status_pill.html" with status="suspended" label="Suspended" %}
+                            {% endif %}
                         </td>
-                        <td style="color: var(--color-text-muted); font-size: 0.8125rem;">
-                            {{ user.last_login|date:"M d, Y"|default:"Never" }}
-                        </td>
-                        <td style="text-align: right;">
-                            <div class="action-btn-group" style="justify-content: flex-end;">
-                                <a href="{% url 'profile_view' user.username %}" class="btn-tbl-action btn-tbl-view">
-                                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> View
-                                </a>
-                                <a href="{% url 'admin_edit_user' user.id %}" class="btn-tbl-action btn-tbl-edit">
-                                    <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Edit
-                                </a>
-                                {% if user != request.user %}
-                                <form method="POST" action="{% url 'delete_user' user.id %}" style="display: inline; margin: 0;" data-turbo="false">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-tbl-action btn-tbl-delete" title="Delete User"
-                                        data-confirm="Are you sure you want to permanently delete user @{{ user.username }}? All account data and access will be removed."
-                                        data-confirm-title="Delete User"
-                                        data-confirm-type="danger"
-                                        data-confirm-btn="Delete User">
-                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
+                        <td>
+                            <div style="font-size:.83rem;color:var(--color-text-main);font-weight:600;">
+                                {{ item.courses_count }} {% if item.role == 'teacher' %}courses{% else %}enrolled{% endif %}
+                            </div>
+                            <div style="font-size:.73rem;color:var(--color-text-muted);margin-top:.1rem;">
+                                {{ item.classes_count }} sessions {% if item.role == 'teacher' %}hosted{% else %}attended{% endif %}
                             </div>
                         </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="empty-users-box">
-                            <i data-lucide="users" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 0.75rem;"></i>
-                            <p style="margin: 0; font-weight: 600;">No users found in database.</p>
+                        <td style="font-size:.83rem;color:var(--color-text-muted);white-space:nowrap;">
+                            {{ item.user.date_joined|date:"M d, Y" }}
+                        </td>
+                        <td style="text-align:right;">
+                            <div class="admin-dropdown">
+                                <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle"
+                                    onclick="toggleDropdown(this)" title="Actions">
+                                    <i data-lucide="more-vertical" style="width:15px;height:15px;"></i>
+                                </button>
+                                <div class="admin-dropdown-menu">
+                                    <a href="{% url 'admin_user_detail' item.user.id %}" class="admin-dropdown-item">
+                                        <i data-lucide="eye"></i> View Profile
+                                    </a>
+                                    <a href="{% url 'admin_edit_user' item.user.id %}" class="admin-dropdown-item">
+                                        <i data-lucide="edit-3"></i> Edit Account
+                                    </a>
+                                    {% if item.user != request.user %}
+                                    <form method="POST" action="{% url 'admin_toggle_user_active' item.user.id %}"
+                                        style="margin:0;"
+                                        onsubmit="return confirm('Change active status for {{ item.user.username }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit"
+                                            class="admin-dropdown-item {% if item.user.is_active %}danger{% endif %}">
+                                            {% if item.user.is_active %}
+                                            <i data-lucide="user-x"></i> Suspend
+                                            {% else %}
+                                            <i data-lucide="user-check"></i> Activate
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        
-        <div id="noResults" class="empty-users-box" style="display: none;">
-            <i data-lucide="user-x" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 0.75rem;"></i>
-            <p id="noResultsText" style="margin: 0; font-weight: 600;">No users found matching your filter criteria.</p>
+
+        <!-- Professional Numbered Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div
+            style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:.75rem;">
+            <div style="font-size:.8rem;color:var(--color-text-muted);">
+                {{ page_obj.paginator.count }} total results
+            </div>
+            <div style="display:flex;align-items:center;gap:.3rem;">
+                <!-- Prev -->
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+                </a>
+                {% else %}
+                <span
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+                </span>
+                {% endif %}
+
+                <!-- Page Numbers -->
+                {% for pg_num in page_obj.paginator.page_range %}
+                {% if pg_num == page_obj.number %}
+                <span
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;background:var(--color-primary);color:#fff;font-weight:700;font-size:.82rem;border:1px solid var(--color-primary);">
+                    {{ pg_num }}
+                </span>
+                {% elif pg_num >= page_obj.number|add:"-2" and pg_num <= page_obj.number|add:"2" %} <a
+                    href="?page={{ pg_num }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    {{ pg_num }}
+                    </a>
+                    {% elif pg_num == 1 or pg_num == page_obj.paginator.num_pages %}
+                    <a href="?page={{ pg_num }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                        onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                        onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                        {{ pg_num }}
+                    </a>
+                    {% elif pg_num == page_obj.number|add:"-3" or pg_num == page_obj.number|add:"3" %}
+                    <span
+                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--color-text-muted);font-size:.82rem;">…</span>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- Next -->
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                        onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                        onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                        <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+                    </a>
+                    {% else %}
+                    <span
+                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+                        <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+                    </span>
+                    {% endif %}
+            </div>
         </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state" style="padding:3rem 1.5rem;">
+            <div class="empty-icon"><i data-lucide="user-x"></i></div>
+            <h3>No users found</h3>
+            <p>No user accounts matched your search criteria or role filters.</p>
+            <a href="?" class="btn-action-sm btn-action-primary" style="margin-top:1rem;display:inline-flex;">Reset
+                Filters</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL DRAWER: QUICK ADD USER
+     ========================================================= -->
+<div id="addUserModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="user-plus"></i> Add New Platform User</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_create_user' %}">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username
+                            *</label>
+                        <input type="text" name="username" class="filter-input" style="width: 100%;" required
+                            placeholder="e.g. john_doe">
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password
+                            *</label>
+                        <input type="password" name="password" class="filter-input" style="width: 100%;" required
+                            placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First
+                            Name</label>
+                        <input type="text" name="first_name" class="filter-input" style="width: 100%;"
+                            placeholder="John">
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last
+                            Name</label>
+                        <input type="text" name="last_name" class="filter-input" style="width: 100%;" placeholder="Doe">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email
+                        Address</label>
+                    <input type="email" name="email" class="filter-input" style="width: 100%;"
+                        placeholder="john@example.com">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role
+                            Assignment *</label>
+                        <select name="user_type" class="filter-input" style="width: 100%;">
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher / Faculty</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department
+                            (Optional)</label>
+                        <input type="text" name="department" class="filter-input" style="width: 100%;"
+                            placeholder="Computer Science">
+                    </div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary"
+                    onclick="closeModal('addUserModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create
+                    User</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-var currentSelectedGroup = "{{ active_role|default:'all' }}";
-
-function selectRoleGroup(group) {
-    currentSelectedGroup = group;
-
-    // Update Card Active States
-    document.querySelectorAll('.group-card').forEach(card => {
-        card.classList.remove('active');
-        if (card.classList.contains(`group-card-${group}`)) {
-            card.classList.add('active');
-        }
-    });
-
-    // Update Tab Active States
-    document.querySelectorAll('.role-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-group') === group) {
-            btn.classList.add('active');
-        }
-    });
-
-    applyUserFilters();
-}
-
-function applyUserFilters() {
-    const searchInput = (document.getElementById('userSearch')?.value || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('.user-row');
-    const noResults = document.getElementById('noResults');
-    const noResultsText = document.getElementById('noResultsText');
-    let visibleCount = 0;
-
-    rows.forEach(row => {
-        const userType = row.getAttribute('data-user-type') || '';
-        const isSuperuser = row.getAttribute('data-is-superuser') === 'true';
-
-        // Check Group Filter
-        let matchesGroup = false;
-        if (currentSelectedGroup === 'all') {
-            matchesGroup = true;
-        } else if (currentSelectedGroup === 'student') {
-            matchesGroup = (userType === 'student') && !isSuperuser;
-        } else if (currentSelectedGroup === 'teacher') {
-            matchesGroup = (userType === 'teacher') && !isSuperuser;
-        } else if (currentSelectedGroup === 'admin') {
-            matchesGroup = isSuperuser || (userType === 'admin');
-        }
-
-        // Check Search Query
-        const username = row.querySelector('.searchable-username') ? row.querySelector('.searchable-username').textContent.toLowerCase() : '';
-        const name = row.querySelector('.searchable-name') ? row.querySelector('.searchable-name').textContent.toLowerCase() : '';
-        const email = row.querySelector('.searchable-email') ? row.querySelector('.searchable-email').textContent.toLowerCase() : '';
-        const typeText = row.querySelector('.searchable-type') ? row.querySelector('.searchable-type').textContent.toLowerCase() : '';
-
-        const fullText = username + ' ' + name + ' ' + email + ' ' + typeText;
-        const matchesSearch = searchInput === '' || fullText.includes(searchInput);
-
-        if (matchesGroup && matchesSearch) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
-    });
-
-    if (noResults) {
-        if (visibleCount === 0) {
-            noResults.style.display = 'block';
-            if (noResultsText) {
-                if (currentSelectedGroup !== 'all') {
-                    noResultsText.textContent = `No ${currentSelectedGroup}s found matching your search criteria.`;
-                } else {
-                    noResultsText.textContent = 'No users found matching your search query.';
-                }
-            }
-        } else {
-            noResults.style.display = 'none';
-        }
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
     }
-}
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
 
-function initUserManagement() {
-    if (window.lucide) lucide.createIcons();
-    selectRoleGroup(currentSelectedGroup);
-}
-
-document.addEventListener('DOMContentLoaded', initUserManagement);
-document.addEventListener('turbo:load', initUserManagement);
+    // Dropdown Logic
+    function toggleDropdown(btn) {
+        const parent = btn.closest('.admin-dropdown');
+        const wasOpen = parent.classList.contains('open');
+        document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        if (!wasOpen) parent.classList.add('open');
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.admin-dropdown')) {
+            document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
 </script>
 {% endblock %}

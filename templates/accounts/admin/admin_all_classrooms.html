@@ -1,0 +1,246 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Classroom & Course Directory | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">Classroom Catalog</span>
+    </div>
+
+    <div class="admin-header">
+        <div>
+            <h1>Classroom Catalog</h1>
+            <p class="admin-subtitle">Overview of active learning courses, enrolled students, and pending access
+                approvals</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="openModal('addCourseModal')" class="btn-action btn-action-primary">
+                <i data-lucide="book-plus"></i> Create Classroom
+            </button>
+        </div>
+    </div>
+
+    {% if classrooms %}
+    <div id="bulkActionsBar"
+        style="display: none; justify-content: space-between; align-items: center; background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;">
+        <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">
+            <span id="selectedCount">0</span> classrooms selected
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-action-sm btn-action-secondary"
+                onclick="alert('Bulk export selected classrooms. (Backend logic required)')">
+                <i data-lucide="download"></i> Export Selected
+            </button>
+            <button type="button" class="btn-action-sm btn-action-danger"
+                onclick="alert('Bulk archive selected classrooms. (Backend logic required)')">
+                <i data-lucide="archive"></i> Archive Selected
+            </button>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem;">
+        {% for cr in classrooms %}
+        <div class="admin-card"
+            style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+            <div>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" class="admin-checkbox card-checkbox" value="{{ cr.id }}">
+                        <span class="role-badge role-badge-teacher">{{ cr.class_code|default:"CLASS" }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        {% if cr.is_active %}
+                        {% include "components/admin/status_pill.html" with status="active" %}
+                        {% else %}
+                        {% include "components/admin/status_pill.html" with status="suspended" label="Archived" %}
+                        {% endif %}
+                        <div class="admin-dropdown">
+                            <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle"
+                                onclick="toggleDropdown(this)" style="padding: 0.35rem 0.5rem;">
+                                <i data-lucide="more-vertical"></i>
+                            </button>
+                            <div class="admin-dropdown-menu">
+                                <a href="{% url 'admin_classroom_detail' cr.id %}" class="admin-dropdown-item"><i
+                                        data-lucide="eye"></i> View 360</a>
+                                <button type="button" class="admin-dropdown-item"><i data-lucide="edit-3"></i> Edit
+                                    Settings</button>
+                                <button type="button" class="admin-dropdown-item danger"><i data-lucide="archive"></i>
+                                    Archive</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.15rem; font-weight: 700;">
+                    <a href="{% url 'admin_classroom_detail' cr.id %}" style="color: inherit; text-decoration: none;">
+                        {{ cr.title }}
+                    </a>
+                </h3>
+                <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 1rem;">
+                    Instructor: <strong><a href="{% url 'admin_teacher_detail' cr.teacher.id %}"
+                            style="color: inherit; text-decoration: underline;">{{
+                            cr.teacher.get_full_name|default:cr.teacher.username }}</a></strong>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); padding: 0.75rem; border-radius: var(--radius-md, 0.5rem); margin-bottom: 1.25rem; border: 1px solid var(--color-border); font-size: 0.85rem;">
+                    <div>
+                        <div style="color: var(--color-text-muted); font-size: 0.75rem;">Enrolled Students</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--color-text-main);">{{
+                            cr.approved_students|default:0 }}</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); font-size: 0.75rem;">Pending Requests</div>
+                        <div
+                            style="font-weight: 700; font-size: 1.1rem; color: {% if cr.pending_students > 0 %}#d97706{% else %}var(--color-text-muted){% endif %};">
+                            {{ cr.pending_students|default:0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <a href="{% url 'admin_classroom_detail' cr.id %}" class="btn-action-sm btn-action-primary"
+                    style="width: 100%; justify-content: center;">
+                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Classroom 360 Dossier
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="admin-card">
+        <div class="empty-state">
+            <div class="empty-icon"><i data-lucide="book-open"></i></div>
+            <h3>No Classrooms Found</h3>
+            <p>No active courses or classrooms have been created yet.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- =========================================================
+     MODAL DRAWER: QUICK CREATE COURSE / CLASSROOM
+     ========================================================= -->
+<div id="addCourseModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="book-plus"></i> Create Learning Classroom</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_create_classroom' %}">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
+                        Title *</label>
+                    <input type="text" name="title" class="filter-input" style="width: 100%;" required
+                        placeholder="e.g. Advanced Computer Science 101">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Class
+                            Code *</label>
+                        <input type="text" name="class_code" class="filter-input" style="width: 100%;"
+                            placeholder="CS101" required>
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
+                            Password</label>
+                        <input type="text" name="password" class="filter-input" style="width: 100%;"
+                            placeholder="Access password">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign
+                        Instructor *</label>
+                    <select name="teacher_id" class="filter-input" style="width: 100%;" required>
+                        <option value="">-- Select Teacher --</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">Prof. {{ teacher.get_full_name|default:teacher.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
+                        Description</label>
+                    <textarea name="description" class="filter-input" style="width: 100%; height: 80px;"
+                        placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="auto_approve" id="auto_approve" checked
+                        style="width: 18px; height: 18px;">
+                    <label for="auto_approve"
+                        style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">Auto-Approve Student Enrollment
+                        Requests</label>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary"
+                    onclick="closeModal('addCourseModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create
+                    Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Dropdown Logic
+    function toggleDropdown(btn) {
+        const parent = btn.closest('.admin-dropdown');
+        const wasOpen = parent.classList.contains('open');
+        document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        if (!wasOpen) parent.classList.add('open');
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.admin-dropdown')) {
+            document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // Checkbox Logic
+    const cardCheckboxes = document.querySelectorAll('.card-checkbox');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function updateBulkActions() {
+        if (!bulkActionsBar) return;
+        const count = document.querySelectorAll('.card-checkbox:checked').length;
+        if (count > 0) {
+            bulkActionsBar.style.display = 'flex';
+            selectedCountEl.textContent = count;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+    }
+    cardCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+</script>
+{% endblock %}

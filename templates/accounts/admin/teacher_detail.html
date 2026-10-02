@@ -1,0 +1,310 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Prof. {{ teacher.get_full_name|default:teacher.username }} — Teacher 360 | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+
+  <!-- Breadcrumbs Bar -->
+  <div class="admin-breadcrumbs">
+    <a href="{% url 'admin_panel' %}">Home</a>
+    <span class="separator">/</span>
+    <a href="{% url 'admin_all_teachers' %}">Teacher Roster</a>
+    <span class="separator">/</span>
+    <span class="current">{{ teacher.get_full_name|default:teacher.username }}</span>
+  </div>
+
+  <!-- Profile Hero -->
+  <div class="profile-hero">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+        {% include "components/admin/user_avatar.html" with user=teacher size=72 avatar_only=True %}
+        <div>
+          <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.35rem;">
+            <h1 style="margin:0;font-size:1.5rem;font-weight:800;">Prof. {{ teacher.get_full_name|default:teacher.username }}</h1>
+            <span class="role-badge role-badge-teacher"><i data-lucide="award" style="width:11px;height:11px;"></i> Faculty Member</span>
+            {% if teacher.is_active %}
+              {% include "components/admin/status_pill.html" with status="active" %}
+            {% else %}
+              {% include "components/admin/status_pill.html" with status="inactive" %}
+            {% endif %}
+          </div>
+          <div style="font-size:.875rem;color:var(--color-text-secondary);display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;">
+            <span><i data-lucide="mail" style="width:13px;height:13px;vertical-align:middle;"></i> {{ teacher.email|default:"No email" }}</span>
+            {% if profile.department %}
+              <span>·</span><span><i data-lucide="building" style="width:13px;height:13px;vertical-align:middle;"></i> {{ profile.department }}</span>
+            {% endif %}
+            {% if identity.specialization %}
+              <span>·</span><span><i data-lucide="zap" style="width:13px;height:13px;vertical-align:middle;"></i> {{ identity.specialization }}</span>
+            {% endif %}
+            {% if identity.employee_id %}
+              <span>·</span><span>ID: {{ identity.employee_id }}</span>
+            {% endif %}
+          </div>
+          <div style="font-size:.78rem;color:var(--color-text-muted);margin-top:.35rem;">
+            Joined {{ teacher.date_joined|date:"M d, Y" }}
+            &bull; Last login: {{ teacher.last_login|date:"M d, Y H:i"|default:"Never" }}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">
+        <a href="{% url 'admin_edit_user' teacher.id %}" class="btn-action btn-action-primary">
+          <i data-lucide="edit-3"></i> Edit Account
+        </a>
+        <a href="{% url 'admin_user_detail' teacher.id %}" class="btn-action btn-action-secondary">
+          <i data-lucide="user"></i> Full 360
+        </a>
+        <a href="{% url 'admin_all_teachers' %}" class="btn-action btn-action-secondary">
+          <i data-lucide="arrow-left"></i> Teachers
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="stat-mini-grid">
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:var(--color-primary);">{{ total_classrooms }}</div>
+      <div class="stat-mini-label">Classrooms Managed</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:#3b82f6;">{{ total_meetings }}</div>
+      <div class="stat-mini-label">Sessions Hosted</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:#10b981;">{{ total_unique_students }}</div>
+      <div class="stat-mini-label">Unique Students</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:{% if live_meetings > 0 %}#ef4444{% else %}var(--color-text-main){% endif %};">
+        {{ live_meetings }}
+      </div>
+      <div class="stat-mini-label">Live Right Now</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:#f59e0b;">{{ upcoming_meetings }}</div>
+      <div class="stat-mini-label">Upcoming Sessions</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:#8b5cf6;">{{ total_assignments_created }}</div>
+      <div class="stat-mini-label">Assignments Created</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color:#06b6d4;">{{ total_quizzes_created }}</div>
+      <div class="stat-mini-label">Quizzes Created</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="admin-card" style="padding:0.75rem 0 1.5rem 0;">
+    <div class="tab-nav" id="teacherDetailTabs">
+      <button class="tab-btn active" onclick="switchTab('classrooms')" data-tab="classrooms">
+        <i data-lucide="book-open" style="width:14px;height:14px;"></i> Classrooms
+        <span style="background:var(--color-primary);color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:999px;font-weight:700;">{{ total_classrooms }}</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('sessions')" data-tab="sessions">
+        <i data-lucide="video" style="width:14px;height:14px;"></i> Sessions
+        <span style="background:#3b82f6;color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:999px;font-weight:700;">{{ total_meetings }}</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('students')" data-tab="students">
+        <i data-lucide="users" style="width:14px;height:14px;"></i> Students
+        <span style="background:#10b981;color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:999px;font-weight:700;">{{ connected_students|length }}</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('activity')" data-tab="activity">
+        <i data-lucide="activity" style="width:14px;height:14px;"></i> Activity
+      </button>
+    </div>
+
+    <!-- TAB: Classrooms -->
+    <div id="tab-classrooms" class="tab-panel active">
+      {% if classrooms %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Classroom</th>
+              <th>Code</th>
+              <th>Status</th>
+              <th>Students</th>
+              <th>Pending</th>
+              <th>Sessions</th>
+              <th>Assignments</th>
+              <th>Materials</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cr in classrooms %}
+            <tr>
+              <td>
+                <div style="font-weight:700;">
+                  <a href="{% url 'admin_classroom_detail' cr.id %}" style="color:inherit;text-decoration:none;">{{ cr.title }}</a>
+                </div>
+                {% if cr.description %}<div style="font-size:.75rem;color:var(--color-text-muted);">{{ cr.description|truncatechars:60 }}</div>{% endif %}
+              </td>
+              <td><span class="role-badge role-badge-student">{{ cr.class_code }}</span></td>
+              <td>
+                {% if cr.is_active %}
+                  {% include "components/admin/status_pill.html" with status="active" %}
+                {% else %}
+                  {% include "components/admin/status_pill.html" with status="inactive" %}
+                {% endif %}
+              </td>
+              <td style="font-size:.85rem;font-weight:600;">{{ cr.approved_students_count }}</td>
+              <td>
+                {% if cr.pending_students_count > 0 %}
+                  <span style="color:#d97706;font-weight:600;font-size:.85rem;">{{ cr.pending_students_count }} pending</span>
+                {% else %}
+                  <span style="color:var(--color-text-muted);font-size:.85rem;">0</span>
+                {% endif %}
+              </td>
+              <td style="font-size:.85rem;">{{ cr.meetings_count }}</td>
+              <td style="font-size:.85rem;">{{ cr.assignments_count }}</td>
+              <td style="font-size:.85rem;">{{ cr.materials_count }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'admin_classroom_detail' cr.id %}" class="btn-action-sm btn-action-secondary">Inspect →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="section-empty">
+          <i data-lucide="book-open"></i>
+          <p>No classrooms created by this teacher yet.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Sessions -->
+    <div id="tab-sessions" class="tab-panel">
+      {% if meetings %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Meeting Title</th>
+              <th>Classroom</th>
+              <th>Scheduled</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th>Attendees</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in meetings %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.9rem;">{{ m.title }}</div>
+                <div style="font-size:.75rem;color:var(--color-text-muted);">{{ m.meeting_code }}</div>
+              </td>
+              <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ m.classroom.title|default:"Standalone" }}</td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ m.scheduled_time|date:"M d, Y H:i" }}</td>
+              <td style="font-size:.82rem;">{{ m.duration_minutes }} min</td>
+              <td>
+                {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
+              </td>
+              <td style="font-size:.85rem;font-weight:600;">{{ m.attendees_count }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-secondary">Detail →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="section-empty">
+          <i data-lucide="video-off"></i>
+          <p>No class sessions hosted by this teacher yet.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Students -->
+    <div id="tab-students" class="tab-panel">
+      {% if connected_students %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Email</th>
+              <th>Roll / ID</th>
+              <th>Classroom</th>
+              <th>Enrolled</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in connected_students %}
+            <tr>
+              <td>
+                {% include "components/admin/user_avatar.html" with user=item.student size=32 show_username_instead=True name_style="font-size:.9rem;" email_style="font-size:.75rem;" %}
+              </td>
+              <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ item.email|default:"—" }}</td>
+              <td style="font-size:.85rem;">{{ item.roll_number }}</td>
+              <td style="font-size:.85rem;color:var(--color-text-secondary);">
+                <a href="{% url 'admin_classroom_detail' item.classroom.id %}" style="color:inherit;text-decoration:underline;">{{ item.classroom.title }}</a>
+              </td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ item.enrolled_at|date:"M d, Y" }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'admin_user_detail' item.student.id %}" class="btn-action-sm btn-action-secondary">360 →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="section-empty">
+          <i data-lucide="user-x"></i>
+          <p>No approved students connected to this teacher's classrooms.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Activity -->
+    <div id="tab-activity" class="tab-panel">
+      {% if activity_timeline %}
+        <div class="timeline">
+          {% for event in activity_timeline %}
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:{{ event.color }}22;color:{{ event.color }};">
+              <i data-lucide="{{ event.icon }}" style="width:16px;height:16px;"></i>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-title">{{ event.title }}</div>
+              <div class="timeline-meta">{{ event.timestamp|date:"M d, Y H:i" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="section-empty">
+          <i data-lucide="activity"></i>
+          <p>No activity events recorded for this teacher.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- end admin-card -->
+
+</div><!-- end admin-container -->
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.querySelector('.tab-btn[data-tab="' + tabId + '"]').classList.add('active');
+}
+</script>
+{% endblock %}

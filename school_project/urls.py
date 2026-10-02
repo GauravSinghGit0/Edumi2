@@ -30,11 +30,12 @@ admin.site.logout_template = None
 urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.svg', permanent=True)),
+    # Accounts and custom admin routes
+    path('', include('accounts.urls')),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='admin-logout'),
     path('admin/', admin.site.urls),
     # LiveKit HTTP proxy — handles /livekit-proxy/ HTTP validation when running without Nginx
     re_path(r'^livekit-proxy(?P<lk_path>/.*)$', livekit_http_proxy),
-    path('', include('accounts.urls')),
     # Put the most specific route first: /cameras/<int:camera_id>/feed/
     path('cameras/<int:camera_id>/feed/', camera_feed_proxy, name='camera_feed_direct'),  # <-- New streamer view!
     path('cameras/', include('cameras.urls')),

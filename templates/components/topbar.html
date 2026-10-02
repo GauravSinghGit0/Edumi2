@@ -11,7 +11,6 @@
     </div>
     <div class="topbar-right">
 
-
         <!-- Theme Toggle -->
         <button type="button" class="topbar-icon-btn theme-toggle" id="themeToggle" onclick="toggleTheme()"
             title="Toggle Dark/Light Mode">
@@ -19,6 +18,7 @@
             <i data-lucide="sun" id="sunIcon" style="display: none; width: 20px; height: 20px;"></i>
         </button>
 
+        <!-- Notification Bell -->
         <div class="notification-wrapper">
             <button type="button" class="topbar-icon-btn notification-btn" id="notificationBtn"
                 onclick="toggleNotifications(event)">
@@ -43,23 +43,84 @@
             </div>
         </div>
 
-        <!-- User Profile -->
-        <div class="topbar-user">
-            <img src="{% if user.userprofile %}{{ user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=667eea&color=fff{% endif %}"
-                alt="{{ user.username }}" class="topbar-user-avatar"
-                onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=667eea&color=fff'">
-            <div class="topbar-user-info">
-                <div class="topbar-user-name">{{ user.userprofile.get_display_name|default:user.username }}</div>
-                <div class="topbar-user-role">
-                    {% if user.is_superuser %}
-                    Administrator
-                    {% elif user.userprofile.user_type == 'teacher' %}
-                    Teacher
-                    {% elif user.userprofile.user_type == 'student' %}
-                    Student
-                    {% endif %}
+        <!-- Professional User Profile Dropdown -->
+        <div class="topbar-user-wrapper" id="topbarUserWrapper">
+            <div class="topbar-user" id="topbarUserBtn" onclick="toggleUserDropdown(event)">
+                <img src="{% if user.userprofile %}{{ user.userprofile.get_profile_picture_url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=7c3aed&color=fff{% endif %}"
+                    alt="{{ user.username }}" class="topbar-user-avatar"
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=7c3aed&color=fff'">
+                <div class="topbar-user-info">
+                    <div class="topbar-user-name">{{ user.userprofile.get_display_name|default:user.username }}</div>
+                    <div class="topbar-user-role">
+                        {% if user.is_superuser %}
+                        Administrator
+                        {% elif user.userprofile.user_type == 'teacher' %}
+                        Teacher
+                        {% elif user.userprofile.user_type == 'student' %}
+                        Student
+                        {% endif %}
+                    </div>
                 </div>
+                <i data-lucide="chevron-down" class="topbar-user-chevron" style="width: 15px; height: 15px;"></i>
+            </div>
+
+            <!-- Floating Profile Menu -->
+            <div class="topbar-user-dropdown" id="topbarUserDropdown">
+                <a href="{% url 'profile_view' %}" class="topbar-user-dropdown-item">
+                    <i data-lucide="sliders" style="width: 16px; height: 16px;"></i>
+                    <span>Account</span>
+                </a>
+                <a href="{% url 'settings' %}" class="topbar-user-dropdown-item">
+                    <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+                    <span>Settings</span>
+                </a>
+                <div class="topbar-user-dropdown-divider"></div>
+                <a href="#" class="topbar-user-dropdown-item logout"
+                   onclick="event.preventDefault(); document.getElementById('topbar-logout-form').submit();">
+                    <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                    <span>Log Out</span>
+                </a>
+                <form id="topbar-logout-form" method="post" action="{% url 'logout' %}" data-turbo="false" style="display:none;">
+                    {% csrf_token %}
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function toggleUserDropdown(e) {
+    if (e) e.stopPropagation();
+    const wrapper = document.getElementById('topbarUserWrapper');
+    const dropdown = document.getElementById('topbarUserDropdown');
+    if (!wrapper || !dropdown) return;
+
+    const notifDropdown = document.getElementById('notificationDropdown');
+    if (notifDropdown) notifDropdown.classList.remove('active');
+
+    wrapper.classList.toggle('active');
+}
+
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('topbarUserWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        wrapper.classList.remove('active');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const wrapper = document.getElementById('topbarUserWrapper');
+    if (!wrapper) return;
+
+    let timeout;
+    wrapper.addEventListener('mouseenter', function() {
+        clearTimeout(timeout);
+        wrapper.classList.add('active');
+    });
+    wrapper.addEventListener('mouseleave', function() {
+        timeout = setTimeout(function() {
+            wrapper.classList.remove('active');
+        }, 180);
+    });
+});
+</script>

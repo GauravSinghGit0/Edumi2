@@ -702,6 +702,151 @@ video {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   UNIVERSAL MULTI-DEVICE RESPONSIVE SUITE (MOBILE / TABLET / LAPTOP)
+   ══════════════════════════════════════════════════════════════ */
+
+/* Universal Media & Viewport Scaling */
+img, video, canvas, iframe, embed, object {
+    max-width: 100% !important;
+    height: auto;
+}
+
+/* Universal Table Wrapper Touch Scrolling */
+.admin-table-wrapper,
+.table-wrapper,
+.table-responsive,
+.table-container {
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+/* Tablet & Mobile Layout Adjustments (max-width: 992px) */
+@media screen and (max-width: 992px) {
+    .admin-container,
+    .admin-page-container,
+    .content-area {
+        padding-left: clamp(0.75rem, 3vw, 1.25rem) !important;
+        padding-right: clamp(0.75rem, 3vw, 1.25rem) !important;
+    }
+
+    .admin-header,
+    .profile-hero,
+    .page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+    }
+
+    .admin-header-actions,
+    .profile-hero-content,
+    .btn-action-group {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    .kpi-grid,
+    .stat-mini-grid,
+    .admin-stats-grid,
+    .classroom-grid,
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)) !important;
+    }
+}
+
+/* Mobile Screen Adjustments (max-width: 768px) */
+@media screen and (max-width: 768px) {
+    body {
+        font-size: 0.9rem !important;
+    }
+
+    h1, .h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2, .h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .admin-card {
+        margin-bottom: 1.25rem !important;
+        border-radius: 0.75rem !important;
+    }
+
+    .admin-card-header {
+        padding: 1rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    .admin-card-body,
+    .tab-panel {
+        padding: 1rem !important;
+    }
+
+    .btn-action,
+    .btn-primary,
+    .btn-secondary {
+        min-height: 38px !important;
+        font-size: 0.82rem !important;
+        padding: 0.4rem 0.85rem !important;
+    }
+
+    .admin-modal-content,
+    .modal-dialog {
+        width: 95vw !important;
+        max-width: 540px !important;
+        margin: 0.5rem auto !important;
+    }
+
+    .tab-nav {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        gap: 0.25rem !important;
+    }
+
+    .tab-btn {
+        padding: 0.6rem 0.85rem !important;
+        font-size: 0.8rem !important;
+    }
+
+    .timeline-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+}
+
+/* Small Smartphone Screen Adjustments (max-width: 480px) */
+@media screen and (max-width: 480px) {
+    .kpi-grid,
+    .stat-mini-grid,
+    .admin-stats-grid,
+    .classroom-grid,
+    .card-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .btn-action,
+    .btn-primary,
+    .btn-action-primary,
+    .btn-action-secondary {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .status-pill,
+    .role-badge {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
    PRINT STYLES
    ══════════════════════════════════════════════════════════════ */
 @media print {
@@ -724,4 +869,4 @@ video {
     .main-content {
         margin-left: 0 !important;
     }
-}
+}

@@ -9,17 +9,6 @@
     <nav class="sidebar-nav">
         {% include 'partials/nav_items.html' with nav_type='sidebar' %}
     </nav>
-
-    <!-- Sidebar Footer -->
-    <div class="sidebar-footer">
-        <a href="#" class="sidebar-footer-item logout"
-            onclick="event.preventDefault();document.getElementById('logout-form-sidebar').submit();">
-            <span class="sidebar-nav-icon"><i data-lucide="log-out"></i></span>
-            <span class="sidebar-nav-text">Logout</span>
-        </a>
-        <form id="logout-form-sidebar" method="post" action="{% url 'logout' %}" data-turbo="false" style="display:none;">{% csrf_token %}
-        </form>
-    </div>
 </aside>
 
 <!-- Sidebar Overlay for Mobile -->

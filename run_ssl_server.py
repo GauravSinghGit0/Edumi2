@@ -86,8 +86,9 @@ def ensure_livekit_running():
         lan_ip = get_lan_ip()
         print(f"[INFO] Auto-starting LiveKit SFU server on port 7880 (Dynamic Node IP: {lan_ip})...")
         try:
-            log_dir = BASE_DIR / "logs"
-            log_dir.mkdir(exist_ok=True)
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            log_dir = BASE_DIR / "logs" / today_str
+            log_dir.mkdir(parents=True, exist_ok=True)
             out_file = open(log_dir / "livekit.stdout.log", "a", encoding="utf-8")
             err_file = open(log_dir / "livekit.stderr.log", "a", encoding="utf-8")
             global _lk_process_handles

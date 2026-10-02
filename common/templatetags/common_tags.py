@@ -186,10 +186,10 @@ NAV_ITEM_GROUPS = {
     'user_management': {
         'url_names': {
             'user_management', 'user_list', 'user_detail', 'user_edit', 'user_delete',
-            'student_list', 'teacher_list', 'admin_all_users', 'admin_all_students',
-            'admin_all_teachers', 'admin_edit_user', 'delete_user', 'architecture',
+            'admin_all_users', 'admin_edit_user', 'delete_user', 'architecture',
+            'admin_user_detail', 'admin_toggle_user_active',
         },
-        'path_prefixes': ('/user-management/', '/admin/users/', '/admin/students/', '/admin/teachers/'),
+        'path_prefixes': ('/user-management/', '/admin/users/'),
     },
     'camera_fleet': {
         'url_names': {
@@ -267,7 +267,30 @@ NAV_ITEM_GROUPS = {
     },
     'admin_panel': {
         'url_names': {'admin_panel'},
-        'path_prefixes': ('/admin-panel/',),
+        'path_prefixes': ('/admin-panel/', '/admin/dashboard/'),
+    },
+    'admin_activity_feed': {
+        'url_names': {'admin_activity_feed'},
+        'path_prefixes': ('/admin/activity/',),
+    },
+    'admin_all_teachers': {
+        'url_names': {'admin_all_teachers', 'admin_teacher_detail'},
+        'path_prefixes': ('/admin/teachers/',),
+    },
+    'admin_all_classrooms': {
+        'url_names': {
+            'admin_all_classrooms', 'admin_classroom_detail',
+            'admin_approve_student', 'admin_reject_student',
+            'admin_create_classroom',
+        },
+        'path_prefixes': ('/admin/classrooms/',),
+    },
+    'admin_all_meetings': {
+        'url_names': {
+            'admin_all_meetings', 'admin_meeting_detail',
+            'admin_live_meetings', 'admin_schedule_meeting',
+        },
+        'path_prefixes': ('/admin/meetings/', '/admin/live-meetings/'),
     },
     'teacher_dashboard': {
         'url_names': {'teacher_dashboard'},
@@ -293,6 +316,18 @@ TARGET_TO_GROUP = {
     'project_list': 'video_editor',
     'notifications_list': 'notifications',
     'profile_view': 'profile',
+    # Admin sub-pages → their parent nav group
+    'admin_teacher_detail': 'admin_all_teachers',
+    'admin_classroom_detail': 'admin_all_classrooms',
+    'admin_approve_student': 'admin_all_classrooms',
+    'admin_reject_student': 'admin_all_classrooms',
+    'admin_create_classroom': 'admin_all_classrooms',
+    'admin_meeting_detail': 'admin_all_meetings',
+    'admin_live_meetings': 'admin_all_meetings',
+    'admin_schedule_meeting': 'admin_all_meetings',
+    'admin_user_detail': 'user_management',
+    'admin_toggle_user_active': 'user_management',
+    'admin_edit_user': 'user_management',
 }
 
 

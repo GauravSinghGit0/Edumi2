@@ -190,6 +190,32 @@ class SidebarNavActiveTests(TestCase):
         self.assertEqual(is_active_nav(context, 'manage_recordings'), '')
 
 
+class AdminDashboardRegressionTests(TestCase):
+    def test_admin_create_classroom_requires_class_code_and_password(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+
+        User = get_user_model()
+        admin = User.objects.create_user(username='admin_create_room', password='superpass123', is_staff=True, is_superuser=True)
+        UserProfile.objects.get_or_create(user=admin, defaults={'user_type': 'admin'})
+        teacher = User.objects.create_user(username='teacher_class_creator', password='teacherpass123')
+        UserProfile.objects.get_or_create(user=teacher, defaults={'user_type': 'teacher'})
+
+        self.client.force_login(admin)
+        response = self.client.post('/admin/classrooms/create/', {
+            'title': 'Physics 101',
+            'class_code': 'PHYS101',
+            'password': 'secret123',
+            'description': 'Intro to physics',
+            'teacher_id': teacher.id,
+            'auto_approve': 'on',
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Classroom')
+        self.assertTrue(teacher.created_classrooms.filter(class_code='PHYS101').exists())
+
+
 class TelemetryAndLoggingTests(TestCase):
     def test_client_ip_extraction(self):
         from common.telemetry import get_client_ip

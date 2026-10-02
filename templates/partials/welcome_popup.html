@@ -1,16 +1,16 @@
 {% if request.session.show_welcome %}
 <style>
     :root {
-        --wp-primary: #6366f1;
+        --wp-primary: #8b5cf6;
         --wp-secondary: #a855f7;
         --wp-glass: rgba(255, 255, 255, 0.7);
-        --wp-text: #1e293b;
+        --wp-text: #111111;
     }
 
     #welcome-overlay {
         position: fixed; inset: 0; z-index: 10000;
         display: flex; align-items: center; justify-content: center;
-        background: radial-gradient(circle at center, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.4) 100%);
+        background: radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0.4) 100%);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         animation: wp-fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -33,7 +33,7 @@
         position: relative;
         padding: 48px 40px 32px;
         text-align: center;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
     }
 
     .wc-icon-wrapper {
@@ -42,7 +42,7 @@
         background: linear-gradient(135deg, var(--wp-primary), var(--wp-secondary));
         border-radius: 24px;
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.5);
         transform: rotate(-5deg);
         animation: wp-icon-float 4s ease-in-out infinite;
     }
@@ -106,12 +106,12 @@
         font-size: 1.1rem; font-weight: 700;
         cursor: pointer; transition: all 0.3s ease;
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4);
     }
 
     .wc-btn:hover {
         transform: scale(1.02);
-        box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 15px 35px -5px rgba(139, 92, 246, 0.5);
     }
 
     .wc-close {

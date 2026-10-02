@@ -8,7 +8,7 @@
     .prejoin-container { max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem; }
     .prejoin-grid { display: grid; grid-template-columns: 1fr 380px; gap: 2rem; }
     .camera-preview-wrap {
-        background: #0f172a;
+        background: #000000;
         border-radius: 1.5rem;
         overflow: hidden;
         aspect-ratio: 16/9;
@@ -30,7 +30,7 @@
     .status-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; flex-shrink: 0; }
     .btn-join {
         width: 100%; padding: 1rem;
-        background: #4f46e5; color: white;
+        background: #7c3aed; color: white;
         border: none; border-radius: 0.75rem;
         font-size: 1.125rem; font-weight: 700;
         cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem;
@@ -62,7 +62,7 @@
         background: #e2e8f0;
     }
     .media-btn:hover { background: #cbd5e1; }
-    .media-btn.active { background: #4f46e5; color: white; }
+    .media-btn.active { background: #7c3aed; color: white; }
     .media-btn.muted { background: #ef4444; color: white; }
     
     @media (max-width: 900px) { .prejoin-grid { grid-template-columns: 1fr; } }
@@ -81,7 +81,7 @@
     </div>
     
     <div style="margin-bottom: 2rem;">
-        <h1 style="font-size: 2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">Join Meeting: {{ meeting.title }}</h1>
+        <h1 style="font-size: 2rem; font-weight: 800; color: #000000; margin-bottom: 0.5rem;">Join Meeting: {{ meeting.title }}</h1>
         <p style="color: #64748b;">Prepare your hardware and verify your identity before entering.</p>
     </div>
 
@@ -99,7 +99,7 @@
         <div style="width: 72px; height: 72px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <h3 style="font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">No Face Profile Found</h3>
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: #111111; margin-bottom: 0.5rem;">No Face Profile Found</h3>
         <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.5rem;">
             Your attendance has been automatically logged. You may enter the meeting directly.
         </p>

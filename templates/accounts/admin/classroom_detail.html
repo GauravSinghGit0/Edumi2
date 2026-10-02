@@ -1,0 +1,307 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ classroom.title }} — Classroom 360 | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+
+  <!-- Breadcrumbs Bar -->
+  <div class="admin-breadcrumbs">
+    <a href="{% url 'admin_panel' %}">Home</a>
+    <span class="separator">/</span>
+    <a href="{% url 'admin_all_classrooms' %}">Classrooms</a>
+    <span class="separator">/</span>
+    <span class="current">{{ classroom.title }}</span>
+  </div>
+
+  <!-- Hero Header Dossier Banner -->
+  <div class="profile-hero">
+    <div class="profile-hero-content">
+      <div>
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem;">
+          <span class="role-badge role-badge-teacher">{{ classroom.class_code|default:"CLASS" }}</span>
+          {% if classroom.is_active %}
+            {% include "components/admin/status_pill.html" with status="active" %}
+          {% else %}
+            {% include "components/admin/status_pill.html" with status="suspended" label="Archived" %}
+          {% endif %}
+          <span style="font-size:.78rem;color:var(--color-text-muted);">
+            {% if classroom.auto_approve %}Auto-Approve Enabled{% else %}Manual Approval Required{% endif %}
+          </span>
+        </div>
+        <h1 style="margin:0;font-size:1.6rem;font-weight:800;color:var(--color-text-main);">{{ classroom.title }}</h1>
+        <div style="color:var(--color-text-secondary);font-size:.9rem;margin-top:.35rem;">
+          Instructor:
+          <strong>
+            <a href="{% url 'admin_teacher_detail' classroom.teacher.id %}" style="color:inherit;text-decoration:underline;">
+              Prof. {{ classroom.teacher.get_full_name|default:classroom.teacher.username }}
+            </a>
+          </strong>
+          &bull; Created: {{ classroom.created_at|date:"M d, Y" }}
+          {% if classroom.description %}&bull; {{ classroom.description|truncatechars:80 }}{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="{% url 'classroom_detail' classroom.id %}" class="btn-action btn-action-primary" target="_blank">
+          <i data-lucide="external-link"></i> Open Classroom
+        </a>
+        <a href="{% url 'admin_all_classrooms' %}" class="btn-action btn-action-secondary">
+          <i data-lucide="arrow-left"></i> All Classrooms
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="kpi-grid" style="margin-bottom:1.5rem;">
+    {% include "components/admin/kpi_card.html" with icon="users" color_class="indigo" label="Enrolled Students" value=classroom.approved_count|default:0 %}
+    {% include "components/admin/kpi_card.html" with icon="clock" custom_icon_style="background:rgba(245,158,11,.1);color:#d97706;" label="Pending Approvals" value=classroom.pending_count|default:0 %}
+    {% include "components/admin/kpi_card.html" with icon="video" color_class="blue" label="Class Sessions" value=classroom.meetings_count|default:0 %}
+    {% include "components/admin/kpi_card.html" with icon="file-text" color_class="purple" label="Assignments" value=classroom.assignments_count|default:0 %}
+    {% include "components/admin/kpi_card.html" with icon="check-circle-2" color_class="emerald" label="Quizzes" value=classroom.quizzes_count|default:0 %}
+    {% include "components/admin/kpi_card.html" with icon="folder" custom_icon_style="background:rgba(236,72,153,.1);color:#ec4899;" label="Study Materials" value=classroom.materials_count|default:0 %}
+  </div>
+
+  <!-- Pending Alert Banner -->
+  {% with pending_list=memberships|dictsort:"status" %}
+  {% endwith %}
+
+  <!-- Tabs -->
+  <div class="admin-card" style="padding-top:1.5rem;">
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('students')" data-tab="students">
+        <i data-lucide="users" style="width:14px;height:14px;"></i> Students
+      </button>
+      <button class="tab-btn" onclick="switchTab('sessions')" data-tab="sessions">
+        <i data-lucide="video" style="width:14px;height:14px;"></i> Sessions
+      </button>
+      <button class="tab-btn" onclick="switchTab('assignments')" data-tab="assignments">
+        <i data-lucide="file-text" style="width:14px;height:14px;"></i> Assignments
+      </button>
+      <button class="tab-btn" onclick="switchTab('quizzes')" data-tab="quizzes">
+        <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> Quizzes
+      </button>
+      <button class="tab-btn" onclick="switchTab('materials')" data-tab="materials">
+        <i data-lucide="folder" style="width:14px;height:14px;"></i> Materials
+      </button>
+    </div>
+
+    <!-- TAB: Students (memberships) -->
+    <div id="tab-students" class="tab-panel active">
+      {% if memberships %}
+
+        <!-- Pending approvals highlighted first -->
+        {% for req in memberships %}{% if req.status == 'pending' %}
+          {% if forloop.first %}
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-left:3px solid #f59e0b;border-radius:.5rem;padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:.65rem;">
+            <i data-lucide="clock" style="width:16px;height:16px;color:#d97706;"></i>
+            <span style="font-weight:600;color:#92400e;font-size:.9rem;">There are pending enrollment requests requiring action.</span>
+          </div>
+          {% endif %}
+        {% endif %}{% endfor %}
+
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Email</th>
+                <th>Membership Status</th>
+                <th>Requested</th>
+                <th>Approved</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in memberships %}
+              <tr {% if m.status == 'pending' %}style="background:rgba(245,158,11,.04);"{% endif %}>
+                <td>
+                  {% include "components/admin/user_avatar.html" with user=m.student size=32 show_username_instead=True name_style="font-size:.9rem;" email_style="font-size:.75rem;" %}
+                </td>
+                <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ m.student.email|default:"—" }}</td>
+                <td>
+                  {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
+                </td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ m.requested_at|date:"M d, Y" }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ m.approved_at|date:"M d, Y"|default:"—" }}</td>
+                <td style="text-align:right;">
+                  <div style="display:flex;gap:.4rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+                    <a href="{% url 'admin_user_detail' m.student.id %}" class="btn-action-sm btn-action-secondary">360 →</a>
+                    {% if m.status == 'pending' %}
+                    <form method="POST" action="{% url 'admin_approve_student' classroom.id m.student.id %}" style="display:inline;" onsubmit="return confirm('Approve this student?');">
+                      {% csrf_token %}
+                      <button type="submit" class="btn-action-sm btn-action-success"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button>
+                    </form>
+                    <form method="POST" action="{% url 'admin_reject_student' classroom.id m.student.id %}" style="display:inline;" onsubmit="return confirm('Reject this student?');">
+                      {% csrf_token %}
+                      <button type="submit" class="btn-action-sm btn-action-danger"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {% include "components/admin/empty_state.html" with use_section_empty=True icon="user-x" message="No students have requested or enrolled in this classroom yet." %}
+      {% endif %}
+    </div>
+
+    <!-- TAB: Sessions -->
+    <div id="tab-sessions" class="tab-panel">
+      {% if meetings %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Session Title</th>
+              <th>Scheduled</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th>Attendees</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in meetings %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.9rem;">{{ m.title }}</div>
+                <div style="font-size:.75rem;color:var(--color-text-muted);">{{ m.meeting_code }}</div>
+              </td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ m.scheduled_time|date:"M d, Y H:i" }}</td>
+              <td style="font-size:.82rem;">{{ m.duration_minutes }} min</td>
+              <td>
+                {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
+              </td>
+              <td style="font-size:.85rem;font-weight:600;">{{ m.attendees_count }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-secondary">Detail →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        {% include "components/admin/empty_state.html" with use_section_empty=True icon="video-off" message="No class sessions have been scheduled in this classroom yet." %}
+      {% endif %}
+    </div>
+
+    <!-- TAB: Assignments -->
+    <div id="tab-assignments" class="tab-panel">
+      {% if assignments %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Title</th><th>Total Marks</th><th>Due Date</th><th>Status</th><th>Submissions</th></tr>
+          </thead>
+          <tbody>
+            {% for a in assignments %}
+            <tr>
+              <td style="font-weight:600;font-size:.9rem;">{{ a.title }}</td>
+              <td style="font-size:.85rem;">{{ a.total_marks }}</td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ a.due_date|date:"M d, Y H:i" }}</td>
+              <td>
+                {% include "components/admin/status_pill.html" with status=a.status label=a.get_status_display %}
+              </td>
+              <td style="font-size:.85rem;font-weight:600;">{{ a.submissions_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        {% include "components/admin/empty_state.html" with use_section_empty=True icon="file" message="No assignments created for this classroom yet." %}
+      {% endif %}
+    </div>
+
+    <!-- TAB: Quizzes -->
+    <div id="tab-quizzes" class="tab-panel">
+      {% if quizzes %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Title</th><th>Total Marks</th><th>Status</th><th>Submissions</th></tr>
+          </thead>
+          <tbody>
+            {% for q in quizzes %}
+            <tr>
+              <td style="font-weight:600;font-size:.9rem;">{{ q.title }}</td>
+              <td style="font-size:.85rem;">{{ q.total_marks }}</td>
+              <td>
+                {% if q.is_active %}
+                  {% include "components/admin/status_pill.html" with status="active" %}
+                {% else %}
+                  {% include "components/admin/status_pill.html" with status="inactive" %}
+                {% endif %}
+              </td>
+              <td style="font-size:.85rem;font-weight:600;">{{ q.submissions_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        {% include "components/admin/empty_state.html" with use_section_empty=True icon="help-circle" message="No quizzes created for this classroom yet." %}
+      {% endif %}
+    </div>
+
+    <!-- TAB: Materials -->
+    <div id="tab-materials" class="tab-panel">
+      {% if materials %}
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Title</th><th>Type</th><th>Size</th><th>Views</th><th>Downloads</th><th>Published</th><th>Uploaded</th></tr>
+          </thead>
+          <tbody>
+            {% for mat in materials %}
+            <tr>
+              <td style="font-weight:600;font-size:.9rem;">{{ mat.title }}</td>
+              <td>
+                <span style="font-size:.75rem;padding:.15rem .5rem;border-radius:999px;background:rgba(139, 92, 246,.1);color:#8b5cf6;font-weight:600;">
+                  {{ mat.get_material_type_display }}
+                </span>
+              </td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ mat.get_file_size_formatted|default:"—" }}</td>
+              <td style="font-size:.85rem;">{{ mat.view_count }}</td>
+              <td style="font-size:.85rem;">{{ mat.download_count }}</td>
+              <td>
+                {% if mat.is_published %}
+                  {% include "components/admin/status_pill.html" with status="published" label="Yes" custom_style="font-size:.7rem;" %}
+                {% else %}
+                  {% include "components/admin/status_pill.html" with status="suspended" label="No" custom_style="font-size:.7rem;" %}
+                {% endif %}
+              </td>
+              <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ mat.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        {% include "components/admin/empty_state.html" with use_section_empty=True icon="folder" message="No study materials uploaded to this classroom yet." %}
+      {% endif %}
+    </div>
+
+  </div><!-- end admin-card -->
+
+</div><!-- end admin-container -->
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.querySelector('.tab-btn[data-tab="' + tabId + '"]').classList.add('active');
+}
+</script>
+{% endblock %}

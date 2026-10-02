@@ -12,7 +12,7 @@
         padding: 1.5rem;
         min-height: calc(100vh - 90px);
         background: var(--color-bg-app, #f8fafc);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         box-sizing: border-box;
     }
     .video-main {
@@ -64,7 +64,7 @@
     .video-title {
         font-size: 1.375rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 1rem 0;
     }
     .teacher-strip {
@@ -76,7 +76,7 @@
     }
     .teacher-avatar {
         width: 48px; height: 48px;
-        background: var(--color-primary, #6366f1);
+        background: var(--color-primary, #8b5cf6);
         color: white;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
@@ -87,7 +87,7 @@
     .teacher-meta-name {
         font-weight: 700;
         font-size: 1rem;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
     }
     .teacher-meta-sub {
         font-size: 0.875rem;
@@ -109,9 +109,9 @@
         transition: background 0.2s ease, border-color 0.2s ease;
     }
     .btn-share:hover {
-        background: var(--color-primary-bg, rgba(99,102,241,0.1));
-        border-color: var(--color-primary, #6366f1);
-        color: var(--color-primary, #6366f1);
+        background: var(--color-primary-bg, rgba(139, 92, 246,0.1));
+        border-color: var(--color-primary, #8b5cf6);
+        color: var(--color-primary, #8b5cf6);
     }
     
     .chat-section {
@@ -130,7 +130,7 @@
         background: var(--color-bg-card, #ffffff);
         border-bottom: 1px solid var(--color-border, #e2e8f0);
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -191,7 +191,7 @@
     .chat-empty-title {
         font-size: 0.9375rem;
         font-weight: 600;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin-bottom: 0.25rem;
     }
     .chat-empty-subtitle {
@@ -228,7 +228,7 @@
         color: var(--color-text-muted, #64748b);
     }
     .chat-msg.own .chat-msg-author {
-        color: var(--color-primary, #6366f1);
+        color: var(--color-primary, #8b5cf6);
     }
     .chat-msg-time {
         font-size: 0.6875rem;
@@ -236,7 +236,7 @@
     }
     .chat-msg-text {
         background: var(--color-bg-hover, #f1f5f9);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         border: 1px solid var(--color-border, #e2e8f0);
         border-radius: 12px;
         border-top-left-radius: 4px;
@@ -246,7 +246,7 @@
         word-break: break-word;
     }
     .chat-msg.own .chat-msg-text {
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
         color: #ffffff;
         border: none;
         border-top-left-radius: 12px;
@@ -270,15 +270,15 @@
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .chat-input-wrapper:focus-within {
-        border-color: var(--color-primary, #6366f1);
-        box-shadow: 0 0 0 3px var(--color-primary-bg, rgba(99, 102, 241, 0.12));
+        border-color: var(--color-primary, #8b5cf6);
+        box-shadow: 0 0 0 3px var(--color-primary-bg, rgba(139, 92, 246, 0.12));
     }
     .chat-input-wrapper input {
         flex: 1;
         background: transparent;
         border: none;
         outline: none;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         font-size: 0.875rem;
         font-family: inherit;
         padding: 6px 0;
@@ -290,7 +290,7 @@
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        background: var(--color-primary, #6366f1);
+        background: var(--color-primary, #8b5cf6);
         color: #ffffff;
         border: none;
         display: flex;
@@ -301,7 +301,7 @@
         flex-shrink: 0;
     }
     .chat-send-btn:hover {
-        background: var(--color-primary-hover, #4f46e5);
+        background: var(--color-primary-hover, #7c3aed);
         transform: scale(1.05);
     }
     .chat-send-btn:disabled {

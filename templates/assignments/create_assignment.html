@@ -16,7 +16,7 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
-        color: var(--color-primary, #4f46e5);
+        color: var(--color-primary, #7c3aed);
         font-weight: 600;
         font-size: 0.875rem;
         text-decoration: none;
@@ -36,7 +36,7 @@
     .form-title {
         font-size: 1.5rem;
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 0.35rem 0;
         letter-spacing: -0.02em;
     }
@@ -53,7 +53,7 @@
         display: block;
         font-size: 0.875rem;
         font-weight: 600;
-        color: var(--color-text-main, #334155);
+        color: var(--color-text-main, #222222);
         margin-bottom: 0.5rem;
     }
 
@@ -63,13 +63,13 @@
         border-radius: var(--radius-md, 0.625rem);
         border: 1px solid var(--color-border, #cbd5e1);
         background: var(--color-bg-card, #ffffff);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         font-size: 0.875rem;
         outline: none;
         transition: all 0.15s;
     }
     .form-control:focus {
-        border-color: var(--color-primary, #4f46e5);
+        border-color: var(--color-primary, #7c3aed);
         box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
     }
 
@@ -94,7 +94,7 @@
         transition: border-color 0.15s;
     }
     .file-upload-area:hover {
-        border-color: var(--color-primary, #4f46e5);
+        border-color: var(--color-primary, #7c3aed);
     }
 
     .btn-group { 
@@ -115,7 +115,7 @@
         font-size: 0.875rem;
         text-decoration: none;
         border: 1px solid var(--color-border, #e2e8f0);
-        color: var(--color-text-main, #334155);
+        color: var(--color-text-main, #222222);
         background: var(--color-bg-main, #f8fafc);
         cursor: pointer;
         transition: all 0.15s;
@@ -148,7 +148,7 @@
         font-size: 0.875rem;
         border: none;
         color: #ffffff;
-        background: var(--color-primary, #4f46e5);
+        background: var(--color-primary, #7c3aed);
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(79,70,229,0.25);
         transition: all 0.15s;
@@ -206,7 +206,7 @@
             <div class="form-group">
                 <label for="question_files">Attach Files (Questions, PDFs, Templates)</label>
                 <div class="file-upload-area">
-                    <i data-lucide="upload-cloud" style="width: 44px; height: 44px; color: var(--color-primary, #4f46e5); margin-bottom: 0.75rem;"></i>
+                    <i data-lucide="upload-cloud" style="width: 44px; height: 44px; color: var(--color-primary, #7c3aed); margin-bottom: 0.75rem;"></i>
                     <p style="margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-text-main);">Upload question documents or reference files</p>
                     <p style="margin: 0 0 0.75rem 0; font-size: 0.8125rem; color: var(--color-text-muted);">PDFs, Word docs, Images, ZIP files up to 50MB</p>
                     <input type="file" name="question_files" id="question_files" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,.tsv,.md,.zip,.rar,.7z,.tar,.gz,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.py,.java,.c,.cpp,.h,.hpp,.cs,.js,.ts,.jsx,.tsx,.html,.css,.json,.sql,.ipynb,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mov,.mkv,.avi" style="display: none;" onchange="updateFileCountLabel(this)">

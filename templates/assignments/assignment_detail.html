@@ -17,7 +17,7 @@
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
-        color: var(--color-primary, #4f46e5);
+        color: var(--color-primary, #7c3aed);
         font-weight: 600;
         font-size: 0.875rem;
         text-decoration: none;
@@ -32,7 +32,7 @@
         border: 1px solid var(--color-border, #e2e8f0);
         border-radius: var(--radius-lg, 12px);
         padding: var(--space-lg) var(--space-xl);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin-bottom: var(--space-lg);
         box-shadow: var(--shadow-sm);
     }
@@ -51,7 +51,7 @@
         margin: 0.2rem 0 0.75rem 0;
         letter-spacing: -0.01em;
         line-height: 1.2;
-        color: var(--color-text-main, #0f172a) !important;
+        color: var(--color-text-main, #000000) !important;
     }
     .hero-badges {
         display: flex;
@@ -69,7 +69,7 @@
         padding: 0.3rem 0.8rem;
         font-size: 0.75rem;
         font-weight: 600;
-        color: var(--color-text-main, #334155);
+        color: var(--color-text-main, #222222);
         white-space: nowrap;
     }
     .badge-glass.overdue { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #dc2626; }
@@ -124,12 +124,12 @@
         gap: 0.5rem;
         font-size: 1rem;
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin: 0 0 1.25rem 0;
         padding-bottom: 0.875rem;
         border-bottom: 1px solid var(--color-border, #e2e8f0);
     }
-    .section-title i { color: var(--color-primary, #4f46e5); }
+    .section-title i { color: var(--color-primary, #7c3aed); }
 
     /* ── Description / Instructions ── */
     .info-block { margin-bottom: 1.25rem; }
@@ -144,7 +144,7 @@
     }
     .info-text {
         font-size: 0.9375rem;
-        color: var(--color-text-main, #334155);
+        color: var(--color-text-main, #222222);
         line-height: 1.65;
         white-space: pre-line;
     }
@@ -161,17 +161,17 @@
         padding: 0.65rem 1rem;
         transition: border-color 0.15s;
     }
-    .file-row:hover { border-color: var(--color-primary, #4f46e5); }
+    .file-row:hover { border-color: var(--color-primary, #7c3aed); }
     .file-row-icon {
         width: 34px; height: 34px;
         border-radius: 0.5rem;
         background: rgba(79,70,229,0.1);
-        color: var(--color-primary,#4f46e5);
+        color: var(--color-primary,#7c3aed);
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
     }
     .file-row-name { flex: 1; font-size: 0.875rem; font-weight: 600; color: var(--color-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-row-action { font-size: 0.8125rem; font-weight: 600; color: var(--color-primary, #4f46e5); text-decoration: none; white-space: nowrap; }
+    .file-row-action { font-size: 0.8125rem; font-weight: 600; color: var(--color-primary, #7c3aed); text-decoration: none; white-space: nowrap; }
     .file-row-action:hover { text-decoration: underline; }
 
     /* ── Student Submission Panel ── */
@@ -218,7 +218,7 @@
         border-radius: 0.875rem;
         font-size: 0.9375rem;
         font-weight: 700;
-        background: var(--color-primary, #4f46e5);
+        background: var(--color-primary, #7c3aed);
         color: #fff;
         text-decoration: none;
         border: none;
@@ -237,7 +237,7 @@
         font-size: 0.875rem;
         font-weight: 600;
         background: var(--color-bg-main, #f1f5f9);
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         border: 1px solid var(--color-border, #e2e8f0);
         text-decoration: none;
         transition: all 0.15s;
@@ -500,7 +500,7 @@
                             <span>{{ submitted_count }}/{{ total_students_count }}</span>
                         </div>
                         <div style="height:6px;border-radius:999px;background:var(--color-border,#e2e8f0);overflow:hidden;">
-                            <div style="height:100%;border-radius:999px;background:var(--color-primary,#4f46e5);width:{% widthratio submitted_count total_students_count 100 %}%;transition:width 0.4s;"></div>
+                            <div style="height:100%;border-radius:999px;background:var(--color-primary,#7c3aed);width:{% widthratio submitted_count total_students_count 100 %}%;transition:width 0.4s;"></div>
                         </div>
                     </div>
                     {% endif %}

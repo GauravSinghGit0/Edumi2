@@ -51,9 +51,9 @@
             
             <div style="margin-bottom: 25px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
                 <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin: 0;">
-                    <input type="checkbox" name="auto_approve" style="width: 18px; height: 18px; margin-top: 2px; accent-color: #6366f1;" {% if form_data.auto_approve %}checked{% endif %}>
+                    <input type="checkbox" name="auto_approve" style="width: 18px; height: 18px; margin-top: 2px; accent-color: #8b5cf6;" {% if form_data.auto_approve %}checked{% endif %}>
                     <div>
-                        <strong style="color: #1e293b; font-size: 14px; display: block;">⚡ Instant Auto-Join (Google Classroom style)</strong>
+                        <strong style="color: #111111; font-size: 14px; display: block;">⚡ Instant Auto-Join (Google Classroom style)</strong>
                         <span style="color: #64748b; font-size: 13px; display: block; margin-top: 2px;">
                             Automatically approve students when they enter the correct class code & password without needing manual review for every student.
                         </span>
@@ -73,7 +73,7 @@
             
             <div style="display: flex; gap: 10px;">
                 <button type="submit" 
-                        style="flex: 1; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        style="flex: 1; padding: 15px; background: linear-gradient(135deg, #8b5cf6 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer;">
                     Create Classroom
                 </button>
                 <a href="{% url 'teacher_classrooms' %}" 

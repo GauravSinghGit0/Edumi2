@@ -1,0 +1,549 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}{{ target_user.get_full_name|default:target_user.username }} — 360 Dossier | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+<style>
+  /* ── Progress bar ── */
+  .progress-bar-wrap { background: var(--color-border); border-radius: 999px; height: 6px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 999px; background: var(--color-primary); transition: width .4s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+
+  <!-- Breadcrumbs Bar -->
+  <div class="admin-breadcrumbs">
+    <a href="{% url 'admin_panel' %}">Home</a>
+    <span class="separator">/</span>
+    <a href="{% url 'user_management' %}">User Directory</a>
+    <span class="separator">/</span>
+    <span class="current">{{ target_user.get_full_name|default:target_user.username }}</span>
+  </div>
+
+  <!-- Profile Hero -->
+  <div class="profile-hero">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+        {% include "components/admin/user_avatar.html" with user=target_user size=72 avatar_only=True %}
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+            <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800;">{{ target_user.get_full_name|default:target_user.username }}</h1>
+            {% if role == 'admin' %}
+              <span class="role-badge role-badge-admin"><i data-lucide="shield-check" style="width:11px;height:11px;"></i> Admin</span>
+            {% elif role == 'teacher' %}
+              <span class="role-badge role-badge-teacher"><i data-lucide="award" style="width:11px;height:11px;"></i> Teacher</span>
+            {% else %}
+              <span class="role-badge role-badge-student"><i data-lucide="graduation-cap" style="width:11px;height:11px;"></i> Student</span>
+            {% endif %}
+            {% if target_user.is_active %}
+              {% include "components/admin/status_pill.html" with status="active" %}
+            {% else %}
+              {% include "components/admin/status_pill.html" with status="suspended" label="Suspended" %}
+            {% endif %}
+            {% if profile.is_verified %}
+              <span class="status-pill" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);color:#059669;"><i data-lucide="check-circle" style="width:10px;height:10px;"></i> Verified</span>
+            {% endif %}
+          </div>
+          <div style="font-size: 0.875rem; color: var(--color-text-secondary); display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;">
+            <span><i data-lucide="mail" style="width:13px;height:13px;vertical-align:middle;"></i> {{ target_user.email|default:"No email" }}</span>
+            <span>·</span>
+            <span><i data-lucide="at-sign" style="width:13px;height:13px;vertical-align:middle;"></i> {{ target_user.username }}</span>
+            {% if identity.phone %}
+              <span>·</span><span><i data-lucide="phone" style="width:13px;height:13px;vertical-align:middle;"></i> {{ identity.phone }}</span>
+            {% endif %}
+            {% if identity.department %}
+              <span>·</span><span><i data-lucide="building" style="width:13px;height:13px;vertical-align:middle;"></i> {{ identity.department }}</span>
+            {% endif %}
+          </div>
+          <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.35rem;">
+            Joined {{ target_user.date_joined|date:"M d, Y" }}
+            &bull; Last login: {{ target_user.last_login|date:"M d, Y H:i"|default:"Never" }}
+          </div>
+        </div>
+      </div>
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-start;">
+        <a href="{% url 'admin_edit_user' target_user.id %}" class="btn-action btn-action-primary">
+          <i data-lucide="edit-3"></i> Edit Account
+        </a>
+        {% if target_user != request.user %}
+        <form method="POST" action="{% url 'admin_toggle_user_active' target_user.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-action {% if target_user.is_active %}btn-action-danger{% else %}btn-action-success{% endif %}"
+                  onclick="return confirm('{% if target_user.is_active %}Suspend{% else %}Activate{% endif %} this account?')">
+            {% if target_user.is_active %}
+              <i data-lucide="user-x"></i> Suspend
+            {% else %}
+              <i data-lucide="user-check"></i> Activate
+            {% endif %}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="stat-mini-grid">
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: var(--color-primary);">{{ total_courses_count }}</div>
+      <div class="stat-mini-label">{% if role == 'teacher' %}Classrooms Managed{% else %}Courses Enrolled{% endif %}</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: var(--color-secondary, #3b82f6);">{{ total_classes_count }}</div>
+      <div class="stat-mini-label">{% if role == 'teacher' %}Sessions Hosted{% else %}Sessions Tracked{% endif %}</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: #8b5cf6;">{{ total_assignments_submitted }}</div>
+      <div class="stat-mini-label">Assignments Submitted</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: #06b6d4;">{{ total_quizzes_completed }}</div>
+      <div class="stat-mini-label">Quizzes Completed</div>
+    </div>
+    {% if role != 'teacher' %}
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: {% if attendance_pct >= 75 %}#10b981{% elif attendance_pct >= 50 %}#f59e0b{% else %}#ef4444{% endif %};">
+        {{ attendance_pct }}%
+      </div>
+      <div class="stat-mini-label">Attendance Rate</div>
+    </div>
+    {% endif %}
+    {% if face_profile %}
+    <div class="stat-mini">
+      <div class="stat-mini-value" style="color: #10b981; font-size: 1.1rem;">
+        <i data-lucide="scan-face"></i> Enrolled
+      </div>
+      <div class="stat-mini-label">Face Biometrics</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tabs Card Container -->
+  <div class="admin-card" style="padding: 0; overflow: visible;">
+    <div class="tab-nav" id="userDetailTabs" style="padding: 0.85rem 1.25rem 0 1.25rem; margin-bottom: 0;">
+      <button class="tab-btn active" onclick="switchTab('overview')" data-tab="overview">
+        <i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Overview
+      </button>
+      <button class="tab-btn" onclick="switchTab('courses')" data-tab="courses">
+        <i data-lucide="book-open" style="width:14px;height:14px;"></i>
+        {% if role == 'teacher' %}Classrooms{% else %}Courses{% endif %}
+      </button>
+      <button class="tab-btn" onclick="switchTab('classes')" data-tab="classes">
+        <i data-lucide="video" style="width:14px;height:14px;"></i> Sessions
+      </button>
+      {% if role != 'admin' %}
+      <button class="tab-btn" onclick="switchTab('progress')" data-tab="progress">
+        <i data-lucide="trending-up" style="width:14px;height:14px;"></i> Progress
+      </button>
+      {% endif %}
+      <button class="tab-btn" onclick="switchTab('activity')" data-tab="activity">
+        <i data-lucide="activity" style="width:14px;height:14px;"></i> Activity
+      </button>
+    </div>
+
+    <!-- TAB: Overview -->
+    <div id="tab-overview" class="tab-panel active" style="padding: 1.5rem; overflow: visible;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; align-items: start;">
+
+        <!-- Account Details Card -->
+        <div style="background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem); padding: 1.25rem;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-main);">
+            <i data-lucide="shield-check" style="width:18px;height:18px;color:var(--color-primary);"></i> Account Details & Permissions
+          </h3>
+          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+            {% if identity.student_id %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Student ID</span>
+              <span style="font-weight:700;font-size:.85rem;color:var(--color-text-main);">{{ identity.student_id }}</span>
+            </div>
+            {% endif %}
+            {% if identity.employee_id %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Employee ID</span>
+              <span style="font-weight:700;font-size:.85rem;color:var(--color-text-main);">{{ identity.employee_id }}</span>
+            </div>
+            {% endif %}
+            {% if identity.branch %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Branch</span>
+              <span style="font-weight:700;font-size:.85rem;color:var(--color-text-main);">{{ identity.branch }}</span>
+            </div>
+            {% endif %}
+            {% if identity.grade %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Grade / Class</span>
+              <span style="font-weight:700;font-size:.85rem;color:var(--color-text-main);">{{ identity.grade }}</span>
+            </div>
+            {% endif %}
+            {% if identity.specialization %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Specialization</span>
+              <span style="font-weight:700;font-size:.85rem;color:var(--color-text-main);">{{ identity.specialization }}</span>
+            </div>
+            {% endif %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Superuser Access</span>
+              {% if target_user.is_superuser %}
+                <span class="role-badge role-badge-admin" style="font-size:.7rem;">Granted</span>
+              {% else %}
+                <span style="font-weight:600;font-size:.82rem;color:var(--color-text-muted);">Standard</span>
+              {% endif %}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--color-bg-card,#fff);border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+              <span style="color:var(--color-text-muted);font-size:.78rem;font-weight:600;">Email Verified</span>
+              {% if profile.is_verified %}
+                <span class="status-pill status-active" style="font-size:.7rem;"><i data-lucide="check-circle" style="width:10px;height:10px;"></i> Verified</span>
+              {% else %}
+                <span class="status-pill" style="font-size:.7rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:#ef4444;">Unverified</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Bio & Identity Card -->
+        <div style="background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem); padding: 1.25rem;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-main);">
+            <i data-lucide="user" style="width:18px;height:18px;color:var(--color-primary);"></i> Profile & Social Identity
+          </h3>
+          {% if identity.headline or identity.bio %}
+            {% if identity.headline %}
+              <div style="font-weight:700;font-size:.92rem;color:var(--color-text-main);margin-bottom:.5rem;">{{ identity.headline }}</div>
+            {% endif %}
+            {% if identity.bio %}
+              <div style="font-size:.85rem;color:var(--color-text-secondary);line-height:1.5;margin-bottom:1rem;background:var(--color-bg-card,#fff);padding:.75rem 1rem;border-radius:.5rem;border:1px solid var(--color-border,#e2e8f0);">
+                {{ identity.bio }}
+              </div>
+            {% endif %}
+          {% else %}
+            <div style="padding: 1.5rem 1rem; text-align: center; color: var(--color-text-muted); background: var(--color-bg-card, #fff); border-radius: 0.5rem; border: 1px dashed var(--color-border, #e2e8f0); margin-bottom: 1rem;">
+              <i data-lucide="user-check" style="width:24px;height:24px;opacity:0.4;margin-bottom:.5rem;"></i>
+              <div style="font-size: 0.85rem; font-weight: 500;">No bio or profile summary provided by user</div>
+            </div>
+          {% endif %}
+
+          <!-- Social links -->
+          {% if profile.linkedin or profile.github or profile.website %}
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.75rem;">
+            {% if profile.linkedin %}<a href="{{ profile.linkedin }}" target="_blank" class="btn-action-sm btn-action-secondary"><i data-lucide="linkedin" style="width:13px;height:13px;"></i> LinkedIn</a>{% endif %}
+            {% if profile.github %}<a href="{{ profile.github }}" target="_blank" class="btn-action-sm btn-action-secondary"><i data-lucide="github" style="width:13px;height:13px;"></i> GitHub</a>{% endif %}
+            {% if profile.website %}<a href="{{ profile.website }}" target="_blank" class="btn-action-sm btn-action-secondary"><i data-lucide="external-link" style="width:13px;height:13px;"></i> Website</a>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <!-- Attendance summary for students -->
+      {% if role != 'teacher' and total_classes_count > 0 %}
+      <div style="margin-top: 1.5rem; padding: 1.25rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem);">
+        <h3 style="font-size:.9rem;font-weight:700;margin:0 0 .85rem 0;display:flex;align-items:center;gap:.5rem;color:var(--color-text-main);">
+          <i data-lucide="bar-chart-2" style="width:16px;height:16px;color:var(--color-primary);"></i> Attendance Performance Metric
+        </h3>
+        <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div class="progress-bar-wrap" style="height: 8px;">
+              <div class="progress-bar-fill" style="width:{{ attendance_pct }}%;background:{% if attendance_pct >= 75 %}#10b981{% elif attendance_pct >= 50 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+            </div>
+          </div>
+          <div style="font-weight:800;font-size:1.25rem;white-space:nowrap;color:{% if attendance_pct >= 75 %}#10b981{% elif attendance_pct >= 50 %}#d97706{% else %}#ef4444{% endif %};">
+            {{ attendance_pct }}%
+          </div>
+          <div style="font-size:.8rem;color:var(--color-text-muted);font-weight:500;">across {{ total_classes_count }} class session(s)</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Courses -->
+    <div id="tab-courses" class="tab-panel" style="padding: 1.5rem; overflow: visible;">
+      {% if enrolled_classrooms %}
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Classroom / Course</th>
+                <th>Role</th>
+                <th>Status</th>
+                {% if role != 'teacher' %}
+                <th>Enrolled Date</th>
+                {% else %}
+                <th>Created</th>
+                {% endif %}
+                <th>Sessions</th>
+                <th>Assignments</th>
+                <th style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in enrolled_classrooms %}
+              <tr>
+                <td>
+                  <div style="font-weight:700;">{{ item.classroom.title }}</div>
+                  <div style="font-size:.75rem;color:var(--color-text-muted);">{{ item.classroom.class_code }}</div>
+                </td>
+                <td><span class="role-badge role-badge-{% if role == 'teacher' %}teacher{% else %}student{% endif %}">{{ item.role }}</span></td>
+                <td>
+                  {% if item.status == 'Active' or item.status == 'Approved' %}
+                    <span class="status-pill status-active"><span class="status-dot"></span> {{ item.status }}</span>
+                  {% else %}
+                    <span class="status-pill status-suspended"><span class="status-dot"></span> {{ item.status }}</span>
+                  {% endif %}
+                </td>
+                <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ item.enrolled_date|date:"M d, Y"|default:"—" }}</td>
+                <td style="font-size:.85rem;">{{ item.meetings_count }}</td>
+                <td style="font-size:.85rem;">{{ item.assignments_count }}</td>
+                <td style="text-align:right;">
+                  <a href="{% url 'admin_classroom_detail' item.classroom.id %}" class="btn-action-sm btn-action-secondary">View →</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="section-empty" style="padding: 3rem 1rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px dashed var(--color-border, #e2e8f0); border-radius: 0.75rem;">
+          <i data-lucide="book-open"></i>
+          <p>{% if role == 'teacher' %}No classrooms assigned to this teacher.{% else %}This student has not enrolled in any courses.{% endif %}</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Sessions / Classes -->
+    <div id="tab-classes" class="tab-panel" style="padding: 1.5rem; overflow: visible;">
+      {% if classes_data %}
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Session Title</th>
+                <th>Classroom</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Attendance</th>
+                <th>Duration Attended</th>
+                <th style="text-align:right;">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in classes_data %}
+              <tr>
+                <td>
+                  <div style="font-weight:600;font-size:.9rem;">{{ c.meeting.title }}</div>
+                  <div style="font-size:.75rem;color:var(--color-text-muted);">{{ c.meeting.meeting_code }}</div>
+                </td>
+                <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ c.classroom_title }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ c.scheduled_time|date:"M d, Y H:i" }}</td>
+                <td>
+                  {% include "components/admin/status_pill.html" with status=c.meeting.status label=c.meeting.get_status_display %}
+                </td>
+                <td>
+                  {% if c.attendance_status == 'Present' or c.attendance_status == 'Host' or c.attendance_status == 'Joined' %}
+                    <span style="color:#10b981;font-weight:600;font-size:.82rem;">✓ {{ c.attendance_status }}</span>
+                  {% elif c.attendance_status == 'Late' %}
+                    <span style="color:#f59e0b;font-weight:600;font-size:.82rem;">⏱ Late</span>
+                  {% elif c.attendance_status == 'Upcoming' %}
+                    <span style="color:#3b82f6;font-size:.82rem;">📅 Upcoming</span>
+                  {% else %}
+                    <span style="color:var(--color-text-muted);font-size:.82rem;">{{ c.attendance_status }}</span>
+                  {% endif %}
+                </td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ c.duration_attended }}</td>
+                <td style="text-align:right;">
+                  <a href="{% url 'admin_meeting_detail' c.meeting.id %}" class="btn-action-sm btn-action-secondary">View →</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="section-empty" style="padding: 3rem 1rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px dashed var(--color-border, #e2e8f0); border-radius: 0.75rem;">
+          <i data-lucide="video-off"></i>
+          <p>No class session records found for this user.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB: Progress -->
+    {% if role != 'admin' %}
+    <div id="tab-progress" class="tab-panel" style="padding: 1.5rem; overflow: visible;">
+
+      <!-- Assignments -->
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="file-text" style="width:15px;height:15px;color:#8b5cf6;"></i> Assignments
+        <span style="background:#8b5cf6;color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:999px;font-weight:700;">{{ total_assignments_submitted }}</span>
+      </h3>
+      {% if assignments_progress %}
+        <div class="admin-table-wrapper" style="overflow-x: auto;" style="margin-bottom:2rem;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Classroom</th>
+                <th>Submitted</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in assignments_progress %}
+              <tr>
+                <td style="font-weight:600;font-size:.9rem;">{{ a.title }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ a.classroom }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ a.submitted_at|date:"M d, Y H:i" }}</td>
+                <td>
+                  {% if a.marks_obtained is not None and a.total_marks %}
+                    <strong>{{ a.marks_obtained }}</strong> / {{ a.total_marks }}
+                  {% else %}
+                    <span style="color:var(--color-text-muted);">Pending grading</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% include "components/admin/status_pill.html" with status=a.status label=a.status %}
+                </td>
+                <td style="font-size:.8rem;color:var(--color-text-muted);">{{ a.feedback|default:"—"|truncatechars:60 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="section-empty" style="margin-bottom:1.5rem; padding: 2rem 1rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px dashed var(--color-border, #e2e8f0); border-radius: 0.75rem;">
+          <i data-lucide="file"></i>
+          <p>No assignment submissions recorded.</p>
+        </div>
+      {% endif %}
+
+      <!-- Quizzes -->
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="check-circle-2" style="width:15px;height:15px;color:#06b6d4;"></i> Quizzes
+        <span style="background:#06b6d4;color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:999px;font-weight:700;">{{ total_quizzes_completed }}</span>
+      </h3>
+      {% if quizzes_progress %}
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Quiz</th>
+                <th>Classroom</th>
+                <th>Submitted</th>
+                <th>Score</th>
+                <th>Time Taken</th>
+                <th>Tab Switches</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for q in quizzes_progress %}
+              <tr>
+                <td style="font-weight:600;font-size:.9rem;">{{ q.title }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ q.classroom }}</td>
+                <td style="font-size:.82rem;color:var(--color-text-secondary);">{{ q.submitted_at|date:"M d, Y H:i" }}</td>
+                <td>
+                  {% if q.marks_obtained is not None and q.total_marks %}
+                    <strong>{{ q.marks_obtained }}</strong> / {{ q.total_marks }}
+                  {% else %}
+                    <span style="color:var(--color-text-muted);">—</span>
+                  {% endif %}
+                </td>
+                <td style="font-size:.82rem;">{{ q.time_taken|default:"—" }}</td>
+                <td style="font-size:.82rem;">
+                  {% if q.tab_switch_count > 0 %}
+                    <span style="color:#f59e0b;font-weight:600;">{{ q.tab_switch_count }} switches</span>
+                  {% else %}
+                    <span style="color:var(--color-text-muted);">0</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="section-empty" style="padding: 2rem 1rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px dashed var(--color-border, #e2e8f0); border-radius: 0.75rem;">
+          <i data-lucide="help-circle"></i>
+          <p>No quiz submissions recorded.</p>
+        </div>
+      {% endif %}
+
+      <!-- Attendance Records (Biometric) -->
+      {% if attendance_records %}
+      <h3 style="font-size:1rem;font-weight:700;margin:2rem 0 1rem;display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="scan-face" style="width:15px;height:15px;color:#ec4899;"></i> Biometric Attendance Records
+      </h3>
+      <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Date</th><th>Meeting</th><th>Classroom</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for rec in attendance_records %}
+            <tr>
+              <td style="font-size:.85rem;">{{ rec.date|date:"M d, Y" }}</td>
+              <td style="font-size:.85rem;">{{ rec.meeting.title|default:"—" }}</td>
+              <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ rec.classroom.title|default:"—" }}</td>
+              <td>
+                {% include "components/admin/status_pill.html" with status=rec.status label=rec.get_status_display %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+    <!-- TAB: Activity -->
+    <div id="tab-activity" class="tab-panel" style="padding: 1.5rem; overflow: visible;">
+      <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-main);">
+        <i data-lucide="activity" style="width:18px;height:18px;color:var(--color-primary);"></i> Audit Activity Trail
+      </h3>
+      {% if activity_timeline %}
+        <div class="timeline" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          {% for event in activity_timeline %}
+          <div class="timeline-item" style="display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1.25rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem); margin: 0;">
+            <div class="timeline-dot" style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ event.color }}18; color: {{ event.color }}; flex-shrink: 0;">
+              <i data-lucide="{{ event.icon }}" style="width:18px;height:18px;"></i>
+            </div>
+            <div class="timeline-body" style="flex: 1; min-width: 0;">
+              <div class="timeline-title" style="font-size: 0.92rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ event.title }}
+              </div>
+              <div class="timeline-meta" style="font-size: 0.78rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 0.5rem;">
+                <span>{{ event.timestamp|date:"M d, Y H:i" }}</span>
+                <span>&bull;</span>
+                <span class="role-badge role-badge-{{ event.user_role|default:'student' }}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">{{ event.user_role|capfirst }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="section-empty" style="padding: 3rem 1rem; background: var(--color-bg-subtle, rgba(0,0,0,0.02)); border: 1px dashed var(--color-border, #e2e8f0); border-radius: 0.75rem;">
+          <i data-lucide="activity" style="width:36px;height:36px;opacity:0.35;"></i>
+          <p style="font-size: 0.9rem; font-weight: 500;">No activity events recorded yet for this user.</p>
+        </div>
+      {% endif %}
+    </div>
+
+
+  </div><!-- end admin-card -->
+
+</div><!-- end admin-container -->
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.querySelector('.tab-btn[data-tab="' + tabId + '"]').classList.add('active');
+}
+</script>
+{% endblock %}

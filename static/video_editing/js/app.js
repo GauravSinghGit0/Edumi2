@@ -507,7 +507,7 @@
       timelineContainer.addEventListener("dragenter", (e) => {
         e.preventDefault();
         timelineContainer.style.borderColor = "var(--ve-primary)";
-        timelineContainer.style.background = "rgba(102, 126, 234, 0.04)";
+        timelineContainer.style.background = "rgba(139, 92, 246, 0.04)";
       });
 
       timelineContainer.addEventListener("dragleave", () => {

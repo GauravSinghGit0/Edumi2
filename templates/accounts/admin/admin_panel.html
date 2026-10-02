@@ -1,389 +1,336 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Admin Panel{% endblock %}
+{% block page_title %}Admin Control Center | EduMi{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
 
 {% block content %}
-<style>
-    .admin-container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; font-family: var(--font-family-base, 'Inter', sans-serif); color: var(--color-text-main); }
-    
-    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
-    .admin-header h1 { font-size: 2rem; font-weight: 800; color: var(--color-text-main); margin: 0; }
-    
-    /* Service Health */
-    .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .health-card { background: var(--color-bg-card); border-radius: 1rem; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
-    .indicator { width: 10px; height: 10px; border-radius: 50%; position: relative; }
-    .indicator.online { background: var(--color-success, #10b981); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-    .indicator.online::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: pulse 2s infinite; }
-    .indicator.offline { background: var(--color-danger, #ef4444); }
-    .health-info .label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
-    .health-info .value { font-size: 0.9375rem; font-weight: 700; color: var(--color-text-main); }
-
-    /* Admin Tabs */
-    .admin-tabs { display: flex; gap: 0.5rem; background: var(--color-bg-hover); padding: 0.4rem; border-radius: 0.75rem; margin-bottom: 2rem; width: fit-content; border: 1px solid var(--color-border); }
-    .tab-btn { 
-        padding: 0.75rem 1.5rem; 
-        border-radius: 0.5rem; 
-        border: none; 
-        background: transparent; 
-        color: var(--color-text-muted); 
-        font-weight: 600; 
-        cursor: pointer; 
-        display: flex; 
-        align-items: center; 
-        gap: 0.5rem; 
-        transition: all 0.2s; 
-    }
-    .tab-btn.active { background: var(--color-bg-card); color: var(--color-primary); box-shadow: var(--shadow-sm); }
-    .tab-btn i { width: 18px; height: 18px; }
-
-    /* Stats Row */
-    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-    .stat-mini-card { background: var(--color-bg-card); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--color-border); text-align: center; box-shadow: var(--shadow-sm); }
-    .stat-mini-card .val { font-size: 1.75rem; font-weight: 800; color: var(--color-primary); }
-    .stat-mini-card .lab { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
-
-    /* Tables */
-    .table-card { background: var(--color-bg-card); border-radius: 1rem; border: 1px solid var(--color-border); overflow: hidden; box-shadow: var(--shadow-sm); }
-    .table-header { padding: 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
-    .table-header h2 { font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--color-text-main); }
-    
-    .data-table { width: 100%; border-collapse: collapse; }
-    .data-table th { background: var(--color-bg-hover); padding: 1rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; border-bottom: 1px solid var(--color-border); }
-    .data-table td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-text-main); }
-    .data-table tr:last-child td { border-bottom: none; }
-    
-    .user-pill { display: flex; align-items: center; gap: 0.75rem; }
-    .user-pill img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-    
-    .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-    .badge-admin { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-    .badge-teacher { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .badge-student { background: rgba(16, 185, 129, 0.15); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.3); }
-
-    @keyframes pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
-
-    .btn-action { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--color-bg-hover); color: var(--color-text-main); font-weight: 600; text-decoration: none; font-size: 0.8125rem; border: 1px solid var(--color-border); transition: all 0.2s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
-    .btn-action:hover { background: var(--color-border); }
-
-    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; }
-    .modal-box { background: var(--color-bg-card); color: var(--color-text-main); border: 1px solid var(--color-border); border-radius: 1rem; padding: 2rem; max-width: 500px; width: 90%; box-shadow: var(--shadow-xl); }
-    .modal-input { width: 100%; padding: 0.75rem; background: var(--color-bg-hover); border: 1px solid var(--color-border); color: var(--color-text-main); border-radius: 0.5rem; outline: none; }
-    .modal-input:focus { border-color: var(--color-primary); }
-</style>
-
 <div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">Executive Dashboard</span>
+    </div>
+
+    <!-- Header Section with Live Status & Quick Action Controls -->
     <div class="admin-header">
-        <h1>Admin Control Panel</h1>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <a href="{% url 'user_management' %}" class="btn-action" style="background: var(--color-primary); color: white; border: none;">Manage Users</a>
-            <button onclick="toggleBroadcast()" class="btn-action" id="broadcastBtn">Broadcast Message</button>
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <h1>Admin Control Center</h1>
+                {% if camera_service_online %}
+                    {% include "components/admin/status_pill.html" with status="active" label="LiveKit SFU Online" custom_style="cursor: help;" %}
+                {% else %}
+                    {% include "components/admin/status_pill.html" with status="suspended" label="SFU Offline" custom_style="cursor: help;" %}
+                {% endif %}
+            </div>
+            <p class="admin-subtitle">Real-time learning metrics, active video streams, and administrative controls</p>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="openModal('addUserModal')" class="btn-action btn-action-primary">
+                <i data-lucide="user-plus"></i> Add User
+            </button>
+            <button type="button" onclick="openModal('addCourseModal')" class="btn-action btn-action-secondary">
+                <i data-lucide="book-plus"></i> Create Course
+            </button>
+            <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary" title="Export Users CSV Report">
+                <i data-lucide="download"></i> Export Data
+            </a>
         </div>
     </div>
 
-    <!-- Broadcast Modal -->
-    <div id="broadcastModal" class="modal-backdrop">
-        <div class="modal-box">
-            <h2 style="font-weight: 700; margin-bottom: 1.5rem; color: var(--color-text-main);">Broadcast Message to All Users</h2>
-            <form id="broadcastForm" onsubmit="sendBroadcast(event)">
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text-muted);">Title</label>
-                    <input type="text" id="broadcastTitle" class="modal-input" required placeholder="Important Announcement">
+    <!-- Live Sessions Alert Banner (Dynamic) -->
+    {% if live_meetings > 0 %}
+    <div class="admin-card" style="border-left: 4px solid var(--color-danger); background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%); margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444; animation: pulse 1.5s infinite;"></div>
+                <div>
+                    <strong style="font-size: 1.05rem; color: var(--color-danger);">🔴 {{ live_meetings }} Live Virtual Sessions Broadcast In Progress</strong>
+                    <div style="font-size: 0.85rem; color: var(--color-text-secondary);">Real-time LiveKit SFU WebRTC streams active across learning classrooms.</div>
                 </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text-muted);">Message</label>
-                    <textarea id="broadcastMessage" rows="4" class="modal-input" required placeholder="Enter your message here..."></textarea>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button type="button" onclick="closeBroadcastModal()" style="flex: 1; padding: 0.75rem; background: var(--color-bg-hover); color: var(--color-text-main); border: 1px solid var(--color-border); border-radius: 0.5rem; font-weight: 600; cursor: pointer;">Cancel</button>
-                    <button type="submit" style="flex: 1; padding: 0.75rem; background: var(--color-primary); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">Send Broadcast</button>
-                </div>
-            </form>
+            </div>
+            <a href="{% url 'admin_live_meetings' %}" class="btn-action-sm btn-action-danger">
+                <i data-lucide="radio"></i> Open Live Monitor &rarr;
+            </a>
         </div>
     </div>
+    {% endif %}
 
-    <!-- System Health -->
-    <div class="health-grid">
-        <div class="health-card">
-            <div class="indicator online"></div>
-            <div class="health-info">
-                <p class="label">App Server</p>
-                <p class="value">Active (Port 8002)</p>
-            </div>
-        </div>
-        <div class="health-card">
-            <div class="indicator {% if camera_service_online %}online{% else %}offline{% endif %}"></div>
-            <div class="health-info">
-                <p class="label">AI Microservice</p>
-                <p class="value">{% if camera_service_online %}Running{% else %}Offline{% endif %}</p>
-            </div>
-        </div>
-        <div class="health-card">
-            <div class="indicator online"></div>
-            <div class="health-info">
-                <p class="label">Database</p>
-                <p class="value">SQLite Connected</p>
-            </div>
-        </div>
-        <div class="health-card">
-            <div class="indicator online"></div>
-            <div class="health-info">
-                <p class="label">WebSockets</p>
-                <p class="value">Engine Live</p>
-            </div>
-        </div>
-        {% if user.userprofile.user_type == 'student' %}
-        <div class="health-card">
-            <div class="indicator {% if face_registered %}online{% else %}offline{% endif %}"></div>
-            <div class="health-info">
-                <p class="label">Facial ID</p>
-                <p class="value">{% if face_registered %}Registered{% else %}Missing{% endif %}</p>
-            </div>
-        </div>
-        {% endif %}
+    <!-- Key Performance Indicators (KPIs) -->
+    <div class="kpi-grid">
+        {% url 'user_management' as url_users %}
+        {% include "components/admin/kpi_card.html" with href=url_users icon="users" color_class="indigo" label="Total Registered Users" value=total_users subtext=active_users|stringformat:"s"|add:" Active &bull; "|add:total_students|stringformat:"s"|add:" Students" subtext_style="color: var(--color-success);" %}
+
+        {% url 'admin_all_teachers' as url_teachers %}
+        {% include "components/admin/kpi_card.html" with href=url_teachers icon="award" color_class="blue" label="Teaching Staff" value=total_teachers subtext=active_teachers|stringformat:"s"|add:" Active Instructors" %}
+
+        {% url 'admin_all_classrooms' as url_classrooms %}
+        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="book-open" color_class="emerald" label="Active Classrooms" value=total_classrooms subtext=total_enrollments|stringformat:"s"|add:" Enrolled &bull; "|add:pending_enrollments|stringformat:"s"|add:" Pending" %}
+
+        {% url 'admin_all_meetings' as url_meetings %}
+        {% include "components/admin/kpi_card.html" with href=url_meetings icon="video" color_class="purple" label="Total Class Sessions" value=total_meetings subtext=live_meetings|stringformat:"s"|add:" Live &bull; "|add:upcoming_meetings|stringformat:"s"|add:" Scheduled" %}
     </div>
 
-    <!-- Quick Stats -->
-    <div class="stats-row">
-        <div class="stat-mini-card">
-            <p class="val">{{ total_users }}</p>
-            <p class="lab">Total Users</p>
-        </div>
-        <div class="stat-mini-card">
-            <p class="val">{{ total_students }}</p>
-            <p class="lab">Students</p>
-        </div>
-        <div class="stat-mini-card">
-            <p class="val">{{ total_teachers }}</p>
-            <p class="lab">Teachers</p>
-        </div>
-        <div class="stat-mini-card">
-            <p class="val">{{ live_meetings_count }}</p>
-            <p class="lab">Live Sessions</p>
-        </div>
+    <!-- Second row KPI cards -->
+    <div class="kpi-grid" style="margin-bottom:1.5rem;">
+        {% url 'admin_all_classrooms' as url_classrooms %}
+        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="file-text" custom_icon_style="background:rgba(245,158,11,.1);color:#d97706;" label="Assignments" value=total_assignments subtext=total_assignment_submissions|stringformat:"s"|add:" submissions" %}
+
+        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="check-circle-2" custom_icon_style="background:rgba(6,182,212,.1);color:#0891b2;" label="Quizzes" value=total_quizzes subtext=total_quiz_submissions|stringformat:"s"|add:" completions" %}
+
+        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="folder" custom_icon_style="background:rgba(236,72,153,.1);color:#db2777;" label="Study Materials" value=total_materials subtext="Across all classrooms" %}
+
+        {% include "components/admin/kpi_card.html" with icon="calendar-check" custom_icon_style="background:rgba(100,116,139,.1);color:#64748b;" label="Completed Sessions" value=completed_meetings subtext=upcoming_meetings|stringformat:"s"|add:" upcoming" %}
     </div>
 
-    <!-- Tabbed Content -->
-    <div class="admin-tabs">
-        <button class="tab-btn active" onclick="switchTab(event, 'users')"><i data-lucide="users"></i> Users</button>
-        <button class="tab-btn" onclick="switchTab(event, 'meetings')"><i data-lucide="video"></i> Meetings</button>
-        <button class="tab-btn" onclick="switchTab(event, 'cameras')"><i data-lucide="camera"></i> Cameras</button>
-    </div>
-
-    <div id="tab-users" class="tab-content">
-        <div class="table-card">
-            <div class="table-header">
-                <h2>Recent Registered Users</h2>
+    <!-- Active Live Sessions & Activity Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+        
+        <!-- Currently Active Sessions Card -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2 class="admin-card-title">
+                    <i data-lucide="radio" style="color: var(--color-danger); width: 18px; height: 18px;"></i> Active Live Sessions
+                </h2>
+                <a href="{% url 'admin_all_meetings' %}" class="btn-action-sm btn-action-secondary">All Meetings &rarr;</a>
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Type</th>
-                        <th>Joined</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in recent_users %}
-                    <tr>
-                        <td>
-                            <div class="user-pill">
-                                <img src="{{ user.userprofile.get_profile_picture_url }}" alt="">
-                                <div>
-                                    <div style="font-weight: 700; color: var(--color-text-main);">{{ user.get_full_name|default:user.username }}</div>
-                                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ user.email }}</div>
+            
+            <div class="admin-card-body">
+                {% if live_meeting_list %}
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        {% for m in live_meeting_list %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); border-radius: var(--radius-md); border: 1px solid var(--color-border); border-left: 3px solid var(--color-danger);">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.95rem;">{{ m.title }}</div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">
+                                    Teacher: Prof. {{ m.teacher.get_full_name|default:m.teacher.username }} &bull; Classroom: {{ m.classroom.title|default:"Standalone" }}
                                 </div>
                             </div>
-                        </td>
-                        <td>
-                            {% if user.is_superuser %}
-                            <span class="badge badge-admin">Admin</span>
-                            {% elif user.userprofile %}
-                            <span class="badge badge-{{ user.userprofile.user_type }}">
-                                {{ user.userprofile.get_user_type_display }}
-                            </span>
-                            {% else %}
-                            <span class="badge badge-admin">Admin</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ user.date_joined|date:"M d, Y" }}</td>
-                        <td><span style="color: var(--color-success, #10b981); font-weight: 600;">● Active</span></td>
-                        <td><a href="{% url 'profile_view' user.username %}" class="btn-action">View</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="tab-meetings" class="tab-content" style="display: none;">
-        <div class="table-card">
-            <div class="table-header">
-                <h2>Live & Recent Meetings</h2>
+                            <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-danger">Inspect</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon"><i data-lucide="video-off"></i></div>
+                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-weight: 700;">No Active Live Meetings</h4>
+                        <p style="font-size: 0.85rem; margin: 0;">All classrooms are currently offline.</p>
+                    </div>
+                {% endif %}
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Meeting</th>
-                        <th>Teacher</th>
-                        <th>Status</th>
-                        <th>Participants</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for meeting in all_meetings|slice:":10" %}
-                    <tr>
-                        <td>
-                            <div style="font-weight: 700; color: var(--color-text-main);">{{ meeting.title }}</div>
-                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">Code: {{ meeting.meeting_code }}</div>
-                        </td>
-                        <td>{{ meeting.teacher.username }}</td>
-                        <td>
-                            {% if meeting.status == 'live' %}
-                            <span style="color: var(--color-danger, #ef4444); font-weight: 700;">🔴 LIVE</span>
-                            {% else %}
-                            <span style="color: var(--color-text-muted);">{{ meeting.get_status_display }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ meeting.participants.count }}</td>
-                        <td><a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-action">Join</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
-    </div>
 
-    <div id="tab-cameras" class="tab-content" style="display: none;">
-        <div class="table-card">
-            <div class="table-header">
-                <h2>Connected Cameras</h2>
-                <a href="{% url 'admin_dashboard' %}" class="btn-action" style="background: var(--color-primary); color: white; text-decoration: none; border: none;">Manage Cameras</a>
+        <!-- Real Platform Activity Feed -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2 class="admin-card-title">
+                    <i data-lucide="activity" style="color: var(--color-primary); width: 18px; height: 18px;"></i>
+                    Platform Activity Feed
+                    <span style="font-size:.72rem;font-weight:500;color:var(--color-text-muted);margin-left:.5rem;">Latest 5 Events</span>
+                </h2>
+                <a href="{% url 'admin_activity_feed' %}" class="btn-action-sm btn-action-secondary">View All Activity &rarr;</a>
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Camera Name</th>
-                        <th>Address</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for camera in all_cameras %}
-                    <tr>
-                        <td style="font-weight: 700;">{{ camera.name }}</td>
-                        <td style="font-family: monospace;">{{ camera.ip_address }}:{{ camera.port }}</td>
-                        <td>
-                            {% if camera.is_live %}
-                                <span style="color: var(--color-danger, #ef4444); font-weight: 700;">🔴 Live</span>
-                            {% elif camera.is_active %}
-                                <span style="color: var(--color-success, #10b981);">● Active</span>
+
+            {% if activity_feed %}
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;"></th>
+                            <th>Event</th>
+                            <th>User</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in activity_feed %}
+                        <tr>
+                            <td style="padding:.7rem 1rem;">
+                                <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ event.color }}18;color:{{ event.color }};flex-shrink:0;">
+                                    <i data-lucide="{{ event.icon }}" style="width:13px;height:13px;"></i>
+                                </div>
+                            </td>
+                            <td style="max-width:220px;">
+                                <div style="font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-main);" title="{{ event.title }}">{{ event.title }}</div>
+                                <div style="font-size:.7rem;color:var(--color-text-muted);margin-top:.1rem;">{{ event.action }}</div>
+                            </td>
+                            <td>
+                                {% if event.user %}
+                                    <a href="{% url 'admin_user_detail' event.user.id %}" style="color:var(--color-primary);font-weight:600;text-decoration:none;font-size:.8rem;">@{{ event.username }}</a>
+                                {% else %}
+                                    <span style="font-size:.8rem;color:var(--color-text-muted);">@{{ event.username }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:.75rem;color:var(--color-text-muted);white-space:nowrap;">
+                                {{ event.timestamp|date:"M d, H:i" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif recent_users %}
+                <!-- Fallback: show recently joined users if no activity yet -->
+                <div class="admin-card-body">
+                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                        {% for u in recent_users %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                            {% url 'admin_user_detail' u.id as user_url %}
+                            {% include "components/admin/user_avatar.html" with user=u size=30 link=user_url subtext="Joined "|add:u.date_joined|date:"M d, Y" %}
+                            {% if u.is_superuser or u.userprofile.user_type == 'admin' %}
+                                <span class="role-badge role-badge-admin" style="font-size:.68rem;">Admin</span>
+                            {% elif u.userprofile.user_type == 'teacher' %}
+                                <span class="role-badge role-badge-teacher" style="font-size:.68rem;">Teacher</span>
                             {% else %}
-                                <span style="color: var(--color-text-muted);">Offline</span>
+                                <span class="role-badge role-badge-student" style="font-size:.68rem;">Student</span>
                             {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <a href="{% url 'watch_live' camera.id %}" class="btn-action" style="background: var(--color-primary); color: white; text-decoration: none; font-size: 0.75rem; padding: 0.375rem 0.75rem; border: none;">View Feed</a>
-                                <a href="{% url 'admin_dashboard' %}" class="btn-action" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">Config</a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
-                            No cameras configured. <a href="{% url 'admin_dashboard' %}" style="color: var(--color-primary);">Add cameras</a> in Camera Management.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="admin-card-body">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i data-lucide="clock"></i></div>
+                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-weight: 700;">No Activity Yet</h4>
+                        <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0;">Events will appear here as users interact with the platform.</p>
+                    </div>
+                </div>
+            {% endif %}
         </div>
+
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL DRAWER 1: QUICK ADD USER
+     ========================================================= -->
+<div id="addUserModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="user-plus"></i> Add New Platform User</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_create_user' %}">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username *</label>
+                        <input type="text" name="username" class="filter-input" style="width: 100%;" required placeholder="e.g. john_doe">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password *</label>
+                        <input type="password" name="password" class="filter-input" style="width: 100%;" required placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First Name</label>
+                        <input type="text" name="first_name" class="filter-input" style="width: 100%;" placeholder="John">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last Name</label>
+                        <input type="text" name="last_name" class="filter-input" style="width: 100%;" placeholder="Doe">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email Address</label>
+                    <input type="email" name="email" class="filter-input" style="width: 100%;" placeholder="john@example.com">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role Assignment *</label>
+                        <select name="user_type" class="filter-input" style="width: 100%;">
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher / Faculty</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department (Optional)</label>
+                        <input type="text" name="department" class="filter-input" style="width: 100%;" placeholder="Computer Science">
+                    </div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL DRAWER 2: QUICK CREATE COURSE / CLASSROOM
+     ========================================================= -->
+<div id="addCourseModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="book-plus"></i> Create Learning Classroom</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_create_classroom' %}">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Title *</label>
+                    <input type="text" name="title" class="filter-input" style="width: 100%;" required placeholder="e.g. Advanced Computer Science 101">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Class Code *</label>
+                        <input type="text" name="class_code" class="filter-input" style="width: 100%;" placeholder="CS101" required>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Password</label>
+                        <input type="text" name="password" class="filter-input" style="width: 100%;" placeholder="Enter a classroom access password">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign Instructor *</label>
+                    <select name="teacher_id" class="filter-input" style="width: 100%;" required>
+                        <option value="">-- Select Teacher --</option>
+                        {% for u in recent_users %}
+                            <option value="{{ u.id }}">Prof. {{ u.get_full_name|default:u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Description</label>
+                    <textarea name="description" class="filter-input" style="width: 100%; height: 80px;" placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="auto_approve" id="auto_approve" checked style="width: 18px; height: 18px;">
+                    <label for="auto_approve" style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">Auto-Approve Student Enrollment Requests</label>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addCourseModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create Classroom</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-    function switchTab(event, tabId) {
-        document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        
-        document.getElementById('tab-' + tabId).style.display = 'block';
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('active');
-        }
-    }
-
-    function toggleBroadcast() {
-        const modal = document.getElementById('broadcastModal');
-        modal.style.display = 'flex';
-    }
-
-    function closeBroadcastModal() {
-        const modal = document.getElementById('broadcastModal');
-        modal.style.display = 'none';
-        document.getElementById('broadcastForm').reset();
-    }
-
-    async function sendBroadcast(e) {
-        e.preventDefault();
-        const title = document.getElementById('broadcastTitle').value;
-        const message = document.getElementById('broadcastMessage').value;
-        
-        if (!title.trim() || !message.trim()) {
-            alert('Please enter both title and message');
-            return;
-        }
-
-        const btn = e.target.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
-        try {
-            const response = await fetch('/notifications/broadcast/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ title, message })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                if (typeof showToast === 'function') {
-                    showToast('Success', data.message, 'success');
-                } else {
-                    alert(data.message);
-                }
-                closeBroadcastModal();
-            } else {
-                if (typeof showToast === 'function') {
-                    showToast('Error', data.error || 'Failed to send broadcast', 'error');
-                } else {
-                    alert(data.error || 'Failed to send broadcast');
-                }
-            }
-        } catch (error) {
-            console.error('Broadcast error:', error);
-            if (typeof showToast === 'function') {
-                showToast('Error', 'Network error sending broadcast', 'error');
-            } else {
-                alert('Network error sending broadcast');
-            }
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Send Broadcast';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.lucide) lucide.createIcons();
-    });
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
 </script>
 {% endblock %}

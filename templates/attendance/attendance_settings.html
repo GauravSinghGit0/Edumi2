@@ -13,7 +13,7 @@
         </a>
 
         <div class="attendance-table-card" style="padding: var(--space-xl);">
-            <h2 style="margin: 0 0 6px; font-size: var(--font-size-xl, 20px); font-weight: 800; color: var(--color-text-main, #0f172a);">Attendance Settings · {{ classroom.title }}</h2>
+            <h2 style="margin: 0 0 6px; font-size: var(--font-size-xl, 20px); font-weight: 800; color: var(--color-text-main, #000000);">Attendance Settings · {{ classroom.title }}</h2>
             <p style="margin: 0 0 24px; color: var(--color-text-muted, #64748b); font-size: var(--font-size-sm, 14px);">Configure how face recognition attendance works for this classroom.</p>
 
             <form method="post">
@@ -47,12 +47,12 @@
                 <div style="margin-bottom:24px;">
                     <div style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                         <span>Confidence Threshold</span>
-                        <span id="confVal" style="color:var(--color-primary, #667eea); font-weight:800;">{{ att_settings.confidence_threshold }}</span>
+                        <span id="confVal" style="color:var(--color-primary, #8b5cf6); font-weight:800;">{{ att_settings.confidence_threshold }}</span>
                     </div>
                     <div style="font-size:12px; color:var(--color-text-muted, #64748b); margin-bottom:10px;">Minimum face-match confidence to mark attendance (0.4 = lenient, 0.8 = strict)</div>
                     <div class="progress-wrap">
                         <input type="range" name="confidence_threshold" min="0.4" max="0.85" step="0.05"
-                               value="{{ att_settings.confidence_threshold }}" style="flex:1; accent-color:var(--color-primary, #667eea);"
+                               value="{{ att_settings.confidence_threshold }}" style="flex:1; accent-color:var(--color-primary, #8b5cf6);"
                                oninput="document.getElementById('confVal').textContent=this.value">
                     </div>
                 </div>
@@ -61,12 +61,12 @@
                 <div style="margin-bottom:24px;">
                     <div style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                         <span>Required Verified Seconds</span>
-                        <span id="presenceVal" style="color:var(--color-primary, #667eea); font-weight:800;">{{ att_settings.presence_duration_seconds }}s</span>
+                        <span id="presenceVal" style="color:var(--color-primary, #8b5cf6); font-weight:800;">{{ att_settings.presence_duration_seconds }}s</span>
                     </div>
                     <div style="font-size:12px; color:var(--color-text-muted, #64748b); margin-bottom:10px;">Cumulative seconds of verified face presence before marking Present</div>
                     <div class="progress-wrap">
                         <input type="range" name="presence_duration_seconds" min="10" max="120" step="5"
-                               value="{{ att_settings.presence_duration_seconds }}" style="flex:1; accent-color:var(--color-primary, #667eea);"
+                               value="{{ att_settings.presence_duration_seconds }}" style="flex:1; accent-color:var(--color-primary, #8b5cf6);"
                                oninput="document.getElementById('presenceVal').textContent=this.value+'s'">
                     </div>
                 </div>
@@ -75,12 +75,12 @@
                 <div style="margin-bottom:24px;">
                     <div style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                         <span>Late Threshold (minutes)</span>
-                        <span id="lateVal" style="color:var(--color-primary, #667eea); font-weight:800;">{{ att_settings.late_threshold_minutes }}m</span>
+                        <span id="lateVal" style="color:var(--color-primary, #8b5cf6); font-weight:800;">{{ att_settings.late_threshold_minutes }}m</span>
                     </div>
                     <div style="font-size:12px; color:var(--color-text-muted, #64748b); margin-bottom:10px;">Minutes after class start before a student is marked Late instead of Present</div>
                     <div class="progress-wrap">
                         <input type="range" name="late_threshold_minutes" min="0" max="30" step="5"
-                               value="{{ att_settings.late_threshold_minutes }}" style="flex:1; accent-color:var(--color-primary, #667eea);"
+                               value="{{ att_settings.late_threshold_minutes }}" style="flex:1; accent-color:var(--color-primary, #8b5cf6);"
                                oninput="document.getElementById('lateVal').textContent=this.value+'m'">
                     </div>
                 </div>
@@ -89,12 +89,12 @@
                 <div style="margin-bottom:24px;">
                     <div style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                         <span>Recognition Interval (seconds)</span>
-                        <span id="intVal" style="color:var(--color-primary, #667eea); font-weight:800;">{{ att_settings.recognition_interval_seconds }}s</span>
+                        <span id="intVal" style="color:var(--color-primary, #8b5cf6); font-weight:800;">{{ att_settings.recognition_interval_seconds }}s</span>
                     </div>
                     <div style="font-size:12px; color:var(--color-text-muted, #64748b); margin-bottom:10px;">How often to capture a frame for recognition (lower = more accurate, higher = less CPU)</div>
                     <div class="progress-wrap">
                         <input type="range" name="recognition_interval_seconds" min="5" max="60" step="5"
-                               value="{{ att_settings.recognition_interval_seconds }}" style="flex:1; accent-color:var(--color-primary, #667eea);"
+                               value="{{ att_settings.recognition_interval_seconds }}" style="flex:1; accent-color:var(--color-primary, #8b5cf6);"
                                oninput="document.getElementById('intVal').textContent=this.value+'s'">
                     </div>
                 </div>

@@ -15,7 +15,7 @@
         padding-bottom: 0.75rem; 
         border-bottom: 2px solid #e2e8f0;
     }
-    .day-date { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+    .day-date { font-size: 1.25rem; font-weight: 800; color: #111111; }
     .day-count { 
         font-size: 0.8rem; 
         font-weight: 600; 
@@ -39,13 +39,13 @@
     }
     .meeting-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
     
-    .meeting-info h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+    .meeting-info h3 { font-size: 1.1rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem; }
     .meeting-meta { display: flex; gap: 1rem; color: #64748b; font-size: 0.875rem; align-items: center; }
-    .meeting-time { font-weight: 600; color: #4f46e5; }
+    .meeting-time { font-weight: 600; color: #7c3aed; }
     
     .meeting-stats { display: flex; gap: 1.5rem; }
     .stat-item { text-align: center; }
-    .stat-val { display: block; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+    .stat-val { display: block; font-size: 1.1rem; font-weight: 700; color: #111111; }
     .stat-lbl { display: block; font-size: 0.7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
 
     .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
@@ -60,7 +60,7 @@
 
     .btn-view {
         padding: 0.6rem 1.25rem;
-        background: #4f46e5;
+        background: #7c3aed;
         color: white;
         text-decoration: none;
         border-radius: 0.5rem;
@@ -82,7 +82,7 @@
 <div class="history-container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
-            <h1 style="font-size: 1.875rem; font-weight: 800; color: #0f172a;">📋 Attendance History</h1>
+            <h1 style="font-size: 1.875rem; font-weight: 800; color: #000000;">📋 Attendance History</h1>
             <p style="color: #64748b;">Overview of all past meetings across your classrooms</p>
         </div>
         <a href="{% url 'teacher_classrooms' %}" style="color: #64748b; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
@@ -137,7 +137,7 @@
     {% else %}
         <div class="empty-state">
             <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">No attendance logs found</h2>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #111111; margin-bottom: 0.5rem;">No attendance logs found</h2>
             <p style="color: #64748b;">Once you conduct classroom meetings, attendance history will appear here.</p>
         </div>
     {% endif %}

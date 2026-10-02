@@ -21,7 +21,7 @@
                             {{ meeting.scheduled_time|default:meeting.created_at|date:"M d, Y • g:i A" }}
                         </p>
                     </div>
-                    <span style="font-size: 0.6875rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; background: {% if meeting.status == 'live' %}#ef4444{% elif meeting.status == 'scheduled' %}#4f46e5{% else %}#e2e8f0{% endif %}; color: {% if meeting.status == 'live' or meeting.status == 'scheduled' %}white{% else %}#475569{% endif %}; text-transform: uppercase;">
+                    <span style="font-size: 0.6875rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; background: {% if meeting.status == 'live' %}#ef4444{% elif meeting.status == 'scheduled' %}#7c3aed{% else %}#e2e8f0{% endif %}; color: {% if meeting.status == 'live' or meeting.status == 'scheduled' %}white{% else %}#475569{% endif %}; text-transform: uppercase;">
                         {{ meeting.get_status_display }}
                     </span>
                 </div>
@@ -52,7 +52,7 @@
                             {% endif %}
                         {% elif meeting.status == 'scheduled' %}
                             {% if is_teacher %}
-                            <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-meeting-action" style="background: #4f46e5; color: white;">
+                            <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-meeting-action" style="background: #7c3aed; color: white;">
                                 <i data-lucide="play" style="width: 14px; height: 14px;"></i>
                                 Start Session
                             </a>

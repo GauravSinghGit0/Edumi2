@@ -108,7 +108,7 @@ SECURE_HSTS_PRELOAD             = env_bool('SECURE_HSTS_PRELOAD', 'False' if (DE
 SECURE_BROWSER_XSS_FILTER    = True
 SECURE_CONTENT_TYPE_NOSNIFF  = True
 SECURE_REFERRER_POLICY       = 'strict-origin-when-cross-origin'
-X_FRAME_OPTIONS              = 'SAMEORIGIN'
+X_FRAME_OPTIONS              = 'DENY'
 
 # CSRF trusted origins — always include env + sensible defaults
 CSRF_TRUSTED_ORIGINS = env_list(
@@ -511,7 +511,7 @@ COMPRESS_ENABLED  = env_bool('COMPRESS_ENABLED', 'True')
 COMPRESS_URL      = STATIC_URL
 COMPRESS_ROOT     = STATIC_ROOT
 COMPRESS_STORAGE  = 'compressor.storage.CompressorFileStorage'
-COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False' if DEBUG else 'True')
+COMPRESS_OFFLINE  = env_bool('COMPRESS_OFFLINE', 'False')
 COMPRESS_OFFLINE_MANIFEST = 'compressor.json'
 COMPRESS_REBUILD_TIMEOUT = 0 if DEBUG else 300
 

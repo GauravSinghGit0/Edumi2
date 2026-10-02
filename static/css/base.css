@@ -3,10 +3,10 @@
 
 :root {
     /* Legacy color variables for backward compatibility */
-    --primary: var(--color-primary, #667eea);
-    --primary-dark: var(--color-primary-hover, #5568d3);
-    --primary-light: var(--color-primary-light, #818cf8);
-    --secondary: var(--color-secondary, #764ba2);
+    --primary: var(--color-primary, #7c3aed);
+    --primary-dark: var(--color-primary-hover, #6d28d9);
+    --primary-light: var(--color-primary-light, #a78bfa);
+    --secondary: var(--color-secondary, #8b5cf6);
     --success: var(--color-success, #10b981);
     --danger: var(--color-danger, #ef4444);
     --warning: var(--color-warning, #f59e0b);

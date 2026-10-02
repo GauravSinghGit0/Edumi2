@@ -1,0 +1,190 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Platform Activity Feed | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">Platform Activity Feed</span>
+    </div>
+
+    <div class="admin-header">
+        <div>
+            <h1><i data-lucide="activity" style="width:28px;height:28px;vertical-align:middle;margin-right:.5rem;color:var(--color-primary);"></i>Platform Activity Feed</h1>
+            <p class="admin-subtitle">Complete real-time audit trail of all user actions, enrollments, meetings, and submissions across the platform</p>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
+            <div class="kpi-icon indigo" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="activity" style="width:18px;height:18px;"></i></div>
+            <div>
+                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ total_events }}</div>
+                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Total Events</div>
+            </div>
+        </div>
+        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
+            <div class="kpi-icon blue" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
+            <div>
+                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ page_obj.paginator.count }}</div>
+                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Loaded Records</div>
+            </div>
+        </div>
+        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
+            <div class="kpi-icon emerald" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="layers" style="width:18px;height:18px;"></i></div>
+            <div>
+                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ page_obj.paginator.num_pages }}</div>
+                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Total Pages</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2 class="admin-card-title">
+                <i data-lucide="list" style="width:18px;height:18px;color:var(--color-primary);"></i>
+                All Activity Events
+                <span style="font-size:.75rem;font-weight:500;color:var(--color-text-muted);margin-left:.5rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </h2>
+        </div>
+
+        {% if activity_feed %}
+        <div class="admin-table-wrapper">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px;"></th>
+                        <th>Event</th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Timestamp</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in activity_feed %}
+                    <tr>
+                        <td style="padding:.75rem 1rem;">
+                            <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ event.color }}18;color:{{ event.color }};flex-shrink:0;">
+                                <i data-lucide="{{ event.icon }}" style="width:14px;height:14px;"></i>
+                            </div>
+                        </td>
+                        <td style="font-weight:600;max-width:340px;">
+                            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ event.title }}">{{ event.title }}</div>
+                            <div style="font-size:.73rem;color:var(--color-text-muted);font-weight:400;margin-top:.1rem;">{{ event.action }}</div>
+                        </td>
+                        <td>
+                            {% if event.user %}
+                                <a href="{% url 'admin_user_detail' event.user.id %}" style="color:var(--color-primary);font-weight:600;text-decoration:none;font-size:.85rem;">@{{ event.username }}</a>
+                            {% else %}
+                                <span style="color:var(--color-text-muted);font-size:.85rem;">@{{ event.username }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if event.user_role == 'admin' %}
+                                <span class="role-badge role-badge-admin">Admin</span>
+                            {% elif event.user_role == 'teacher' %}
+                                <span class="role-badge role-badge-teacher">Teacher</span>
+                            {% elif event.user_role == 'student' %}
+                                <span class="role-badge role-badge-student">Student</span>
+                            {% else %}
+                                <span class="role-badge" style="background:rgba(100,116,139,.1);color:#64748b;border-color:rgba(100,116,139,.2);">{{ event.user_role|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:.82rem;color:var(--color-text-muted);white-space:nowrap;">
+                            {{ event.timestamp|date:"M d, Y" }}<br>
+                            <span style="font-size:.72rem;">{{ event.timestamp|date:"H:i:s" }}</span>
+                        </td>
+                        <td>
+                            <span style="font-size:.72rem;padding:.2rem .55rem;border-radius:.35rem;background:var(--color-bg-hover);color:var(--color-text-muted);font-family:monospace;">{{ event.source|default:"log" }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:.75rem;">
+            <div style="font-size:.82rem;color:var(--color-text-muted);">
+                Showing <strong>{{ page_obj.start_index }}&#8211;{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> activity events
+            </div>
+            <div style="display:flex;gap:.35rem;align-items:center;">
+                <!-- Prev -->
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}"
+                   style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                   onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                   onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+                </a>
+                {% else %}
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+                </span>
+                {% endif %}
+
+                <!-- Page Numbers -->
+                {% for pg_num in page_obj.paginator.page_range %}
+                    {% if pg_num == page_obj.number %}
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;background:var(--color-primary);color:#fff;font-weight:700;font-size:.82rem;border:1px solid var(--color-primary);">
+                        {{ pg_num }}
+                    </span>
+                    {% elif pg_num >= page_obj.number|add:"-2" and pg_num <= page_obj.number|add:"2" %}
+                    <a href="?page={{ pg_num }}"
+                       style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                       onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                       onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                        {{ pg_num }}
+                    </a>
+                    {% elif pg_num == 1 or pg_num == page_obj.paginator.num_pages %}
+                    <a href="?page={{ pg_num }}"
+                       style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                       onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                       onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                        {{ pg_num }}
+                    </a>
+                    {% elif pg_num == page_obj.number|add:"-3" or pg_num == page_obj.number|add:"3" %}
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--color-text-muted);font-size:.82rem;">…</span>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Next -->
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}"
+                   style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                   onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                   onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+                </a>
+                {% else %}
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+                    <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="admin-card-body">
+            <div class="empty-state">
+                <div class="empty-icon"><i data-lucide="activity"></i></div>
+                <h3>No Activity Recorded Yet</h3>
+                <p>Events will appear here as users interact with the platform.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+{% endblock %}

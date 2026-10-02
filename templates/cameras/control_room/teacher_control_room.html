@@ -134,7 +134,7 @@
     }
     body.dark-mode .controls-bar {
         background: #162032;
-        border-color: #334155;
+        border-color: #222222;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     }
     .controls-left, .controls-right {
@@ -161,7 +161,7 @@
         user-select: none;
     }
     .btn-ctrl-live {
-        background: #4f46e5;
+        background: #7c3aed;
         color: #ffffff;
         border-color: #4338ca;
         box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
@@ -197,20 +197,20 @@
     .btn-ctrl-outline {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        color: #334155;
+        color: #222222;
     }
     .btn-ctrl-outline:hover {
         background: #f1f5f9;
         border-color: #cbd5e1;
-        color: #0f172a;
+        color: #000000;
     }
     body.dark-mode .btn-ctrl-outline {
-        background: #0f172a;
-        border-color: #334155;
+        background: #000000;
+        border-color: #222222;
         color: #cbd5e1;
     }
     body.dark-mode .btn-ctrl-outline:hover {
-        background: #1e293b;
+        background: #111111;
         border-color: #475569;
         color: #ffffff;
     }
@@ -239,8 +239,8 @@
         white-space: nowrap;
     }
     body.dark-mode .ctrl-zoom-group {
-        background: #0f172a;
-        border-color: #334155;
+        background: #000000;
+        border-color: #222222;
     }
     .ctrl-label {
         font-size: 0.75rem;
@@ -263,14 +263,14 @@
         cursor: pointer;
     }
     body.dark-mode .ctrl-slider {
-        background: #334155;
+        background: #222222;
     }
     .ctrl-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 14px;
         height: 14px;
-        background: #6366f1;
+        background: #8b5cf6;
         border-radius: 50%;
         cursor: pointer;
         box-shadow: 0 1px 3px rgba(0,0,0,0.25);
@@ -282,7 +282,7 @@
     .ctrl-zoom-val {
         font-size: 0.8125rem;
         font-weight: 700;
-        color: #0f172a;
+        color: #000000;
         min-width: 32px;
         text-align: right;
         font-variant-numeric: tabular-nums;
@@ -300,7 +300,7 @@
         padding: 0 2rem 0 0.85rem;
         font-size: 0.8125rem;
         font-weight: 600;
-        color: #334155;
+        color: #222222;
         cursor: pointer;
         outline: none;
         appearance: none;
@@ -314,25 +314,25 @@
     .ctrl-select:hover {
         background-color: #f1f5f9;
         border-color: #cbd5e1;
-        color: #0f172a;
+        color: #000000;
     }
     .ctrl-select:focus {
-        border-color: #6366f1;
+        border-color: #8b5cf6;
         outline: none;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
     }
     body.dark-mode .ctrl-select, body.dark-mode select.ctrl-select {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
+        background-color: #000000 !important;
+        border-color: #222222 !important;
         color: #f1f5f9 !important;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     }
     body.dark-mode .ctrl-select:hover {
-        background-color: #1e293b !important;
+        background-color: #111111 !important;
         border-color: #475569 !important;
     }
     body.dark-mode .ctrl-select option {
-        background-color: #0f172a;
+        background-color: #000000;
         color: #f1f5f9;
     }
     .btn-ctrl-square {
@@ -359,16 +359,16 @@
     .btn-ctrl-square:hover {
         background: #f1f5f9;
         border-color: #cbd5e1;
-        color: #0f172a;
+        color: #000000;
         transform: scale(1.02);
     }
     body.dark-mode .btn-ctrl-square {
-        background: #0f172a;
-        border-color: #334155;
+        background: #000000;
+        border-color: #222222;
         color: #cbd5e1;
     }
     body.dark-mode .btn-ctrl-square:hover {
-        background: #1e293b;
+        background: #111111;
         border-color: #475569;
         color: #ffffff;
     }
@@ -508,7 +508,7 @@
         -webkit-appearance: none;
         width: 12px;
         height: 12px;
-        background: #6366f1;
+        background: #8b5cf6;
         border-radius: 50%;
         cursor: pointer;
     }
@@ -624,7 +624,7 @@
             <div style="padding-top:1rem; border-top:1px solid #f1f5f9; margin-top:auto;">
                 <form onsubmit="sendChatMessage(event)" style="display:flex; gap:0.5rem;">
                     <input type="text" id="chatInput" placeholder="Reply to students..." style="flex:1; padding:0.5rem; border:1px solid #e2e8f0; border-radius:0.5rem; font-size:0.875rem; outline:none;">
-                    <button type="submit" style="padding:0.5rem; background:#6366f1; color:white; border:none; border-radius:0.5rem; cursor:pointer;">
+                    <button type="submit" style="padding:0.5rem; background:#8b5cf6; color:white; border:none; border-radius:0.5rem; cursor:pointer;">
                         <i data-lucide="send" style="width:16px; height:16px;"></i>
                     </button>
                 </form>
@@ -673,7 +673,7 @@
                 <button type="button" class="btn-action" style="flex:1; background:#f1f5f9; color:#475569; padding:0.5rem 1rem; font-size:0.875rem; justify-content:center;" onclick="finishPublish(null, true)">
                     Save Draft
                 </button>
-                <button type="submit" class="btn-action" style="flex:1; background:#6366f1; color:white; padding:0.5rem 1rem; font-size:0.875rem; justify-content:center;">
+                <button type="submit" class="btn-action" style="flex:1; background:#8b5cf6; color:white; padding:0.5rem 1rem; font-size:0.875rem; justify-content:center;">
                     Publish Now
                 </button>
                 <button type="button" class="btn-action" style="background:#8b5cf6; color:white; padding:0.5rem; justify-content:center;" title="Edit in Advanced Editor" onclick="redirectToEditor()">
@@ -877,8 +877,8 @@
                 const fsTxt = '<i data-lucide="radio"></i> Live';
                 btn.innerHTML = txt;
                 fsBtn.innerHTML = fsTxt;
-                btn.style.background = '#6366f1';
-                fsBtn.style.background = '#6366f1';
+                btn.style.background = '#8b5cf6';
+                fsBtn.style.background = '#8b5cf6';
                 showNotification(data.message, 'info');
             }
         }
@@ -1240,7 +1240,7 @@
                     
                     // Dynamic color based on connection
                     if (audioSocket && audioSocket.readyState === WebSocket.OPEN) {
-                        canvasCtx.fillStyle = `rgb(99, 102, 241)`; // Indigo
+                        canvasCtx.fillStyle = `rgb(139, 92, 246)`; // Indigo
                     } else {
                         canvasCtx.fillStyle = `rgb(148, 163, 184)`; // Gray
                     }
@@ -1818,8 +1818,8 @@
             <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; font-weight: 700;">
                 ${user} ${isSelf ? '(You)' : ''}
             </div>
-            <div style="background: ${isSelf ? '#6366f1' : '#f1f5f9'}; 
-                        color: ${isSelf ? 'white' : '#1e293b'}; 
+            <div style="background: ${isSelf ? '#8b5cf6' : '#f1f5f9'}; 
+                        color: ${isSelf ? 'white' : '#111111'}; 
                         padding: 0.5rem 0.75rem; 
                         border-radius: 0.75rem; 
                         font-size: 0.875rem; 

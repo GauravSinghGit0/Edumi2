@@ -39,14 +39,14 @@
     }
 
     .breadcrumb-back:hover {
-        color: var(--color-primary, #667eea);
+        color: var(--color-primary, #8b5cf6);
     }
 
     .header-title {
         margin: 0;
         font-size: var(--font-size-2xl, 22px);
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
     }
 
     .header-subtitle {
@@ -69,7 +69,7 @@
     .day-date {
         font-size: var(--font-size-lg, 18px);
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
     }
     
     .day-count { 
@@ -99,13 +99,13 @@
     .meeting-card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-md);
-        border-color: var(--color-primary, #667eea);
+        border-color: var(--color-primary, #8b5cf6);
     }
     
     .meeting-info h3 {
         font-size: var(--font-size-md, 16px);
         font-weight: 700;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
         margin-bottom: 0.25rem;
     }
     
@@ -117,7 +117,7 @@
         align-items: center;
     }
     
-    .meeting-time { font-weight: 700; color: var(--color-primary, #667eea); }
+    .meeting-time { font-weight: 700; color: var(--color-primary, #8b5cf6); }
     
     .meeting-stats { display: flex; gap: 1.5rem; }
     .stat-item { text-align: center; }
@@ -126,7 +126,7 @@
         display: block;
         font-size: var(--font-size-lg, 18px);
         font-weight: 800;
-        color: var(--color-text-main, #0f172a);
+        color: var(--color-text-main, #000000);
     }
     
     .stat-lbl {
@@ -150,7 +150,7 @@
 
     .btn-view {
         padding: 0.6rem 1.25rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #8b5cf6, #764ba2);
         color: white;
         text-decoration: none;
         border-radius: var(--radius-md, 8px);
@@ -239,7 +239,7 @@
     {% else %}
         <div class="empty-state">
             <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-main, #0f172a); margin-bottom: 0.5rem;">No meetings yet</h2>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-main, #000000); margin-bottom: 0.5rem;">No meetings yet</h2>
             <p>Meetings held in this classroom will appear here grouped by day.</p>
         </div>
     {% endif %}

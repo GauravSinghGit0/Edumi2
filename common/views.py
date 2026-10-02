@@ -158,5 +158,11 @@ def telemetry_events_view(request):
         except Exception:
             pass  # Failsafe so DB locks never break telemetry
 
+        try:
+            from .telemetry_cache import increment_telemetry_event_counter
+            increment_telemetry_event_counter(len(logs_to_create))
+        except Exception:
+            pass
+
     return JsonResponse({'status': 'ok', 'processed': len(logs_to_create)})
 

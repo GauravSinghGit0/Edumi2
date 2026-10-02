@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_POST
-from .notification_models import Notification
+from accounts.notification_models import Notification
 
 logger = logging.getLogger(__name__)
 

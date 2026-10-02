@@ -94,8 +94,37 @@ def on_user_saved(sender, instance, created, **kwargs):
             user=instance,
             defaults={'user_type': 'admin' if instance.is_superuser else 'student'}
         )
+        try:
+            from common.activity import log_lms_activity, ACTION_USER_REGISTERED
+            log_lms_activity(instance, ACTION_USER_REGISTERED, title=f"User @{instance.username} registered account")
+        except Exception as e:
+            logger.warning(f"Error logging registration activity: {e}")
+
     user_id = instance.id
     transaction.on_commit(lambda: _broadcast_identity_change(user_id))
+
+
+from django.contrib.auth.signals import user_logged_in, user_logged_out
+
+@receiver(user_logged_in)
+def on_user_logged_in(sender, request, user, **kwargs):
+    """Handler for user authentication logins."""
+    try:
+        from common.activity import log_lms_activity, ACTION_LOGIN
+        log_lms_activity(user, ACTION_LOGIN, title=f"User @{user.username} logged into LMS", request=request)
+    except Exception as e:
+        logger.warning(f"Error logging login activity: {e}")
+
+
+@receiver(user_logged_out)
+def on_user_logged_out(sender, request, user, **kwargs):
+    """Handler for user authentication logouts."""
+    try:
+        if user:
+            from common.activity import log_lms_activity, ACTION_LOGOUT
+            log_lms_activity(user, ACTION_LOGOUT, title=f"User @{user.username} logged out of LMS", request=request)
+    except Exception as e:
+        logger.warning(f"Error logging logout activity: {e}")
 
 
 @receiver(post_save, sender=UserProfile)
@@ -117,3 +146,87 @@ try:
         transaction.on_commit(lambda: _broadcast_identity_change(user_id))
 except Exception:
     pass
+
+
+# LMS Academic Activity Signals (Classrooms, Meetings, Enrollments, Submissions)
+try:
+    from meetings.models import Classroom, Meeting, ClassroomMembership
+
+    @receiver(post_save, sender=Classroom)
+    def on_classroom_saved(sender, instance, created, **kwargs):
+        if created and instance.teacher:
+            try:
+                from common.activity import log_lms_activity, ACTION_TEACHER_CREATED_COURSE
+                log_lms_activity(
+                    instance.teacher,
+                    ACTION_TEACHER_CREATED_COURSE,
+                    title=f"Created course/classroom '{instance.title}'",
+                    metadata={'classroom_id': instance.id, 'class_code': instance.class_code}
+                )
+            except Exception:
+                pass
+
+    @receiver(post_save, sender=Meeting)
+    def on_meeting_saved(sender, instance, created, **kwargs):
+        if created and instance.teacher:
+            try:
+                from common.activity import log_lms_activity, ACTION_TEACHER_CREATED_CLASS
+                log_lms_activity(
+                    instance.teacher,
+                    ACTION_TEACHER_CREATED_CLASS,
+                    title=f"Scheduled class/meeting '{instance.title}'",
+                    metadata={'meeting_id': instance.id, 'meeting_code': instance.meeting_code}
+                )
+            except Exception:
+                pass
+
+    @receiver(post_save, sender=ClassroomMembership)
+    def on_membership_saved(sender, instance, created, **kwargs):
+        if (created or instance.status == 'approved') and instance.student:
+            try:
+                from common.activity import log_lms_activity, ACTION_COURSE_ENROLLED
+                log_lms_activity(
+                    instance.student,
+                    ACTION_COURSE_ENROLLED,
+                    title=f"Enrolled in '{instance.classroom.title}'",
+                    metadata={'classroom_id': instance.classroom_id, 'status': instance.status}
+                )
+            except Exception:
+                pass
+except Exception:
+    pass
+
+
+try:
+    from assignments.models import AssignmentSubmission, QuizSubmission
+
+    @receiver(post_save, sender=AssignmentSubmission)
+    def on_assignment_submission_saved(sender, instance, created, **kwargs):
+        if created and instance.student:
+            try:
+                from common.activity import log_lms_activity, ACTION_ASSIGNMENT_SUBMITTED
+                log_lms_activity(
+                    instance.student,
+                    ACTION_ASSIGNMENT_SUBMITTED,
+                    title=f"Submitted assignment '{instance.assignment.title}'",
+                    metadata={'assignment_id': instance.assignment_id}
+                )
+            except Exception:
+                pass
+
+    @receiver(post_save, sender=QuizSubmission)
+    def on_quiz_submission_saved(sender, instance, created, **kwargs):
+        if created and instance.student:
+            try:
+                from common.activity import log_lms_activity, ACTION_QUIZ_COMPLETED
+                log_lms_activity(
+                    instance.student,
+                    ACTION_QUIZ_COMPLETED,
+                    title=f"Completed quiz '{instance.quiz.title}'",
+                    metadata={'quiz_id': instance.quiz_id, 'marks': instance.marks_obtained}
+                )
+            except Exception:
+                pass
+except Exception:
+    pass
+

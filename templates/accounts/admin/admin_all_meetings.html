@@ -1,89 +1,185 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}All Meetings{% endblock %}
+{% block page_title %}Live & Scheduled Meetings | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="admin-container" style="max-width: 1400px; margin: 30px auto; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h2 style="color: var(--color-text-main); margin-bottom: 5px; font-weight: 800;">🎥 All Meetings</h2>
-            <p style="color: var(--color-text-muted); margin: 0;">Total: {{ total_count }} meetings</p>
-        </div>
-        <a href="{% url 'admin_panel' %}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem; background: var(--color-bg-hover); color: var(--color-text-main); text-decoration: none; border-radius: var(--radius-md, 0.5rem); font-weight: 600; font-size: 0.875rem; border: 1px solid var(--color-border); transition: all 0.2s ease;">
-            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Admin Panel
-        </a>
+<div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    <div class="admin-breadcrumbs">
+        <a href="{% url 'admin_panel' %}">Home</a>
+        <span class="separator">/</span>
+        <span class="current">Meetings & Attendance</span>
     </div>
-    
-    <div style="background: var(--color-bg-card); border-radius: var(--radius-xl, 1rem); padding: 25px; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead>
-                <tr style="background: var(--color-bg-hover); border-bottom: 1px solid var(--color-border);">
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Title</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Teacher</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Classroom</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Meeting Code</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Scheduled Time</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Status</th>
-                    <th style="padding: 15px; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;">Participants</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for meeting in meetings %}
-                    <tr style="border-bottom: 1px solid var(--color-border);">
-                        <td style="padding: 15px; color: var(--color-text-main); font-weight: 600;">
-                            {{ meeting.title }}
+
+    <div class="admin-header">
+        <div>
+            <h1>Live Meetings & Attendance</h1>
+            <p class="admin-subtitle">Monitor virtual video sessions, attendance rosters, and technical metrics</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="openModal('scheduleMeetingModal')" class="btn-action btn-action-primary">
+                <i data-lucide="calendar-plus"></i> Schedule Session
+            </button>
+            <a href="{% url 'admin_live_meetings' %}" class="btn-action btn-action-danger">
+                <i data-lucide="radio"></i> Live Monitor
+            </a>
+        </div>
+    </div>
+
+    {% if meetings %}
+    <div class="admin-card">
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Meeting Title</th>
+                        <th>Host Teacher</th>
+                        <th>Classroom</th>
+                        <th>Status</th>
+                        <th>Scheduled Time</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in meetings %}
+                    <tr>
+                        <td>
+                            <strong style="font-size: 0.95rem;">
+                                <a href="{% url 'admin_meeting_detail' m.id %}"
+                                    style="color: inherit; text-decoration: none;">{{ m.title }}</a>
+                            </strong>
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">Code: {{ m.meeting_code }}
+                            </div>
                         </td>
-                        <td style="padding: 15px;">
-                            <a href="{% url 'profile_view' meeting.teacher.username %}" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">
-                                {{ meeting.teacher.username }}
+                        <td>
+                            <a href="{% url 'admin_teacher_detail' m.teacher.id %}"
+                                style="color: inherit; text-decoration: underline; font-size: 0.9rem;">
+                                {{ m.teacher.get_full_name|default:m.teacher.username }}
                             </a>
                         </td>
-                        <td style="padding: 15px; color: var(--color-text-muted);">
-                            {% if meeting.classroom %}
-                                <a href="{% url 'classroom_detail' meeting.classroom.id %}" style="color: var(--color-primary); text-decoration: none;">
-                                    {{ meeting.classroom.title }}
-                                </a>
+                        <td>
+                            {% if m.classroom %}
+                            <a href="{% url 'admin_classroom_detail' m.classroom.id %}"
+                                style="color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 0.85rem;">
+                                {{ m.classroom.title }}
+                            </a>
                             {% else %}
-                                -
+                            <span style="color: var(--color-text-muted); font-size: 0.85rem;">Standalone Session</span>
                             {% endif %}
                         </td>
-                        <td style="padding: 15px; color: var(--color-text-muted); font-family: monospace;">
-                            {{ meeting.meeting_code }}
+                        <td>
+                            {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
                         </td>
-                        <td style="padding: 15px; color: var(--color-text-muted); font-size: 14px;">
-                            {{ meeting.scheduled_time|date:"M d, Y g:i A" }}
+                        <td style="font-size: 0.85rem; color: var(--color-text-secondary);">
+                            {{ m.scheduled_time|date:"M d, Y H:i" }}
                         </td>
-                        <td style="padding: 15px;">
-                            {% if meeting.status == 'live' %}
-                                <span style="padding: 4px 12px; background: rgba(239, 68, 68, 0.15); color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 15px; font-size: 12px; font-weight: 600;">🔴 Live</span>
-                            {% elif meeting.status == 'ended' %}
-                                <span style="padding: 4px 12px; background: var(--color-bg-hover); color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: 15px; font-size: 12px; font-weight: 600;">Ended</span>
-                            {% elif meeting.status == 'scheduled' %}
-                                <span style="padding: 4px 12px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 15px; font-size: 12px; font-weight: 600;">Scheduled</span>
-                            {% else %}
-                                <span style="padding: 4px 12px; background: rgba(245, 158, 11, 0.15); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 15px; font-size: 12px; font-weight: 600;">{{ meeting.status }}</span>
+                        <td style="text-align: right;">
+                            <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-primary">
+                                Attendance Detail &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="admin-card">
+        <div class="empty-state">
+            <div class="empty-icon"><i data-lucide="video-off"></i></div>
+            <h3>No Sessions Found</h3>
+            <p>No live or past video meetings recorded in the system.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- =========================================================
+     MODAL DRAWER: SCHEDULE MEETING
+     ========================================================= -->
+<div id="scheduleMeetingModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="calendar-plus"></i> Schedule Virtual Live Session</h3>
+            <button type="button" class="admin-modal-close"
+                onclick="closeModal('scheduleMeetingModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_schedule_meeting' %}">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Session
+                        Title *</label>
+                    <input type="text" name="title" class="filter-input" style="width: 100%;" required
+                        placeholder="e.g. Weekly CS101 Live Lecture">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign
+                            Classroom</label>
+                        <select name="classroom_id" class="filter-input" style="width: 100%;">
+                            <option value="">-- Standalone Session --</option>
+                            {% for m in meetings %}
+                            {% if m.classroom %}
+                            <option value="{{ m.classroom.id }}">{{ m.classroom.title }}</option>
                             {% endif %}
-                        </td>
-                        <td style="padding: 15px; color: var(--color-text-muted);">
-                            {{ meeting.participants.count }}
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="7" style="padding: 40px; text-align: center; color: var(--color-text-muted);">
-                            No meetings found
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Host
+                            Instructor *</label>
+                        <select name="teacher_id" class="filter-input" style="width: 100%;" required>
+                            <option value="">-- Select Host Teacher --</option>
+                            {% for m in meetings %}
+                            <option value="{{ m.teacher.id }}">Prof. {{
+                                m.teacher.get_full_name|default:m.teacher.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Scheduled
+                            Date & Time</label>
+                        <input type="datetime-local" name="scheduled_time" class="filter-input" style="width: 100%;">
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Duration
+                            (Minutes)</label>
+                        <input type="number" name="duration_minutes" class="filter-input" style="width: 100%;"
+                            value="60" min="15" max="300">
+                    </div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary"
+                    onclick="closeModal('scheduleMeetingModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Schedule
+                    Session</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.lucide) lucide.createIcons();
-    });
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
 </script>
 {% endblock %}

@@ -1,0 +1,25 @@
+{% if status == 'active' or status == 'published' or status == 'approved' or status == 'present' %}
+    <span class="status-pill status-active" {% if custom_style %}style="{{ custom_style }}"{% endif %}>
+        <span class="status-dot"></span> {{ label|default:status|title }}
+    </span>
+{% elif status == 'pending' or status == 'scheduled' %}
+    <span class="status-pill" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.3); {% if custom_style %}{{ custom_style }}{% endif %}">
+        <span class="status-dot"></span> {{ label|default:status|title }}
+    </span>
+{% elif status == 'suspended' or status == 'inactive' or status == 'rejected' or status == 'denied' or status == 'late' or status == 'cancelled' %}
+    <span class="status-pill status-suspended" {% if custom_style %}style="{{ custom_style }}"{% endif %}>
+        <span class="status-dot"></span> {{ label|default:status|title }}
+    </span>
+{% elif status == 'live' %}
+    <span class="status-pill" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); {% if custom_style %}{{ custom_style }}{% endif %}">
+        <span class="status-dot" style="animation: pulse 1.5s infinite; background: #ef4444;"></span> {{ label|default:'LIVE NOW' }}
+    </span>
+{% elif status == 'ended' or status == 'left' or status == 'removed' %}
+    <span class="status-pill" style="background: rgba(100, 116, 139, 0.1); color: #64748b; border-color: rgba(100, 116, 139, 0.2); {% if custom_style %}{{ custom_style }}{% endif %}">
+        <span class="status-dot"></span> {{ label|default:status|title }}
+    </span>
+{% else %}
+    <span class="status-pill" {% if custom_style %}style="{{ custom_style }}"{% endif %}>
+        {{ label|default:status|title }}
+    </span>
+{% endif %}
