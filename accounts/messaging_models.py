@@ -37,26 +37,43 @@ class Conversation(models.Model):
                 pass
             return "Classroom Chat"
         if current_user:
-            other = self.get_other_user(current_user)
+            try:
+                other = self.get_other_user(current_user)
+            except Exception:
+                other = None
         else:
-            other = self.participants.first()
+            try:
+                other = self.participants.first()
+            except Exception:
+                other = None
         if other:
             profile = getattr(other, 'userprofile', None)
             if profile and getattr(profile, 'display_name', None):
                 return profile.display_name
             return other.get_full_name() or other.username
-        return "Deleted User"
+        return "Direct Message"
     
     def get_last_message(self):
         """Get the most recent message"""
-        return self.messages.order_by('-created_at').first()
+        try:
+            return self.messages.order_by('-created_at').first()
+        except Exception:
+            return None
     
     def __str__(self):
         if self.classroom_id:
-            return f"Classroom Chat: {self.classroom.title}"
-        users = list(self.participants.all()[:2])
-        if len(users) == 2:
-            return f"{users[0].username} - {users[1].username}"
+            try:
+                if self.classroom:
+                    return f"Classroom Chat: {self.classroom.title}"
+            except Exception:
+                pass
+            return f"Classroom Chat ({self.classroom_id})"
+        try:
+            users = list(self.participants.all()[:2])
+            if len(users) == 2:
+                return f"{users[0].username} - {users[1].username}"
+        except Exception:
+            pass
         return f"Conversation {self.id}"
 
 from common.encryption import EncryptedTextField

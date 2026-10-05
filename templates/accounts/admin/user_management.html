@@ -188,6 +188,10 @@
                                             {% endif %}
                                         </button>
                                     </form>
+                                    <a href="{% url 'delete_user' item.user.id %}" class="admin-dropdown-item danger"
+                                       onclick="return confirm('PERMANENTLY DELETE user @{{ item.user.username }}? This action cannot be undone.');">
+                                        <i data-lucide="trash-2"></i> Delete Account
+                                    </a>
                                     {% endif %}
                                 </div>
                             </div>

@@ -6,32 +6,34 @@
 {% block content %}
 <div class="logs-container">
     <div class="page-header">
-        <h1>📋 Head Count Logs</h1>
+        <h1><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Head Count Logs</h1>
         <div class="header-actions">
-            <a href="{% url 'head_count_dashboard' %}" class="btn btn-secondary">← Dashboard</a>
-            <a href="{% url 'export_head_count_csv' %}?{{ request.GET.urlencode }}" class="btn btn-primary">📥 Export CSV</a>
+            <a href="{% url 'head_count_dashboard' %}" class="btn btn-secondary">&larr; Dashboard</a>
+            <a href="{% url 'export_head_count_csv' %}?{{ request.GET.urlencode }}" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
+            </a>
         </div>
     </div>
 
     <!-- Statistics Summary -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon">📊</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
             <div class="stat-value">{{ stats.total_records|default:0 }}</div>
             <div class="stat-label">Total Records</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">👥</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div class="stat-value">{{ stats.avg_head_count|floatformat:1|default:0 }}</div>
             <div class="stat-label">Avg Head Count</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📈</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
             <div class="stat-value">{{ stats.max_head_count|default:0 }}</div>
             <div class="stat-label">Max Count</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📉</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
             <div class="stat-value">{{ stats.min_head_count|default:0 }}</div>
             <div class="stat-label">Min Count</div>
         </div>
@@ -39,7 +41,7 @@
 
     <!-- Filters -->
     <div class="filter-section">
-        <h3>🔍 Filter Logs</h3>
+        <h3><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Filter Logs</h3>
         <form method="GET" class="filter-form">
             <div class="filter-row">
                 <div class="filter-group">

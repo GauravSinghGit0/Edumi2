@@ -49,9 +49,6 @@
                             {{ classroom.title }}
                         </a>
                         <div class="gclass-subtitle">
-                            <span class="gclass-code-badge" onclick="copyClassCode('{{ classroom.class_code }}', event)" title="Click to copy class code">
-                                <i data-lucide="copy" style="width: 12px; height: 12px;"></i> {{ classroom.class_code }}
-                            </span>
                             <span class="gclass-sub-text">
                                 {% if classroom.teacher.userprofile %}{{ classroom.teacher.userprofile.get_display_name }}{% else %}{{ classroom.teacher.get_full_name|default:classroom.teacher.username }}{% endif %}
                             </span>
@@ -99,7 +96,7 @@
             <div class="gclass-body">
                 <div class="gclass-student-info">
                     <p class="gclass-desc">
-                        {{ classroom.description|default:"Access class announcements, study notes, and join interactive live sessions."|truncatechars:90 }}
+                        {% if classroom.description and not "pass_" in classroom.description %}{{ classroom.description|truncatechars:90 }}{% else %}Access class announcements, study notes, and interactive live sessions.{% endif %}
                     </p>
                 </div>
             </div>
@@ -107,13 +104,12 @@
             <!-- Card Footer -->
             <div class="gclass-footer">
                 <div class="gclass-footer-btns">
+                    <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-btn-open">
+                        Open
+                    </a>
                     {% if classroom.has_active_meeting %}
                     <a href="{% url 'join_meeting' classroom.get_active_meeting.meeting_code %}" class="gclass-btn-live">
                         <i data-lucide="video"></i> Join Live
-                    </a>
-                    {% else %}
-                    <a href="{% url 'classroom_detail' classroom.id %}" class="gclass-btn-open">
-                        Open
                     </a>
                     {% endif %}
                 </div>

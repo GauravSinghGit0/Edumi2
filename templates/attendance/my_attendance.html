@@ -84,7 +84,7 @@ tbody tr:hover { background: rgba(139, 92, 246,.04); }
     <!-- Face registration CTA if not registered -->
     {% if not request.user.face_profile %}
     <div class="cta-face">
-        <p>🔒 <strong>Register your face</strong> to enable automatic attendance tracking during online classes.</p>
+        <p><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <strong>Register your face</strong> to enable automatic attendance tracking during online classes.</p>
         <a href="{% url 'face_setup' %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
             Register Face
@@ -159,9 +159,9 @@ tbody tr:hover { background: rgba(139, 92, 246,.04); }
                         <td>{{ rec.meeting.title }}</td>
                         <td>
                             <span class="badge badge-{{ rec.status }}">
-                                {% if rec.status == 'present' %}✓ Present
-                                {% elif rec.status == 'absent' %}✗ Absent
-                                {% elif rec.status == 'late' %}⏰ Late
+                                {% if rec.status == 'present' %}Present
+                                {% elif rec.status == 'absent' %}Absent
+                                {% elif rec.status == 'late' %}Late
                                 {% else %}Partial{% endif %}
                             </span>
                         </td>

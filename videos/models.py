@@ -49,6 +49,7 @@ class Video(models.Model):
     
     is_processed = models.BooleanField(default=False)
     is_chunked = models.BooleanField(default=False)
+    hls_master_playlist = models.FileField(upload_to='videos/hls/', blank=True, null=True)
     
     class Meta:
         ordering = ['-uploaded_at']
@@ -69,7 +70,10 @@ class VideoQuality(models.Model):
         max_length=20, 
         choices=Video.VIDEO_QUALITY_CHOICES
     )
-    file = models.FileField(upload_to=video_quality_upload_path)
+    file = models.FileField(upload_to=video_quality_upload_path, blank=True, null=True)
+    hls_playlist = models.FileField(upload_to='videos/hls/', blank=True, null=True)
+    codec = models.CharField(max_length=20, default='h265')
+    bitrate = models.PositiveIntegerField(blank=True, null=True)
     file_size = models.PositiveBigIntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     

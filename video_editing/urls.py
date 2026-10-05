@@ -1,10 +1,11 @@
 from django.urls import path
-
+from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
     # Projects
     path("", views.project_list, name="project_list"),
+    path("projects/", lambda request: redirect("project_list", permanent=True)),
     path("upload/", views.project_list, name="project_upload"),  # kept for back-compat
     path("chunked-upload/", views.chunked_upload_view, name="chunked_upload"),
     path("project/<int:pk>/", views.project_detail, name="project_detail"),

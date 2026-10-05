@@ -16,5 +16,9 @@ from videos.views_logic import (
     delete_video,
     stream_video_chunk,
     stream_quality_video,
+    stream_hls_master,
+    stream_hls_variant,
+    stream_hls_segment,
     like_video,
 )
+

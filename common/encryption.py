@@ -55,26 +55,46 @@ def encrypt_message_content(plain_text: str) -> str:
 def decrypt_message_content(cipher_text: str) -> str:
     """
     Decrypts encrypted ciphertext.
-    If text is unencrypted (legacy plain text) or decryption fails, returns original text gracefully.
+    If text is unencrypted (legacy plain text), returns original text.
+    If decryption fails under current key and fallback keys, returns a clean user-friendly placeholder.
     """
     if not cipher_text:
         return cipher_text
 
     if not cipher_text.startswith(_PREFIX):
-        # Legacy plain text message
+        # Plain text message
         return cipher_text
 
     token = cipher_text[len(_PREFIX):]
+    
+    # 1. Primary cipher attempt
     try:
         cipher = get_cipher()
         decrypted_bytes = cipher.decrypt(token.encode('utf-8'))
         return decrypted_bytes.decode('utf-8')
     except InvalidToken:
-        logger.warning("Decryption token invalid or corrupted; returning raw ciphertext.")
-        return cipher_text
+        pass
     except Exception as e:
-        logger.error(f"Decryption failed: {e}")
-        return cipher_text
+        logger.error(f"Primary decryption failed: {e}")
+
+    # 2. Fallback key attempts (for key rotation or alternate derivation)
+    try:
+        secret_bytes = settings.SECRET_KEY.encode('utf-8')
+        fallback_keys = [
+            base64.urlsafe_b64encode(hashlib.sha256(secret_bytes).digest()),
+            base64.urlsafe_b64encode(secret_bytes.ljust(32)[:32]),
+        ]
+        for f_key in fallback_keys:
+            try:
+                decrypted_bytes = Fernet(f_key).decrypt(token.encode('utf-8'))
+                return decrypted_bytes.decode('utf-8')
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    logger.warning("Decryption token invalid or corrupted; returning sanitized placeholder.")
+    return "[Encrypted Message]"
 
 
 from django.db import models
@@ -99,7 +119,11 @@ class EncryptedTextField(models.TextField):
         return value
 
     def get_prep_value(self, value):
-        if value is None:
+        value = super().get_prep_value(value)
+        if value is None or value == "":
             return value
-        return encrypt_message_content(str(value))
+        val_str = str(value)
+        if val_str.startswith(_PREFIX) or val_str == "[Encrypted Message]":
+            return val_str
+        return encrypt_message_content(val_str)
 

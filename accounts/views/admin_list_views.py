@@ -90,12 +90,12 @@ def admin_all_classrooms(request):
     status_filter = request.GET.get('status', 'all').lower()
 
     classrooms_qs = Classroom.objects.select_related('teacher', 'teacher__userprofile').annotate(
-        approved_students=Count('memberships', filter=Q(memberships__status='approved')),
-        pending_students=Count('memberships', filter=Q(memberships__status='pending')),
-        meetings_count=Count('meetings'),
-        assignments_count=Count('assignments'),
-        quizzes_count=Count('quizzes'),
-        materials_count=Count('study_materials'),
+        approved_students=Count('memberships', filter=Q(memberships__status='approved'), distinct=True),
+        pending_students=Count('memberships', filter=Q(memberships__status='pending'), distinct=True),
+        meetings_count=Count('meetings', distinct=True),
+        assignments_count=Count('assignments', distinct=True),
+        quizzes_count=Count('quizzes', distinct=True),
+        materials_count=Count('study_materials', distinct=True),
     ).order_by('-created_at')
 
     if status_filter == 'active':
@@ -153,8 +153,17 @@ def admin_all_meetings(request):
     search_query = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', 'all').lower()
 
+    now = timezone.now()
+
+    # Auto-clean any stale live meetings
+    for m in Meeting.objects.filter(status='live'):
+        if m.is_expired():
+            m.status = 'ended'
+            m.ended_at = now
+            m.save(update_fields=['status', 'ended_at'])
+
     meetings_qs = Meeting.objects.select_related('teacher', 'teacher__userprofile', 'classroom').annotate(
-        attendees_count=Count('participants')
+        attendees_count=Count('participants', distinct=True)
     ).order_by('-scheduled_time')
 
     if status_filter in ['scheduled', 'live', 'ended', 'cancelled']:

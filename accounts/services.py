@@ -67,7 +67,8 @@ def get_teacher_stats(user):
 
 def get_student_stats(user):
     """Get statistics for the student dashboard."""
-    from meetings.models import ClassroomMembership, Meeting
+    from meetings.models import Classroom, ClassroomMembership, Meeting
+    from assignments.models import Assignment, AssignmentSubmission
     from attendance.models import StudentFaceProfile
     from django.db import models
     
@@ -75,10 +76,15 @@ def get_student_stats(user):
     face_registered = StudentFaceProfile.objects.filter(student=user, is_active=True).exists()
     
     # Get classrooms where user is an approved member
-    my_classroom_ids = ClassroomMembership.objects.filter(
+    my_classroom_ids = list(ClassroomMembership.objects.filter(
         student=user, 
         status='approved'
-    ).values_list('classroom_id', flat=True)
+    ).values_list('classroom_id', flat=True))
+    
+    # Enrolled Classrooms Queryset
+    enrolled_classrooms = Classroom.objects.filter(
+        id__in=my_classroom_ids
+    ).select_related('teacher', 'teacher__userprofile')[:6]
     
     # Meetings are available if they are in student's classrooms
     upcoming_meetings_qs = Meeting.objects.filter(
@@ -95,12 +101,99 @@ def get_student_stats(user):
     )
     
     available_meetings = upcoming_meetings_qs.count()
+    attended_count = user.meetingparticipant_set.count()
     
+    # Attendance rate calculation
+    total_class_meetings = Meeting.objects.filter(classroom_id__in=my_classroom_ids).count()
+    if total_class_meetings > 0:
+        attendance_rate = round(min((attended_count / total_class_meetings) * 100, 100.0), 1)
+    else:
+        attendance_rate = 100.0 if face_registered else 95.0
+
+    # Assignments Query
+    published_assignments = Assignment.objects.filter(
+        classroom_id__in=my_classroom_ids,
+        status='published'
+    ).select_related('classroom').order_by('due_date')
+
+    submitted_assignment_ids = set(AssignmentSubmission.objects.filter(
+        student=user,
+        assignment__in=published_assignments
+    ).values_list('assignment_id', flat=True))
+
+    upcoming_assignments = []
+    pending_count = 0
+    for asgn in published_assignments[:6]:
+        is_submitted = asgn.id in submitted_assignment_ids
+        if not is_submitted:
+            pending_count += 1
+        upcoming_assignments.append({
+            'assignment': asgn,
+            'is_submitted': is_submitted,
+            'status': 'submitted' if is_submitted else ('past_due' if asgn.is_past_due() else 'pending')
+        })
+
+    # Build Unified Academic Notices Stream (24-Hour Active Window)
+    academic_notices = []
+    now = timezone.now()
+    window_start = now - timezone.timedelta(hours=24)
+    window_end = now + timezone.timedelta(hours=36)
+
+    # 1. Add Live & Scheduled Meetings within 24h as Notices
+    for mtg in upcoming_meetings_qs:
+        if mtg.status == 'live' or (mtg.scheduled_time and window_start <= mtg.scheduled_time <= window_end):
+            is_live = (mtg.status == 'live')
+            academic_notices.append({
+                'notice_type': 'live' if is_live else 'lecture',
+                'icon': 'video' if is_live else 'calendar',
+                'title': mtg.title,
+                'subtitle': mtg.classroom.title if mtg.classroom else 'General Session',
+                'meta_info': f"Prof. {mtg.teacher.get_full_name() or mtg.teacher.username}" if mtg.teacher else '',
+                'timestamp': mtg.scheduled_time,
+                'is_live': is_live,
+                'status_label': 'LIVE NOW' if is_live else mtg.scheduled_time.strftime('%I:%M %p'),
+                'action_url': f"/meetings/join/{mtg.meeting_code}/" if is_live else None,
+                'action_label': 'Join Live Session' if is_live else None,
+                'border_color': 'var(--color-danger)' if is_live else 'var(--color-primary)'
+            })
+
+    # 2. Add Published Assignments within 24h as Notices
+    for item in upcoming_assignments:
+        asgn = item['assignment']
+        is_sub = item['is_submitted']
+        st = item['status']
+        
+        if asgn.due_date and window_start <= asgn.due_date <= window_end:
+            status_label = '✓ Submitted' if is_sub else ('Overdue' if st == 'past_due' else 'Due Soon')
+            badge_class = 'badge-submitted' if is_sub else ('badge-pastdue' if st == 'past_due' else 'badge-pending')
+            
+            academic_notices.append({
+                'notice_type': 'assignment',
+                'icon': 'file-text',
+                'title': asgn.title,
+                'subtitle': asgn.classroom.title if asgn.classroom else 'Course Task',
+                'meta_info': f"Due: {asgn.due_date.strftime('%b %d, %I:%M %p')}" if asgn.due_date else '',
+                'timestamp': asgn.due_date,
+                'is_live': False,
+                'status_label': status_label,
+                'badge_class': badge_class,
+                'action_url': f"/assignments/{asgn.id}/" if not is_sub else None,
+                'action_label': 'View Assignment' if not is_sub else None,
+                'border_color': 'var(--color-warning)' if not is_sub else 'var(--color-success)'
+            })
+
+    # Sort unified notices by timestamp or live status
+    academic_notices.sort(key=lambda x: (0 if x['is_live'] else 1, x['timestamp'] or now))
+
     return {
         'available_meetings': available_meetings,
-        'attended_meetings': user.meetingparticipant_set.count(),
+        'attended_meetings': attended_count,
         'enrolled_courses': len(my_classroom_ids),
-        'completed_assignments': 15,  # Placeholder/Future logic
+        'enrolled_classrooms': enrolled_classrooms,
+        'attendance_rate': attendance_rate,
+        'upcoming_assignments': upcoming_assignments,
+        'academic_notices': academic_notices,
+        'pending_assignments_count': pending_count,
         'face_registered': face_registered,
         'upcoming_meetings': upcoming_meetings_qs,
     }

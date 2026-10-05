@@ -11,11 +11,14 @@ from meetings.views import (
     material_detail_api, digital_library_view,
 )
 
+from django.shortcuts import redirect
+
 urlpatterns = [
     path('api/classrooms/',                                      api_classrooms,                name='api_classrooms'),
     path('classroom/create/',                                    create_classroom,              name='create_classroom'),
     path('classroom/teacher/',                                   teacher_classrooms,            name='teacher_classrooms'),
     path('classroom/student/',                                   student_classrooms,            name='student_classrooms'),
+    path('student/classrooms/',                                  lambda request: redirect('student_classrooms', permanent=True)),
     path('classroom/<int:classroom_id>/',                        classroom_detail,              name='classroom_detail'),
     path('classroom/join/',                                      join_classroom_request,        name='join_classroom_request'),
     path('classroom/approve/<int:membership_id>/',               approve_join_request,          name='approve_join_request'),

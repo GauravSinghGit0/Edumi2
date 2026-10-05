@@ -4,7 +4,7 @@
 {% endcomment %}
 
 {% if user.is_authenticated %}
-    {% if user.is_superuser %}
+    {% if user.is_superuser or user.userprofile.user_type == 'admin' %}
         <!-- Executive Control Center -->
         <div class="sidebar-nav-section">
             <div class="sidebar-nav-title">Executive Control</div>

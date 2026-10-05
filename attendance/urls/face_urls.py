@@ -5,7 +5,10 @@ from attendance.views import (
     detect_face, face_registration_status, update_profile_info,
 )
 
+from django.shortcuts import redirect
+
 urlpatterns = [
+    path('setup/',                lambda request: redirect('face_setup', permanent=True)),
     path('face/setup/',           face_setup,               name='face_setup'),
     path('face/upload/',          upload_face_photo,         name='upload_face_photo'),
     path('face/capture/',         capture_face_photo,        name='capture_face_photo'),

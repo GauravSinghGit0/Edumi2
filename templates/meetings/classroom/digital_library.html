@@ -42,42 +42,11 @@
             <a href="{% url 'digital_library' %}?type=notes{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'notes' %}active{% endif %}">
                 <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Notes
             </a>
-            <a href="{% url 'digital_library' %}?type=video{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'video' %}active{% endif %}">
-                <i data-lucide="video" style="width: 14px; height: 14px;"></i> Videos
-            </a>
             <a href="{% url 'digital_library' %}?bookmarked=true{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if bookmarks_only %}active{% endif %}">
                 <i data-lucide="bookmark" style="width: 14px; height: 14px;"></i> Bookmarked
             </a>
         </div>
     </div>
-
-    <!-- Classroom Filter Pills -->
-    {% if classrooms %}
-    <div class="classroom-filter-bar">
-        <div class="classroom-filter-label">
-            <i data-lucide="graduation-cap" style="width: 15px; height: 15px;"></i>
-            <span>Classroom:</span>
-        </div>
-        <div class="classroom-pills-scroll">
-            <a href="{% url 'digital_library' %}{% if current_type %}?type={{ current_type }}{% endif %}{% if current_query %}&q={{ current_query }}{% endif %}{% if bookmarks_only %}&bookmarked=true{% endif %}"
-               class="class-pill {% if not current_classroom %}active{% endif %}">
-                <i data-lucide="layout-grid" style="width: 14px; height: 14px;"></i>
-                <span>All Classes</span>
-                <span class="class-pill-count">{{ total_count }}</span>
-            </a>
-            {% for c in classrooms %}
-            <a href="{% url 'digital_library' %}?classroom={{ c.id }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_query %}&q={{ current_query }}{% endif %}{% if bookmarks_only %}&bookmarked=true{% endif %}"
-               class="class-pill {% if current_classroom == c.id|stringformat:'i' %}active{% endif %}">
-                <i data-lucide="book-marked" style="width: 14px; height: 14px;"></i>
-                <span>{{ c.title }}</span>
-                {% if c.class_code %}
-                <span class="class-pill-code">{{ c.class_code }}</span>
-                {% endif %}
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Materials Grid -->
     {% if materials %}

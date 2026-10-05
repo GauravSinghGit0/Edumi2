@@ -94,8 +94,7 @@
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" class="admin-checkbox card-checkbox" value="{{ t.user.id }}">
                         {% url 'admin_teacher_detail' t.user.id as url_teacher_detail %}
-                        {% include "components/admin/user_avatar.html" with user=t.user size=48 link=url_teacher_detail
-                        name_style="font-size: 1.05rem;" %}
+                        {% include "components/admin/user_avatar.html" with user=t.user size=48 link=url_teacher_detail name_style="font-size: 1.05rem;" %}
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -132,20 +131,17 @@
                 <div
                     style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); padding: 0.85rem; border-radius: var(--radius-md, 0.5rem); margin-bottom: 1.25rem; text-align: center; border: 1px solid var(--color-border);">
                     <div>
-                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary);">{{
-                            t.classrooms_count|default:0 }}</div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary);">{{ t.classrooms_count|default:0 }}</div>
                         <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
                             Classrooms</div>
                     </div>
                     <div>
-                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-secondary);">{{
-                            t.meetings_count|default:0 }}</div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-secondary);">{{ t.meetings_count|default:0 }}</div>
                         <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
                             Sessions</div>
                     </div>
                     <div>
-                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-success);">{{
-                            t.students_count|default:0 }}</div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-success);">{{ t.students_count|default:0 }}</div>
                         <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase;">
                             Students</div>
                     </div>

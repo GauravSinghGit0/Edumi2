@@ -141,8 +141,7 @@
                         <select name="teacher_id" class="filter-input" style="width: 100%;" required>
                             <option value="">-- Select Host Teacher --</option>
                             {% for m in meetings %}
-                            <option value="{{ m.teacher.id }}">Prof. {{
-                                m.teacher.get_full_name|default:m.teacher.username }}</option>
+                            <option value="{{ m.teacher.id }}">Prof. {{ m.teacher.get_full_name|default:m.teacher.username }}</option>
                             {% endfor %}
                         </select>
                     </div>

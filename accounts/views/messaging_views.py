@@ -57,83 +57,110 @@ def get_user_contacts(user):
     """
     from meetings.models import Classroom, ClassroomMembership
     
-    # 1. Classrooms
-    if hasattr(user, 'userprofile') and user.userprofile.user_type == 'teacher':
-        teacher_classrooms = Classroom.objects.filter(teacher=user, is_active=True)
-        enrolled_classrooms = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True)
-        classrooms_qs = (teacher_classrooms | enrolled_classrooms).distinct().select_related('teacher')
-    else:
-        classrooms_qs = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True).select_related('teacher')
+    try:
+        profile = getattr(user, 'userprofile', None)
+        if profile and getattr(profile, 'user_type', None) == 'teacher':
+            teacher_classrooms = Classroom.objects.filter(teacher=user, is_active=True)
+            enrolled_classrooms = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True)
+            classrooms_qs = (teacher_classrooms | enrolled_classrooms).distinct().select_related('teacher')
+        else:
+            classrooms_qs = Classroom.objects.filter(memberships__student=user, memberships__status='approved', is_active=True).select_related('teacher')
 
-    classroom_list = []
-    for c in classrooms_qs:
-        conv = getattr(c, 'conversation', None)
-        if not conv:
-            conv = c.get_or_create_conversation()
-        classroom_list.append({
-            'id': c.id,
-            'title': c.title,
-            'class_code': c.class_code,
-            'teacher': c.teacher,
-            'conversation_id': conv.id if conv else None,
-            'member_count': c.get_approved_students().count() + 1,
-        })
+        classroom_list = []
+        for c in classrooms_qs:
+            try:
+                conv = getattr(c, 'conversation', None)
+                if not conv:
+                    conv = c.get_or_create_conversation()
+                classroom_list.append({
+                    'id': c.id,
+                    'title': c.title,
+                    'class_code': c.class_code,
+                    'teacher': c.teacher,
+                    'conversation_id': conv.id if conv else None,
+                    'member_count': c.get_approved_students().count() + 1,
+                })
+            except Exception:
+                continue
 
-    # 2. Get students and teachers in those classrooms
-    classroom_ids = [c['id'] for c in classroom_list]
-    classroom_student_ids = ClassroomMembership.objects.filter(classroom_id__in=classroom_ids, status='approved').values_list('student_id', flat=True)
-    classroom_teacher_ids = classrooms_qs.values_list('teacher_id', flat=True)
-    contact_user_ids = set(classroom_student_ids).union(set(classroom_teacher_ids))
-    contact_user_ids.discard(user.id)
+        classroom_ids = [c['id'] for c in classroom_list]
+        classroom_student_ids = ClassroomMembership.objects.filter(classroom_id__in=classroom_ids, status='approved').values_list('student_id', flat=True)
+        classroom_teacher_ids = classrooms_qs.values_list('teacher_id', flat=True)
+        contact_user_ids = set(classroom_student_ids).union(set(classroom_teacher_ids))
+        contact_user_ids.discard(user.id)
 
-    # Classmates and Teachers
-    network_users = User.objects.filter(id__in=contact_user_ids, is_active=True).select_related('userprofile')
-    
-    # Other users across school
-    other_users = User.objects.filter(is_active=True).exclude(id=user.id).exclude(id__in=contact_user_ids).select_related('userprofile')[:20]
+        network_users = User.objects.filter(id__in=contact_user_ids, is_active=True).select_related('userprofile')
+        other_users = User.objects.filter(is_active=True).exclude(id=user.id).exclude(id__in=contact_user_ids).select_related('userprofile')[:20]
 
-    return {
-        'joined_classrooms': classroom_list,
-        'network_users': network_users,
-        'other_users': other_users,
-    }
+        return {
+            'joined_classrooms': classroom_list,
+            'network_users': network_users,
+            'other_users': other_users,
+        }
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error in get_user_contacts: {e}")
+        return {
+            'joined_classrooms': [],
+            'network_users': [],
+            'other_users': User.objects.filter(is_active=True).exclude(id=user.id).select_related('userprofile')[:20],
+        }
 
 
 @login_required
 def inbox(request):
     """View all conversations with optional user search."""
     search_query = request.GET.get('q', '').strip()
-    raw_conversations = request.user.conversations.all().prefetch_related(
-        'participants', 'participants__userprofile', 'messages'
-    )
+    try:
+        raw_conversations = request.user.conversations.all().prefetch_related(
+            'participants', 'participants__userprofile', 'messages'
+        )
+    except Exception:
+        raw_conversations = []
+
     conversations = []
     for conv in raw_conversations:
-        if not conv.classroom_id:
-            other = conv.get_other_user(request.user)
-            if not other:
-                conv.delete()
-                continue
-            conv.other_user = other
-        else:
-            conv.other_user = None
+        try:
+            if not conv.classroom_id:
+                other = conv.get_other_user(request.user)
+                if not other:
+                    conv.delete()
+                    continue
+                conv.other_user = other
+            else:
+                try:
+                    if not conv.classroom:
+                        conv.delete()
+                        continue
+                except Exception:
+                    conv.delete()
+                    continue
+                conv.other_user = None
 
-        conv.display_title = conv.get_display_title(request.user)
-        conv.is_classroom = conv.is_classroom_chat()
-        conv.last_msg = conv.get_last_message()
-        conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
-        if conv.last_msg:
-            conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
-        conversations.append(conv)
+            conv.display_title = conv.get_display_title(request.user)
+            conv.is_classroom = conv.is_classroom_chat()
+            conv.last_msg = conv.get_last_message()
+            conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
+            if conv.last_msg:
+                conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
+            conversations.append(conv)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Error processing conversation {getattr(conv, 'id', None)}: {e}")
+            continue
 
     search_results = []
     if search_query:
-        search_results = User.objects.filter(
-            models.Q(username__icontains=search_query) |
-            models.Q(first_name__icontains=search_query) |
-            models.Q(last_name__icontains=search_query) |
-            models.Q(email__icontains=search_query) |
-            models.Q(userprofile__display_name__icontains=search_query)
-        ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
+        try:
+            search_results = User.objects.filter(
+                models.Q(username__icontains=search_query) |
+                models.Q(first_name__icontains=search_query) |
+                models.Q(last_name__icontains=search_query) |
+                models.Q(email__icontains=search_query) |
+                models.Q(userprofile__display_name__icontains=search_query)
+            ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
+        except Exception:
+            search_results = []
 
     contacts_data = get_user_contacts(request.user)
 
@@ -141,9 +168,9 @@ def inbox(request):
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
-        'joined_classrooms': contacts_data['joined_classrooms'],
-        'network_users': contacts_data['network_users'],
-        'other_users': contacts_data['other_users'],
+        'joined_classrooms': contacts_data.get('joined_classrooms', []),
+        'network_users': contacts_data.get('network_users', []),
+        'other_users': contacts_data.get('other_users', []),
     })
 
 
@@ -164,63 +191,90 @@ def conversation_detail(request, conversation_id):
     else:
         other_user = None
 
-    conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    try:
+        conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    except Exception:
+        pass
+
     conversation.display_title = conversation.get_display_title(request.user)
     conversation.is_classroom = conversation.is_classroom_chat()
-    messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
+    try:
+        messages_list = list(conversation.messages.all().select_related('sender', 'sender__userprofile').order_by('created_at'))
+    except Exception:
+        messages_list = []
 
     now_local = timezone.localtime(timezone.now())
     today = now_local.date()
     yesterday = today - timedelta(days=1)
     prev_date = None
     for msg in messages_list:
-        local_msg_dt = timezone.localtime(msg.created_at)
-        msg_date = local_msg_dt.date()
-        if msg_date != prev_date:
-            msg.show_date_separator = True
-            if msg_date == today:
-                msg.date_label = 'Today'
-            elif msg_date == yesterday:
-                msg.date_label = 'Yesterday'
+        try:
+            local_msg_dt = timezone.localtime(msg.created_at)
+            msg_date = local_msg_dt.date()
+            if msg_date != prev_date:
+                msg.show_date_separator = True
+                if msg_date == today:
+                    msg.date_label = 'Today'
+                elif msg_date == yesterday:
+                    msg.date_label = 'Yesterday'
+                else:
+                    msg.date_label = local_msg_dt.strftime('%B %d, %Y')
+                prev_date = msg_date
             else:
-                msg.date_label = local_msg_dt.strftime('%B %d, %Y')
-            prev_date = msg_date
-        else:
+                msg.show_date_separator = False
+        except Exception:
             msg.show_date_separator = False
 
     # Fetch data for sidebar
     search_query = request.GET.get('q', '').strip()
-    raw_conversations = request.user.conversations.all().prefetch_related(
-        'participants', 'participants__userprofile', 'messages'
-    )
+    try:
+        raw_conversations = request.user.conversations.all().prefetch_related(
+            'participants', 'participants__userprofile', 'messages'
+        )
+    except Exception:
+        raw_conversations = []
+
     conversations = []
     for conv in raw_conversations:
-        if not conv.classroom_id:
-            other = conv.get_other_user(request.user)
-            if not other:
-                conv.delete()
-                continue
-            conv.other_user = other
-        else:
-            conv.other_user = None
+        try:
+            if not conv.classroom_id:
+                other = conv.get_other_user(request.user)
+                if not other:
+                    conv.delete()
+                    continue
+                conv.other_user = other
+            else:
+                try:
+                    if not conv.classroom:
+                        conv.delete()
+                        continue
+                except Exception:
+                    conv.delete()
+                    continue
+                conv.other_user = None
 
-        conv.display_title = conv.get_display_title(request.user)
-        conv.is_classroom = conv.is_classroom_chat()
-        conv.last_msg = conv.get_last_message()
-        conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
-        if conv.last_msg:
-            conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
-        conversations.append(conv)
+            conv.display_title = conv.get_display_title(request.user)
+            conv.is_classroom = conv.is_classroom_chat()
+            conv.last_msg = conv.get_last_message()
+            conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
+            if conv.last_msg:
+                conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
+            conversations.append(conv)
+        except Exception:
+            continue
 
     search_results = []
     if search_query:
-        search_results = User.objects.filter(
-            models.Q(username__icontains=search_query) |
-            models.Q(first_name__icontains=search_query) |
-            models.Q(last_name__icontains=search_query) |
-            models.Q(email__icontains=search_query) |
-            models.Q(userprofile__display_name__icontains=search_query)
-        ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
+        try:
+            search_results = User.objects.filter(
+                models.Q(username__icontains=search_query) |
+                models.Q(first_name__icontains=search_query) |
+                models.Q(last_name__icontains=search_query) |
+                models.Q(email__icontains=search_query) |
+                models.Q(userprofile__display_name__icontains=search_query)
+            ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
+        except Exception:
+            search_results = []
 
     contacts_data = get_user_contacts(request.user)
 
@@ -231,9 +285,9 @@ def conversation_detail(request, conversation_id):
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
-        'joined_classrooms': contacts_data['joined_classrooms'],
-        'network_users': contacts_data['network_users'],
-        'other_users': contacts_data['other_users'],
+        'joined_classrooms': contacts_data.get('joined_classrooms', []),
+        'network_users': contacts_data.get('network_users', []),
+        'other_users': contacts_data.get('other_users', []),
     })
 
 

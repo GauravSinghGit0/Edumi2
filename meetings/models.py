@@ -39,12 +39,24 @@ class Classroom(models.Model):
         """Get all pending join requests"""
         return self.memberships.filter(status='pending').select_related('student')
     
+    def auto_clean_stale_meetings(self):
+        """Auto-clean expired or abandoned live meetings for this classroom."""
+        from django.utils import timezone
+        live_meetings = self.meetings.filter(status='live')
+        for m in live_meetings:
+            if m.is_expired():
+                m.status = 'ended'
+                m.ended_at = timezone.now()
+                m.save(update_fields=['status', 'ended_at'])
+
     def has_active_meeting(self):
         """Check if classroom has an active meeting"""
+        self.auto_clean_stale_meetings()
         return self.meetings.filter(status='live').exists()
     
     def get_active_meeting(self):
         """Get the current active meeting if any"""
+        self.auto_clean_stale_meetings()
         return self.meetings.filter(status='live').first()
 
     def get_or_create_conversation(self):

@@ -132,9 +132,35 @@
             function initVideoPlayer() {
                 {% if video.is_processed %}
                 const video = document.getElementById('mainVideo');
-                const videoUrl = "{{ video.original_file.url }}";
-                if (video && (!video.src || video.src === window.location.href)) {
-                    video.src = videoUrl;
+                const hlsUrl = "{% if video.hls_master_playlist %}{% url 'stream_hls_master' video.id %}{% else %}{{ video.original_file.url }}{% endif %}";
+
+                if (Hls.isSupported() && hlsUrl.endsWith('.m3u8')) {
+                    const hls = new Hls({
+                        capLevelToPlayerSize: true,
+                        maxBufferLength: 30
+                    });
+                    hls.loadSource(hlsUrl);
+                    hls.attachMedia(video);
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                        const qualitySelect = document.getElementById('qualitySelect');
+                        if (qualitySelect) {
+                            qualitySelect.innerHTML = '<option value="-1">Auto (ABR H.265)</option>';
+                            data.levels.forEach((level, index) => {
+                                const opt = document.createElement('option');
+                                opt.value = index;
+                                opt.textContent = `${level.height}p (${(level.bitrate / 1000000).toFixed(1)} Mbps)`;
+                                qualitySelect.appendChild(opt);
+                            });
+                            qualitySelect.addEventListener('change', function() {
+                                hls.currentLevel = parseInt(this.value, 10);
+                            });
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl') && hlsUrl.endsWith('.m3u8')) {
+                    video.src = hlsUrl;
+                } else if (video) {
+                    video.src = "{{ video.original_file.url }}";
                 }
                 {% endif %}
             }
@@ -142,7 +168,17 @@
             document.addEventListener('turbo:load', initVideoPlayer);
         </script>
 
-        <h1 class="video-title">{{ video.title }}</h1>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1 class="video-title mb-0">{{ video.title }}</h1>
+            {% if video.is_processed and video.hls_master_playlist %}
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success small"><i data-lucide="zap" style="width:12px;"></i> H.265 HLS</span>
+                <select id="qualitySelect" class="form-select form-select-sm" style="width: auto; font-size: 0.85rem;">
+                    <option value="-1">Auto (ABR H.265)</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
         
         <div class="video-actions">
             <div class="uploader-info">

@@ -298,14 +298,14 @@ class TelemetryAndLoggingTests(TestCase):
         self.assertEqual(data.get('processed'), 2)
 
         # Verify records created in database
-        logs = UserActivityLog.objects.filter(username='telemetry_tester').order_by('created_at')
-        self.assertEqual(logs.count(), 2)
+        telemetry_logs = UserActivityLog.objects.filter(username='telemetry_tester', event_type__in=['page_view', 'click']).order_by('created_at')
+        self.assertEqual(telemetry_logs.count(), 2)
 
-        pv = logs.filter(event_type='page_view').first()
+        pv = telemetry_logs.filter(event_type='page_view').first()
         self.assertIsNotNone(pv)
         self.assertEqual(pv.page_title, 'Meetings')
 
-        clk = logs.filter(event_type='click').first()
+        clk = telemetry_logs.filter(event_type='click').first()
         self.assertIsNotNone(clk)
         self.assertEqual(clk.target_element, 'button#joinMeetingBtn')
         self.assertEqual(clk.target_text, 'Join Live Lecture')

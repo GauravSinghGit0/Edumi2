@@ -37,6 +37,13 @@ def compute_raw_admin_dashboard_stats():
     total_enrollments = ClassroomMembership.objects.filter(status='approved').count()
     pending_enrollments = ClassroomMembership.objects.filter(status='pending').count()
 
+    # Auto-clean any stale meetings stuck in 'live' status after expiration
+    for m in Meeting.objects.filter(status='live'):
+        if m.is_expired():
+            m.status = 'ended'
+            m.ended_at = now
+            m.save(update_fields=['status', 'ended_at'])
+
     # Meeting / session counts
     total_meetings = Meeting.objects.count()
     live_meetings = Meeting.objects.filter(status='live').count()
@@ -226,9 +233,9 @@ def get_user_360_data(user_id):
     # 1. Enrolled / Managed Courses (Classrooms)
     if role == 'teacher':
         classrooms_list = Classroom.objects.filter(teacher=target_user).annotate(
-            students_count=Count('memberships', filter=Q(memberships__status='approved')),
-            meetings_count=Count('meetings'),
-            assignments_count=Count('assignments'),
+            students_count=Count('memberships', filter=Q(memberships__status='approved'), distinct=True),
+            meetings_count=Count('meetings', distinct=True),
+            assignments_count=Count('assignments', distinct=True),
         ).order_by('-created_at')
         enrolled_classrooms = []
         for cr in classrooms_list:
@@ -460,16 +467,16 @@ def get_teacher_360_data(teacher_id):
 
     # 1. Classrooms managed
     classrooms = Classroom.objects.filter(teacher=teacher).annotate(
-        approved_students_count=Count('memberships', filter=Q(memberships__status='approved')),
-        pending_students_count=Count('memberships', filter=Q(memberships__status='pending')),
-        meetings_count=Count('meetings'),
-        assignments_count=Count('assignments'),
-        materials_count=Count('study_materials'),
+        approved_students_count=Count('memberships', filter=Q(memberships__status='approved'), distinct=True),
+        pending_students_count=Count('memberships', filter=Q(memberships__status='pending'), distinct=True),
+        meetings_count=Count('meetings', distinct=True),
+        assignments_count=Count('assignments', distinct=True),
+        materials_count=Count('study_materials', distinct=True),
     ).order_by('-created_at')
 
     # 2. Meetings hosted
     meetings = Meeting.objects.filter(teacher=teacher).select_related('classroom').annotate(
-        attendees_count=Count('participants')
+        attendees_count=Count('participants', distinct=True)
     ).order_by('-scheduled_time')
 
     # 3. Students connected via classroom memberships
@@ -523,12 +530,12 @@ def get_teacher_360_data(teacher_id):
 def get_classroom_360_data(classroom_id):
     """Retrieves full details for a course/classroom for Admin inspection."""
     cr = Classroom.objects.select_related('teacher', 'teacher__userprofile').annotate(
-        approved_count=Count('memberships', filter=Q(memberships__status='approved')),
-        pending_count=Count('memberships', filter=Q(memberships__status='pending')),
-        meetings_count=Count('meetings'),
-        assignments_count=Count('assignments'),
-        quizzes_count=Count('quizzes'),
-        materials_count=Count('study_materials'),
+        approved_count=Count('memberships', filter=Q(memberships__status='approved'), distinct=True),
+        pending_count=Count('memberships', filter=Q(memberships__status='pending'), distinct=True),
+        meetings_count=Count('meetings', distinct=True),
+        assignments_count=Count('assignments', distinct=True),
+        quizzes_count=Count('quizzes', distinct=True),
+        materials_count=Count('study_materials', distinct=True),
     ).get(id=classroom_id)
 
     # Students enrolled

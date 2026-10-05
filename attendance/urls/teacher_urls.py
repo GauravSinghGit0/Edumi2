@@ -5,8 +5,11 @@ from attendance.views import (
     set_class_schedule, attendance_settings_view, override_attendance,
 )
 
+from django.shortcuts import redirect
+
 urlpatterns = [
     path('my/',                                    my_attendance,              name='my_attendance'),
+    path('my-attendance/',                         lambda request: redirect('my_attendance', permanent=True)),
     path('schedule/<int:classroom_id>/set/',       set_class_schedule,         name='set_class_schedule'),
     path('settings/<int:classroom_id>/',           attendance_settings_view,   name='attendance_settings'),
     path('override/<int:record_id>/',              override_attendance,        name='override_attendance'),

@@ -82,6 +82,10 @@
             {% endif %}
           </button>
         </form>
+        <a href="{% url 'delete_user' target_user.id %}" class="btn-action btn-action-danger"
+           onclick="return confirm('PERMANENTLY DELETE user @{{ target_user.username }}? This action cannot be undone.');">
+          <i data-lucide="trash-2"></i> Delete User
+        </a>
         {% endif %}
       </div>
     </div>
