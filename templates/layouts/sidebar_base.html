@@ -85,8 +85,36 @@
             }
         });
 
+        // Cleanup page-specific lock classes (e.g. AI workspace lock) when navigating away via Turbo
+        function cleanupPageLocks() {
+            if (!window.location.pathname.includes('/meetings/library/rag')) {
+                document.documentElement.classList.remove('aw-body-lock');
+                document.body.classList.remove('aw-body-lock');
+                document.body.style.overflow = '';
+            } else {
+                document.documentElement.classList.add('aw-body-lock');
+                document.body.classList.add('aw-body-lock');
+            }
+        }
+
+        document.addEventListener('turbo:load', cleanupPageLocks);
+
         // Apply theme and sync states of permanent elements before Turbo renders new body
         document.addEventListener('turbo:before-render', (event) => {
+            if (!window.location.pathname.includes('/meetings/library/rag')) {
+                document.documentElement.classList.remove('aw-body-lock');
+                document.body.classList.remove('aw-body-lock');
+                if (event.detail && event.detail.newBody) {
+                    event.detail.newBody.classList.remove('aw-body-lock');
+                }
+            } else {
+                document.documentElement.classList.add('aw-body-lock');
+                document.body.classList.add('aw-body-lock');
+                if (event.detail && event.detail.newBody) {
+                    event.detail.newBody.classList.add('aw-body-lock');
+                }
+            }
+
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
                 event.detail.newBody.classList.add('dark-mode');

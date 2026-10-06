@@ -40,6 +40,27 @@
         </div>
     </div>
 
+    <!-- 1. Selection & Action Header Banner -->
+    <div class="study-selection-header">
+        <div class="selection-count-badge">
+            <i data-lucide="layers" style="width: 18px; height: 18px;"></i>
+            <span id="selectedCountText">0 Resources Selected</span>
+        </div>
+
+        <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" onclick="selectAllMaterials()" class="filter-pill" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25);">
+                <i data-lucide="check-square" style="width: 14px; height: 14px;"></i> Select All
+            </button>
+            <button type="button" onclick="clearMaterialSelection()" class="filter-pill" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25);">
+                <i data-lucide="square" style="width: 14px; height: 14px;"></i> Clear Selection
+            </button>
+            <a id="btnStartAiChatHeader" href="{% url 'digital_library' %}?view=ai_workspace" onclick="redirectToWorkspaceWithSelection(event)" class="btn-start-ai-chat" style="text-decoration: none;">
+                <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                Start AI Study Chat →
+            </a>
+        </div>
+    </div>
+
     <!-- Search & Filter Toolbar -->
     <div class="materials-toolbar">
         <form method="GET" action="{% url 'classroom_materials' classroom.id %}" class="materials-search-wrap">
@@ -77,11 +98,12 @@
             {% for mat in materials %}
             <div class="material-card" id="mat-card-{{ mat.id }}">
                 <div>
-                    <div class="mat-card-top">
+                    <div class="mat-card-top" style="align-items: flex-start;">
+                        <input type="checkbox" class="mat-card-select-check" data-id="{{ mat.id }}" data-title="{{ mat.title }}" data-unit="{{ mat.unit.title|default:'General' }}" data-type="{{ mat.material_type }}" data-rag="{{ mat.rag_indexed|yesno:'true,false' }}" onchange="handleMaterialSelectionChange(this)">
                         <div class="mat-type-icon-box" style="background: {{ mat.get_badge_color }}15; color: {{ mat.get_badge_color }};">
                             <i data-lucide="{{ mat.get_icon_name }}" style="width: 22px; height: 22px;"></i>
                         </div>
-                        <div class="mat-card-meta">
+                        <div class="mat-card-meta" style="flex: 1;">
                             <h4 class="mat-title" title="{{ mat.title }}">{{ mat.title }}</h4>
                             <div class="mat-subtitle">
                                 <span style="text-transform: uppercase; font-weight: 750; font-size: 0.6875rem; color: {{ mat.get_badge_color }};">{{ mat.material_type }}</span>
@@ -95,8 +117,20 @@
                     <p class="mat-desc">{{ mat.description }}</p>
                     {% endif %}
 
-
+                    {% if not mat.rag_indexed %}
+                    <div style="margin-bottom: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <span class="mat-rag-badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); display: inline-flex; align-items: center; gap: 5px;">
+                            <span class="aw-dots-loader">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span>Processing</span>
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
+
 
                 <div class="mat-card-footer">
                     <div class="mat-footer-stats">

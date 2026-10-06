@@ -258,8 +258,12 @@ NAV_ITEM_GROUPS = {
         'path_prefixes': ('/settings/',),
     },
     'digital_library': {
-        'url_names': {'digital_library'},
-        'path_prefixes': ('/meetings/library/', '/library/'),
+        'url_names': {
+            'digital_library', 'rag_workspace', 'rag_workspace_library',
+            'rag_materials_api', 'rag_chat_api', 'rag_instructor_settings_api',
+            'rag_sessions_api', 'rag_session_detail_api',
+        },
+        'path_prefixes': ('/meetings/library/rag/', '/meetings/library/', '/library/', '/rag/'),
     },
     'face_setup': {
         'url_names': {'face_setup'},
@@ -316,6 +320,8 @@ TARGET_TO_GROUP = {
     'project_list': 'video_editor',
     'notifications_list': 'notifications',
     'profile_view': 'profile',
+    'rag_workspace': 'digital_library',
+    'rag_workspace_library': 'digital_library',
     # Admin sub-pages → their parent nav group
     'admin_teacher_detail': 'admin_all_teachers',
     'admin_classroom_detail': 'admin_all_classrooms',

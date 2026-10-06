@@ -45,8 +45,10 @@ urlpatterns = [
     path('videos/', include('videos.urls')),  # <-- Video URLs
     path('video-editing/', include('video_editing.urls')),  # <-- Video editing URLs
     path('assignments/', include('assignments.urls')),  # <-- Assignments URLs
+    path('rag/', RedirectView.as_view(pattern_name='rag_workspace', permanent=False)),  # <-- Redirect /rag/ to /meetings/library/rag/
     path('', include('common.urls')),  # <-- Common & Telemetry URLs
 ]
+
 
 # Error handlers
 handler404 = 'accounts.views.error_404'

@@ -67,5 +67,9 @@ from .quiz_live_views import (
     submit_meeting_quiz,
     get_meeting_quiz_submissions,
 )
-
+from .rag_views import (
+    rag_materials_list_api,
+    rag_chat_api,
+    rag_teacher_settings_api,
+)
 

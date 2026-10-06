@@ -1,0 +1,327 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Digital Library / AI Workspace{% endblock %}
+{% block title %}Digital Library / AI Workspace — EduMi{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/rag_workspace.css' %}">
+<script>
+    /* Synchronously lock body viewport for AI Workspace, cleanup on navigation away */
+    (function () {
+        function applyLock() {
+            if (window.location.pathname.includes('/meetings/library/rag')) {
+                document.documentElement.classList.add('aw-body-lock');
+                if (document.body) document.body.classList.add('aw-body-lock');
+            }
+        }
+        applyLock();
+        if (!document.body) {
+            document.addEventListener('DOMContentLoaded', applyLock);
+        }
+
+        function removeLock() {
+            if (!window.location.pathname.includes('/meetings/library/rag')) {
+                document.documentElement.classList.remove('aw-body-lock');
+                if (document.body) {
+                    document.body.classList.remove('aw-body-lock');
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        document.addEventListener('turbo:before-render', removeLock);
+        document.addEventListener('turbo:before-visit', removeLock);
+        window.addEventListener('beforeunload', removeLock);
+    })();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="aw-wrap">
+
+    <!-- Breadcrumb Path Header -->
+    <div class="aw-breadcrumb-bar">
+        <nav class="aw-breadcrumb-nav" aria-label="Breadcrumb">
+            <ol class="aw-breadcrumb-list">
+                <li class="aw-breadcrumb-item">
+                    <a href="{% url 'digital_library' %}" class="aw-breadcrumb-link">
+                        <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                        <span>Digital Library</span>
+                    </a>
+                </li>
+                <li class="aw-breadcrumb-sep">/</li>
+                <li class="aw-breadcrumb-item aw-breadcrumb-item--active">
+                    <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                    <span>AI Workspace</span>
+                </li>
+            </ol>
+        </nav>
+
+        <button type="button" class="aw-history-trigger-btn" onclick="AW.toggleHistoryDrawer()"
+            title="View Chat History Sessions">
+            <i data-lucide="history" style="width: 15px; height: 15px;"></i>
+            <span>Chat History</span>
+        </button>
+    </div>
+
+    <div class="aw-layout">
+
+        <aside class="aw-panel aw-doc-panel">
+            <div class="aw-panel-header">
+                <div class="aw-header-top">
+                    <div class="aw-title-group">
+                        <span class="aw-icon-wrap">
+                            <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+                        </span>
+                        <div>
+                            <h2 class="aw-panel-title">Source Documents</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="aw-search-row">
+                    <div class="aw-search-box">
+                        <i data-lucide="search" class="aw-search-icon" style="width: 15px; height: 15px;"></i>
+                        <input type="text" id="awSearchInput" class="aw-search-input" placeholder="Search documents..."
+                            aria-label="Search documents" oninput="AW.filterDocuments(this.value)">
+                    </div>
+                    <button type="button" class="aw-filter-btn" onclick="AW.toggleClassroomFilter()"
+                        aria-label="Filter by class">
+                        <i data-lucide="filter" style="width: 15px; height: 15px;"></i>
+                        <span>Filter</span>
+                    </button>
+                </div>
+
+                <div class="aw-classroom-filter" id="awClassroomFilter" style="display:none;">
+                    <select id="awClassroomSelect" class="aw-type-select" aria-label="Filter by classroom"
+                        onchange="AW.filterByClassroom(this.value)">
+                        <option value="all">All Classes</option>
+                        {% for cr in classrooms %}
+                        <option value="{{ cr.id }}">{{ cr.title }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="awTypeSelect" class="aw-type-select" aria-label="Filter by document type"
+                        onchange="AW.filterByType(this.value)">
+                        <option value="all">All Types</option>
+                        <option value="document">PDFs</option>
+                        <option value="slides">Slides</option>
+                        <option value="notes">Notes</option>
+                    </select>
+                </div>
+
+                <div class="aw-controls-row">
+                    <label class="aw-select-all">
+                        <input type="checkbox" id="awSelectAll" onchange="AW.toggleSelectAll(this.checked)">
+                        <span>Select all RAG Ready</span>
+                    </label>
+                    <button type="button" class="aw-link-btn" onclick="AW.clearSelection()">Clear</button>
+                </div>
+            </div>
+
+            <div class="aw-doc-list" id="awDocList">
+                {% if materials %}
+                {% for mat in materials %}
+                <label class="aw-doc-item {% if not mat.rag_indexed %}aw-doc--processing{% endif %}"
+                    id="aw-doc-{{ mat.id }}" data-title="{{ mat.title|escape }}" data-type="{{ mat.material_type }}"
+                    data-classroom="{{ mat.classroom_id }}" data-rag="{{ mat.rag_indexed|yesno:'true,false' }}">
+
+                    <input type="checkbox" class="aw-doc-check" {% if mat.rag_indexed %}{% if initial_selected_ids and mat.id in initial_selected_ids %}checked{% endif %}{% else %}disabled
+                        title="Still processing RAG vectors" {% endif %} data-id="{{ mat.id }}"
+                        data-title="{{ mat.title|escape }}" data-unit="{{ mat.unit.title|default:'General'|escape }}"
+                        data-type="{{ mat.material_type }}" data-rag="{{ mat.rag_indexed|yesno:'true,false' }}"
+                        data-classroom="{{ mat.classroom_id }}" onchange="AW.updateSelection()">
+
+                    <span class="aw-doc-icon aw-doc-icon--{{ mat.material_type }}">
+                        <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                    </span>
+
+                    <div class="aw-doc-info">
+                        <div class="aw-doc-title" title="{{ mat.title }}">{{ mat.title }}</div>
+                        <div class="aw-doc-meta">
+                            <span class="aw-doc-classroom" title="{{ mat.classroom.title }}">{{ mat.classroom.title }}</span>
+                            <span class="aw-dot-sep"></span>
+                            <span>{{ mat.material_type|title }} • {{ mat.chunks.count|default:1 }} page{{ mat.chunks.count|default:1|pluralize }} • {{ mat.get_file_size_formatted|default:"1.4 MB" }}</span>
+                        </div>
+                    </div>
+
+                    {% if not mat.rag_indexed %}
+                    <span class="aw-status aw-status--processing" title="Processing document for RAG">
+                        <span class="aw-dots-loader">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </span>
+                        <span>Processing</span>
+                    </span>
+                    {% endif %}
+
+                    <div class="aw-doc-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                        <button type="button" class="aw-icon-btn" title="Preview"
+                            onclick="AW.openPreview({{ mat.id }}, '{{ mat.title|escapejs }}')">
+                            <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+                        </button>
+                    </div>
+                </label>
+                {% endfor %}
+                {% else %}
+                <div class="aw-empty-state">
+                    <div class="aw-empty-icon">
+                        <i data-lucide="folder-open" style="width: 40px; height: 40px;"></i>
+                    </div>
+                    <h3>No documents yet</h3>
+                    <p>Study materials from your enrolled classes will appear here.</p>
+                    <a href="{% url 'digital_library' %}" class="aw-cta-btn">
+                        <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                        Browse Digital Library
+                    </a>
+                </div>
+                {% endif %}
+
+                <div class="aw-empty-state" id="awEmptyFilter" style="display:none;">
+                    <div class="aw-empty-icon">
+                        <i data-lucide="search" style="width: 40px; height: 40px;"></i>
+                    </div>
+                    <h3>No matches</h3>
+                    <p>Try a different keyword or clear filters.</p>
+                    <button type="button" class="aw-cta-btn" onclick="AW.resetFilters()">
+                        Reset Filters
+                    </button>
+                </div>
+            </div>
+
+            <div class="aw-panel-footer">
+                <div class="aw-tip-box">
+                    <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                    <div>
+                        <strong>Tip:</strong> Only <span class="aw-tip-strong">RAG Ready</span> documents are used by
+                        the AI. You can change your selection at any time.
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="aw-panel aw-chat-panel" style="position:relative;">
+            <div class="aw-chat-header">
+                <div class="aw-header-top">
+                    <div class="aw-title-group">
+                        <span class="aw-icon-wrap aw-icon-wrap--primary">
+                            <i data-lucide="bot" style="width: 20px; height: 20px;"></i>
+                        </span>
+                        <div>
+                            <h2 class="aw-panel-title">AI Study Assistant</h2>
+                            <p class="aw-panel-subtitle">Grounded answers & AI study copilot</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <button type="button" class="aw-icon-btn aw-icon-btn--lg" onclick="AW.toggleHistoryDrawer()"
+                            title="Chat History" aria-label="History">
+                            <i data-lucide="history" style="width: 15px; height: 15px;"></i>
+                        </button>
+                        <button type="button" class="aw-icon-btn aw-icon-btn--lg" onclick="AW.newChat()"
+                            title="Start new chat" aria-label="New chat">
+                            <i data-lucide="plus" style="width: 15px; height: 15px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="aw-scope-bar">
+                    <div class="aw-scope-info">
+                        <i data-lucide="book-open" style="width: 14px; height: 14px;"></i>
+                        <span class="aw-scope-label"><span class="aw-scope-prefix">Grounded in &nbsp;·&nbsp;</span>Using
+                            <strong id="awScopeCount">0</strong> document<strong id="awScopePlural">s</strong></span>
+                    </div>
+                    <div class="aw-scope-pills" id="awScopePills"></div>
+                </div>
+            </div>
+
+            <!-- Scrollable Chat Stream -->
+            <div class="aw-chat-stream" id="awChatStream">
+                <div class="aw-chat-welcome-container" id="awWelcomeRow">
+                    <div class="aw-chat-welcome-pill">
+                        <i data-lucide="lock" style="width: 14px; height: 14px;"></i>
+                        <span>Grounded AI Study Workspace &nbsp;·&nbsp; Select documents on the left to start chat</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Scroll to Bottom Arrow -->
+            <button type="button" id="awScrollBottomBtn" class="aw-scroll-bottom-btn" style="display:none;"
+                onclick="AW.scrollToBottom(true)" title="Scroll to bottom">
+                <i data-lucide="arrow-down" style="width: 18px; height: 18px;"></i>
+            </button>
+
+            <div class="aw-chat-input-wrap">
+                <div class="aw-input-row">
+                    <span class="aw-input-sparkle">
+                        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                    </span>
+                    <textarea id="awPromptInput" class="aw-prompt-textarea" rows="1"
+                        placeholder="Ask anything about your selected documents..." aria-label="Ask AI"
+                        onkeydown="AW.handleKeydown(event)" oninput="AW.resizeTextarea(this)"></textarea>
+                    <div class="aw-input-actions">
+                        <button type="button" id="awSendBtn" class="aw-action-btn aw-action-btn--send"
+                            onclick="AW.sendMessage()" title="Send message" aria-label="Send">
+                            <i data-lucide="send-horizontal" style="width: 15px; height: 15px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+<!-- Chat Sessions History Drawer (ChatGPT style) -->
+<div class="aw-history-drawer" id="awHistoryDrawer" style="display:none;"
+    onclick="if(event.target===this) AW.toggleHistoryDrawer()">
+    <div class="aw-history-card">
+        <div class="aw-modal-header">
+            <div class="aw-modal-title">
+                <i data-lucide="history" style="width: 18px; height: 18px;"></i>
+                <h3>Your Chat Sessions</h3>
+            </div>
+            <button type="button" class="aw-modal-close" onclick="AW.toggleHistoryDrawer()">&times;</button>
+        </div>
+        <div class="aw-history-body" id="awHistoryList">
+            <p class="aw-modal-note">Loading history sessions...</p>
+        </div>
+    </div>
+</div>
+
+<div class="aw-doc-modal" id="awDocModal" style="display:none;" onclick="if(event.target===this) AW.closePreview()">
+    <div class="aw-modal-card">
+        <div class="aw-modal-header">
+            <div class="aw-modal-title">
+                <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                <h3 id="awDocModalTitle">Document Preview</h3>
+            </div>
+            <button type="button" class="aw-modal-close" onclick="AW.closePreview()" aria-label="Close">&times;</button>
+        </div>
+        <div class="aw-modal-body">
+            <p class="aw-modal-note">Full PDF viewer integration available with file URLs.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include 'components/lucide_icons.html' %}
+<script src="{% static 'js/rag_workspace.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        AW.init({
+            apiChatUrl: "{% url 'rag_chat_api' %}",
+            apiSessionsUrl: "{% url 'rag_sessions_api' %}",
+            csrfToken: "{{ csrf_token }}",
+            initialIds: [{% if initial_selected_ids %}{{ initial_selected_ids|join:',' }}{% endif %}],
+            currentUser: {
+                username: "{{ request.user.username|escapejs }}",
+                displayName: "{{ request.user.userprofile.get_display_name|default:request.user.username|escapejs }}",
+                avatarUrl: "{% if request.user.userprofile %}{{ request.user.userprofile.get_profile_picture_url|escapejs }}{% else %}https://ui-avatars.com/api/?name={{ request.user.username|urlencode }}&background=7c3aed&color=fff{% endif %}"
+            }
+        });
+    });
+</script>
+{% endblock %}

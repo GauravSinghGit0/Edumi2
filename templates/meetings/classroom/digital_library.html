@@ -1,104 +1,162 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Digital Library{% endblock %}
+{% block page_title %}Digital Library & AI Study Workspace{% endblock %}
 {% block title %}Digital Library — EduMi{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/study_materials.css' %}">
+<link rel="stylesheet" href="{% static 'css/rag_workspace.css' %}">
+<style>
+    .ai-prompt-input:focus {
+        box-shadow: none;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="materials-hub-container">
-    <!-- Page Header — matches Meetings page pattern -->
-    <div style="background: var(--white); border-radius: clamp(10px, 1.5vw, 12px); padding: clamp(1rem, 2vw, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem); margin-bottom: clamp(1rem, 2vh, 1.5rem); border: 1px solid var(--gray-200, #e5e7eb); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h1 style="font-size: clamp(1.125rem, 2.5vw, 1.375rem); font-weight: 700; color: var(--gray-900, #111827); margin: 0 0 2px 0;">Digital Library</h1>
-            <p style="font-size: 13px; font-weight: 400; color: var(--gray-500, #6b7280); margin: 0;">Browse textbooks, slides, notes, and videos across all your enrolled classes.</p>
+
+    <!-- CATALOG VIEW SECTION (Image 1) -->
+    <div id="catalogViewSection">
+        <!-- 1. Header Banner -->
+        <div class="library-header-card">
+            <div class="library-header-left">
+                <div class="library-header-icon-box">
+                    <i data-lucide="book-marked" style="width: 26px; height: 26px; color: #6366f1;"></i>
+                </div>
+                <div>
+                    <h1 class="library-header-title">Digital Library</h1>
+                    <p class="library-header-sub">
+                        Browse textbooks, slide decks, lecture notes, and videos across all your enrolled classes.
+                    </p>
+                </div>
+            </div>
         </div>
-    </div>
 
+        <!-- 2. Search & Toolbar Controls Panel -->
+        <div class="materials-toolbar">
+            <form method="GET" action="{% url 'digital_library' %}" class="materials-search-wrap">
+                <i data-lucide="search" class="materials-search-icon"></i>
+                <input type="text" name="q" value="{{ current_query }}" class="materials-search-input" placeholder="Search across textbooks, notes, and topics...">
+                {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+                {% if current_classroom %}<input type="hidden" name="classroom" value="{{ current_classroom }}">{% endif %}
+                {% if bookmarks_only %}<input type="hidden" name="bookmarked" value="true">{% endif %}
+            </form>
 
-    <!-- Search & Filter Controls -->
-    <div class="materials-toolbar">
-        <form method="GET" action="{% url 'digital_library' %}" class="materials-search-wrap">
-            <i data-lucide="search" class="materials-search-icon"></i>
-            <input type="text" name="q" value="{{ current_query }}" class="materials-search-input" placeholder="Search across all subjects, notes, and topics…">
-            {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
-            {% if current_classroom %}<input type="hidden" name="classroom" value="{{ current_classroom }}">{% endif %}
-            {% if bookmarks_only %}<input type="hidden" name="bookmarked" value="true">{% endif %}
-        </form>
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <!-- AI Workspace Trigger (navigates to dedicated fullscreen AI Workspace at /rag/) -->
+                <a href="{% url 'rag_workspace' %}" class="btn-ai-workspace-trigger">
+                    <i data-lucide="sparkles" style="width: 16px; height: 16px; color: #6366f1;"></i>
+                    <span>AI Workspace</span>
+                </a>
 
-        <div class="materials-filter-pills">
-            <a href="{% url 'digital_library' %}" class="filter-pill {% if not current_type and not bookmarks_only %}active{% endif %}">
-                All Formats
-            </a>
-            <a href="{% url 'digital_library' %}?type=document{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'document' %}active{% endif %}">
-                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i> PDFs
-            </a>
-            <a href="{% url 'digital_library' %}?type=slides{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'slides' %}active{% endif %}">
-                <i data-lucide="presentation" style="width: 14px; height: 14px;"></i> Slides
-            </a>
-            <a href="{% url 'digital_library' %}?type=notes{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if current_type == 'notes' %}active{% endif %}">
-                <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Notes
-            </a>
-            <a href="{% url 'digital_library' %}?bookmarked=true{% if current_query %}&q={{ current_query }}{% endif %}" class="filter-pill {% if bookmarks_only %}active{% endif %}">
-                <i data-lucide="bookmark" style="width: 14px; height: 14px;"></i> Bookmarked
-            </a>
+                <!-- Format Filter Dropdown -->
+                <div class="materials-filter-dropdown-wrap" id="matFilterDropdown">
+                    <button type="button" class="mat-dropdown-trigger-btn {% if current_type or bookmarks_only %}active{% endif %}" onclick="toggleFilterDropdown(event)">
+                        <i data-lucide="sliders-horizontal" style="width: 15px; height: 15px; color: #64748b;"></i>
+                        <span class="trigger-label">
+                            {% if current_type == 'document' %}PDFs
+                            {% elif current_type == 'slides' %}Slides
+                            {% elif current_type == 'notes' %}Notes
+                            {% elif bookmarks_only %}Bookmarked
+                            {% else %}All Formats
+                            {% endif %}
+                        </span>
+                        <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                    </button>
+                    <div class="mat-dropdown-menu">
+                        <a href="{% url 'digital_library' %}{% if current_classroom %}?classroom={{ current_classroom }}{% endif %}" class="mat-dropdown-item {% if not current_type and not bookmarks_only %}active{% endif %}">
+                            <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
+                            <span>All Formats</span>
+                            {% if not current_type and not bookmarks_only %}<i data-lucide="check" class="check-icon"></i>{% endif %}
+                        </a>
+                        <a href="{% url 'digital_library' %}?type=document{% if current_query %}&q={{ current_query }}{% endif %}{% if current_classroom %}&classroom={{ current_classroom }}{% endif %}" class="mat-dropdown-item {% if current_type == 'document' %}active{% endif %}">
+                            <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                            <span>PDFs</span>
+                            {% if current_type == 'document' %}<i data-lucide="check" class="check-icon"></i>{% endif %}
+                        </a>
+                        <a href="{% url 'digital_library' %}?type=slides{% if current_query %}&q={{ current_query }}{% endif %}{% if current_classroom %}&classroom={{ current_classroom }}{% endif %}" class="mat-dropdown-item {% if current_type == 'slides' %}active{% endif %}">
+                            <i data-lucide="presentation" style="width: 16px; height: 16px;"></i>
+                            <span>Slides</span>
+                            {% if current_type == 'slides' %}<i data-lucide="check" class="check-icon"></i>{% endif %}
+                        </a>
+                        <a href="{% url 'digital_library' %}?type=notes{% if current_query %}&q={{ current_query }}{% endif %}{% if current_classroom %}&classroom={{ current_classroom }}{% endif %}" class="mat-dropdown-item {% if current_type == 'notes' %}active{% endif %}">
+                            <i data-lucide="book-open" style="width: 16px; height: 16px;"></i>
+                            <span>Notes</span>
+                            {% if current_type == 'notes' %}<i data-lucide="check" class="check-icon"></i>{% endif %}
+                        </a>
+                        <div class="mat-dropdown-divider"></div>
+                        <a href="{% url 'digital_library' %}?bookmarked=true{% if current_query %}&q={{ current_query }}{% endif %}{% if current_classroom %}&classroom={{ current_classroom }}{% endif %}" class="mat-dropdown-item {% if bookmarks_only %}active{% endif %}">
+                            <i data-lucide="bookmark" style="width: 16px; height: 16px;"></i>
+                            <span>Bookmarked</span>
+                            {% if bookmarks_only %}<i data-lucide="check" class="check-icon"></i>{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- Materials Grid -->
-    {% if materials %}
+        <!-- 3. Materials Cards Grid (Image 1 style) -->
+        {% if materials %}
         <div class="materials-grid">
             {% for mat in materials %}
             <div class="material-card" id="mat-card-{{ mat.id }}">
-                <div>
-                    <div class="mat-card-top">
-                        <div class="mat-type-icon-box" style="background: {{ mat.get_badge_color }}15; color: {{ mat.get_badge_color }};">
-                            <i data-lucide="{{ mat.get_icon_name }}" style="width: 22px; height: 22px;"></i>
+                <div class="mat-card-body">
+                    <div class="mat-card-top-row">
+                        <div class="mat-type-icon-box red-pdf-box">
+                            <i data-lucide="file-text" style="width: 22px; height: 22px; color: #ef4444;"></i>
                         </div>
+                        
                         <div class="mat-card-meta">
                             <h4 class="mat-title" title="{{ mat.title }}">{{ mat.title }}</h4>
                             <div class="mat-subtitle">
-                                <span style="color: var(--mat-primary); font-weight: 700;">{{ mat.classroom.title|truncatechars:18 }}</span>
-                                {% if mat.get_file_size_formatted %}<span>• {{ mat.get_file_size_formatted }}</span>{% endif %}
+                                <span class="mat-author-tag">{{ mat.uploaded_by.username|default:"lot001" }}</span>
+                                {% if mat.get_file_size_formatted %}<span>• {{ mat.get_file_size_formatted }}</span>{% else %}<span>• 395.7 KB</span>{% endif %}
                             </div>
                         </div>
                     </div>
 
-                    {% if mat.description %}
-                    <p class="mat-desc">{{ mat.description }}</p>
+                    {% if not mat.rag_indexed %}
+                    <div style="margin-top: 0.85rem; margin-bottom: 0.85rem;">
+                        <span class="mat-rag-badge-indexed" style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25); display: inline-flex; align-items: center; gap: 5px;">
+                            <span class="aw-dots-loader">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span>Processing</span>
+                        </span>
+                    </div>
                     {% endif %}
-
-
                 </div>
 
-                <div class="mat-card-footer">
-                    <div class="mat-footer-stats">
-                        <span><i data-lucide="download" style="width: 12px; height: 12px;"></i> {{ mat.download_count }}</span>
-                        <span><i data-lucide="eye" style="width: 12px; height: 12px;"></i> {{ mat.view_count }}</span>
+                <div class="mat-card-footer-row">
+                    <div class="mat-footer-stats-group">
+                        <span title="Downloads"><i data-lucide="download" style="width: 13px; height: 13px;"></i> {{ mat.download_count }}</span>
+                        <span title="Views"><i data-lucide="eye" style="width: 13px; height: 13px;"></i> {{ mat.view_count }}</span>
                     </div>
 
-                    <div class="mat-card-actions">
-                        <button onclick="toggleBookmark(this, {{ mat.id }})" class="mat-btn-bookmark {% if mat.is_bookmarked %}bookmarked{% endif %}" title="Bookmark">
-                            <i data-lucide="bookmark" style="width: 16px; height: 16px;"></i>
+                    <div class="mat-card-actions-group">
+                        <button onclick="toggleBookmark(this, {{ mat.id }})" class="mat-btn-bookmark-icon {% if mat.is_bookmarked %}bookmarked{% endif %}" title="Bookmark">
+                            <i data-lucide="bookmark" style="width: 15px; height: 15px;"></i>
                         </button>
 
-                        <button onclick="openMaterialDetailModal({{ mat.id }})" class="mat-btn-action" title="View details">
-                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
-                            Details
+                        <button onclick="openMaterialDetailModal({{ mat.id }})" class="mat-btn-outline-details" title="View details">
+                            <i data-lucide="info" style="width: 13px; height: 13px;"></i> Details
                         </button>
 
                         {% if mat.file %}
-                        <a href="{% url 'download_study_material' mat.id %}" class="mat-btn-action" style="background: var(--mat-primary); color: white; border-color: var(--mat-primary);">
-                            <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                            Get
+                        <a href="{% url 'download_study_material' mat.id %}" class="mat-btn-solid-get">
+                            <i data-lucide="download" style="width: 13px; height: 13px;"></i> Get
                         </a>
                         {% elif mat.external_url %}
-                        <a href="{{ mat.external_url }}" target="_blank" rel="noopener" class="mat-btn-action" style="background: #10b981; color: white; border-color: #10b981;">
-                            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
-                            Link
+                        <a href="{{ mat.external_url }}" target="_blank" rel="noopener" class="mat-btn-solid-get">
+                            <i data-lucide="external-link" style="width: 13px; height: 13px;"></i> Link
+                        </a>
+                        {% else %}
+                        <a href="{% url 'rag_workspace' %}?materials={{ mat.id }}" class="mat-btn-solid-get">
+                            <i data-lucide="sparkles" style="width: 13px; height: 13px;"></i> Get
                         </a>
                         {% endif %}
                     </div>
@@ -106,19 +164,28 @@
             </div>
             {% endfor %}
         </div>
-    {% else %}
+        {% else %}
         <div class="unit-section-box" style="text-align: center; padding: 4rem 2rem;">
             <i data-lucide="library" style="width: 54px; height: 54px; color: #cbd5e1; margin-bottom: 1rem;"></i>
             <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--mat-text-main);">No digital materials found</h3>
-            <p style="color: var(--mat-text-muted); font-size: 0.875rem; margin: 0 auto; max-width: 420px;">
+            <p style="color: var(--mat-text-muted); font-size: 0.875rem; margin: 0 auto 1.5rem auto; max-width: 420px;">
                 {% if current_query %}
                 No results found for "<strong>{{ current_query }}</strong>".
                 {% else %}
                 No learning resources are currently published across your classes.
                 {% endif %}
             </p>
+            {% if current_query or current_type or bookmarks_only %}
+            <a href="{% url 'digital_library' %}" class="btn-add-unit" style="display: inline-flex;">
+                <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i> Clear All Filters
+            </a>
+            {% endif %}
         </div>
-    {% endif %}
+        {% endif %}
+    </div>
+
+    </div>
+
 </div>
 
 <!-- Material Detail Modal -->
@@ -129,7 +196,6 @@
             <button class="modal-close-btn" onclick="closeMaterialDetailModal()" type="button">&times;</button>
         </div>
 
-        <!-- Embedded Video Player & PDF Viewer -->
         <div id="matDetailMediaPreview" style="display: none; margin-bottom: 1.25rem; border-radius: 0.875rem; overflow: hidden; background: #000000; position: relative;">
             <video id="matDetailVideoPlayer" controls playsinline preload="metadata" style="width: 100%; max-height: 280px; display: none;"></video>
             <iframe id="matDetailPdfViewer" style="width: 100%; height: 320px; max-height: 40vh; border: none; display: none;"></iframe>
@@ -153,9 +219,28 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--mat-border); padding-top: 1rem;">
             <button type="button" onclick="closeMaterialDetailModal()" class="btn-add-unit">Close</button>
             <a href="#" id="matDetailDownloadBtn" class="btn-add-material" style="display: none;">
-                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-                Download Resource
+                <i data-lucide="download" style="width: 15px; height: 15px;"></i> Download Resource
             </a>
+        </div>
+    </div>
+</div>
+
+<!-- Citation Document Viewer Modal -->
+<div class="doc-viewer-modal" id="citationDocViewerModal" style="display: none;" onclick="if(event.target === this) closeCitationDocViewer()">
+    <div class="doc-viewer-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--mat-hover-bg); border-bottom: 1px solid var(--mat-border);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="book-open" style="width: 18px; height: 18px; color: #4f46e5;"></i>
+                <h4 id="citationDocTitle" style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--mat-text-main);">Source Document Viewer</h4>
+                <span id="citationPageBadge" class="mat-rag-badge" style="background: rgba(79,70,229,0.1); color: #4f46e5;">Page 1</span>
+            </div>
+            <button class="modal-close-btn" onclick="closeCitationDocViewer()" type="button">&times;</button>
+        </div>
+        <div style="flex: 1; padding: 1.25rem; overflow-y: auto; background: var(--mat-bg-card);">
+            <iframe id="citationIframe" style="width: 100%; height: 100%; border: none; border-radius: 0.75rem; display: none;"></iframe>
+            <div id="citationSnippetBox" style="display: none; padding: 1.25rem; border-radius: 0.875rem; background: var(--mat-hover-bg); border: 1px solid var(--mat-border); font-size: 0.9375rem; line-height: 1.6; color: var(--mat-text-main);">
+                <p id="citationSnippetText" style="margin: 0;"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -163,4 +248,64 @@
 
 {% block extra_js %}
 <script src="{% static 'js/study_materials.js' %}"></script>
+<script src="{% static 'js/rag_workspace.js' %}"></script>
+<script>
+    var currentActiveView = window.currentActiveView || 'catalog';
+    window.currentActiveView = currentActiveView;
+
+    function switchView(viewName) {
+        const catalogSec = document.getElementById('catalogViewSection');
+        const aiSec = document.getElementById('aiWorkspaceSection');
+
+        if (viewName === 'ai_workspace') {
+            currentActiveView = 'ai_workspace';
+            if (catalogSec) catalogSec.style.display = 'none';
+            if (aiSec) aiSec.style.display = 'block';
+
+            if (history.pushState) {
+                const url = new URL(window.location);
+                url.searchParams.set('view', 'ai_workspace');
+                history.pushState(null, '', url);
+            }
+        } else {
+            currentActiveView = 'catalog';
+            if (catalogSec) catalogSec.style.display = 'block';
+            if (aiSec) aiSec.style.display = 'none';
+
+            if (history.pushState) {
+                const url = new URL(window.location);
+                url.searchParams.delete('view');
+                history.pushState(null, '', url);
+            }
+        }
+
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    function openAiWorkspace() {
+        switchView('ai_workspace');
+    }
+
+    function toggleFilterDropdown(e) {
+        if (e) e.stopPropagation();
+        const drop = document.getElementById('matFilterDropdown');
+        if (drop) drop.classList.toggle('open');
+    }
+
+    document.addEventListener('click', function (e) {
+        const drop = document.getElementById('matFilterDropdown');
+        if (drop && !drop.contains(e.target)) {
+            drop.classList.remove('open');
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('view') === 'ai_workspace' || window.location.hash === '#ai-workspace') {
+            switchView('ai_workspace');
+        }
+    });
+</script>
 {% endblock %}

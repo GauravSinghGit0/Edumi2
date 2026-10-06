@@ -387,6 +387,7 @@ class MaterialChunk(models.Model):
     token_count = models.IntegerField(default=0)
     page_number = models.IntegerField(null=True, blank=True)
     embedding_id = models.CharField(max_length=128, blank=True, null=True, db_index=True)
+    embedding_vector = models.JSONField(default=list, blank=True, help_text="Float array representation for semantic search")
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

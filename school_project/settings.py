@@ -155,7 +155,9 @@ INSTALLED_APPS = [
     'videos',
     'video_editing',
     'assignments',
+    'rag_workspace',
     'django_extensions',
+
     'compressor',
 ]
 
@@ -733,4 +735,15 @@ try:
 except Exception:
     FFMPEG_BINARY = env('FFMPEG_BINARY', 'ffmpeg')
     FFPROBE_BINARY = env('FFPROBE_BINARY', 'ffprobe')
+
+
+# ==============================================================================
+# AI MODEL & RAG WORKSPACE CONFIGURATION
+# ==============================================================================
+AI_LLM_URL          = env('AI_LLM_URL', '')
+AI_LLM_BEARER_TOKEN = env('AI_LLM_BEARER_TOKEN', '')
+AI_MODEL_NAME       = env('AI_MODEL_NAME', 'phi:latest')
+AI_EMBEDDING_URL    = env('AI_EMBEDDING_URL', 'http://127.0.0.1:11434')
+AI_EMBEDDING_MODEL  = env('AI_EMBEDDING_MODEL', 'nomic-embed-text:latest')
+
 

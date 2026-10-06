@@ -29,67 +29,168 @@ def check_classroom_access(classroom, user):
     return is_approved_student, False
 
 
+def extract_text_pages_from_material(material):
+    """
+    Extracts text pages from uploaded StudyMaterial files (PDF, DOCX, TXT, etc.).
+    Returns a list of tuples: [(page_number, text_content), ...]
+    """
+    pages = []
+    ext = (material.file_extension or '').lower().lstrip('.')
+    if not ext and material.file:
+        ext = material.file.name.split('.')[-1].lower() if '.' in material.file.name else ''
+
+    if material.file:
+        file_path = material.file.path if hasattr(material.file, 'path') and os.path.exists(material.file.path) else None
+
+        # 1. PDF Parsing
+        if ext == 'pdf':
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(file_path or material.file)
+                for idx, p in enumerate(reader.pages, 1):
+                    t = p.extract_text() or ''
+                    if t.strip():
+                        pages.append((idx, t))
+            except Exception:
+                try:
+                    import PyPDF2
+                    reader = PyPDF2.PdfReader(file_path or material.file)
+                    for idx, p in enumerate(reader.pages, 1):
+                        t = p.extract_text() or ''
+                        if t.strip():
+                            pages.append((idx, t))
+                except Exception as err:
+                    print(f"[PDF Extract Error] {err}")
+
+        # 2. DOCX Parsing
+        elif ext in ['docx', 'doc']:
+            try:
+                import docx
+                doc = docx.Document(file_path or material.file)
+                paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+                if paragraphs:
+                    pages.append((1, "\n\n".join(paragraphs)))
+            except Exception as err:
+                print(f"[DOCX Extract Error] {err}")
+
+        # 3. Plain Text File Parsing
+        elif ext in ['txt', 'md', 'py', 'json', 'csv', 'html', 'log']:
+            try:
+                if file_path:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        raw = f.read()
+                else:
+                    material.file.open('r')
+                    raw = material.file.read()
+                    material.file.close()
+
+                if isinstance(raw, bytes):
+                    raw = raw.decode('utf-8', errors='ignore')
+                if raw.strip():
+                    pages.append((1, raw[:100000]))
+            except Exception as err:
+                print(f"[Text Extract Error] {err}")
+
+    # Fallback to database content_text or description
+    if not pages:
+        fallback_txt = material.content_text or material.description or material.title
+        pages.append((1, fallback_txt))
+
+    return pages
+
+
 def auto_chunk_and_index_rag(material):
     """
     RAG Pre-processor:
-    Extracts text, creates text chunks with token estimates, generates key topics, and marks RAG readiness.
+    Extracts text from PDF/DOCX/TXT files, creates overlapping text chunks with page tracking,
+    pre-computes vector embeddings upfront, and marks RAG readiness.
     """
-    raw_text = material.content_text or material.description or ""
-    
-    # If a file is uploaded, attempt to read plaintext or describe metadata
-    if material.file and not raw_text:
-        ext = (material.file_extension or '').lower()
-        if ext in ['txt', 'md', 'py', 'json', 'csv', 'html']:
-            try:
-                material.file.open('r')
-                raw_text = material.file.read()[:50000] # Cap initial read
-                material.file.close()
-            except Exception:
-                pass
+    from rag_workspace.services import get_nomic_embedding
 
-    if not raw_text:
-        raw_text = f"{material.title}\n\n{material.description}"
+    extracted_pages = extract_text_pages_from_material(material)
 
-    material.extracted_text = raw_text
+    full_text_list = []
+    chunk_records = []
+    chunk_counter = 0
+
+    chunk_size = 500
+    chunk_overlap = 100
+
+    for page_num, page_text in extracted_pages:
+        full_text_list.append(f"--- Page {page_num} ---\n{page_text}")
+
+        # Sliding window chunking with overlap per page
+        p_len = len(page_text)
+        if p_len <= chunk_size:
+            p_chunks = [page_text]
+        else:
+            p_chunks = []
+            start = 0
+            while start < p_len:
+                end = start + chunk_size
+                p_chunks.append(page_text[start:end])
+                if end >= p_len:
+                    break
+                start += (chunk_size - chunk_overlap)
+
+        for c_text in p_chunks:
+            c_text_clean = c_text.strip()
+            if not c_text_clean:
+                continue
+
+            approx_tokens = len(c_text_clean.split())
+            chunk_records.append({
+                'chunk_index': chunk_counter,
+                'chunk_text': c_text_clean,
+                'token_count': approx_tokens,
+                'page_number': page_num,
+                'embedding_id': f"emb_mat_{material.id}_chunk_{chunk_counter}",
+            })
+            chunk_counter += 1
+
+    all_raw_text = "\n\n".join(full_text_list)
+    material.extracted_text = all_raw_text[:200000]
 
     # Extract keywords/topics for hybrid search
-    words = [w.strip('.,()[]:;"\'') for w in raw_text.split() if len(w) > 4]
-    unique_topics = list(dict.fromkeys([w.capitalize() for w in words[:25]]))
+    words = [w.strip('.,()[]:;"\'') for w in all_raw_text.split() if len(w) > 4]
+    unique_topics = list(dict.fromkeys([w.capitalize() for w in words[:40]]))
     material.key_topics = unique_topics[:8]
 
     # Create summary
-    first_paragraph = raw_text.strip().split('\n\n')[0] if raw_text else material.title
+    first_paragraph = all_raw_text.strip().split('\n\n')[0] if all_raw_text else material.title
     material.summary_ai = (first_paragraph[:280] + '...') if len(first_paragraph) > 280 else first_paragraph
 
-    # Chunk the text (e.g. ~400 characters / ~80 tokens per chunk)
-    chunk_size = 400
-    paragraphs = [raw_text[i:i+chunk_size] for i in range(0, len(raw_text), chunk_size)] if raw_text else [material.title]
-
-    # Clear old chunks if any
+    # Clear old chunks
     material.chunks.all().delete()
 
-    for idx, p_text in enumerate(paragraphs):
-        approx_tokens = len(p_text.split())
-        MaterialChunk.objects.create(
+    # Pre-compute embeddings upfront where possible
+    created_chunks = []
+    for c_data in chunk_records:
+        vec = get_nomic_embedding(c_data['chunk_text'])
+        mc = MaterialChunk.objects.create(
             material=material,
-            chunk_index=idx,
-            chunk_text=p_text,
-            token_count=approx_tokens,
-            embedding_id=f"emb_mat_{material.id}_chunk_{idx}",
+            chunk_index=c_data['chunk_index'],
+            chunk_text=c_data['chunk_text'],
+            token_count=c_data['token_count'],
+            page_number=c_data['page_number'],
+            embedding_id=c_data['embedding_id'],
+            embedding_vector=vec or [],
             metadata={
                 'source': material.title,
                 'type': material.material_type,
                 'classroom_id': material.classroom_id,
-                'chunk_idx': idx,
+                'page_number': c_data['page_number'],
             }
         )
+        created_chunks.append(mc)
 
     material.rag_indexed = True
     material.rag_indexed_at = timezone.now()
     material.rag_metadata = {
-        'total_chunks': len(paragraphs),
+        'total_chunks': len(created_chunks),
+        'pages_extracted': len(extracted_pages),
         'vector_collection': f"classroom_{material.classroom_id}_library",
-        'embedding_model': 'text-embedding-3-small (Simulated Ready)',
+        'embedding_model': 'nomic-embed-text',
     }
     material.save(update_fields=['extracted_text', 'summary_ai', 'key_topics', 'rag_indexed', 'rag_indexed_at', 'rag_metadata'])
 
@@ -199,8 +300,11 @@ def upload_study_material(request, classroom_id):
         is_published=True,
     )
 
-    # Trigger automatic RAG chunking & embedding readiness pipeline
-    auto_chunk_and_index_rag(material)
+    # Trigger automatic RAG chunking & embedding readiness pipeline safely
+    try:
+        auto_chunk_and_index_rag(material)
+    except Exception as err:
+        print(f"[RAG Auto-Indexing Warning during upload] {err}")
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({

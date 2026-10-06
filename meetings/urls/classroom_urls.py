@@ -1,5 +1,4 @@
-# meetings/urls/classroom_urls.py
-from django.urls import path
+from django.urls import path, include
 from meetings.views import (
     create_classroom, teacher_classrooms, student_classrooms, classroom_detail,
     join_classroom_request, approve_join_request, approve_all_join_requests,
@@ -9,12 +8,17 @@ from meetings.views import (
     classroom_materials_view, upload_study_material, create_material_unit,
     delete_study_material, toggle_material_bookmark, download_study_material,
     material_detail_api, digital_library_view,
+    rag_materials_list_api, rag_chat_api, rag_teacher_settings_api,
 )
 
 from django.shortcuts import redirect
 
 urlpatterns = [
     path('api/classrooms/',                                      api_classrooms,                name='api_classrooms'),
+    path('api/rag/materials/',                                   rag_materials_list_api,        name='rag_materials_list_api'),
+    path('api/rag/chat/',                                        rag_chat_api,                  name='rag_chat_api'),
+    path('api/rag/instructor-settings/',                         rag_teacher_settings_api,      name='rag_teacher_settings_api'),
+
     path('classroom/create/',                                    create_classroom,              name='create_classroom'),
     path('classroom/teacher/',                                   teacher_classrooms,            name='teacher_classrooms'),
     path('classroom/student/',                                   student_classrooms,            name='student_classrooms'),
@@ -42,5 +46,6 @@ urlpatterns = [
     path('materials/<int:material_id>/download/',                download_study_material,       name='download_study_material'),
     path('materials/<int:material_id>/detail-api/',              material_detail_api,           name='material_detail_api'),
     path('library/',                                             digital_library_view,          name='digital_library'),
+    path('library/rag/',                                         include('rag_workspace.urls')),
 ]
 
