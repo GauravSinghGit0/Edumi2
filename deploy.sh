@@ -335,6 +335,18 @@ EXISTING_EMAIL_HOST_PASSWORD=$(grep '^EMAIL_HOST_PASSWORD=' "$ENV_FILE" 2>/dev/n
 EXISTING_DEFAULT_FROM_EMAIL=$(grep '^DEFAULT_FROM_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
 [ -z "$EXISTING_DEFAULT_FROM_EMAIL" ] && EXISTING_DEFAULT_FROM_EMAIL="EduMi Support <YOUR_EMAIL@gmail.com>"
 
+# Preserve existing AI & RAG LLM configurations
+EXISTING_AI_LLM_URL=$(grep '^AI_LLM_URL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_AI_LLM_BEARER_TOKEN=$(grep '^AI_LLM_BEARER_TOKEN=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_AI_MODEL_NAME=$(grep '^AI_MODEL_NAME=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_AI_EMBEDDING_URL=$(grep '^AI_EMBEDDING_URL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_AI_EMBEDDING_MODEL=$(grep '^AI_EMBEDDING_MODEL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_OPENAI_API_KEY=$(grep '^OPENAI_API_KEY=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+EXISTING_OPENAI_MODEL=$(grep '^OPENAI_MODEL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
+
+# Collect any additional custom user environment variables
+CUSTOM_ENV_KEYS=$(grep -v '^\s*#' "$ENV_FILE" 2>/dev/null | grep -v '^\s*$' | grep '=' | grep -v '^\(SECRET_KEY\|DEBUG\|ALLOWED_HOSTS\|SERVER_IP\|LOG_LEVEL\|DATABASE_URL\|REDIS_URL\|LIVEKIT_\|SECURE_SSL_REDIRECT\|SESSION_COOKIE_SECURE\|CSRF_COOKIE_SECURE\|FACE_\|CSRF_TRUSTED_ORIGINS\|CAMERA_\|FFMPEG_\|FFPROBE_\|EMAIL_\|DEFAULT_FROM_EMAIL\|AI_\|OPENAI_\)' || echo "")
+
 if [ -n "$EXISTING_SECRET" ]; then
     SECRET_KEY=$EXISTING_SECRET
 else
@@ -390,8 +402,23 @@ EMAIL_USE_SSL=$EXISTING_EMAIL_USE_SSL
 EMAIL_HOST_USER=$EXISTING_EMAIL_HOST_USER
 EMAIL_HOST_PASSWORD=$EXISTING_EMAIL_HOST_PASSWORD
 DEFAULT_FROM_EMAIL=$EXISTING_DEFAULT_FROM_EMAIL
+
+# AI Model & RAG Workspace Configuration
+AI_LLM_URL=$EXISTING_AI_LLM_URL
+AI_LLM_BEARER_TOKEN=$EXISTING_AI_LLM_BEARER_TOKEN
+AI_MODEL_NAME=${EXISTING_AI_MODEL_NAME:-phi:latest}
+AI_EMBEDDING_URL=$EXISTING_AI_EMBEDDING_URL
+AI_EMBEDDING_MODEL=${EXISTING_AI_EMBEDDING_MODEL:-nomic-embed-text:latest}
+OPENAI_API_KEY=$EXISTING_OPENAI_API_KEY
+OPENAI_MODEL=${EXISTING_OPENAI_MODEL:-gpt-4o-mini}
 EOF
-log ".env updated for HTTPS & $DOMAIN."
+
+if [ -n "$CUSTOM_ENV_KEYS" ]; then
+    echo "" >> "$ENV_FILE"
+    echo "# Custom User Environment Variables (Preserved)" >> "$ENV_FILE"
+    echo "$CUSTOM_ENV_KEYS" >> "$ENV_FILE"
+fi
+log ".env updated for HTTPS & $DOMAIN (All custom AI/User keys preserved)."
 
 
 # ------------------------------------------------------------------------------

@@ -880,7 +880,7 @@
             const userUsername = (this._config.currentUser && this._config.currentUser.username) || 'User';
 
             const userAvatarHtml = userAvatarUrl
-                ? '<img src="' + this._escapeHtml(userAvatarUrl) + '" alt="' + this._escapeHtml(userDisplayName) + '" class="aw-user-avatar-img" onerror="this.onerror=null; this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(userUsername) + '&background=7c3aed&color=fff\';">'
+                ? '<img src="' + this._escapeHtml(userAvatarUrl) + '" alt="' + this._escapeHtml(userDisplayName) + '" class="aw-user-avatar-img" onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'inline-block\';"><i data-lucide="user" style="width:16px; height:16px; display:none;"></i>'
                 : '<i data-lucide="user" style="width:16px; height:16px;"></i>';
 
             const avatar = role === 'user'

@@ -319,7 +319,7 @@
             currentUser: {
                 username: "{{ request.user.username|escapejs }}",
                 displayName: "{{ request.user.userprofile.get_display_name|default:request.user.username|escapejs }}",
-                avatarUrl: "{% if request.user.userprofile %}{{ request.user.userprofile.get_profile_picture_url|escapejs }}{% else %}https://ui-avatars.com/api/?name={{ request.user.username|urlencode }}&background=7c3aed&color=fff{% endif %}"
+                avatarUrl: "{% if request.user.userprofile and request.user.userprofile.profile_picture %}{{ request.user.userprofile.profile_picture.url|escapejs }}{% elif request.user.userprofile and request.user.userprofile.avatar_url %}{{ request.user.userprofile.avatar_url|escapejs }}{% else %}{% endif %}"
             }
         });
     });
