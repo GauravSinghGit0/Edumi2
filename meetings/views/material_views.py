@@ -478,7 +478,16 @@ def material_detail_api(request, material_id):
 @login_required
 def digital_library_view(request):
     """Global Digital Library across all user's accessible classrooms with cross-subject search."""
-    if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher':
+    user_type = None
+    try:
+        if hasattr(request.user, 'userprofile') and request.user.userprofile:
+            user_type = request.user.userprofile.user_type
+    except Exception:
+        user_type = None
+
+    if request.user.is_superuser or user_type == 'admin':
+        classrooms = Classroom.objects.filter(is_active=True)
+    elif user_type == 'teacher':
         classrooms = Classroom.objects.filter(teacher=request.user, is_active=True)
     else:
         classrooms = Classroom.objects.filter(

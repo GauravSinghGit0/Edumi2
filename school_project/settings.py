@@ -478,12 +478,12 @@ STATICFILES_FINDERS = [
     'compressor.finders.CompressorFinder',
 ]
 
-# WhiteNoise: compressed + cache-busted static files
+# WhiteNoise: compressed static files (non-strict to prevent 500 errors on missing manifest entries)
 try:
     import whitenoise  # noqa
     STORAGES = {
         'staticfiles': {
-            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
         },
         'default': {
             'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -497,7 +497,7 @@ try:
 except ImportError:
     STORAGES = {
         'staticfiles': {
-            'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
         },
         'default': {
             'BACKEND': 'django.core.files.storage.FileSystemStorage',
