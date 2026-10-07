@@ -102,14 +102,74 @@ def cosine_similarity(v1, v2):
     return dot / (norm_a * norm_b)
 
 
-def retrieve_source_chunks(material_ids, query, top_k=6):
+def rewrite_query(prompt):
     """
-    Retrieves and ranks relevant text chunks using Hybrid Search:
+    Cleans and normalizes user query by removing conversational prefixes/filler words,
+    extra whitespace, and non-essential punctuation for vector and lexical retrieval.
+    """
+    if not prompt:
+        return ""
+    cleaned = prompt.strip()
+    patterns = [
+        r'^(hey|hi|hello|please|can you|could you|bhai|batao|tell me|explain|describe|what is|who is|where is|how does|why is|what are|tell me about)\s+',
+    ]
+    lowered = cleaned.lower()
+    for pat in patterns:
+        lowered = re.sub(pat, '', lowered, flags=re.IGNORECASE)
+    cleaned_words = re.sub(r'[^\w\s]', ' ', lowered)
+    normalized = re.sub(r'\s+', ' ', cleaned_words).strip()
+    return normalized if normalized else prompt
+
+
+def rerank_and_deduplicate_chunks(chunks, min_score=0.15, max_chunks=6):
+    """
+    Reranks retrieved chunks by relevance score, filters out chunks below min_score threshold (0.15),
+    and deduplicates identical or heavily overlapping context snippets before sending to LLM.
+    """
+    if not chunks:
+        return []
+
+    sorted_chunks = sorted(chunks, key=lambda x: x['score'], reverse=True)
+
+    filtered = []
+    seen_texts = []
+
+    for c in sorted_chunks:
+        if c['score'] < min_score:
+            continue
+        text_snippet = c['text'].strip().lower()
+        
+        is_dup = False
+        for seen in seen_texts:
+            if text_snippet in seen or seen in text_snippet:
+                is_dup = True
+                break
+            words_a = set(text_snippet.split())
+            words_b = set(seen.split())
+            if words_a and words_b:
+                overlap = len(words_a.intersection(words_b)) / float(min(len(words_a), len(words_b)))
+                if overlap > 0.85:
+                    is_dup = True
+                    break
+        if not is_dup:
+            seen_texts.append(text_snippet)
+            filtered.append(c)
+            if len(filtered) >= max_chunks:
+                break
+
+    return filtered
+
+
+def retrieve_source_chunks(material_ids, query, top_k=10):
+    """
+    Retrieves and ranks relevant text chunks using Metadata Filtering + Hybrid Search:
     Combines nomic-embed-text Cosine Vector Similarity (75% weight) with BM25 Keyword Matching (25% weight).
+    Metadata filtering by material_ids and is_published=True.
     """
     if not material_ids:
         return []
 
+    # Metadata filtering at Database layer
     chunks = MaterialChunk.objects.filter(
         material_id__in=material_ids,
         material__is_published=True
@@ -118,10 +178,13 @@ def retrieve_source_chunks(material_ids, query, top_k=6):
     if not chunks.exists():
         return []
 
-    # Get query embedding for semantic search
-    query_vec = get_nomic_embedding(query) if query else None
+    rewritten_query = rewrite_query(query)
+    effective_query = rewritten_query if rewritten_query else query
 
-    query_clean = re.sub(r'[^\w\s]', '', (query or '').lower())
+    # Get query embedding for semantic search
+    query_vec = get_nomic_embedding(effective_query) if effective_query else None
+
+    query_clean = re.sub(r'[^\w\s]', '', (effective_query or '').lower())
     query_tokens = [w for w in query_clean.split() if len(w) > 2]
 
     scored = []
@@ -160,7 +223,7 @@ def retrieve_source_chunks(material_ids, query, top_k=6):
         if query_vec and chunk_vec:
             sem_sim = cosine_similarity(query_vec, chunk_vec)
 
-        # 3. Hybrid Combined Score
+        # 3. Hybrid Combined Score (75% Vector Embedding + 25% BM25 Lexical Keyword)
         if query_vec and chunk_vec:
             final_score = (0.75 * sem_sim) + (0.25 * min(1.0, kw_norm / 5.0))
         elif query_tokens:
@@ -168,20 +231,19 @@ def retrieve_source_chunks(material_ids, query, top_k=6):
         else:
             final_score = 1.0 / (chunk.chunk_index + 1)
 
-        if final_score > 0.05 or not query_tokens:
-            page_num = chunk.page_number or (chunk.chunk_index + 1)
-            unit_title = chunk.material.unit.title if chunk.material.unit else "General"
-            scored.append({
-                'chunk_id': chunk.id,
-                'material_id': chunk.material.id,
-                'material_title': chunk.material.title,
-                'unit_title': unit_title,
-                'page_number': page_num,
-                'chunk_index': chunk.chunk_index,
-                'text': chunk.chunk_text,
-                'score': final_score,
-                'file_url': chunk.material.file.url if chunk.material.file else None,
-            })
+        page_num = chunk.page_number or (chunk.chunk_index + 1)
+        unit_title = chunk.material.unit.title if chunk.material.unit else "General"
+        scored.append({
+            'chunk_id': chunk.id,
+            'material_id': chunk.material.id,
+            'material_title': chunk.material.title,
+            'unit_title': unit_title,
+            'page_number': page_num,
+            'chunk_index': chunk.chunk_index,
+            'text': chunk.chunk_text,
+            'score': final_score,
+            'file_url': chunk.material.file.url if chunk.material.file else None,
+        })
 
     scored.sort(key=lambda x: x['score'], reverse=True)
     return scored[:top_k]
@@ -331,6 +393,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
 def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Main synchronous entrypoint for processing user study requests in RAG AI Study Workspace.
+    Strict True RAG: Query Rewriting -> Metadata Filtering -> Hybrid Search -> Relevance Reranking & Deduplication -> Grounded Generation with Citations.
     """
     materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
     if not materials.exists():
@@ -338,21 +401,22 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             'status': 'error',
             'message': 'No study materials selected.',
             'not_found': True,
-            'answer': 'Please select at least one study resource to start an AI study session.',
+            'answer': 'Not found in the knowledge base.',
             'sources': []
         }
 
-    chunks = retrieve_source_chunks(material_ids, prompt, top_k=6)
-    max_score = max([c['score'] for c in chunks]) if chunks else 0.0
+    raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
+    chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
 
-    if strict_mode and (not chunks or (prompt and max_score < 0.12 and mode in ['ask', 'explain'])):
-        s_id = log_rag_query(user, mode, prompt, "I couldn't find this information in your selected study materials.", 0, [], strict_mode, True, session_id, material_ids)
+    if not chunks:
+        msg = "Not found in the knowledge base."
+        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
         return {
             'status': 'success',
             'not_found': True,
-            'answer': "I couldn't find this information in your selected study materials.",
+            'answer': msg,
             'sources': [],
-            'can_fallback_external': allow_external,
+            'can_fallback_external': False,
             'mode': mode,
             'session_id': s_id
         }
@@ -377,18 +441,20 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     context_str = "\n\n".join(context_blocks)
 
-    # Unified ChatGPT-style Conversational RAG Prompt Engine
     system_p = (
-        "You are EduMi AI, a helpful, intelligent AI Tutor. "
-        "Answer the student's request naturally, clearly, and thoroughly using the provided study material context. "
-        "Fulfill the user's prompt directly (whether it is a question, explanation, summary, quiz request, or study aid). "
-        "Always cite source titles and page numbers like [Title, Page X] when referencing facts from the materials."
+        "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
+        "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
+        "STRICT CONSTRAINTS:\n"
+        "1. Answer ONLY using the facts present in the provided context. Do NOT use any external knowledge, assumptions, or prior training data.\n"
+        "2. If the context does not contain sufficient facts to answer the user prompt completely, reply with EXACTLY: Not found in the knowledge base.\n"
+        "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
+        "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
     )
-    user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT PROMPT: {prompt or 'Provide an overview of the core topics in these study materials.'}"
+    user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
 
     answer = call_phi_llm(user_p, system_p)
-    if not answer:
-        answer = generate_fallback_ask(prompt, chunks, materials)
+    if not answer or "not found in the knowledge base" in answer.lower() or answer.strip() == "":
+        answer = "Not found in the knowledge base."
 
     s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
     return {
@@ -403,7 +469,8 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
 def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
-    Streaming variant of run_rag_workspace_pipeline emitting SSE text frames in ChatGPT style.
+    Streaming variant of run_rag_workspace_pipeline emitting SSE text frames.
+    Strict True RAG pipeline execution.
     """
     def _frame(payload):
         return payload
@@ -411,11 +478,18 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
     if not materials.exists():
         yield _frame({'type': 'error', 'message': 'No study materials selected.', 'not_found': True})
-        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Please select at least one study resource to start an AI study session.', 'sources': []})
+        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the knowledge base.', 'sources': []})
         return
 
-    chunks = retrieve_source_chunks(material_ids, prompt, top_k=6)
-    max_score = max([c['score'] for c in chunks]) if chunks else 0.0
+    raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
+    chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
+
+    if not chunks:
+        msg = "Not found in the knowledge base."
+        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
+        yield _frame({'type': 'meta', 'status': 'success', 'not_found': True, 'mode': mode, 'session_id': s_id})
+        yield _frame({'type': 'done', 'status': 'success', 'not_found': True, 'answer': msg, 'sources': [], 'mode': mode, 'session_id': s_id})
+        return
 
     context_blocks = []
     unique_sources = []
@@ -435,25 +509,20 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             })
     context_str = "\n\n".join(context_blocks)
 
-    if strict_mode and (not chunks or (prompt and max_score < 0.12)):
-        msg = "I couldn't find this information in your selected study materials."
-        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
-        yield _frame({'type': 'meta', 'status': 'success', 'not_found': True, 'mode': mode, 'session_id': s_id})
-        yield _frame({'type': 'done', 'status': 'success', 'not_found': True, 'answer': msg, 'sources': [], 'mode': mode, 'session_id': s_id})
-        return
-
     system_p = (
-        "You are EduMi AI, a helpful, intelligent AI Tutor. "
-        "Answer the student's request naturally, clearly, and thoroughly using the provided study material context. "
-        "Fulfill the user's prompt directly (whether it is a question, explanation, summary, quiz request, or study aid). "
-        "Always cite source titles and page numbers like [Title, Page X] when referencing facts from the materials."
+        "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
+        "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
+        "STRICT CONSTRAINTS:\n"
+        "1. Answer ONLY using the facts present in the provided context. Do NOT use any external knowledge, assumptions, or prior training data.\n"
+        "2. If the context does not contain sufficient facts to answer the user prompt completely, reply with EXACTLY: Not found in the knowledge base.\n"
+        "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
+        "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
     )
-    user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT PROMPT: {prompt or 'Provide an overview of the core topics in these study materials.'}"
+    user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
 
     yield _frame({'type': 'meta', 'status': 'success', 'not_found': False, 'mode': mode, 'sources_count': len(unique_sources)})
 
     collected = []
-    fallback_emitted = False
     token_count = 0
 
     for delta in call_phi_llm_stream(user_p, system_prompt=system_p):
@@ -462,9 +531,8 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         yield _frame({'type': 'token', 'delta': delta})
 
     answer = "".join(collected).strip()
-    if not answer:
-        fallback_emitted = True
-        answer = generate_fallback_ask(prompt, chunks, materials)
+    if not answer or "not found in the knowledge base" in answer.lower():
+        answer = "Not found in the knowledge base."
         for i in range(0, len(answer), 6):
             yield _frame({'type': 'token', 'delta': answer[i:i+6]})
 
@@ -476,7 +544,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         'answer': answer,
         'sources': unique_sources,
         'not_found': False,
-        'fallback_used': fallback_emitted,
+        'fallback_used': False,
         'tokens': token_count,
         'session_id': s_id
     })
