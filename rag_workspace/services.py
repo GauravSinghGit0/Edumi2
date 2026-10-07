@@ -102,6 +102,30 @@ def cosine_similarity(v1, v2):
     return dot / (norm_a * norm_b)
 
 
+TASK_OR_META_KEYWORDS = {
+    'mcq', 'mcqs', 'quiz', 'quizzes', 'question', 'questions', 'test', 'exam',
+    'flashcard', 'flashcards', 'summary', 'summarize', 'overview', 'outline',
+    'notes', 'key points', 'main topics', 'bullet points', 'generate', 'create',
+    'make', 'give', 'prepare', 'list', 'revision', 'practice', 'explain', 'detail'
+}
+
+
+def is_task_or_meta_prompt(prompt):
+    """
+    Returns True if user prompt is a study task/meta instruction (e.g. 'generate mcqs', 'summarize', 'create quiz')
+    rather than a specific topical keyword search.
+    """
+    if not prompt or not prompt.strip():
+        return True
+    cleaned = prompt.lower().strip()
+    words = set(re.findall(r'\b\w+\b', cleaned))
+    if words.intersection(TASK_OR_META_KEYWORDS):
+        return True
+    if len(words) <= 4 and ('this' in words or 'it' in words or 'document' in words or 'material' in words or 'paper' in words):
+        return True
+    return False
+
+
 def rewrite_query(prompt):
     """
     Cleans and normalizes user query by removing conversational prefixes/filler words,
@@ -181,6 +205,9 @@ def retrieve_source_chunks(material_ids, query, top_k=10):
     rewritten_query = rewrite_query(query)
     effective_query = rewritten_query if rewritten_query else query
 
+    # Check if prompt is a document-level task (e.g. generate MCQs, summarize)
+    is_meta = is_task_or_meta_prompt(query)
+
     # Get query embedding for semantic search
     query_vec = get_nomic_embedding(effective_query) if effective_query else None
 
@@ -230,6 +257,11 @@ def retrieve_source_chunks(material_ids, query, top_k=10):
             final_score = kw_norm
         else:
             final_score = 1.0 / (chunk.chunk_index + 1)
+
+        # For task/meta prompts (e.g. generate MCQs, summarize), assign structural baseline score so selected materials are used
+        if is_meta:
+            baseline = max(0.35, 0.60 / (chunk.chunk_index + 1))
+            final_score = max(final_score, baseline)
 
         page_num = chunk.page_number or (chunk.chunk_index + 1)
         unit_title = chunk.material.unit.title if chunk.material.unit else "General"
@@ -435,6 +467,33 @@ def get_or_create_rag_session(user, session_id, prompt, mode, strict_mode=True):
     return session
 
 
+def get_fallback_document_chunks(material_ids, max_chunks=6):
+    """Retrieves top structural text chunks directly from selected published study materials."""
+    if not material_ids:
+        return []
+    fallback_db_chunks = MaterialChunk.objects.filter(
+        material_id__in=material_ids,
+        material__is_published=True
+    ).select_related('material', 'material__unit').order_by('chunk_index')[:max_chunks]
+    
+    chunks = []
+    for idx, chunk in enumerate(fallback_db_chunks):
+        page_num = chunk.page_number or (chunk.chunk_index + 1)
+        unit_title = chunk.material.unit.title if chunk.material.unit else "General"
+        chunks.append({
+            'chunk_id': chunk.id,
+            'material_id': chunk.material.id,
+            'material_title': chunk.material.title,
+            'unit_title': unit_title,
+            'page_number': page_num,
+            'chunk_index': chunk.chunk_index,
+            'text': chunk.chunk_text,
+            'score': 0.50,
+            'file_url': chunk.material.file.url if chunk.material.file else None,
+        })
+    return chunks
+
+
 def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Main synchronous entrypoint for processing user study requests in RAG AI Study Workspace.
@@ -456,6 +515,10 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
     chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
+
+    # Fallback to structural document chunks if user asks task instructions (MCQs, Quiz, Summary, Explanation)
+    if not chunks and is_task_or_meta_prompt(prompt):
+        chunks = get_fallback_document_chunks(material_ids, max_chunks=6)
 
     if not chunks:
         msg = "Not found in the knowledge base."
@@ -500,13 +563,12 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
-        "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
+        "You are a strict Retrieval-Augmented Generation (RAG) AI Study Assistant.\n"
+        "Your task is to answer the user request (e.g. answer questions, generate MCQs, summarize, explain, create study aids) BASED STRICTLY AND ONLY ON THE PROVIDED RETRIEVED CONTEXT snippets below.\n\n"
         "STRICT CONSTRAINTS:\n"
-        "1. Answer ONLY using the facts present in the provided context. Do NOT use any external knowledge, assumptions, or prior training data.\n"
-        "2. If the context does not contain sufficient facts to answer the user prompt completely, reply with EXACTLY: Not found in the knowledge base.\n"
-        "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
-        "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
+        "1. Fulfill the user's study prompt directly using ONLY facts present in the retrieved context. Do NOT use outside knowledge or hallucinate facts.\n"
+        "2. For every question, MCQ, explanation, or major point, provide inline citations in the format [Document Title, Page X].\n"
+        "3. Reply with EXACTLY: Not found in the knowledge base. ONLY if the retrieved context is completely empty or contains zero facts to address the prompt."
     )
     
     if history_str:
@@ -515,7 +577,7 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
         user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
 
     answer = call_phi_llm(user_p, system_p)
-    if not answer or "not found in the knowledge base" in answer.lower() or answer.strip() == "":
+    if not answer or answer.strip() == "":
         answer = "Not found in the knowledge base."
 
     s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
@@ -548,6 +610,10 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
 
     raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
     chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
+
+    # Fallback to structural document chunks if user asks task instructions (MCQs, Quiz, Summary, Explanation)
+    if not chunks and is_task_or_meta_prompt(prompt):
+        chunks = get_fallback_document_chunks(material_ids, max_chunks=6)
 
     if not chunks:
         msg = "Not found in the knowledge base."
@@ -584,13 +650,12 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
-        "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
-        "STRICT CONSTRAINTS:\n"
-        "1. Answer ONLY using the facts present in the provided context. Do NOT use any external knowledge, assumptions, or prior training data.\n"
-        "2. If the context does not contain sufficient facts to answer the user prompt completely, reply with EXACTLY: Not found in the knowledge base.\n"
-        "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
-        "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
+        "You are a strict Retrieval-Augmented Generation (RAG) AI Study Assistant.\n"
+        "Your task is to answer the user request (e.g. answer questions, generate MCQs, summarize, explain, create study aids) BASED STRICTLY AND ONLY ON THE PROVIDED RETRIEVED CONTEXT snippets below.\n\n"
+        "STRICT RULES:\n"
+        "1. Fulfill the user's study prompt directly using ONLY facts present in the retrieved context. Do NOT use outside knowledge or hallucinate facts.\n"
+        "2. For every question, MCQ, explanation, or major point, provide inline citations in the format [Document Title, Page X].\n"
+        "3. Reply with EXACTLY: Not found in the knowledge base. ONLY if the retrieved context is completely empty or contains zero facts to address the prompt."
     )
 
     if history_str:
@@ -609,7 +674,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         yield _frame({'type': 'token', 'delta': delta})
 
     answer = "".join(collected).strip()
-    if not answer or "not found in the knowledge base" in answer.lower():
+    if not answer:
         answer = "Not found in the knowledge base."
         for i in range(0, len(answer), 6):
             yield _frame({'type': 'token', 'delta': answer[i:i+6]})
