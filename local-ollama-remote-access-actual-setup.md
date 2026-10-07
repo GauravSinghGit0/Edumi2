@@ -370,7 +370,102 @@ AI_EMBEDDING_MODEL=nomic-embed-text:latest
 
 ---
 
-## 7. Verification & Testing Playbook
+## 7. RAG (Retrieval-Augmented Generation) Architecture & Workspace Pipeline
+
+The **EduMi AI Study Workspace** (`rag_workspace`) integrates Retrieval-Augmented Generation (RAG) to deliver zero-hallucination academic tutoring directly grounded in uploaded course study materials (`StudyMaterial`, e.g., lecture slides, textbooks, PDF notes).
+
+### 🔄 End-to-End RAG Execution Flow
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   STUDENT / USER INTERFACE                                  │
+│                   Selects Study Materials + Choice of 5 Learning Modes                     │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ Prompt + Material IDs
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                              EDUMI DJANGO RAG WORKSPACE SERVICE                             │
+│                                  (`rag_workspace/services.py`)                              │
+│                                                                                             │
+│  1. Document Chunk Retrieval: Query `MaterialChunk` database for selected materials          │
+│  2. Dense Vector Embeddings: Fetch embedding for query via `nomic-embed-text`               │
+│  3. Hybrid Search Scoring: Combine Cosine Similarity (75%) + BM25 Lexical Keyword (25%)     │
+│  4. Strict Grounding Filter: Check `max_score >= 0.12` threshold to prevent hallucinations  │
+│  5. Dynamic Prompt Assembly: Inject Top-6 source chunks with [Title, Page X] markers         │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ Assembled System + User Prompt Payload
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               CLOUDFLARE TUNNEL + FASTAPI GATEWAY                           │
+│                     (HTTPS Auth Proxy -> `http://127.0.0.1:8765/api/generate`)             │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ Encrypted Loopback Pass-Through
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 LOCAL OLLAMA INFERENCE ENGINE                               │
+│                                (`phi:latest` @ Port 11434)                                  │
+└──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                               │ NDJSON Token Stream (SSE)
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  STUDENT / USER INTERFACE                                  │
+│                       Renders real-time answer with page-level citations                     │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 🧠 Core RAG Engine Components
+
+#### 1. Document Extraction & Chunking (`meetings.models.MaterialChunk`)
+- Course materials uploaded by instructors are parsed and divided into sequential `MaterialChunk` records.
+- Each chunk preserves exact page numbers (`page_number`), parent unit metadata (`unit_title`), and document titles to allow pinpoint source attribution.
+
+#### 2. Vector Embedding Generation (`get_nomic_embedding`)
+- **Primary Model**: `nomic-embed-text:latest` (768-dimensional float vectors) hosted on local Ollama via `/api/embeddings`.
+- **Circuit Breaker**: A 30-second offline circuit breaker avoids batch indexing slowdowns if the embedding endpoint is temporarily unreachable.
+- **Fallback**: Secondary support for OpenAI `text-embedding-3-small` when an OpenAI key is present in `.env`.
+
+#### 3. Hybrid Search Algorithm (`retrieve_source_chunks`)
+To achieve high recall and semantic precision, chunk retrieval utilizes a weighted **Hybrid Search**:
+- **Dense Vector Cosine Similarity (75% Weight)**: Measures semantic context match between query vector $\vec{q}$ and chunk vector $\vec{c}$:
+  $$\text{Cosine Similarity} = \frac{\vec{q} \cdot \vec{c}}{\|\vec{q}\| \|\vec{c}\|}$$
+- **Lexical BM25 Keyword Match (25% Weight)**: Measures exact keyword hits with logarithmic frequency scaling and document title boosting.
+- **Selection**: Returns the Top-6 highest scoring chunks (`top_k=6`) for prompt injection.
+
+#### 4. Hallucination Prevention & Strict Grounding Mode
+- **Strict Grounding (`strict_mode=True`)**: If the highest chunk score falls below the relevance threshold (`max_score < 0.12`), the engine blocks generation and safely responds:
+  > *"I couldn't find this information in your selected study materials."*
+- **Instructor Safeguards (`RagInstructorSetting`)**: Course instructors can configure classroom-level controls to toggle feature availability, mandate source citations, or permit fallback to external general knowledge when relevant materials are missing.
+
+---
+
+### 🎓 5 Specialized Educational Learning Modes
+
+The RAG engine powers 5 distinct study workflows tailored for interactive learning:
+
+| Mode | Purpose & Behavior | Prompt Strategy & System Persona |
+| :--- | :--- | :--- |
+| **`ask`** | Direct Q&A grounded strictly in selected course documents. | Instructs LLM to answer using *only* context chunks and cite source titles and pages as `[Title, Page X]`. |
+| **`explain`** | Multi-tiered topic explanations matching student comprehension levels (`simple`, `detailed`, `exam`). | Adapts depth: `simple` uses analogies; `detailed` provides step-by-step principles; `exam` highlights formulas, definitions, and test questions. |
+| **`summarize`** | Automated structured study guides for selected chapters or units. | Generates Markdown sections: 1. Key Concepts, 2. Important Definitions, 3. Core Formulas/Rules, 4. Practical Examples, 5. Exam Focus Points. |
+| **`quiz`** | Interactive multiple-choice question generation. | Extracts key material concepts to synthesize practice questions, options, correct choices, and detailed answer explanations. |
+| **`revision`** | Flashcards and quick review decks for exam prep. | Generates key concept cards with front-facing prompt and back-facing answer key tied to specific unit topics. |
+
+---
+
+### 📊 Data Models & Audit Logging Architecture
+
+All user interactions in the RAG workspace are logged for analytical auditing and session continuation:
+
+- **`RagSession`**: Manages active study sessions, linking users to selected `StudyMaterial` items, active mode, and strict mode preferences.
+- **`RagChatMessage`**: Persists multi-turn conversation logs, role (`user`/`assistant`), content, and structured source citations (`sources`).
+- **`RagQueryLog`**: Audit record logging raw user prompts, generated responses, retrieved chunk count, strict mode status, and whether a "not found" state was triggered.
+- **`RagInstructorSetting`**: Classroom configuration record allowing instructors to grant or restrict specific AI modes and citation policies.
+
+---
+
+## 8. Verification & Testing Playbook
 
 Execute these verification commands from your **Remote Server**:
 
@@ -414,7 +509,7 @@ curl -N -X POST "https://ollama.yourdomain.com/api/generate" \
 
 ---
 
-## 8. Troubleshooting & Edge-Case Reference
+## 9. Troubleshooting & Edge-Case Reference
 
 | Symptom / Error | Root Cause | Solution |
 | :--- | :--- | :--- |

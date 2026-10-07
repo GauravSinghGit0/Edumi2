@@ -32,6 +32,9 @@ from accounts.email_tokens import (
 from accounts.ratelimit import ratelimit
 from django.contrib.auth.password_validation import validate_password
 
+from django.db.models import Q
+from django.conf import settings
+
 User = get_user_model()
 logger = logging.getLogger('accounts')
 
@@ -39,11 +42,16 @@ logger = logging.getLogger('accounts')
 @ratelimit(action='login', limit=15, period=300)
 def login_view(request):
     """
-    Login page — authenticates user with rate limiting and single-pass auth lookup,
-    enforces email verification for non-superusers, and redirects to appropriate dashboard.
+    Login page — authenticates user with rate limiting and multi-pass auth lookup
+    (username, case-insensitive username, email, student ID / roll number, employee ID),
+    enforces email verification for non-staff/superusers, and redirects to appropriate dashboard.
     """
+    next_url = request.POST.get('next') or request.GET.get('next', '')
+
     if request.user.is_authenticated:
-        if request.user.is_superuser:
+        if next_url and next_url.startswith('/'):
+            return redirect(next_url)
+        if request.user.is_superuser or request.user.is_staff:
             return redirect('admin_panel')
         if hasattr(request.user, 'userprofile'):
             if request.user.userprofile.user_type == 'teacher':
@@ -57,57 +65,75 @@ def login_view(request):
         password = request.POST.get('password', '')
         if not username_or_email or not password:
             return render(request, 'accounts/auth/login.html', {
-                'error': 'Please enter both username/email and password.',
+                'error': 'Please enter both username/email/ID and password.',
                 'entered_username': username_or_email,
+                'next': next_url,
             })
 
-        # High-performance single-pass authentication
+        # High-performance multi-pass authentication pipeline
         user = None
-        if '@' in username_or_email:
-            # If user entered an email, resolve username first to avoid double password-hashing cost
+
+        # 1. Direct username/password check
+        user = authenticate(request, username=username_or_email, password=password)
+
+        # 2. Case-insensitive username lookup
+        if user is None:
+            try:
+                user_obj = User.objects.filter(username__iexact=username_or_email).first()
+                if user_obj:
+                    user = authenticate(request, username=user_obj.username, password=password)
+            except Exception as e:
+                logger.error(f"Error checking case-insensitive username login: {e}")
+
+        # 3. Email lookup
+        if user is None:
             try:
                 user_obj = User.objects.filter(email__iexact=username_or_email).first()
                 if user_obj:
                     user = authenticate(request, username=user_obj.username, password=password)
             except Exception as e:
                 logger.error(f"Error checking email login: {e}")
-        else:
-            # Username login
-            user = authenticate(request, username=username_or_email, password=password)
-            if user is None:
-                # Fallback email check if username wasn't found
-                try:
-                    user_obj = User.objects.filter(email__iexact=username_or_email).first()
-                    if user_obj:
-                        user = authenticate(request, username=user_obj.username, password=password)
-                except Exception as e:
-                    logger.error(f"Error checking fallback email login: {e}")
+
+        # 4. Student ID / Roll Number / Employee ID lookup
+        if user is None:
+            try:
+                prof = UserProfile.objects.filter(
+                    Q(student_id__iexact=username_or_email) |
+                    Q(roll_number__iexact=username_or_email) |
+                    Q(employee_id__iexact=username_or_email)
+                ).select_related('user').first()
+                if prof and prof.user:
+                    user = authenticate(request, username=prof.user.username, password=password)
+            except Exception as e:
+                logger.error(f"Error checking profile ID login: {e}")
 
         if user is not None:
-            # Superusers always bypass email verification and are guaranteed verified status
-            if user.is_superuser:
-                profile, _ = UserProfile.objects.get_or_create(
-                    user=user,
-                    defaults={'user_type': 'admin', 'display_name': f"Admin {user.username}", 'is_verified': True}
-                )
+            # Ensure profile exists
+            user_type_default = 'admin' if (user.is_superuser or user.is_staff) else 'student'
+            profile, _ = UserProfile.objects.get_or_create(
+                user=user,
+                defaults={'user_type': user_type_default, 'is_verified': bool(user.is_superuser or user.is_staff)}
+            )
+
+            # Superusers and Staff are auto-verified
+            if user.is_superuser or user.is_staff:
                 if not profile.is_verified:
                     profile.verify_email()
-                if not user.is_staff:
+                if user.is_superuser and not user.is_staff:
                     user.is_staff = True
                     user.save(update_fields=['is_staff'])
 
-                login(request, user)
-                messages.success(request, f"Welcome back, {user.username}!")
-                return redirect('admin_panel')
+            # Check if user is active
+            if not user.is_active:
+                return render(request, 'accounts/auth/login.html', {
+                    'error': 'This account has been disabled. Please contact support.',
+                    'entered_username': username_or_email,
+                    'next': next_url,
+                })
 
-            # Ensure profile exists
-            profile, _ = UserProfile.objects.get_or_create(
-                user=user,
-                defaults={'user_type': 'student', 'is_verified': False}
-            )
-
-            # Block login if user email is not yet verified
-            if not profile.is_verified:
+            # Check email verification for regular non-staff users
+            require_verification = getattr(settings, 'REQUIRE_EMAIL_VERIFICATION', True)
+            if require_verification and not profile.is_verified and not user.is_superuser and not user.is_staff:
                 request.session['unverified_email'] = user.email
                 request.session['unverified_username'] = user.username
                 return render(request, 'accounts/auth/login.html', {
@@ -115,31 +141,32 @@ def login_view(request):
                     'unverified_error': True,
                     'unverified_email': user.email,
                     'entered_username': username_or_email,
-                })
-
-            # Check if user is active
-            if not user.is_active:
-                return render(request, 'accounts/auth/login.html', {
-                    'error': 'This account has been disabled. Please contact support.',
-                    'entered_username': username_or_email,
+                    'next': next_url,
                 })
 
             # Validated & Verified -> Log in
             login(request, user)
             messages.success(request, f"Welcome back, {user.username}!")
 
-            if profile.user_type == 'teacher':
+            # Redirect handling
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
+
+            if user.is_superuser or user.is_staff:
+                return redirect('admin_panel')
+            elif profile.user_type == 'teacher':
                 return redirect('teacher_dashboard')
             elif profile.user_type == 'student':
                 return redirect('student_dashboard')
             return redirect('home')
 
         return render(request, 'accounts/auth/login.html', {
-            'error': 'Invalid username/email or password.',
+            'error': 'Invalid username, email, ID, or password.',
             'entered_username': username_or_email,
+            'next': next_url,
         })
 
-    return render(request, 'accounts/auth/login.html')
+    return render(request, 'accounts/auth/login.html', {'next': next_url})
 
 
 @ratelimit(action='register')

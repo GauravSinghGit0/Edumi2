@@ -56,9 +56,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve DB_PASS: Use CLI arg -> existing .env -> generate secure random
+# Resolve DB_PASS: Use CLI arg -> existing .env (POSTGRES_PASSWORD or DATABASE_URL) -> generate secure random
 if [ -z "$DB_PASS" ]; then
     DB_PASS=$(grep '^POSTGRES_PASSWORD=' "$APP_DIR/.env" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
+fi
+if [ -z "$DB_PASS" ]; then
+    DB_PASS=$(grep '^DATABASE_URL=' "$APP_DIR/.env" 2>/dev/null | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p' || echo "")
 fi
 if [ -z "$DB_PASS" ]; then
     DB_PASS=$(openssl rand -hex 16 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(16))" 2>/dev/null || echo "edumi_$(date +%s)_dbpass")
@@ -274,10 +277,11 @@ log "LiveKit configuration updated in ./config/livekit.yaml (Keys synced with .e
 # ------------------------------------------------------------------------------
 step "STEP 5: Python Virtual Environment & Dependencies"
 # ------------------------------------------------------------------------------
+cd "$APP_DIR"
 VENV_DIR="venv"
-if [ -d ".venv" ]; then
+if [ -d "$APP_DIR/.venv" ]; then
     VENV_DIR=".venv"
-elif [ -d "venv" ]; then
+elif [ -d "$APP_DIR/venv" ]; then
     VENV_DIR="venv"
 fi
 
@@ -296,7 +300,7 @@ VENV_PIP="$APP_DIR/$VENV_DIR/bin/pip"
 
 info "Installing Python packages from requirements.txt..."
 $VENV_PIP install --upgrade pip setuptools wheel -q
-$VENV_PIP install -r requirements.txt -q
+$VENV_PIP install -r "$APP_DIR/requirements.txt" -q
 log "Python environment ready inside ./$VENV_DIR"
 
 

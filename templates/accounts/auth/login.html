@@ -140,9 +140,12 @@
 
             <form method="post" class="auth-form" data-turbo="false">
                 {% csrf_token %}
+                {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
 
                 <div class="form-field">
-                    <label for="usernameInput">Username or Email</label>
+                    <label for="usernameInput">Username, Email or Student/Staff ID</label>
                     <input type="text" id="usernameInput" name="username" required placeholder="Enter your username or email"
                         autocomplete="username" value="{{ entered_username|default:'' }}" autofocus>
                 </div>
