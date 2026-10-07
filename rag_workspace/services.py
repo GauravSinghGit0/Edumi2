@@ -102,6 +102,26 @@ def cosine_similarity(v1, v2):
     return dot / (norm_a * norm_b)
 
 
+# ==============================================================================
+# RAG PRODUCTION CONFIGURATION CONSTANTS
+# ==============================================================================
+RAG_TOP_K_INITIAL = 20               # Candidate chunks pool
+RAG_MIN_SIMILARITY_THRESHOLD = 0.08  # Initial generous similarity floor
+RAG_MIN_RERANK_THRESHOLD = 0.12      # Minimum score threshold after reranking
+RAG_MAX_FINAL_CHUNKS = 8            # Maximum final chunks sent to LLM prompt
+RAG_FALLBACK_SEARCH_ENABLED = True     # Enable multi-stage fallback retrieval
+RAG_DEBUG_LOGGING = True            # Enable server-side developer telemetry logging
+
+
+def log_rag_debug(event_name, data):
+    """Outputs structured developer debug telemetry logging to server console."""
+    if RAG_DEBUG_LOGGING:
+        try:
+            print(f"[RAG TELEMETRY | {event_name}] {json.dumps(data, default=str)}")
+        except Exception:
+            print(f"[RAG TELEMETRY | {event_name}] {data}")
+
+
 TASK_OR_META_KEYWORDS = {
     'mcq', 'mcqs', 'quiz', 'quizzes', 'question', 'questions', 'test', 'exam',
     'flashcard', 'flashcards', 'summary', 'summarize', 'overview', 'outline',
@@ -145,9 +165,9 @@ def rewrite_query(prompt):
     return normalized if normalized else prompt
 
 
-def rerank_and_deduplicate_chunks(chunks, min_score=0.15, max_chunks=6):
+def rerank_and_deduplicate_chunks(chunks, min_score=RAG_MIN_RERANK_THRESHOLD, max_chunks=RAG_MAX_FINAL_CHUNKS):
     """
-    Reranks retrieved chunks by relevance score, filters out chunks below min_score threshold (0.15),
+    Reranks retrieved chunks by relevance score, filters out chunks below min_score threshold,
     and deduplicates identical or heavily overlapping context snippets before sending to LLM.
     """
     if not chunks:
@@ -172,7 +192,7 @@ def rerank_and_deduplicate_chunks(chunks, min_score=0.15, max_chunks=6):
             words_b = set(seen.split())
             if words_a and words_b:
                 overlap = len(words_a.intersection(words_b)) / float(min(len(words_a), len(words_b)))
-                if overlap > 0.85:
+                if overlap > 0.80:
                     is_dup = True
                     break
         if not is_dup:
@@ -184,10 +204,10 @@ def rerank_and_deduplicate_chunks(chunks, min_score=0.15, max_chunks=6):
     return filtered
 
 
-def retrieve_source_chunks(material_ids, query, top_k=10):
+def retrieve_source_chunks(material_ids, query, top_k=RAG_TOP_K_INITIAL):
     """
     Retrieves and ranks relevant text chunks using Metadata Filtering + Hybrid Search:
-    Combines nomic-embed-text Cosine Vector Similarity (75% weight) with BM25 Keyword Matching (25% weight).
+    Combines nomic-embed-text Cosine Vector Similarity (70% weight) with BM25 Lexical Keyword Matching (30% weight).
     Metadata filtering by material_ids and is_published=True.
     """
     if not material_ids:
@@ -219,7 +239,7 @@ def retrieve_source_chunks(material_ids, query, top_k=10):
         c_text = chunk.chunk_text.lower()
         m_title = chunk.material.title.lower()
 
-        # 1. Keyword Score
+        # 1. Lexical Keyword & N-gram Matching Score
         kw_score = 0.0
         matches = 0
         for token in query_tokens:
@@ -228,7 +248,11 @@ def retrieve_source_chunks(material_ids, query, top_k=10):
                 kw_score += (1.0 + math.log(cnt))
                 matches += 1
             if token in m_title:
-                kw_score += 2.5
+                kw_score += 3.0
+
+        # Substring / partial term match boost for short queries (e.g. "vigilance")
+        if len(query_tokens) == 1 and query_tokens[0] in c_text:
+            kw_score += 4.0
 
         if query_tokens and matches > 0:
             kw_norm = kw_score / (len(query_tokens) ** 0.5)
@@ -250,9 +274,9 @@ def retrieve_source_chunks(material_ids, query, top_k=10):
         if query_vec and chunk_vec:
             sem_sim = cosine_similarity(query_vec, chunk_vec)
 
-        # 3. Hybrid Combined Score (75% Vector Embedding + 25% BM25 Lexical Keyword)
+        # 3. Hybrid Combined Score (70% Vector Embedding + 30% BM25 Lexical Keyword)
         if query_vec and chunk_vec:
-            final_score = (0.75 * sem_sim) + (0.25 * min(1.0, kw_norm / 5.0))
+            final_score = (0.70 * sem_sim) + (0.30 * min(1.0, kw_norm / 5.0))
         elif query_tokens:
             final_score = kw_norm
         else:
@@ -467,7 +491,7 @@ def get_or_create_rag_session(user, session_id, prompt, mode, strict_mode=True):
     return session
 
 
-def get_fallback_document_chunks(material_ids, max_chunks=6):
+def get_fallback_document_chunks(material_ids, max_chunks=RAG_MAX_FINAL_CHUNKS):
     """Retrieves top structural text chunks directly from selected published study materials."""
     if not material_ids:
         return []
@@ -494,10 +518,60 @@ def get_fallback_document_chunks(material_ids, max_chunks=6):
     return chunks
 
 
+def execute_multi_stage_retrieval(material_ids, prompt):
+    """
+    Multi-stage retrieval execution with Developer Telemetry Logging:
+    Stage 1: Primary Hybrid Search (Dense Vector + BM25 Lexical).
+    Stage 2: Fallback Retrieval (N-gram/Token expansion & Structural Fallback).
+    """
+    rewritten = rewrite_query(prompt)
+    log_rag_debug("RETRIEVAL_START", {
+        "selected_material_ids": material_ids,
+        "raw_query": prompt,
+        "rewritten_query": rewritten,
+        "is_meta_prompt": is_task_or_meta_prompt(prompt)
+    })
+
+    # Stage 1: Primary Hybrid Search
+    raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=RAG_TOP_K_INITIAL)
+    chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=RAG_MIN_RERANK_THRESHOLD, max_chunks=RAG_MAX_FINAL_CHUNKS)
+
+    log_rag_debug("STAGE1_RESULT", {
+        "raw_candidates_count": len(raw_chunks),
+        "reranked_count": len(chunks),
+        "top_scores": [round(c['score'], 3) for c in chunks[:5]]
+    })
+
+    # Stage 2: Fallback Retrieval Strategy
+    if RAG_FALLBACK_SEARCH_ENABLED and len(chunks) < 2:
+        fallback_reason = "Low candidate score or task prompt"
+        log_rag_debug("FALLBACK_TRIGGERED", {"reason": fallback_reason, "current_chunks": len(chunks)})
+        
+        # Pass A: Token expansion / Raw query fallback
+        if prompt and prompt != rewritten:
+            raw_pass_chunks = retrieve_source_chunks(material_ids, prompt, top_k=RAG_TOP_K_INITIAL)
+            raw_reranked = rerank_and_deduplicate_chunks(raw_pass_chunks, min_score=0.10, max_chunks=RAG_MAX_FINAL_CHUNKS)
+            if raw_reranked:
+                chunks.extend([c for c in raw_reranked if c['chunk_id'] not in [x['chunk_id'] for x in chunks]])
+                chunks = sorted(chunks, key=lambda x: x['score'], reverse=True)[:RAG_MAX_FINAL_CHUNKS]
+
+        # Pass B: Structural fallback for task instructions (MCQs, Quiz, Summary, Flashcards)
+        if not chunks and is_task_or_meta_prompt(prompt):
+            chunks = get_fallback_document_chunks(material_ids, max_chunks=RAG_MAX_FINAL_CHUNKS)
+            log_rag_debug("STRUCTURAL_FALLBACK_APPLIED", {"retrieved_fallback_count": len(chunks)})
+
+    log_rag_debug("FINAL_RETRIEVAL_CHUNKS", {
+        "final_chunks_sent": len(chunks),
+        "chunk_sources": [{'title': c['material_title'], 'page': c['page_number'], 'score': round(c['score'], 3)} for c in chunks]
+    })
+
+    return chunks
+
+
 def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Main synchronous entrypoint for processing user study requests in RAG AI Study Workspace.
-    Strict True RAG: Query Rewriting -> Metadata Filtering -> Hybrid Search -> Relevance Reranking & Deduplication -> Grounded Generation with Citations.
+    Production-Grade RAG Pipeline with Evidence Validation & Hard Selected-Document Boundary.
     """
     session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
     s_id = session.id if session else None
@@ -508,20 +582,15 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             'status': 'error',
             'message': 'No study materials selected.',
             'not_found': True,
-            'answer': 'Not found in the knowledge base.',
+            'answer': 'Not found in the selected documents.',
             'sources': [],
             'session_id': s_id
         }
 
-    raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
-    chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
-
-    # Fallback to structural document chunks if user asks task instructions (MCQs, Quiz, Summary, Explanation)
-    if not chunks and is_task_or_meta_prompt(prompt):
-        chunks = get_fallback_document_chunks(material_ids, max_chunks=6)
+    chunks = execute_multi_stage_retrieval(material_ids, prompt)
 
     if not chunks:
-        msg = "Not found in the knowledge base."
+        msg = "Not found in the selected documents."
         s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, s_id, material_ids)
         return {
             'status': 'success',
@@ -563,12 +632,14 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) AI Study Assistant.\n"
-        "Your task is to answer the user request (e.g. answer questions, generate MCQs, summarize, explain, create study aids) BASED STRICTLY AND ONLY ON THE PROVIDED RETRIEVED CONTEXT snippets below.\n\n"
+        "You are a strict Retrieval-Augmented Generation (RAG) AI Assistant.\n"
+        "Your ONLY source of information is the RETRIEVED CONTEXT below from documents selected by the user.\n\n"
         "STRICT CONSTRAINTS:\n"
-        "1. Fulfill the user's study prompt directly using ONLY facts present in the retrieved context. Do NOT use outside knowledge or hallucinate facts.\n"
-        "2. For every question, MCQ, explanation, or major point, provide inline citations in the format [Document Title, Page X].\n"
-        "3. Reply with EXACTLY: Not found in the knowledge base. ONLY if the retrieved context is completely empty or contains zero facts to address the prompt."
+        "1. HARD SOURCE BOUNDARY: Use ONLY facts explicitly supported by the retrieved context. Never use outside knowledge, prior training data, internet info, or unselected documents.\n"
+        "2. DISTINGUISH SUPPORTED FACTS vs. MISSING INFORMATION: If evidence is partial, answer ONLY the supported part and explicitly state what is missing.\n"
+        "3. INLINE CITATIONS: For every claim, fact, or question generated, cite the source as [Document Title, Page X].\n"
+        "4. NO RELEVANT EVIDENCE: Reply with EXACTLY: Not found in the selected documents. ONLY if the retrieved context is completely empty or contains zero facts to answer the prompt.\n"
+        "5. NEVER HALLUCINATE or fabricate page numbers, chunk IDs, or facts."
     )
     
     if history_str:
@@ -578,7 +649,7 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     answer = call_phi_llm(user_p, system_p)
     if not answer or answer.strip() == "":
-        answer = "Not found in the knowledge base."
+        answer = "Not found in the selected documents."
 
     s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
     return {
@@ -594,7 +665,7 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Streaming variant of run_rag_workspace_pipeline emitting SSE text frames.
-    Strict True RAG pipeline execution.
+    Production-Grade RAG Pipeline execution.
     """
     def _frame(payload):
         return payload
@@ -605,18 +676,13 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
     if not materials.exists():
         yield _frame({'type': 'error', 'message': 'No study materials selected.', 'not_found': True, 'session_id': s_id})
-        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the knowledge base.', 'sources': [], 'session_id': s_id})
+        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the selected documents.', 'sources': [], 'session_id': s_id})
         return
 
-    raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
-    chunks = rerank_and_deduplicate_chunks(raw_chunks, min_score=0.15, max_chunks=6)
-
-    # Fallback to structural document chunks if user asks task instructions (MCQs, Quiz, Summary, Explanation)
-    if not chunks and is_task_or_meta_prompt(prompt):
-        chunks = get_fallback_document_chunks(material_ids, max_chunks=6)
+    chunks = execute_multi_stage_retrieval(material_ids, prompt)
 
     if not chunks:
-        msg = "Not found in the knowledge base."
+        msg = "Not found in the selected documents."
         s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, s_id, material_ids)
         yield _frame({'type': 'meta', 'status': 'success', 'not_found': True, 'mode': mode, 'session_id': s_id})
         yield _frame({'type': 'done', 'status': 'success', 'not_found': True, 'answer': msg, 'sources': [], 'mode': mode, 'session_id': s_id})
@@ -650,12 +716,14 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) AI Study Assistant.\n"
-        "Your task is to answer the user request (e.g. answer questions, generate MCQs, summarize, explain, create study aids) BASED STRICTLY AND ONLY ON THE PROVIDED RETRIEVED CONTEXT snippets below.\n\n"
-        "STRICT RULES:\n"
-        "1. Fulfill the user's study prompt directly using ONLY facts present in the retrieved context. Do NOT use outside knowledge or hallucinate facts.\n"
-        "2. For every question, MCQ, explanation, or major point, provide inline citations in the format [Document Title, Page X].\n"
-        "3. Reply with EXACTLY: Not found in the knowledge base. ONLY if the retrieved context is completely empty or contains zero facts to address the prompt."
+        "You are a strict Retrieval-Augmented Generation (RAG) AI Assistant.\n"
+        "Your ONLY source of information is the RETRIEVED CONTEXT below from documents selected by the user.\n\n"
+        "STRICT CONSTRAINTS:\n"
+        "1. HARD SOURCE BOUNDARY: Use ONLY facts explicitly supported by the retrieved context. Never use outside knowledge, prior training data, internet info, or unselected documents.\n"
+        "2. DISTINGUISH SUPPORTED FACTS vs. MISSING INFORMATION: If evidence is partial, answer ONLY the supported part and explicitly state what is missing.\n"
+        "3. INLINE CITATIONS: For every claim, fact, or question generated, cite the source as [Document Title, Page X].\n"
+        "4. NO RELEVANT EVIDENCE: Reply with EXACTLY: Not found in the selected documents. ONLY if the retrieved context is completely empty or contains zero facts to answer the prompt.\n"
+        "5. NEVER HALLUCINATE or fabricate page numbers, chunk IDs, or facts."
     )
 
     if history_str:
@@ -675,7 +743,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
 
     answer = "".join(collected).strip()
     if not answer:
-        answer = "Not found in the knowledge base."
+        answer = "Not found in the selected documents."
         for i in range(0, len(answer), 6):
             yield _frame({'type': 'token', 'delta': answer[i:i+6]})
 
