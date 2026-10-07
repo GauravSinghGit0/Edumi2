@@ -377,105 +377,33 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     context_str = "\n\n".join(context_blocks)
 
-    if mode == "ask":
-        system_p = (
-            "You are an expert AI Tutor inside EduMi AI Study Workspace. "
-            "Answer the student's question using ONLY the provided study material sources. "
-            "Cite source titles and page numbers like [Title, Page X] for every fact."
-        )
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT QUESTION: {prompt}"
+    # Unified ChatGPT-style Conversational RAG Prompt Engine
+    system_p = (
+        "You are EduMi AI, a helpful, intelligent AI Tutor. "
+        "Answer the student's request naturally, clearly, and thoroughly using the provided study material context. "
+        "Fulfill the user's prompt directly (whether it is a question, explanation, summary, quiz request, or study aid). "
+        "Always cite source titles and page numbers like [Title, Page X] when referencing facts from the materials."
+    )
+    user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT PROMPT: {prompt or 'Provide an overview of the core topics in these study materials.'}"
 
-        answer = call_phi_llm(user_p, system_p)
-        if not answer:
-            answer = generate_fallback_ask(prompt, chunks, materials)
+    answer = call_phi_llm(user_p, system_p)
+    if not answer:
+        answer = generate_fallback_ask(prompt, chunks, materials)
 
-        s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-        return {
-            'status': 'success',
-            'mode': 'ask',
-            'answer': answer,
-            'sources': unique_sources,
-            'not_found': False,
-            'session_id': s_id
-        }
-
-    elif mode == "explain":
-        level_instructions = {
-            'simple': "Explain in simple, beginner-friendly terms with easy analogies.",
-            'detailed': "Provide a thorough academic breakdown with clear step-by-step principles.",
-            'exam': "Explain at an exam level, highlighting key terms, definitions, formulas, and potential exam questions."
-        }
-        level_str = level_instructions.get(explain_level, level_instructions['detailed'])
-
-        system_p = f"You are an AI Study Assistant. {level_str} Ground your explanation in the provided materials and cite sources like [Title, Page X]."
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nEXPLAIN TOPIC: {prompt or 'Core topics in these materials'}"
-
-        answer = call_phi_llm(user_p, system_p)
-        if not answer:
-            answer = generate_fallback_explain(prompt, explain_level, chunks, materials)
-
-        s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-        return {
-            'status': 'success',
-            'mode': 'explain',
-            'explain_level': explain_level,
-            'answer': answer,
-            'sources': unique_sources,
-            'not_found': False,
-            'session_id': s_id
-        }
-
-    elif mode == "summarize":
-        system_p = (
-            "You are an academic summarization engine. Create a structured summary from the provided study materials. "
-            "Include sections for: 1. Key Concepts, 2. Important Definitions, 3. Core Formulas / Rules, 4. Practical Examples, 5. Exam Focus Points."
-        )
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSUMMARIZE REQUEST: {prompt or 'Summarize selected resources'}"
-
-        answer = call_phi_llm(user_p, system_p)
-        if not answer:
-            answer = generate_fallback_summary(chunks, materials)
-
-        s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-        return {
-            'status': 'success',
-            'mode': 'summarize',
-            'answer': answer,
-            'sources': unique_sources,
-            'not_found': False,
-            'session_id': s_id
-        }
-
-    elif mode == "quiz":
-        quiz_data = generate_quiz_engine_data(chunks, materials)
-        s_id = log_rag_query(user, mode, prompt, f"Generated {len(quiz_data)} quiz questions", len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-        return {
-            'status': 'success',
-            'mode': 'quiz',
-            'quiz': quiz_data,
-            'sources': unique_sources,
-            'not_found': False,
-            'session_id': s_id
-        }
-
-    elif mode == "revision":
-        revision_data = generate_revision_engine_data(chunks, materials)
-        s_id = log_rag_query(user, mode, prompt, "Generated revision flashcards", len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-        return {
-            'status': 'success',
-            'mode': 'revision',
-            'revision': revision_data,
-            'sources': unique_sources,
-            'not_found': False,
-            'session_id': s_id
-        }
-
-    return {'status': 'error', 'message': f'Invalid mode: {mode}'}
+    s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
+    return {
+        'status': 'success',
+        'mode': mode,
+        'answer': answer,
+        'sources': unique_sources,
+        'not_found': False,
+        'session_id': s_id
+    }
 
 
 def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
-    Streaming variant of run_rag_workspace_pipeline emitting SSE text frames.
+    Streaming variant of run_rag_workspace_pipeline emitting SSE text frames in ChatGPT style.
     """
     def _frame(payload):
         return payload
@@ -507,51 +435,20 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             })
     context_str = "\n\n".join(context_blocks)
 
-    if strict_mode and (not chunks or (prompt and max_score < 0.12 and mode in ['ask', 'explain'])):
+    if strict_mode and (not chunks or (prompt and max_score < 0.12)):
         msg = "I couldn't find this information in your selected study materials."
         s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
         yield _frame({'type': 'meta', 'status': 'success', 'not_found': True, 'mode': mode, 'session_id': s_id})
         yield _frame({'type': 'done', 'status': 'success', 'not_found': True, 'answer': msg, 'sources': [], 'mode': mode, 'session_id': s_id})
         return
 
-    if mode in ('quiz', 'revision'):
-        result_payload = None
-        if mode == 'quiz':
-            quiz_data = generate_quiz_engine_data(chunks, materials)
-            s_id = log_rag_query(user, mode, prompt, f"Generated {len(quiz_data)} quiz questions", len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-            result_payload = {'status': 'success', 'mode': 'quiz', 'quiz': quiz_data, 'sources': unique_sources, 'not_found': False, 'session_id': s_id}
-        else:
-            revision_data = generate_revision_engine_data(chunks, materials)
-            s_id = log_rag_query(user, mode, prompt, "Generated revision flashcards", len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
-            result_payload = {'status': 'success', 'mode': 'revision', 'revision': revision_data, 'sources': unique_sources, 'not_found': False, 'session_id': s_id}
-        yield _frame({'type': 'meta', **result_payload})
-        yield _frame({'type': 'done', **result_payload})
-        return
-
-    level_instructions = {
-        'simple': "Explain in simple, beginner-friendly terms with easy analogies.",
-        'detailed': "Provide a thorough academic breakdown with clear step-by-step principles.",
-        'exam': "Explain at an exam level, highlighting key terms, definitions, formulas, and potential exam questions."
-    }
-
-    system_p = user_p = None
-    if mode == "ask":
-        system_p = (
-            "You are an AI Tutor inside EduMi AI Study Workspace. "
-            "Answer the student's question using ONLY the provided study material sources. "
-            "Cite source titles and page numbers like [Title, Page X] for every fact."
-        )
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT QUESTION: {prompt}"
-    elif mode == "explain":
-        level_str = level_instructions.get(explain_level, level_instructions['detailed'])
-        system_p = f"You are an AI Study Assistant. {level_str} Ground your explanation in the provided materials and cite sources like [Title, Page X]."
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nEXPLAIN TOPIC: {prompt or 'Core topics in these materials'}"
-    elif mode == "summarize":
-        system_p = (
-            "You are an academic summarization engine. Create a structured summary from the provided study materials. "
-            "Include sections for: 1. Key Concepts, 2. Important Definitions, 3. Core Formulas / Rules, 4. Practical Examples, 5. Exam Focus Points."
-        )
-        user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSUMMARIZE REQUEST: {prompt or 'Summarize selected resources'}"
+    system_p = (
+        "You are EduMi AI, a helpful, intelligent AI Tutor. "
+        "Answer the student's request naturally, clearly, and thoroughly using the provided study material context. "
+        "Fulfill the user's prompt directly (whether it is a question, explanation, summary, quiz request, or study aid). "
+        "Always cite source titles and page numbers like [Title, Page X] when referencing facts from the materials."
+    )
+    user_p = f"STUDY MATERIALS CONTEXT:\n{context_str}\n\nSTUDENT PROMPT: {prompt or 'Provide an overview of the core topics in these study materials.'}"
 
     yield _frame({'type': 'meta', 'status': 'success', 'not_found': False, 'mode': mode, 'sources_count': len(unique_sources)})
 
@@ -567,12 +464,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     answer = "".join(collected).strip()
     if not answer:
         fallback_emitted = True
-        if mode == "ask":
-            answer = generate_fallback_ask(prompt, chunks, materials)
-        elif mode == "explain":
-            answer = generate_fallback_explain(prompt, explain_level, chunks, materials)
-        else:
-            answer = generate_fallback_summary(chunks, materials)
+        answer = generate_fallback_ask(prompt, chunks, materials)
         for i in range(0, len(answer), 6):
             yield _frame({'type': 'token', 'delta': answer[i:i+6]})
 
@@ -581,7 +473,6 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         'type': 'done',
         'status': 'success',
         'mode': mode,
-        'explain_level': explain_level if mode == 'explain' else None,
         'answer': answer,
         'sources': unique_sources,
         'not_found': False,
