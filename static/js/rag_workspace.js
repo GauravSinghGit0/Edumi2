@@ -268,10 +268,12 @@
                         const isCurrent = self.state.currentSessionId == sess.id;
                         const item = document.createElement('div');
                         item.className = 'aw-history-item' + (isCurrent ? ' aw-history-item--active' : '');
+                        const msgCount = (typeof sess.messages_count === 'number') ? sess.messages_count : 0;
+                        const msgStr = msgCount > 0 ? (msgCount + ' message' + (msgCount === 1 ? '' : 's') + ' · ') : '';
                         item.innerHTML = `
                             <div class="aw-history-info">
                                 <span class="aw-history-title">${self._escapeHtml(sess.title)}</span>
-                                <span class="aw-history-meta">Mode: ${sess.active_mode.toUpperCase()} · ${sess.updated_at}</span>
+                                <span class="aw-history-meta">${msgStr}${sess.updated_at}</span>
                             </div>
                             <button type="button" class="aw-icon-btn" title="Delete Session" onclick="event.stopPropagation(); AW.deleteSession(${sess.id})">
                                 <i data-lucide="trash-2" style="width:14px; height:14px;"></i>

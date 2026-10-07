@@ -316,6 +316,7 @@ def rag_sessions_api(request):
             'updated_at': s.updated_at.strftime('%b %d, %H:%M'),
             'created_at': s.created_at.strftime('%b %d, %Y'),
             'materials_count': s.selected_materials.count(),
+            'messages_count': s.messages.count(),
         } for s in sessions]
         return JsonResponse({'status': 'success', 'sessions': data})
 

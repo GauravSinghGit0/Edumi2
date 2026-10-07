@@ -390,11 +390,59 @@ def call_phi_llm_stream(prompt, system_prompt=""):
             print(f"[OpenAI Fallback LLM Error] {err}")
 
 
+def generate_session_title(prompt):
+    """Generates a clean, readable ChatGPT-style session title from user prompt."""
+    if not prompt or not prompt.strip():
+        return "AI Study Session"
+    cleaned = rewrite_query(prompt)
+    if not cleaned:
+        cleaned = prompt.strip()
+    words = cleaned.split()
+    if not words:
+        return "AI Study Session"
+    title_str = " ".join(words[:6]).capitalize()
+    if len(title_str) > 36:
+        title_str = title_str[:33] + "..."
+    return title_str or "AI Study Session"
+
+
+def get_or_create_rag_session(user, session_id, prompt, mode, strict_mode=True):
+    """
+    Fetches an existing user RAG session or creates a new single-session container.
+    Guarantees all message turns in a continuous conversation are stored under the same session.
+    """
+    session = None
+    if session_id:
+        try:
+            session = RagSession.objects.filter(id=int(session_id), user=user).first()
+        except Exception:
+            pass
+
+    if not session and user.is_authenticated:
+        session = RagSession.objects.create(
+            user=user,
+            title=generate_session_title(prompt),
+            strict_mode=strict_mode,
+            active_mode=mode
+        )
+    elif session:
+        if session.title in ("AI Study Session", "New Chat", "New AI Study Session", "Untitled Session") and prompt:
+            session.title = generate_session_title(prompt)
+        session.active_mode = mode
+        session.updated_at = timezone.now()
+        session.save(update_fields=['title', 'active_mode', 'updated_at'])
+
+    return session
+
+
 def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Main synchronous entrypoint for processing user study requests in RAG AI Study Workspace.
     Strict True RAG: Query Rewriting -> Metadata Filtering -> Hybrid Search -> Relevance Reranking & Deduplication -> Grounded Generation with Citations.
     """
+    session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
+    s_id = session.id if session else None
+
     materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
     if not materials.exists():
         return {
@@ -402,7 +450,8 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             'message': 'No study materials selected.',
             'not_found': True,
             'answer': 'Not found in the knowledge base.',
-            'sources': []
+            'sources': [],
+            'session_id': s_id
         }
 
     raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
@@ -410,7 +459,7 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     if not chunks:
         msg = "Not found in the knowledge base."
-        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
+        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, s_id, material_ids)
         return {
             'status': 'success',
             'not_found': True,
@@ -441,6 +490,15 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
 
     context_str = "\n\n".join(context_blocks)
 
+    # Multi-turn conversation context from existing session
+    history_str = ""
+    if session:
+        prev_msgs = list(session.messages.order_by('-created_at')[:6])
+        prev_msgs.reverse()
+        if prev_msgs:
+            h_lines = [f"{'Student' if m.role == 'user' else 'Assistant'}: {m.content}" for m in prev_msgs]
+            history_str = "\n".join(h_lines)
+
     system_p = (
         "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
         "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
@@ -450,13 +508,17 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
         "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
         "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
     )
-    user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+    
+    if history_str:
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+    else:
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
 
     answer = call_phi_llm(user_p, system_p)
     if not answer or "not found in the knowledge base" in answer.lower() or answer.strip() == "":
         answer = "Not found in the knowledge base."
 
-    s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
+    s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
     return {
         'status': 'success',
         'mode': mode,
@@ -475,10 +537,13 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     def _frame(payload):
         return payload
 
+    session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
+    s_id = session.id if session else None
+
     materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
     if not materials.exists():
-        yield _frame({'type': 'error', 'message': 'No study materials selected.', 'not_found': True})
-        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the knowledge base.', 'sources': []})
+        yield _frame({'type': 'error', 'message': 'No study materials selected.', 'not_found': True, 'session_id': s_id})
+        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the knowledge base.', 'sources': [], 'session_id': s_id})
         return
 
     raw_chunks = retrieve_source_chunks(material_ids, prompt, top_k=10)
@@ -486,7 +551,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
 
     if not chunks:
         msg = "Not found in the knowledge base."
-        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, session_id, material_ids)
+        s_id = log_rag_query(user, mode, prompt, msg, 0, [], strict_mode, True, s_id, material_ids)
         yield _frame({'type': 'meta', 'status': 'success', 'not_found': True, 'mode': mode, 'session_id': s_id})
         yield _frame({'type': 'done', 'status': 'success', 'not_found': True, 'answer': msg, 'sources': [], 'mode': mode, 'session_id': s_id})
         return
@@ -509,6 +574,15 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             })
     context_str = "\n\n".join(context_blocks)
 
+    # Multi-turn conversation context from existing session
+    history_str = ""
+    if session:
+        prev_msgs = list(session.messages.order_by('-created_at')[:6])
+        prev_msgs.reverse()
+        if prev_msgs:
+            h_lines = [f"{'Student' if m.role == 'user' else 'Assistant'}: {m.content}" for m in prev_msgs]
+            history_str = "\n".join(h_lines)
+
     system_p = (
         "You are a strict Retrieval-Augmented Generation (RAG) system.\n"
         "Your ONLY task is to answer the user request based STRICTLY and ONLY on the provided RETRIEVED CONTEXT snippets below.\n\n"
@@ -518,9 +592,13 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         "3. For every statement or claim in your response, provide an inline citation in the format [Document Title, Page X].\n"
         "4. Keep your answer precise, grounded, deterministic, and traceable to the retrieved source chunks."
     )
-    user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
 
-    yield _frame({'type': 'meta', 'status': 'success', 'not_found': False, 'mode': mode, 'sources_count': len(unique_sources)})
+    if history_str:
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+    else:
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+
+    yield _frame({'type': 'meta', 'status': 'success', 'not_found': False, 'mode': mode, 'session_id': s_id, 'sources_count': len(unique_sources)})
 
     collected = []
     token_count = 0
@@ -536,7 +614,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         for i in range(0, len(answer), 6):
             yield _frame({'type': 'token', 'delta': answer[i:i+6]})
 
-    s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, session_id, material_ids)
+    s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
     yield _frame({
         'type': 'done',
         'status': 'success',
@@ -627,27 +705,9 @@ def log_rag_query(user, mode, prompt, response, retrieved_count, sources, strict
     Logs RAG query execution to audit table AND persists conversation message turns
     in RagChatMessage table for ChatGPT-style session persistence per user.
     """
-    session = None
+    session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
     try:
-        if session_id:
-            session = RagSession.objects.filter(id=session_id, user=user).first()
-        
-        if not session and user.is_authenticated:
-            session = RagSession.objects.create(
-                user=user,
-                title=prompt[:40] if prompt else "AI Study Session",
-                strict_mode=strict_mode,
-                active_mode=mode
-            )
-
         if session:
-            # Update session title if default
-            if session.title in ("AI Study Session", "New Chat", "New AI Study Session") and prompt:
-                session.title = prompt[:40] + ("..." if len(prompt) > 40 else "")
-            session.updated_at = timezone.now()
-            session.active_mode = mode
-            session.save(update_fields=['title', 'updated_at', 'active_mode'])
-
             if material_ids and isinstance(material_ids, (list, set, tuple)):
                 try:
                     session.selected_materials.set(list(material_ids))

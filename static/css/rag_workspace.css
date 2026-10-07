@@ -1085,9 +1085,30 @@ html.aw-body-lock {
     text-overflow: ellipsis;
 }
 
-.aw-history-meta {
-    font-size: 11px;
-    color: var(--color-text-muted, #64748b);
+.aw-history-new-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(124,58,237,0.1);
+    color: var(--color-primary, #7c3aed);
+    border: 1px solid rgba(124,58,237,0.25);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.aw-history-new-btn:hover {
+    background: var(--color-primary, #7c3aed);
+    color: #ffffff;
+    border-color: var(--color-primary, #7c3aed);
+}
+
+.aw-history-item--active {
+    background: rgba(124,58,237,0.08) !important;
+    border-color: var(--color-primary, #7c3aed) !important;
 }
 
 

@@ -282,7 +282,13 @@
                 <i data-lucide="history" style="width: 18px; height: 18px;"></i>
                 <h3>Your Chat Sessions</h3>
             </div>
-            <button type="button" class="aw-modal-close" onclick="AW.toggleHistoryDrawer()">&times;</button>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <button type="button" class="aw-history-new-btn" onclick="AW.newChat(); AW.toggleHistoryDrawer();" title="Start a new chat session">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                    <span>New Chat</span>
+                </button>
+                <button type="button" class="aw-modal-close" onclick="AW.toggleHistoryDrawer()">&times;</button>
+            </div>
         </div>
         <div class="aw-history-body" id="awHistoryList">
             <p class="aw-modal-note">Loading history sessions...</p>
