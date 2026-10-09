@@ -100,6 +100,8 @@ load_testing/credentials.json
 load_testing/.env.loadtest
 load_testing/reports/
 # LOAD TESTING ONLY - REMOVE AFTER TEST
+testing com/
+
 
 # ================================================
 # OPERATING SYSTEM FILES

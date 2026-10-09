@@ -56,8 +56,11 @@ def get_nomic_embedding(text):
             "model": cfg['embedding_model'],
             "prompt": text[:2000]
         }
+        emb_headers = {'Content-Type': 'application/json'}
+        if cfg['bearer_token']:
+            emb_headers['Authorization'] = f"Bearer {cfg['bearer_token']}"
         try:
-            res = requests.post(url, json=payload, timeout=1.5)
+            res = requests.post(url, json=payload, headers=emb_headers, timeout=8.0)
             if res.status_code == 200:
                 data = res.json()
                 if data.get('embedding'):
@@ -389,7 +392,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
                 "prompt": full_prompt,
                 "stream": True
             }
-            res = requests.post(ollama_generate_url, json=ollama_payload, stream=True, timeout=(3, 60))
+            res = requests.post(ollama_generate_url, headers=headers, json=ollama_payload, stream=True, timeout=(4, 60))
             if res.status_code == 200:
                 emitted_any = False
                 for line in res.iter_lines():
