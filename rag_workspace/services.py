@@ -60,7 +60,7 @@ def get_nomic_embedding(text):
         if cfg['bearer_token']:
             emb_headers['Authorization'] = f"Bearer {cfg['bearer_token']}"
         try:
-            res = requests.post(url, json=payload, headers=emb_headers, timeout=8.0)
+            res = requests.post(url, json=payload, headers=emb_headers, timeout=25.0)
             if res.status_code == 200:
                 data = res.json()
                 if data.get('embedding'):
@@ -81,7 +81,7 @@ def get_nomic_embedding(text):
                     "model": "text-embedding-3-small",
                     "input": text[:2000]
                 },
-                timeout=2.0
+                timeout=5.0
             )
             if res.status_code == 200:
                 data = res.json()
@@ -89,7 +89,7 @@ def get_nomic_embedding(text):
         except Exception:
             pass
 
-    _EMBEDDING_OFFLINE_UNTIL = now + 30.0
+    _EMBEDDING_OFFLINE_UNTIL = now + 10.0
     return None
 
 
@@ -111,7 +111,7 @@ def cosine_similarity(v1, v2):
 RAG_TOP_K_INITIAL = 20               # Candidate chunks pool
 RAG_MIN_SIMILARITY_THRESHOLD = 0.08  # Initial generous similarity floor
 RAG_MIN_RERANK_THRESHOLD = 0.12      # Minimum score threshold after reranking
-RAG_MAX_FINAL_CHUNKS = 5            # Maximum final chunks sent to LLM prompt (optimized for fast local inference)
+RAG_MAX_FINAL_CHUNKS = 4            # Maximum final chunks sent to LLM prompt (optimized for fast local inference)
 RAG_FALLBACK_SEARCH_ENABLED = True     # Enable multi-stage fallback retrieval
 RAG_DEBUG_LOGGING = True            # Enable server-side developer telemetry logging
 
@@ -360,7 +360,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
                 headers=headers,
                 json=payload,
                 stream=True,
-                timeout=(15, 180)
+                timeout=(30, 240)
             )
 
             if response.status_code == 200:
@@ -392,7 +392,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
                 "prompt": full_prompt,
                 "stream": True
             }
-            res = requests.post(ollama_generate_url, headers=headers, json=ollama_payload, stream=True, timeout=(15, 180))
+            res = requests.post(ollama_generate_url, headers=headers, json=ollama_payload, stream=True, timeout=(30, 240))
             if res.status_code == 200:
                 emitted_any = False
                 for line in res.iter_lines():
@@ -635,24 +635,26 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) AI Assistant.\n"
-        "Your ONLY source of information is the RETRIEVED CONTEXT below from documents selected by the user.\n\n"
-        "STRICT CONSTRAINTS:\n"
-        "1. HARD SOURCE BOUNDARY: Use ONLY facts explicitly supported by the retrieved context. Never use outside knowledge, prior training data, internet info, or unselected documents.\n"
-        "2. DISTINGUISH SUPPORTED FACTS vs. MISSING INFORMATION: If evidence is partial, answer ONLY the supported part and explicitly state what is missing.\n"
-        "3. INLINE CITATIONS: For every claim, fact, or question generated, cite the source as [Document Title, Page X].\n"
-        "4. NO RELEVANT EVIDENCE: Reply with EXACTLY: Not found in the selected documents. ONLY if the retrieved context is completely empty or contains zero facts to answer the prompt.\n"
-        "5. NEVER HALLUCINATE or fabricate page numbers, chunk IDs, or facts."
+        "You are an expert AI Study Assistant for educational courses.\n"
+        "Your task is to answer the student's question accurately using the RETRIEVED CONTEXT below.\n\n"
+        "GUIDELINES:\n"
+        "1. STRICT GROUNDING: Base your explanation on the facts, definitions, and details in the RETRIEVED CONTEXT.\n"
+        "2. INLINE CITATIONS: For every key fact, cite the source as [Document Title, Page X].\n"
+        "3. PARTIAL COVERAGE: If the context answers part of the prompt, explain what is available from the text and note what specific details were missing.\n"
+        "4. HELPFUL & DIRECT: Give a clear, direct, and structured response based on the document passages."
     )
     
     if history_str:
-        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT QUESTION: {prompt or 'Summarize key points from these chunks.'}"
     else:
-        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nSTUDENT QUESTION: {prompt or 'Summarize key points from these chunks.'}"
 
     answer = call_phi_llm(user_p, system_p)
-    if not answer or answer.strip() == "":
-        answer = "Not found in the selected documents."
+    if not answer or answer.strip() == "" or answer.strip().lower() in ("not found in the selected documents.", "not found in the selected documents"):
+        if chunks:
+            answer = generate_fallback_ask(prompt, chunks, materials)
+        else:
+            answer = "Not found in the selected documents."
 
     s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
     return {
@@ -719,22 +721,22 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
             history_str = "\n".join(h_lines)
 
     system_p = (
-        "You are a strict Retrieval-Augmented Generation (RAG) AI Assistant.\n"
-        "Your ONLY source of information is the RETRIEVED CONTEXT below from documents selected by the user.\n\n"
-        "STRICT CONSTRAINTS:\n"
-        "1. HARD SOURCE BOUNDARY: Use ONLY facts explicitly supported by the retrieved context. Never use outside knowledge, prior training data, internet info, or unselected documents.\n"
-        "2. DISTINGUISH SUPPORTED FACTS vs. MISSING INFORMATION: If evidence is partial, answer ONLY the supported part and explicitly state what is missing.\n"
-        "3. INLINE CITATIONS: For every claim, fact, or question generated, cite the source as [Document Title, Page X].\n"
-        "4. NO RELEVANT EVIDENCE: Reply with EXACTLY: Not found in the selected documents. ONLY if the retrieved context is completely empty or contains zero facts to answer the prompt.\n"
-        "5. NEVER HALLUCINATE or fabricate page numbers, chunk IDs, or facts."
+        "You are an expert AI Study Assistant for educational courses.\n"
+        "Your task is to answer the student's question accurately using the RETRIEVED CONTEXT below.\n\n"
+        "GUIDELINES:\n"
+        "1. STRICT GROUNDING: Base your explanation on the facts, definitions, and details in the RETRIEVED CONTEXT.\n"
+        "2. INLINE CITATIONS: For every key fact, cite the source as [Document Title, Page X].\n"
+        "3. PARTIAL COVERAGE: If the context answers part of the prompt, explain what is available from the text and note what specific details were missing.\n"
+        "4. HELPFUL & DIRECT: Give a clear, direct, and structured response based on the document passages."
     )
 
     if history_str:
-        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nRECENT CHAT HISTORY:\n{history_str}\n\nSTUDENT QUESTION: {prompt or 'Summarize key points from these chunks.'}"
     else:
-        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nUSER PROMPT: {prompt or 'Summarize key points from these chunks.'}"
+        user_p = f"RETRIEVED CONTEXT:\n{context_str}\n\nSTUDENT QUESTION: {prompt or 'Summarize key points from these chunks.'}"
 
     yield _frame({'type': 'meta', 'status': 'success', 'not_found': False, 'mode': mode, 'session_id': s_id, 'sources_count': len(unique_sources)})
+    yield _frame({'type': 'status', 'message': f'Found {len(chunks)} relevant sections. Analyzing with AI...'})
 
     collected = []
     token_count = 0
@@ -745,10 +747,16 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
         yield _frame({'type': 'token', 'delta': delta})
 
     answer = "".join(collected).strip()
-    if not answer:
-        answer = "Not found in the selected documents."
-        for i in range(0, len(answer), 6):
-            yield _frame({'type': 'token', 'delta': answer[i:i+6]})
+    if not answer or answer.strip().lower() in ("not found in the selected documents.", "not found in the selected documents"):
+        if chunks:
+            log_rag_debug("LLM_EMPTY_OR_GENERIC_FALLBACK", {"reason": "Using grounded document synthesis"})
+            answer = generate_fallback_ask(prompt, chunks, materials)
+            for i in range(0, len(answer), 12):
+                yield _frame({'type': 'token', 'delta': answer[i:i+12]})
+        else:
+            answer = "Not found in the selected documents."
+            for i in range(0, len(answer), 6):
+                yield _frame({'type': 'token', 'delta': answer[i:i+6]})
 
     s_id = log_rag_query(user, mode, prompt, answer, len(chunks), unique_sources, strict_mode, False, s_id, material_ids)
     yield _frame({

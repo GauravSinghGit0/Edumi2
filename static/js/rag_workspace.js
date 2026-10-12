@@ -12,7 +12,7 @@
             csrfToken: '',
             storageKey: 'edumi_aw_selected_ids_v1',
             stream: true,
-            streamIdleMs: 15000
+            streamIdleMs: 180000
         },
 
         state: {
@@ -438,7 +438,7 @@
 
             const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
             this.state.activeController = controller;
-            const idleMs = this._config.streamIdleMs || 15000;
+            const idleMs = this._config.streamIdleMs || 180000;
             let idleTimer = null;
             let idleTimerSet = false;
             const bumpIdle = function () {
@@ -566,6 +566,17 @@
 
                     const type = frame.type || 'done';
                     bumpIdle();
+
+                    if (type === 'status' || type === 'ping') {
+                        if (frame.message) {
+                            const ldEl = document.getElementById(loadingId);
+                            if (ldEl) {
+                                const msgEl = ldEl.querySelector('.aw-thinking span:last-child');
+                                if (msgEl) msgEl.textContent = frame.message;
+                            }
+                        }
+                        return;
+                    }
 
                     if (type === 'error') {
                         if (!finished) {
