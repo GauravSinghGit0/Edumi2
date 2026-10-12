@@ -80,3 +80,5 @@ zope.interface
 dlib-bin
 face_recognition
 psutil>=5.9.0
+pypdf>=3.17.0
+python-docx>=1.1.0
