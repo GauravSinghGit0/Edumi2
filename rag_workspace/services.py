@@ -111,7 +111,7 @@ def cosine_similarity(v1, v2):
 RAG_TOP_K_INITIAL = 20               # Candidate chunks pool
 RAG_MIN_SIMILARITY_THRESHOLD = 0.08  # Initial generous similarity floor
 RAG_MIN_RERANK_THRESHOLD = 0.12      # Minimum score threshold after reranking
-RAG_MAX_FINAL_CHUNKS = 8            # Maximum final chunks sent to LLM prompt
+RAG_MAX_FINAL_CHUNKS = 5            # Maximum final chunks sent to LLM prompt (optimized for fast local inference)
 RAG_FALLBACK_SEARCH_ENABLED = True     # Enable multi-stage fallback retrieval
 RAG_DEBUG_LOGGING = True            # Enable server-side developer telemetry logging
 
@@ -360,7 +360,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
                 headers=headers,
                 json=payload,
                 stream=True,
-                timeout=(4, 60)
+                timeout=(15, 180)
             )
 
             if response.status_code == 200:
@@ -392,7 +392,7 @@ def call_phi_llm_stream(prompt, system_prompt=""):
                 "prompt": full_prompt,
                 "stream": True
             }
-            res = requests.post(ollama_generate_url, headers=headers, json=ollama_payload, stream=True, timeout=(4, 60))
+            res = requests.post(ollama_generate_url, headers=headers, json=ollama_payload, stream=True, timeout=(15, 180))
             if res.status_code == 200:
                 emitted_any = False
                 for line in res.iter_lines():
