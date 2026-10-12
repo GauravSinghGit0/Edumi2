@@ -611,23 +611,87 @@
             }
         }
 
-        // Toast System
+        // Modern Toast Notification System
+        let _lastToastSignature = '';
+        let _lastToastTime = 0;
+
+        function dismissToast(toast) {
+            if (!toast || toast.classList.contains('fade-out')) return;
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                if (toast && toast.parentNode) toast.remove();
+            }, 260);
+        }
+
         function showToast(title, message, type = 'info') {
+            // Flexible argument handling: showToast(msg, type) or showToast(title, msg, type)
+            if (arguments.length === 2 && ['success', 'info', 'warning', 'danger', 'error'].includes(arguments[1])) {
+                type = arguments[1];
+                message = '';
+            } else if (arguments.length === 1) {
+                message = '';
+                type = 'info';
+            }
+            if (type === 'error') type = 'danger';
+
+            // Deduplicate rapid identical toasts within 1.2 seconds
+            const sig = `${title}::${message}::${type}`;
+            const now = Date.now();
+            if (sig === _lastToastSignature && (now - _lastToastTime) < 1200) {
+                return;
+            }
+            _lastToastSignature = sig;
+            _lastToastTime = now;
+
             const container = document.getElementById('toastContainer') || createToastContainer();
+
+            // Limit visible toasts to maximum 3
+            while (container.children.length >= 3) {
+                container.firstElementChild.remove();
+            }
+
+            const icons = {
+                success: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+                danger: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+                warning: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                info: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+            };
+
             const toast = document.createElement('div');
             toast.className = `custom-toast ${type}`;
+            toast.setAttribute('role', 'status');
             toast.innerHTML = `
-                <div class="toast-content">
-                    <strong>${title}</strong>
-                    <p>${message}</p>
+                <div class="toast-icon-wrap ${type}">
+                    ${icons[type] || icons.info}
                 </div>
-                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+                <div class="toast-content">
+                    <strong class="toast-title">${title}</strong>
+                    ${message ? `<p class="toast-desc">${message}</p>` : ''}
+                </div>
+                <button type="button" class="toast-close" aria-label="Close">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             `;
+
+            const closeBtn = toast.querySelector('.toast-close');
+            if (closeBtn) {
+                closeBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    dismissToast(toast);
+                };
+            }
+
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 500);
-            }, 5000);
+
+            const timer = setTimeout(() => {
+                dismissToast(toast);
+            }, 3200);
+
+            toast.onmouseenter = () => clearTimeout(timer);
+            toast.onmouseleave = () => setTimeout(() => dismissToast(toast), 1500);
         }
 
         function createToastContainer() {
@@ -708,70 +772,155 @@
     <style>
         .toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
+            top: 24px;
+            right: 24px;
+            z-index: 99999;
             display: flex;
             flex-direction: column;
             gap: 10px;
+            max-width: 380px;
+            pointer-events: none;
         }
 
         .custom-toast {
-            background: white;
-            padding: 15px 20px;
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.98);
+            color: #0f172a;
+            padding: 12px 14px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #8b5cf6;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(226, 232, 240, 0.9);
             display: flex;
             align-items: center;
-            gap: 15px;
-            min-width: 300px;
-            animation: slideInRight 0.3s ease;
+            gap: 12px;
+            min-width: 280px;
+            max-width: 360px;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
         }
 
-        .custom-toast.success {
-            border-left-color: #10b981;
+        /* Dark mode support */
+        .dark-mode .custom-toast {
+            background: rgba(30, 41, 59, 0.98);
+            color: #f8fafc;
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
         }
 
-        .custom-toast.info {
-            border-left-color: #8b5cf6;
+        .toast-icon-wrap {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
-        .custom-toast.danger {
-            border-left-color: #ef4444;
+        .toast-icon-wrap.success {
+            background: #ecfdf5;
+            color: #059669;
+        }
+        .dark-mode .toast-icon-wrap.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
         }
 
-        .custom-toast.warning {
-            border-left-color: #f59e0b;
+        .toast-icon-wrap.danger {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .dark-mode .toast-icon-wrap.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .toast-icon-wrap.warning {
+            background: #fffbeb;
+            color: #d97706;
+        }
+        .dark-mode .toast-icon-wrap.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        .toast-icon-wrap.info {
+            background: #f5f3ff;
+            color: #7c3aed;
+        }
+        .dark-mode .toast-icon-wrap.info {
+            background: rgba(124, 58, 237, 0.15);
+            color: #a78bfa;
+        }
+
+        .toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .toast-content .toast-title {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.3;
+            color: #0f172a;
+        }
+        .dark-mode .toast-content .toast-title {
+            color: #f8fafc;
+        }
+
+        .toast-content .toast-desc {
+            font-size: 0.8125rem;
+            color: #64748b;
+            margin: 2px 0 0 0;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .dark-mode .toast-content .toast-desc {
+            color: #94a3b8;
+        }
+
+        .toast-close {
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 4px;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: #334155;
+        }
+        .dark-mode .toast-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
         }
 
         .custom-toast.fade-out {
             opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.5s;
+            transform: translateY(-8px) scale(0.96);
+            transition: all 0.25s ease;
         }
 
-        .toast-content strong {
-            display: block;
-            font-size: 0.9rem;
-            color: #111111;
-        }
-
-        .toast-content p {
-            font-size: 0.8rem;
-            color: #64748b;
-            margin: 0;
-        }
-
-        @keyframes slideInRight {
+        @keyframes toastSlideIn {
             from {
-                transform: translateX(100%);
                 opacity: 0;
+                transform: translateY(-12px) scale(0.94);
             }
-
             to {
-                transform: translateX(0);
                 opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
     </style>
