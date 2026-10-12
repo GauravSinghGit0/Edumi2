@@ -581,6 +581,7 @@ def process_combined_edits(input_path, state):
 
     # 6. Fades
     fade_state = effects_state.get("fade")
+    trim_state = state.get("trim") or {}
     fade_in_sec = 0.0
     fade_out_sec = 0.0
     if fade_state:

@@ -7,6 +7,9 @@ import random
 import string
 import base64
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required

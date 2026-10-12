@@ -290,6 +290,7 @@ def generate_with_pyopenssl():
     KEY_FILE.write_bytes(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     CERT_FILE.write_bytes(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
 
+    now = datetime.datetime.now()
     print(f"[OK] Root CA Key    -> {CA_KEY_FILE}")
     print(f"[OK] Root CA Cert   -> {CA_CERT_FILE}")
     print(f"[OK] Server Key     -> {KEY_FILE}")

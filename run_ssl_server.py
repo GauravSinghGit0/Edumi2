@@ -12,6 +12,7 @@ Usage:  python run_ssl_server.py
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 BASE_DIR  = Path(__file__).resolve().parent
 CERT_FILE = BASE_DIR / "certs" / "edumi.crt"

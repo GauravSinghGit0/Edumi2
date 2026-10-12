@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 from typing import Optional
+import numpy as np
 
 from .encryption_service import FaceEncryptionService
 
