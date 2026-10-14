@@ -15,25 +15,32 @@ from email.mime.multipart import MIMEMultipart
 from email.utils import formatdate, make_msgid
 
 import os
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from pathlib import Path
 
-# ==============================================================================
-# SMTP CONFIGURATION (Reads from .env or environment variables)
-# ==============================================================================
-SMTP_HOST         = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-SMTP_PORT         = int(os.environ.get("EMAIL_PORT", 587))
-SMTP_USE_TLS      = os.environ.get("EMAIL_USE_TLS", "True").lower() in ("true", "1")
-SMTP_USE_SSL      = os.environ.get("EMAIL_USE_SSL", "False").lower() in ("true", "1")
-SMTP_USER         = os.environ.get("EMAIL_HOST_USER", "")
-SMTP_PASSWORD     = os.environ.get("EMAIL_HOST_PASSWORD", "")
-FROM_EMAIL        = os.environ.get("DEFAULT_FROM_EMAIL", "EduMi Support <noreply@edumi.ac.in>")
-DEFAULT_RECIPIENT = os.environ.get("TEST_EMAIL_RECIPIENT", "")
-# ==============================================================================
+# Explicitly locate .env file in project root
+BASE_DIR = Path(__file__).resolve().parent.parent
+env_file = BASE_DIR / '.env'
 
+env_loaded_from = None
+if env_file.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path=env_file, override=True)
+        env_loaded_from = str(env_file)
+    except ImportError:
+        # Fallback: simple line parser for .env if python-dotenv is not installed
+        try:
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        k, v = line.split('=', 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k not in os.environ:
+                            os.environ[k] = v
+            env_loaded_from = f"{env_file} (manual parser)"
+        except Exception:
+            pass
 
 def print_banner(title):
     print("\n" + "=" * 70)
@@ -51,7 +58,17 @@ def main():
         'recipient',
         nargs='?',
         default=None,
-        help="Target email address to receive the test email (defaults to SMTP_USER if omitted)."
+        help="Target email address to receive the test email."
+    )
+    parser.add_argument(
+        '--user', '-u',
+        default=None,
+        help="SMTP username (e.g. your_email@gmail.com). Overrides .env"
+    )
+    parser.add_argument(
+        '--password', '-p',
+        default=None,
+        help="SMTP password / App Password. Overrides .env"
     )
     parser.add_argument(
         '--verbose', '-v',
@@ -61,18 +78,44 @@ def main():
     )
     args = parser.parse_args()
 
-    recipient = args.recipient or DEFAULT_RECIPIENT or SMTP_USER
+    smtp_host = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("EMAIL_PORT", 587))
+    smtp_use_tls = os.environ.get("EMAIL_USE_TLS", "True").lower() in ("true", "1")
+    smtp_use_ssl = os.environ.get("EMAIL_USE_SSL", "False").lower() in ("true", "1")
+    smtp_user = args.user or os.environ.get("EMAIL_HOST_USER", "")
+    smtp_password = args.password or os.environ.get("EMAIL_HOST_PASSWORD", "")
+    from_email = os.environ.get("DEFAULT_FROM_EMAIL", f"EduMi Support <{smtp_user}>" if smtp_user else "EduMi Support <noreply@edumi.ac.in>")
+    recipient = args.recipient or os.environ.get("TEST_EMAIL_RECIPIENT", "") or smtp_user
 
     print_banner("EduMi 2.0 — SMTP Configuration & Diagnostic Tool")
-    print(f"• Mode             : Standalone (Isolated from .env)")
-    print(f"• SMTP Server Host : {SMTP_HOST}")
-    print(f"• SMTP Port        : {SMTP_PORT}")
-    print(f"• Security Mode    : {'SSL (Port 465)' if SMTP_USE_SSL else ('STARTTLS (Port 587)' if SMTP_USE_TLS else 'Plaintext (Port 25)')}")
-    print(f"• Authenticated User: {SMTP_USER}")
-    print(f"• Password Length  : {len(SMTP_PASSWORD)} characters ({'Configured' if SMTP_PASSWORD else 'EMPTY'})")
-    print(f"• From Header      : {FROM_EMAIL}")
+    print(f"• .env Status      : {env_loaded_from if env_loaded_from else 'NOT FOUND (' + str(env_file) + ' does not exist)'}")
+    print(f"• SMTP Server Host : {smtp_host}")
+    print(f"• SMTP Port        : {smtp_port}")
+    print(f"• Security Mode    : {'SSL (Port 465)' if smtp_use_ssl else ('STARTTLS (Port 587)' if smtp_use_tls else 'Plaintext (Port 25)')}")
+    print(f"• Authenticated User: {smtp_user if smtp_user else '(EMPTY - Authentication will fail!)'}")
+    print(f"• Password Length  : {len(smtp_password)} characters ({'Configured' if smtp_password else 'EMPTY'})")
+    print(f"• From Header      : {from_email}")
     print(f"• Recipient (To)   : {recipient}")
     print("=" * 70)
+
+    if not smtp_user or not smtp_password:
+        print("\n[!] WARNING: SMTP_USER or SMTP_PASSWORD is not configured!")
+        print("    Gmail requires authentication. Without credentials, delivery will be rejected.")
+        print("    Fix options:")
+        print("    1. Add EMAIL_HOST_USER and EMAIL_HOST_PASSWORD to your .env file:")
+        print("       EMAIL_HOST_USER=your_email@gmail.com")
+        print("       EMAIL_HOST_PASSWORD=your_16_char_app_password")
+        print("    2. Or pass them directly on the command line:")
+        print(f"       python scripts/test_smtp.py {recipient or 'user@example.com'} --user your_email@gmail.com --password \"xxxx xxxx xxxx xxxx\"\n")
+        sys.exit(1)
+
+    SMTP_HOST = smtp_host
+    SMTP_PORT = smtp_port
+    SMTP_USE_TLS = smtp_use_tls
+    SMTP_USE_SSL = smtp_use_ssl
+    SMTP_USER = smtp_user
+    SMTP_PASSWORD = smtp_password
+    FROM_EMAIL = from_email
 
     # 1. Prepare Email Message
     print_step(1, "Building MIME email message")
