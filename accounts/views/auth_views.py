@@ -385,7 +385,7 @@ def resend_verification_email(request):
     # Always return success message to avoid account enumeration
     return JsonResponse({
         'ok': True,
-        'message': 'A fresh verification link and code have been sent to your email.'
+        'message': 'A fresh verification link and code have been sent. Please check your inbox and Spam / Junk folder.'
     })
 
 

@@ -35,14 +35,11 @@ certs/
 media/
 debug_test.py
 test_all_pages.py
-test_report.md
-fix_test_report.md
-report.md
-UI_REPORT.md
-generate_keys.py
-list_urls.py
-urls.txt
-system_architecture.png
+# ================================================
+# ARCHIVE & DEVELOPER ARTIFACTS
+# ================================================
+archive/
+/archive/
 
 
 # ================================================

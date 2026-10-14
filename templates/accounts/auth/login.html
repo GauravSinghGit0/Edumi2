@@ -178,6 +178,9 @@
                     style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
                     <div style="font-weight: 700; margin-bottom: 4px;">Email Verification Required</div>
                     <div>{{ error }}</div>
+                    <div style="margin-top: 8px; font-size: 0.8rem; background: rgba(217, 119, 6, 0.1); border-left: 3px solid #d97706; padding: 6px 10px; border-radius: 4px; color: #78350f;">
+                        💡 <strong>Tip:</strong> If you haven't received the email, please check your <strong>Spam / Junk</strong> folder.
+                    </div>
                     <div style="margin-top: 10px;">
                         <button type="button" id="loginResendBtn"
                             onclick="resendLoginVerification('{{ unverified_email }}')"

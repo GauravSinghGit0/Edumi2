@@ -16,6 +16,7 @@ class Notification(models.Model):
         ('classroom_removed', 'Removed from Classroom'),
         ('student_joined', 'Student Joined Classroom'),
         ('meeting_reminder', 'Meeting Reminder'),
+        ('assignment_posted', 'New Assignment Posted'),
         ('system', 'System Notification'),
     ]
     
@@ -170,6 +171,20 @@ class Notification(models.Model):
             message=f'"{meeting.title}" starts in 15 minutes',
             link=f'/meetings/join/{meeting.meeting_code}/',
             related_meeting_id=meeting.id
+        )
+    
+    @classmethod
+    def create_assignment_posted_notification(cls, recipient, assignment):
+        """Create notification when a new assignment is posted"""
+        due_str = assignment.due_date.strftime("%b %d, %Y at %I:%M %p") if assignment.due_date else "No deadline"
+        return cls.objects.create(
+            recipient=recipient,
+            notification_type='assignment_posted',
+            title='New Assignment Posted',
+            message=f'New assignment "{assignment.title}" has been posted in {assignment.classroom.title}. Due: {due_str}.',
+            link=f'/assignments/{assignment.id}/',
+            related_user=assignment.created_by,
+            related_classroom_id=assignment.classroom_id
         )
     
     @classmethod

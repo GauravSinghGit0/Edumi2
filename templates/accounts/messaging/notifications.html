@@ -768,17 +768,19 @@ body.dark-mode .skeleton-box {
                  data-id="{{ notification.id }}"
                  data-read="{{ notification.is_read|yesno:'true,false' }}"
                  data-type="{{ notification.notification_type }}"
-                 data-category="{% if 'message' in notification.notification_type %}messages{% elif 'meeting' in notification.notification_type %}meetings{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type %}classroom{% else %}system{% endif %}"
+                 data-category="{% if 'message' in notification.notification_type %}messages{% elif 'meeting' in notification.notification_type %}meetings{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type or 'assignment' in notification.notification_type %}classroom{% else %}system{% endif %}"
                  data-timestamp="{{ notification.created_at|date:'c' }}"
                  data-link="{{ notification.link|default:'' }}"
                  onclick="handleRowClick(event, {{ notification.id }}, '{{ notification.link|default:'' }}')">
                 
                 <!-- Category Icon -->
-                <div class="notif-icon-wrap {% if 'message' in notification.notification_type %}type-message{% elif 'meeting' in notification.notification_type %}type-meeting{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type %}type-classroom{% else %}type-system{% endif %}">
+                <div class="notif-icon-wrap {% if 'message' in notification.notification_type %}type-message{% elif 'meeting' in notification.notification_type %}type-meeting{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type or 'assignment' in notification.notification_type %}type-classroom{% else %}type-system{% endif %}">
                     {% if 'message' in notification.notification_type %}
                     <i data-lucide="message-square"></i>
                     {% elif 'meeting' in notification.notification_type %}
                     <i data-lucide="video"></i>
+                    {% elif 'assignment' in notification.notification_type %}
+                    <i data-lucide="file-text"></i>
                     {% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type %}
                     <i data-lucide="graduation-cap"></i>
                     {% else %}
@@ -794,7 +796,7 @@ body.dark-mode .skeleton-box {
                         <span class="notif-unread-dot" title="Unread"></span>
                         {% endif %}
                         <span class="notif-type-tag">
-                            {% if 'message' in notification.notification_type %}Message{% elif 'meeting' in notification.notification_type %}Meeting{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type %}Classroom{% else %}Alert{% endif %}
+                            {% if 'message' in notification.notification_type %}Message{% elif 'meeting' in notification.notification_type %}Meeting{% elif 'assignment' in notification.notification_type %}Assignment{% elif 'classroom' in notification.notification_type or 'student' in notification.notification_type %}Classroom{% else %}Alert{% endif %}
                         </span>
                     </div>
                     <p class="notif-message">{{ notification.message }}</p>

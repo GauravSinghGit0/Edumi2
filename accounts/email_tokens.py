@@ -315,6 +315,86 @@ def _dispatch_email_async(subject, text_content, from_email, recipient_list, htm
         return True
 
 
+def _dispatch_bulk_emails_async(email_messages_data):
+    """
+    Dispatches a batch of personalized emails asynchronously via Celery or daemon thread fallback.
+    Uses a single SMTP connection for high performance and to prevent connection flooding.
+    """
+    if not email_messages_data:
+        return True
+
+    # If console or locmem backend is configured, run in background thread directly
+    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
+        import threading
+        def _send_console():
+            try:
+                from django.core.mail import get_connection, EmailMultiAlternatives
+                connection = get_connection()
+                connection.open()
+                msgs = []
+                for item in email_messages_data:
+                    recip = item.get('recipient')
+                    if not recip:
+                        continue
+                    m = EmailMultiAlternatives(
+                        subject=item.get('subject', 'EduMi Notification'),
+                        body=item.get('text_content', '').strip(),
+                        from_email=item.get('from_email') or settings.DEFAULT_FROM_EMAIL,
+                        to=[recip],
+                        connection=connection,
+                    )
+                    if item.get('html_content'):
+                        m.attach_alternative(item['html_content'], "text/html")
+                    msgs.append(m)
+                if msgs:
+                    connection.send_messages(msgs)
+                connection.close()
+            except Exception as e:
+                logger.error(f"Console bulk email dispatch failed: {e}")
+
+        t = threading.Thread(target=_send_console, daemon=True)
+        t.start()
+        return True
+
+    try:
+        from accounts.tasks import send_bulk_emails_async_task
+        send_bulk_emails_async_task.delay(email_messages_data)
+        return True
+    except Exception as exc:
+        logger.debug(f"Could not enqueue bulk emails to Celery ({exc}). Dispatching via background daemon thread.")
+        import threading
+        def _send():
+            try:
+                from django.core.mail import get_connection, EmailMultiAlternatives
+                connection = get_connection()
+                connection.open()
+                msgs = []
+                for item in email_messages_data:
+                    recip = item.get('recipient')
+                    if not recip:
+                        continue
+                    m = EmailMultiAlternatives(
+                        subject=item.get('subject', 'EduMi Notification'),
+                        body=item.get('text_content', '').strip(),
+                        from_email=item.get('from_email') or settings.DEFAULT_FROM_EMAIL,
+                        to=[recip],
+                        connection=connection,
+                    )
+                    if item.get('html_content'):
+                        m.attach_alternative(item['html_content'], "text/html")
+                    msgs.append(m)
+                if msgs:
+                    connection.send_messages(msgs)
+                connection.close()
+                logger.info(f"Background bulk email dispatched {len(msgs)} messages successfully.")
+            except Exception as e:
+                logger.error(f"Threaded bulk email dispatch failed: {e}")
+
+        t = threading.Thread(target=_send, daemon=True)
+        t.start()
+        return True
+
+
 # ==============================================================================
 # PASSWORD RESET SERVICES
 # ==============================================================================

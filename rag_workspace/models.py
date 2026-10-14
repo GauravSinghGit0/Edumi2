@@ -78,6 +78,10 @@ class RagInstructorSetting(models.Model):
     strict_material_mode = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = 'RAG Instructor Setting'
+        verbose_name_plural = 'RAG Instructor Settings'
+
     def __str__(self):
         return f"AI Settings - {self.classroom.title}"
 

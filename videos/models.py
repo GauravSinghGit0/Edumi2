@@ -79,6 +79,8 @@ class VideoQuality(models.Model):
     
     class Meta:
         unique_together = ('video', 'quality')
+        verbose_name = 'Video Quality'
+        verbose_name_plural = 'Video Qualities'
     
     def __str__(self):
         return f"{self.video.title} - {self.quality}"

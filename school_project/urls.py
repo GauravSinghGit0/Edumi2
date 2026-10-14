@@ -24,7 +24,10 @@ def health_check(request):
         'version': '2.0',
     }, status=status)
 
-# Override admin logout to redirect to login page
+# Enterprise Admin Site Customization
+admin.site.site_header = "EduMi Platform Administration"
+admin.site.site_title = "EduMi Admin"
+admin.site.index_title = "Academic Operations & Data Registry"
 admin.site.logout_template = None
 
 urlpatterns = [

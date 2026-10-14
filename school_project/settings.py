@@ -453,6 +453,9 @@ EMAIL_OTP_LIFETIME = int(env('EMAIL_OTP_LIFETIME', '300'))  # 5 minutes (in seco
 REGISTRATION_RATE_LIMIT = int(env('REGISTRATION_RATE_LIMIT', '10'))  # 10 attempts per hour
 REGISTRATION_RATE_PERIOD = int(env('REGISTRATION_RATE_PERIOD', '3600'))
 
+# Default Domain for outbound email link generation
+DEFAULT_DOMAIN = env('DEFAULT_DOMAIN', 'http://localhost:8002')
+
 
 # ==============================================================================
 # INTERNATIONALISATION

@@ -434,7 +434,7 @@ def start_classroom_meeting(request, classroom_id):
             allow_chat=allow_chat,
             record_meeting=record_meeting,
         )
-        notify_meeting_started(meeting, classroom)
+        notify_meeting_started(meeting, classroom, request=request)
         messages.success(request, 'Meeting started successfully!')
         return redirect('join_meeting', meeting_code=meeting.meeting_code)
 

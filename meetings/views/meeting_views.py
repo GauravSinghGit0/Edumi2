@@ -186,7 +186,7 @@ def join_meeting(request, meeting_code):
         meeting.status = 'live'
         meeting.save()
         try:
-            notify_meeting_started(meeting, meeting.classroom)
+            notify_meeting_started(meeting, meeting.classroom, request=request)
         except Exception:
             pass
 

@@ -19,6 +19,7 @@ from common.validators import (
     MAX_ASSIGNMENT_SIZE,
     MAX_SUBMISSION_SIZE,
 )
+from accounts.notification_utils import notify_new_assignment_posted
 
 
 def get_default_due_date():
@@ -149,6 +150,11 @@ def create_assignment(request, classroom_id):
         if request.POST.get('action') == 'publish':
             assignment.status = 'published'
             assignment.save()
+            try:
+                notify_new_assignment_posted(assignment, request=request)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to dispatch assignment posted notifications: {e}")
             messages.success(request, f'Assignment "{title}" published successfully!')
         else:
             messages.success(request, f'Assignment "{title}" saved as draft!')
@@ -201,6 +207,7 @@ def edit_assignment(request, assignment_id):
                 })
 
         # Handle status change
+        prev_status = assignment.status
         action = request.POST.get('action')
         if action == 'publish':
             assignment.status = 'published'
@@ -221,6 +228,13 @@ def edit_assignment(request, assignment_id):
             messages.success(request, f'Assignment "{assignment.title}" updated successfully!')
         
         assignment.save()
+
+        if action == 'publish' and prev_status != 'published':
+            try:
+                notify_new_assignment_posted(assignment, request=request)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to dispatch assignment posted notifications: {e}")
         
         # Save valid new files
         for file in files:
@@ -298,6 +312,7 @@ def toggle_assignment_status(request, assignment_id):
         if not target_status:
             target_status = 'draft' if assignment.status == 'published' else 'published'
             
+        prev_status = assignment.status
         if target_status == 'published':
             assignment.status = 'published'
             messages.success(request, f'Assignment "{assignment.title}" is now published and visible to students!')
@@ -309,6 +324,13 @@ def toggle_assignment_status(request, assignment_id):
             messages.success(request, f'Assignment "{assignment.title}" has been archived.')
             
         assignment.save()
+
+        if target_status == 'published' and prev_status != 'published':
+            try:
+                notify_new_assignment_posted(assignment, request=request)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to dispatch assignment posted notifications: {e}")
         
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
             return JsonResponse({'success': True, 'status': assignment.status, 'status_display': assignment.get_status_display()})
