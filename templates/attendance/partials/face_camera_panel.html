@@ -1,139 +1,129 @@
-<!-- Camera Capture Panel -->
+<!-- Centered Apple Face ID Camera Stage -->
 <div class="face-panel active" id="panelCamera">
 
-    <!-- Angle Tracker (Multi-Angle Mode) -->
-    <div class="angle-tracker" id="angleTracker">
-        <div class="angle-chip current" id="angleFrontChip">1. Front View</div>
-        <div class="angle-chip" id="angleLeftChip">2. Left Angle</div>
-        <div class="angle-chip" id="angleRightChip">3. Right Angle</div>
-    </div>
+    <!-- Biometric Camera Stage -->
+    <div class="biometric-camera-stage">
+        
+        <!-- Centered Apple Face ID Frame -->
+        <div class="camera-center-frame">
+            <div class="camera-container" id="cameraContainer">
+                <!-- Live Video Feed -->
+                <video id="cameraFeed" muted playsinline autoplay></video>
 
-    <!-- Camera Viewport & HUD -->
-    <div class="camera-container" id="cameraContainer">
-        <video id="cameraFeed" muted playsinline autoplay></video>
-        <canvas id="captureCanvas"></canvas>
-        <canvas id="analysisCanvas"></canvas>
-        <div class="camera-flash" id="cameraFlash"></div>
-        <div class="camera-overlay"></div>
+                <!-- In-Circle Frozen Snapshot (Displayed in the SAME circle upon capture) -->
+                <img id="capturedFrameImg" class="captured-frame-img" alt="Captured Frame" style="display:none;">
 
-        <!-- Guide Circle with Red/Yellow/Green Feedback -->
-        <div class="face-guide-circle state-red" id="faceGuide">
-            <!-- Auto-Capture 3-2-1 Countdown -->
-            <div class="countdown-overlay" id="countdownOverlay">
-                <div class="countdown-number" id="countdownNumber">3</div>
+                <!-- Canvases for analysis & capture -->
+                <canvas id="captureCanvas"></canvas>
+                <canvas id="analysisCanvas"></canvas>
+
+                <!-- Camera Flash Effect -->
+                <div class="camera-flash" id="cameraFlash"></div>
+                <div class="camera-overlay"></div>
+
+                <!-- Minimal Apple Face ID Circular Alignment Guide -->
+                <div class="face-guide-circle state-idle" id="faceGuide">
+                    <!-- Auto-Capture 3-2-1 Countdown Ring -->
+                    <div class="countdown-overlay" id="countdownOverlay">
+                        <div class="countdown-number" id="countdownNumber">3</div>
+                    </div>
+                </div>
+
+                <!-- In-Circle Verified Badge (Shown when captured) -->
+                <div class="in-circle-badge" id="inCircleBadge" style="display:none;">
+                    <i data-lucide="check-circle-2" style="width:14px; height:14px;"></i>
+                    <span>Photo Verified</span>
+                </div>
+
+                <!-- Subtle Model Loading Badge -->
+                <div class="model-loading-badge" id="modelLoadingBadge">
+                    <div class="model-spinner"></div>
+                    <span id="modelLoadingText">Loading camera AI...</span>
+                </div>
+
+                <!-- Clean Camera Inactive Placeholder -->
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <div class="placeholder-avatar">
+                        <i data-lucide="user" style="width:48px; height:48px;"></i>
+                    </div>
+                    <h4>Camera Inactive</h4>
+                    <p>Click "Start Registration" below to begin live biometric scan</p>
+                </div>
+
+                <!-- Camera Access Error Banner -->
+                <div class="camera-error-banner" id="cameraErrorBanner">
+                    <div class="camera-error-icon">
+                        <i data-lucide="alert-triangle" style="width:24px; height:24px;"></i>
+                    </div>
+                    <h4 id="cameraErrorTitle">Camera Access Required</h4>
+                    <p id="cameraErrorMessage">Please allow camera permissions in your browser to continue.</p>
+                    <button type="button" class="btn-primary btn-sm" onclick="startCamera()">
+                        <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i>
+                        Retry Access
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Model Loading State Badge -->
-        <div class="model-loading-badge" id="modelLoadingBadge">
-            <div class="model-spinner"></div>
-            <span id="modelLoadingText">Loading face analysis model...</span>
-        </div>
-
-        <!-- Camera Inactive Placeholder -->
-        <div class="camera-placeholder" id="cameraPlaceholder">
-            <i data-lucide="camera" style="width:52px; height:52px; margin-bottom:16px; color:var(--primary);"></i>
-            <h4>Camera Not Active</h4>
-            <p>Click "Start Camera" to initialize AI face verification</p>
-        </div>
-
-        <!-- Error Messages Banner (Permission, Missing, In-use) -->
-        <div class="camera-error-banner" id="cameraErrorBanner">
-            <div class="camera-error-icon">
-                <i data-lucide="alert-triangle" style="width:28px; height:28px;"></i>
-            </div>
-            <h4 id="cameraErrorTitle">Camera Access Required</h4>
-            <p id="cameraErrorMessage">Please allow camera access in browser settings to continue.</p>
-            <button type="button" class="btn-primary" onclick="startCamera()">
-                <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
-                Retry Camera
-            </button>
-        </div>
-    </div>
-
-    <!-- Single Big Instruction Line Below Circle -->
-    <div class="instruction-line-wrapper">
-        <div class="instruction-banner state-idle" id="instructionBanner">
-            <span id="instructionIconWrap">
-                <i data-lucide="info" style="width:20px; height:20px;"></i>
-            </span>
-            <span id="instructionText">Click "Start Camera" to begin</span>
-        </div>
-    </div>
-
-    <!-- Live Condition Checklist -->
-    <div class="checklist-container" id="checklistContainer">
-        <div class="check-item" id="checkFace">
-            <span class="check-icon" id="iconFace"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
-            <span>Face detected</span>
-        </div>
-        <div class="check-item" id="checkCenter">
-            <span class="check-icon" id="iconCenter"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
-            <span>Centered & distance</span>
-        </div>
-        <div class="check-item" id="checkLighting">
-            <span class="check-icon" id="iconLighting"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
-            <span>Good lighting</span>
-        </div>
-        <div class="check-item" id="checkStraight">
-            <span class="check-icon" id="iconStraight"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
-            <span>Look straight</span>
-        </div>
-        <div class="check-item" id="checkEyes">
-            <span class="check-icon" id="iconEyes"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
-            <span>Eyes open & steady</span>
-        </div>
-    </div>
-
-    <!-- Capture Preview Screen (Shown after capture) -->
-    <div class="capture-preview-card" id="capturePreviewCard">
-        <div class="preview-header">
-            <h4>
-                <i data-lucide="check-circle-2" style="width:20px; height:20px; color:#10b981;"></i>
-                Best Frame Selected (Anti-Spoof Passed)
-            </h4>
-            <span class="preview-badge" id="previewQualityBadge">Quality: 98% (Optimal)</span>
-        </div>
-        <div class="preview-body">
-            <div class="preview-thumbnail-wrap">
-                <img id="previewCapturedImg" class="preview-thumbnail" alt="Captured Frame">
-            </div>
-            <div class="preview-meta">
-                <p><strong>Lighting:</strong> <span id="previewLightStatus">Balanced</span></p>
-                <p><strong>Clarity:</strong> <span id="previewSharpStatus">High Sharpness (Burst 5x)</span></p>
-                <p><strong>Pose:</strong> <span id="previewPoseStatus">Centered Front</span></p>
-                <div class="preview-angles-gallery" id="previewAnglesGallery"></div>
+        <!-- Single Real-Time Guidance Instruction -->
+        <div class="instruction-wrap">
+            <div class="instruction-banner state-idle" id="instructionBanner">
+                <span id="instructionIconWrap">
+                    <i data-lucide="info" style="width:18px; height:18px;"></i>
+                </span>
+                <span id="instructionText">Center your face in the circle to start</span>
             </div>
         </div>
-        <div class="btn-group" style="margin-top:20px;">
-            <button type="button" class="btn-primary" id="confirmRegisterBtn" onclick="confirmAndRegister()">
-                <i data-lucide="check" style="width:18px; height:18px;"></i>
-                Confirm & Register
-            </button>
-            <button type="button" class="btn-secondary" id="retakeBtn" onclick="retakePhoto()">
-                <i data-lucide="rotate-ccw" style="width:18px; height:18px;"></i>
-                Retake Photo
-            </button>
+
+        <!-- Primary Action Controls Directly Below Circle -->
+        <div class="controls-action-wrap">
+            <!-- Stage 1: Live Camera Controls -->
+            <div class="btn-group" id="cameraControls">
+                <button type="button" class="btn-primary btn-register-main" id="startCamBtn" onclick="startCamera()">
+                    <i data-lucide="camera" style="width:18px; height:18px;"></i>
+                    <span>Start Registration</span>
+                </button>
+                <button type="button" class="btn-primary btn-register-main btn-take-photo" id="captureBtn" onclick="manualCapture()" style="display:none;">
+                    <i data-lucide="aperture" style="width:18px; height:18px;"></i>
+                    <span>Take Photo</span>
+                </button>
+                <button type="button" class="btn-secondary btn-cancel-camera" id="stopCamBtn" onclick="stopCamera()" style="display:none;">
+                    <i data-lucide="x" style="width:16px; height:16px;"></i>
+                    <span>Cancel</span>
+                </button>
+            </div>
+
+            <!-- Stage 2: Post-Capture Confirmation Controls (Directly below the same circle!) -->
+            <div class="btn-group" id="reviewControls" style="display:none;">
+                <button type="button" class="btn-primary btn-register-main btn-confirm-save" id="confirmRegisterBtn" onclick="confirmAndRegister()">
+                    <i data-lucide="check" style="width:18px; height:18px;"></i>
+                    <span>Confirm &amp; Save</span>
+                </button>
+                <button type="button" class="btn-secondary btn-retake-photo" id="retakeBtn" onclick="retakePhoto()">
+                    <i data-lucide="rotate-ccw" style="width:16px; height:16px;"></i>
+                    <span>Retake</span>
+                </button>
+            </div>
         </div>
-    </div>
 
-    <!-- Server Result Toast -->
-    <div id="captureResult"></div>
+        <!-- Result Message Toast -->
+        <div id="captureResult"></div>
 
-    <!-- Primary Control Buttons -->
-    <div class="btn-group" id="cameraControls">
-        <button type="button" class="btn-primary" id="startCamBtn" onclick="startCamera()">
-            <i data-lucide="camera" style="width:18px; height:18px;"></i>
-            Start Camera
-        </button>
-        <button type="button" class="btn-primary" id="captureBtn" onclick="manualCapture()" disabled style="display:none;">
-            <i data-lucide="aperture" style="width:18px; height:18px;"></i>
-            Capture Photo
-        </button>
-        <button type="button" class="btn-secondary" id="stopCamBtn" onclick="stopCamera()" style="display:none;">
-            <i data-lucide="square" style="width:16px; height:16px;"></i>
-            Stop Camera
-        </button>
+        <!-- Silent Quality Checks (Hidden from UI, runs in background) -->
+        <div class="checklist-container" id="checklistContainer" style="display:none !important;" aria-hidden="true">
+            <div class="check-item" id="checkFace"><span id="iconFace"></span></div>
+            <div class="check-item" id="checkCenter"><span id="iconCenter"></span></div>
+            <div class="check-item" id="checkLighting"><span id="iconLighting"></span></div>
+            <div class="check-item" id="checkStraight"><span id="iconStraight"></span></div>
+            <div class="check-item" id="checkEyes"><span id="iconEyes"></span></div>
+        </div>
+
+        <!-- Hidden angle tracker compatibility hook -->
+        <div id="angleTracker" style="display:none !important;" aria-hidden="true">
+            <div id="angleFrontChip"></div>
+            <div id="angleLeftChip"></div>
+            <div id="angleRightChip"></div>
+        </div>
     </div>
 
 </div>

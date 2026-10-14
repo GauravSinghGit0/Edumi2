@@ -1,23 +1,31 @@
-<!-- Status Banner -->
-{% if has_profile %}
-<div class="face-status-banner registered" id="topStatusBanner">
-    <div class="banner-icon">
-        <i data-lucide="check-circle-2" style="width:24px; height:24px; color:#10b981;"></i>
+<!-- Compact Status & Privacy Header -->
+<div class="face-banner-card {% if has_profile %}status-registered{% else %}status-unregistered{% endif %}" id="topStatusBanner">
+    <div class="banner-main-row">
+        <div class="banner-avatar">
+            {% if has_profile %}
+            <i data-lucide="check" style="width:20px; height:20px;"></i>
+            {% else %}
+            <i data-lucide="scan-face" style="width:20px; height:20px;"></i>
+            {% endif %}
+        </div>
+        <div class="banner-body">
+            <div class="banner-title-line">
+                <h3>{% if has_profile %}Biometric Identity Registered{% else %}Live Biometric Registration{% endif %}</h3>
+                <span class="status-chip {% if has_profile %}chip-success{% else %}chip-pending{% endif %}">
+                    {% if has_profile %}Active{% else %}Action Required{% endif %}
+                </span>
+            </div>
+            <p>
+                {% if has_profile %}
+                Your live biometric identity is verified and active for automated attendance.
+                {% else %}
+                Complete a live 3-second camera scan to verify and register your biometric profile.
+                {% endif %}
+            </p>
+        </div>
     </div>
-    <div class="banner-text">
-        <h3>Face Registered & Active</h3>
-        <p>Your facial profile is active for automatic attendance.
-           {% if profile %}Quality confidence: {{ profile.face_quality_score|floatformat:2 }} / 1.00{% endif %}</p>
+    <div class="banner-privacy-line">
+        <i data-lucide="lock" style="width:13px; height:13px;"></i>
+        <span>Encrypted &amp; private. Used strictly for automated classroom attendance.</span>
     </div>
 </div>
-{% else %}
-<div class="face-status-banner unregistered" id="topStatusBanner">
-    <div class="banner-icon">
-        <i data-lucide="alert-circle" style="width:24px; height:24px; color:#f59e0b;"></i>
-    </div>
-    <div class="banner-text">
-        <h3>Face Not Registered</h3>
-        <p>Register your face to enable automatic attendance tracking during live online classes.</p>
-    </div>
-</div>
-{% endif %}

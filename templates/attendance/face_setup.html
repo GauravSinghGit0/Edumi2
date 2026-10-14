@@ -5,11 +5,11 @@
 {% block page_title %}Face Registration{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/face_setup.css' %}">
+<link rel="stylesheet" href="{% static 'css/face_setup.css' %}?v={% now 'U' %}">
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/face_setup.css' %}">
+<link rel="stylesheet" href="{% static 'css/face_setup.css' %}?v={% now 'U' %}">
 <div class="face-setup-page">
     <!-- Biometric Privacy & Trust Strip -->
     {% include 'attendance/partials/face_privacy_strip.html' %}
@@ -19,13 +19,10 @@
 
     <!-- Main Card -->
     <div class="face-card">
-        <!-- Card Header: Tabs & Mode Selection -->
+        <!-- Card Header: Live Biometric Status -->
         {% include 'attendance/partials/face_card_header.html' %}
 
-        <!-- Tab 1: Upload Photo -->
-        {% include 'attendance/partials/face_upload_panel.html' %}
-
-        <!-- Tab 2: Camera Capture (Active by default) -->
+        <!-- Live Camera Biometric Stage -->
         {% include 'attendance/partials/face_camera_panel.html' %}
     </div>
 
@@ -49,7 +46,7 @@ if (typeof faceapi === 'undefined') {
 </script>
 
 <!-- Face Setup Modular Engine -->
-<script src="{% static 'js/face_setup.js' %}"></script>
+<script src="{% static 'js/face_setup.js' %}?v={% now 'U' %}"></script>
 <script>
 (function() {
     function initFaceSetup() {
