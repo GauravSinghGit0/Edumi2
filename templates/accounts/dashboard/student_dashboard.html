@@ -613,7 +613,7 @@
             <h3>Identity Verification Required</h3>
             <p>Mandatory Face ID registration is required before participating in live WebRTC academic sessions.</p>
         </div>
-        <a href="{% url 'face_setup' %}" class="btn-alert"><i data-lucide="fingerprint" style="width:14px; height:14px;"></i> Register Identity</a>
+        <a href="{% url 'face_setup' %}" data-turbo="false" class="btn-alert"><i data-lucide="fingerprint" style="width:14px; height:14px;"></i> Register Identity</a>
     </div>
     {% endif %}
     

@@ -1,0 +1,23 @@
+<!-- Status Banner -->
+{% if has_profile %}
+<div class="face-status-banner registered" id="topStatusBanner">
+    <div class="banner-icon">
+        <i data-lucide="check-circle-2" style="width:24px; height:24px; color:#10b981;"></i>
+    </div>
+    <div class="banner-text">
+        <h3>Face Registered & Active</h3>
+        <p>Your facial profile is active for automatic attendance.
+           {% if profile %}Quality confidence: {{ profile.face_quality_score|floatformat:2 }} / 1.00{% endif %}</p>
+    </div>
+</div>
+{% else %}
+<div class="face-status-banner unregistered" id="topStatusBanner">
+    <div class="banner-icon">
+        <i data-lucide="alert-circle" style="width:24px; height:24px; color:#f59e0b;"></i>
+    </div>
+    <div class="banner-text">
+        <h3>Face Not Registered</h3>
+        <p>Register your face to enable automatic attendance tracking during live online classes.</p>
+    </div>
+</div>
+{% endif %}

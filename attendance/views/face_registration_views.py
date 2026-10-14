@@ -111,64 +111,97 @@ def upload_face_photo(request):
 @login_required
 @require_POST
 def capture_face_photo(request):
-    """Handle camera-captured base64 frame for face registration."""
+    """Handle camera-captured base64 frame (or burst of frames) for face registration."""
     try:
         body = json.loads(request.body)
-        b64 = body.get('frame_b64', '')
+        frames = body.get('frames_b64') or []
+        single_frame = body.get('frame_b64', '')
+        if single_frame and single_frame not in frames:
+            frames.append(single_frame)
+
         u_profile = sync_profile_details(request.user.userprofile)
         roll = body.get('roll_number') or u_profile.roll_number
         branch = body.get('branch') or u_profile.branch
         contact = body.get('contact_number') or u_profile.contact_number
 
-        if not b64:
+        if not frames:
             return JsonResponse({'status': 'error', 'message': 'No frame data received.'}, status=400)
         if not all([roll, branch]):
             return JsonResponse({'status': 'error', 'message': 'Student details are missing. Please complete your profile first.'}, status=400)
-        if ',' in b64:
-            b64 = b64.split(',', 1)[1]
-        image_bytes = base64.b64decode(b64)
+
+        svc = get_face_service()
+        best_result = None
+        best_bytes = None
+        best_quality = -1.0
+
+        # Evaluate frames in burst to keep the best one (Requirement 5)
+        for frame_raw in frames:
+            if not frame_raw:
+                continue
+            b64_str = frame_raw.split(',', 1)[1] if ',' in frame_raw else frame_raw
+            img_bytes = base64.b64decode(b64_str)
+            res = svc.extract_embedding(img_bytes)
+            if res.get('status') == 'success':
+                q = float(res.get('quality', 0.0))
+                if q > best_quality:
+                    best_quality = q
+                    best_result = res
+                    best_bytes = img_bytes
+
+        # If none succeeded, fallback to first frame error
+        if not best_result:
+            first_raw = frames[0]
+            b64_str = first_raw.split(',', 1)[1] if ',' in first_raw else first_raw
+            first_bytes = base64.b64decode(b64_str)
+            best_result = svc.extract_embedding(first_bytes)
+            if best_result.get('status') != 'success':
+                return JsonResponse({'status': 'error', 'message': best_result.get('message', 'Face registration failed.')})
+            best_bytes = first_bytes
+
+        u_profile.roll_number = roll
+        u_profile.branch = branch
+        if contact:
+            u_profile.contact_number = contact
+            u_profile.phone = contact
+        u_profile.save()
+
+        encrypted, checksum = svc.prepare_for_storage(best_result['embedding'])
+        photo_file = ContentFile(best_bytes, name=f"{request.user.username}_face.jpg")
+        StudentFaceProfile.objects.update_or_create(
+            student=request.user,
+            defaults={
+                'face_embedding_encrypted': encrypted, 'embedding_checksum': checksum,
+                'face_quality_score': best_result.get('quality', 0.0), 'is_active': True,
+                'registration_ip': _get_client_ip(request), 'face_photo': photo_file,
+            }
+        )
+        return JsonResponse({
+            'status': 'success',
+            'quality': best_result.get('quality', 0.0),
+            'message': '✅ Face registered successfully!'
+        })
     except Exception as exc:
+        logger.exception("capture_face_photo error: %s", exc)
         return JsonResponse({'status': 'error', 'message': f'Invalid request data: {exc}'}, status=400)
-
-    svc = get_face_service()
-    result = svc.extract_embedding(image_bytes)
-    if result['status'] != 'success':
-        return JsonResponse({'status': 'error', 'message': result['message']})
-
-    u_profile.roll_number = roll
-    u_profile.branch = branch
-    if contact:
-        u_profile.contact_number = contact
-        u_profile.phone = contact
-    u_profile.save()
-
-    encrypted, checksum = svc.prepare_for_storage(result['embedding'])
-    photo_file = ContentFile(image_bytes, name=f"{request.user.username}_face.jpg")
-    StudentFaceProfile.objects.update_or_create(
-        student=request.user,
-        defaults={
-            'face_embedding_encrypted': encrypted, 'embedding_checksum': checksum,
-            'face_quality_score': result['quality'], 'is_active': True,
-            'registration_ip': _get_client_ip(request), 'face_photo': photo_file,
-        }
-    )
-    return JsonResponse({'status': 'success', 'quality': result['quality'], 'message': '✅ Face registered successfully!'})
 
 
 @login_required
 @require_POST
 def detect_face(request):
-    """Lightweight face detection for real-time feedback; includes low-light enhancement."""
+    """
+    Lightweight face condition checks for real-time camera feedback:
+    evaluates face presence, count, center, size, lighting, blur, and eyes.
+    """
     try:
         body = json.loads(request.body)
         b64 = body.get('frame_b64', '')
         if not b64:
-            return JsonResponse({'status': 'no_frame'})
+            return JsonResponse({'status': 'no_frame', 'message': 'Position your face inside the circle', 'state': 'red'})
         if ',' in b64:
             b64 = b64.split(',', 1)[1]
         image_bytes = base64.b64decode(b64)
     except Exception:
-        return JsonResponse({'status': 'invalid_data'})
+        return JsonResponse({'status': 'invalid_data', 'message': 'Position your face inside the circle', 'state': 'red'})
 
     import cv2
     import numpy as np
@@ -176,25 +209,115 @@ def detect_face(request):
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
-        return JsonResponse({'status': 'decode_error'})
+        return JsonResponse({'status': 'decode_error', 'message': 'Position your face inside the circle', 'state': 'red'})
 
+    frame_h, frame_w = img.shape[:2]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    avg_brightness = np.mean(gray)
-    enhanced = False
-    if avg_brightness < 60:
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
-        enhanced = True
-        _, buffer = cv2.imencode('.jpg', img)
-        image_bytes = buffer.tobytes()
+    avg_brightness = float(np.mean(gray))
 
+    # Lighting check
+    lighting_ok = avg_brightness >= 55
+    if not lighting_ok:
+        return JsonResponse({
+            'status': 'too_dark',
+            'message': 'Find better lighting',
+            'state': 'red',
+            'checks': {'face': False, 'lighting': False, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
+        })
+
+    # Blur check
+    laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    blur_ok = laplacian_var >= 32
+
+    # Face detection with Haar Cascade
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=4, minSize=(40, 40))
+
+    if len(faces) == 0:
+        return JsonResponse({
+            'status': 'no_face',
+            'message': 'Position your face inside the circle',
+            'state': 'red',
+            'checks': {'face': False, 'lighting': lighting_ok, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
+        })
+
+    if len(faces) > 1:
+        return JsonResponse({
+            'status': 'multiple_faces',
+            'message': 'Only one person should be visible',
+            'state': 'red',
+            'checks': {'face': False, 'lighting': lighting_ok, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
+        })
+
+    # Single face geometry check
+    (x, y, w, h) = faces[0]
+    face_ratio = float(w) / float(frame_w)
+    center_x = x + w / 2.0
+    center_y = y + h / 2.0
+    offset_x = abs(center_x - frame_w / 2.0) / frame_w
+    offset_y = abs(center_y - frame_h / 2.0) / frame_h
+
+    centered_ok = (offset_x <= 0.20) and (offset_y <= 0.22)
+    too_small = face_ratio < 0.20
+    too_big = face_ratio > 0.68
+
+    if too_small:
+        return JsonResponse({
+            'status': 'too_small',
+            'message': 'Move closer',
+            'state': 'yellow',
+            'checks': {'face': True, 'lighting': lighting_ok, 'center': False, 'pose': True, 'straight': True, 'eyes': True}
+        })
+
+    if too_big:
+        return JsonResponse({
+            'status': 'too_big',
+            'message': 'Move back a little',
+            'state': 'yellow',
+            'checks': {'face': True, 'lighting': lighting_ok, 'center': False, 'pose': True, 'straight': True, 'eyes': True}
+        })
+
+    if not centered_ok:
+        return JsonResponse({
+            'status': 'not_centered',
+            'message': 'Center your face in the circle',
+            'state': 'yellow',
+            'checks': {'face': True, 'lighting': lighting_ok, 'center': False, 'pose': True, 'straight': True, 'eyes': True}
+        })
+
+    if not blur_ok:
+        return JsonResponse({
+            'status': 'blurry',
+            'message': 'Hold still',
+            'state': 'yellow',
+            'checks': {'face': True, 'lighting': lighting_ok, 'center': True, 'pose': True, 'straight': True, 'eyes': False}
+        })
+
+    # Eye check in upper face region
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+    face_roi_gray = gray[y:y + int(h * 0.6), x:x + w]
+    eyes = eye_cascade.detectMultiScale(face_roi_gray, scaleFactor=1.15, minNeighbors=3, minSize=(15, 15))
+    eyes_ok = len(eyes) > 0
+
+    if not eyes_ok:
+        return JsonResponse({
+            'status': 'eyes_closed_or_masked',
+            'message': 'Open your eyes or remove mask / glasses',
+            'state': 'yellow',
+            'checks': {'face': True, 'lighting': lighting_ok, 'center': True, 'pose': True, 'straight': True, 'eyes': False}
+        })
+
+    # Quality check via face service
     svc = get_face_service()
-    result = svc.extract_embedding(image_bytes, live=False)
+    res = svc.extract_embedding(image_bytes, live=False)
+    quality = res.get('quality', 0.5) if res.get('status') == 'success' else 0.4
+
     return JsonResponse({
-        'status': result['status'], 'quality': result['quality'],
-        'low_light_enhanced': enhanced, 'message': result['message'],
+        'status': 'success',
+        'message': '✨ Perfect! Hold still...',
+        'state': 'green',
+        'quality': quality,
+        'checks': {'face': True, 'lighting': True, 'center': True, 'pose': True, 'straight': True, 'eyes': True}
     })
 
 

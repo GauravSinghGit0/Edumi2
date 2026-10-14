@@ -1,0 +1,30 @@
+<!-- Face Card Header: Tabs & Mode Selection -->
+<div class="face-card-header">
+    <!-- Tabs -->
+    <div class="face-tabs">
+        <button type="button" class="face-tab" id="tabUpload" onclick="switchTab('upload')">
+            <i data-lucide="upload" style="width:16px; height:16px;"></i>
+            Upload Photo
+        </button>
+        <button type="button" class="face-tab active" id="tabCamera" onclick="switchTab('camera')">
+            <i data-lucide="camera" style="width:16px; height:16px;"></i>
+            Camera Capture
+        </button>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="mode-selectors" id="modeSelectors">
+        <button type="button" class="mode-pill active" id="modeStandard" onclick="setCaptureMode('standard')">
+            <i data-lucide="user" style="width:14px; height:14px;"></i>
+            Standard Mode
+        </button>
+        <button type="button" class="mode-pill" id="modeLiveness" onclick="setCaptureMode('liveness')">
+            <i data-lucide="eye" style="width:14px; height:14px;"></i>
+            Liveness Anti-Spoof
+        </button>
+        <button type="button" class="mode-pill" id="modeMultiangle" onclick="setCaptureMode('multiangle')">
+            <i data-lucide="scan-face" style="width:14px; height:14px;"></i>
+            Multi-Angle (3x)
+        </button>
+    </div>
+</div>

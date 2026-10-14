@@ -214,7 +214,7 @@
                 <span class="verified-value">{% if face_registered %}Bio-Metric{% else %}Password Only{% endif %}</span>
               </div>
               {% if is_own_profile and not face_registered %}
-              <a href="{% url 'face_setup' %}" class="btn-setup-face">
+              <a href="{% url 'face_setup' %}" data-turbo="false" class="btn-setup-face">
                 <i data-lucide="camera"></i> Set Up Face ID
               </a>
               {% endif %}

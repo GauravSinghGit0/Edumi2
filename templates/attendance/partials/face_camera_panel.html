@@ -1,0 +1,139 @@
+<!-- Camera Capture Panel -->
+<div class="face-panel active" id="panelCamera">
+
+    <!-- Angle Tracker (Multi-Angle Mode) -->
+    <div class="angle-tracker" id="angleTracker">
+        <div class="angle-chip current" id="angleFrontChip">1. Front View</div>
+        <div class="angle-chip" id="angleLeftChip">2. Left Angle</div>
+        <div class="angle-chip" id="angleRightChip">3. Right Angle</div>
+    </div>
+
+    <!-- Camera Viewport & HUD -->
+    <div class="camera-container" id="cameraContainer">
+        <video id="cameraFeed" muted playsinline autoplay></video>
+        <canvas id="captureCanvas"></canvas>
+        <canvas id="analysisCanvas"></canvas>
+        <div class="camera-flash" id="cameraFlash"></div>
+        <div class="camera-overlay"></div>
+
+        <!-- Guide Circle with Red/Yellow/Green Feedback -->
+        <div class="face-guide-circle state-red" id="faceGuide">
+            <!-- Auto-Capture 3-2-1 Countdown -->
+            <div class="countdown-overlay" id="countdownOverlay">
+                <div class="countdown-number" id="countdownNumber">3</div>
+            </div>
+        </div>
+
+        <!-- Model Loading State Badge -->
+        <div class="model-loading-badge" id="modelLoadingBadge">
+            <div class="model-spinner"></div>
+            <span id="modelLoadingText">Loading face analysis model...</span>
+        </div>
+
+        <!-- Camera Inactive Placeholder -->
+        <div class="camera-placeholder" id="cameraPlaceholder">
+            <i data-lucide="camera" style="width:52px; height:52px; margin-bottom:16px; color:var(--primary);"></i>
+            <h4>Camera Not Active</h4>
+            <p>Click "Start Camera" to initialize AI face verification</p>
+        </div>
+
+        <!-- Error Messages Banner (Permission, Missing, In-use) -->
+        <div class="camera-error-banner" id="cameraErrorBanner">
+            <div class="camera-error-icon">
+                <i data-lucide="alert-triangle" style="width:28px; height:28px;"></i>
+            </div>
+            <h4 id="cameraErrorTitle">Camera Access Required</h4>
+            <p id="cameraErrorMessage">Please allow camera access in browser settings to continue.</p>
+            <button type="button" class="btn-primary" onclick="startCamera()">
+                <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
+                Retry Camera
+            </button>
+        </div>
+    </div>
+
+    <!-- Single Big Instruction Line Below Circle -->
+    <div class="instruction-line-wrapper">
+        <div class="instruction-banner state-idle" id="instructionBanner">
+            <span id="instructionIconWrap">
+                <i data-lucide="info" style="width:20px; height:20px;"></i>
+            </span>
+            <span id="instructionText">Click "Start Camera" to begin</span>
+        </div>
+    </div>
+
+    <!-- Live Condition Checklist -->
+    <div class="checklist-container" id="checklistContainer">
+        <div class="check-item" id="checkFace">
+            <span class="check-icon" id="iconFace"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
+            <span>Face detected</span>
+        </div>
+        <div class="check-item" id="checkCenter">
+            <span class="check-icon" id="iconCenter"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
+            <span>Centered & distance</span>
+        </div>
+        <div class="check-item" id="checkLighting">
+            <span class="check-icon" id="iconLighting"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
+            <span>Good lighting</span>
+        </div>
+        <div class="check-item" id="checkStraight">
+            <span class="check-icon" id="iconStraight"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
+            <span>Look straight</span>
+        </div>
+        <div class="check-item" id="checkEyes">
+            <span class="check-icon" id="iconEyes"><i data-lucide="circle" style="width:16px; height:16px;"></i></span>
+            <span>Eyes open & steady</span>
+        </div>
+    </div>
+
+    <!-- Capture Preview Screen (Shown after capture) -->
+    <div class="capture-preview-card" id="capturePreviewCard">
+        <div class="preview-header">
+            <h4>
+                <i data-lucide="check-circle-2" style="width:20px; height:20px; color:#10b981;"></i>
+                Best Frame Selected (Anti-Spoof Passed)
+            </h4>
+            <span class="preview-badge" id="previewQualityBadge">Quality: 98% (Optimal)</span>
+        </div>
+        <div class="preview-body">
+            <div class="preview-thumbnail-wrap">
+                <img id="previewCapturedImg" class="preview-thumbnail" alt="Captured Frame">
+            </div>
+            <div class="preview-meta">
+                <p><strong>Lighting:</strong> <span id="previewLightStatus">Balanced</span></p>
+                <p><strong>Clarity:</strong> <span id="previewSharpStatus">High Sharpness (Burst 5x)</span></p>
+                <p><strong>Pose:</strong> <span id="previewPoseStatus">Centered Front</span></p>
+                <div class="preview-angles-gallery" id="previewAnglesGallery"></div>
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:20px;">
+            <button type="button" class="btn-primary" id="confirmRegisterBtn" onclick="confirmAndRegister()">
+                <i data-lucide="check" style="width:18px; height:18px;"></i>
+                Confirm & Register
+            </button>
+            <button type="button" class="btn-secondary" id="retakeBtn" onclick="retakePhoto()">
+                <i data-lucide="rotate-ccw" style="width:18px; height:18px;"></i>
+                Retake Photo
+            </button>
+        </div>
+    </div>
+
+    <!-- Server Result Toast -->
+    <div id="captureResult"></div>
+
+    <!-- Primary Control Buttons -->
+    <div class="btn-group" id="cameraControls">
+        <button type="button" class="btn-primary" id="startCamBtn" onclick="startCamera()">
+            <i data-lucide="camera" style="width:18px; height:18px;"></i>
+            Start Camera
+        </button>
+        <button type="button" class="btn-primary" id="captureBtn" onclick="manualCapture()" disabled style="display:none;">
+            <i data-lucide="aperture" style="width:18px; height:18px;"></i>
+            Capture Photo
+        </button>
+        <button type="button" class="btn-secondary" id="stopCamBtn" onclick="stopCamera()" style="display:none;">
+            <i data-lucide="square" style="width:16px; height:16px;"></i>
+            Stop Camera
+        </button>
+    </div>
+
+</div>

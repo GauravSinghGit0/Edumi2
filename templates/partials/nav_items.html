@@ -120,7 +120,7 @@
                 <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
                 <span class="sidebar-nav-text">Live / Videos</span>
             </a>
-            <a href="{% url 'face_setup' %}" class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
+            <a href="{% url 'face_setup' %}" data-turbo="false" class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
                 <span class="sidebar-nav-text">Face Identity</span>
             </a>

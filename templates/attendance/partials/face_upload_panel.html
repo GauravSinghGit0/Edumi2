@@ -1,0 +1,26 @@
+<!-- Upload Photo Panel -->
+<div class="face-panel" id="panelUpload">
+    <form id="uploadForm" method="post" action="{% url 'upload_face_photo' %}" enctype="multipart/form-data" data-turbo="false">
+        {% csrf_token %}
+        <div class="upload-zone" id="uploadZone">
+            <input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/webp" onchange="previewImage(this)">
+            <div class="upload-icon">
+                <i data-lucide="upload-cloud" style="width:32px; height:32px; color:#fff;"></i>
+            </div>
+            <h3>Drop your photo here</h3>
+            <p>JPEG, PNG, or WebP · Max 10 MB</p>
+            <img id="previewImg" class="upload-preview" alt="Preview">
+        </div>
+
+        <div class="btn-group">
+            <button type="submit" class="btn-primary" id="uploadBtn" disabled>
+                <i data-lucide="check" style="width:18px; height:18px;"></i>
+                Register Face
+            </button>
+            <button type="button" class="btn-secondary" onclick="document.getElementById('photoInput').click()">
+                <i data-lucide="folder" style="width:18px; height:18px;"></i>
+                Choose File
+            </button>
+        </div>
+    </form>
+</div>
