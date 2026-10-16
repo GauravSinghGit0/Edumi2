@@ -1,8 +1,0 @@
-[tool.pyright]
-include = ["."]
-extraPaths = ["."]
-typeCheckingMode = "basic"
-
-[tool.pyre]
-source_directories = ["."]
-search_path = ["."]

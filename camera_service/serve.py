@@ -10,13 +10,19 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(BASE_DIR.parent))
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'camera_service.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'school_project.settings')
 
 import django
 django.setup()
 
+from django.conf import settings
+# Direct this dedicated Daphne server to the camera API routes
+settings.ROOT_URLCONF = 'camera_api.urls'
+
+from django.core.asgi import get_asgi_application
 from daphne.server import Server
-from camera_service.asgi import application
+
+application = get_asgi_application()
 
 if __name__ == '__main__':
     port = int(os.environ.get('CAMERA_SERVICE_PORT', 8003))
