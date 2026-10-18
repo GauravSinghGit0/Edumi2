@@ -12,7 +12,7 @@ import math
 import requests
 from django.utils import timezone
 from meetings.models import StudyMaterial, MaterialChunk
-from .models import RagSession, RagChatMessage, RagQueryLog, RagInstructorSetting
+from .models import RagSession, RagChatMessage, RagQueryLog
 import os
 from django.conf import settings
 
@@ -571,6 +571,26 @@ def execute_multi_stage_retrieval(material_ids, prompt):
     return chunks
 
 
+def _filter_authorized_materials(user, material_ids):
+    """Enforce strict classroom authorization boundary for RAG materials."""
+    if not user or not user.is_authenticated:
+        return []
+    if getattr(user, 'is_superuser', False):
+        return list(StudyMaterial.objects.filter(id__in=material_ids, is_published=True).values_list('id', flat=True))
+    if hasattr(user, 'userprofile') and user.userprofile.user_type in ('teacher', 'admin'):
+        return list(StudyMaterial.objects.filter(
+            id__in=material_ids,
+            is_published=True,
+            classroom__teacher=user
+        ).values_list('id', flat=True))
+    return list(StudyMaterial.objects.filter(
+        id__in=material_ids,
+        is_published=True,
+        classroom__memberships__student=user,
+        classroom__memberships__status='approved'
+    ).values_list('id', flat=True))
+
+
 def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explain_level="detailed", strict_mode=True, allow_external=False, session_id=None):
     """
     Main synchronous entrypoint for processing user study requests in RAG AI Study Workspace.
@@ -579,13 +599,14 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
     session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
     s_id = session.id if session else None
 
-    materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
-    if not materials.exists():
+    # Defense-in-depth: Enforce authorized classroom membership
+    material_ids = _filter_authorized_materials(user, material_ids)
+    if not material_ids:
         return {
             'status': 'error',
-            'message': 'No study materials selected.',
+            'message': 'No authorized study materials selected.',
             'not_found': True,
-            'answer': 'Not found in the selected documents.',
+            'answer': 'Access denied or no valid study resources selected.',
             'sources': [],
             'session_id': s_id
         }
@@ -652,7 +673,7 @@ def run_rag_workspace_pipeline(user, material_ids, prompt="", mode="ask", explai
     answer = call_phi_llm(user_p, system_p)
     if not answer or answer.strip() == "" or answer.strip().lower() in ("not found in the selected documents.", "not found in the selected documents"):
         if chunks:
-            answer = generate_fallback_ask(prompt, chunks, materials)
+            answer = generate_fallback_ask(prompt, chunks)
         else:
             answer = "Not found in the selected documents."
 
@@ -678,10 +699,11 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     session = get_or_create_rag_session(user, session_id, prompt, mode, strict_mode)
     s_id = session.id if session else None
 
-    materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
-    if not materials.exists():
-        yield _frame({'type': 'error', 'message': 'No study materials selected.', 'not_found': True, 'session_id': s_id})
-        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Not found in the selected documents.', 'sources': [], 'session_id': s_id})
+    # Defense-in-depth: Enforce authorized classroom membership
+    material_ids = _filter_authorized_materials(user, material_ids)
+    if not material_ids:
+        yield _frame({'type': 'error', 'message': 'No authorized study materials selected.', 'not_found': True, 'session_id': s_id})
+        yield _frame({'type': 'done', 'status': 'error', 'answer': 'Access denied or no valid study resources selected.', 'sources': [], 'session_id': s_id})
         return
 
     chunks = execute_multi_stage_retrieval(material_ids, prompt)
@@ -750,7 +772,7 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     if not answer or answer.strip().lower() in ("not found in the selected documents.", "not found in the selected documents"):
         if chunks:
             log_rag_debug("LLM_EMPTY_OR_GENERIC_FALLBACK", {"reason": "Using grounded document synthesis"})
-            answer = generate_fallback_ask(prompt, chunks, materials)
+            answer = generate_fallback_ask(prompt, chunks)
             for i in range(0, len(answer), 12):
                 yield _frame({'type': 'token', 'delta': answer[i:i+12]})
         else:
@@ -772,76 +794,15 @@ def run_rag_workspace_pipeline_stream(user, material_ids, prompt="", mode="ask",
     })
 
 
-def generate_fallback_ask(prompt, chunks, materials):
+def generate_fallback_ask(prompt, chunks, materials=None):
     if chunks:
         c = chunks[0]
         return f"According to **{c['material_title']}** (Page {c['page_number']}):\n\n{c['text']}"
-    m = materials.first()
-    return f"Based on **{m.title}**, here is key information regarding your query: {m.summary_ai or m.description or 'Refer to document.'}"
-
-
-def generate_fallback_explain(prompt, level, chunks, materials):
-    hdr = f"💡 **{level.capitalize()} Topic Explanation:**\n\n"
-    if chunks:
-        return hdr + f"{chunks[0]['text']}\n\n*(Reference: {chunks[0]['material_title']}, Page {chunks[0]['page_number']})*"
-    return hdr + "Selected materials contain foundational guidance for this topic."
-
-
-def generate_fallback_summary(chunks, materials):
-    res = "## 📖 Study Material Summary\n\n"
-    res += "### 💡 Key Concepts\n"
-    for m in materials:
-        res += f"- **{m.title}**: {m.summary_ai or m.description or 'Course study resource.'}\n"
-    res += "\n### 📌 Important Passages\n"
-    for c in chunks[:3]:
-        res += f"- **{c['material_title']}** (Page {c['page_number']}): {c['text'][:150]}...\n"
-    return res
-
-
-def generate_quiz_engine_data(chunks, materials):
-    items = []
-    sample_texts = [c['text'] for c in chunks[:5]] if chunks else [m.title for m in materials]
-
-    for idx, txt in enumerate(sample_texts[:5], 1):
-        c = chunks[idx-1] if idx-1 < len(chunks) else {'material_title': materials.first().title, 'page_number': 1}
-        stmt = txt.strip().split('.')[0] if '.' in txt else txt[:70]
-
-        items.append({
-            'id': idx,
-            'type': 'mcq',
-            'question': f"According to {c['material_title']} (Page {c['page_number']}), which statement is correct regarding: '{stmt[:60]}...'?",
-            'options': [
-                f"It is a core concept documented in {c['material_title']} on Page {c['page_number']}.",
-                "It applies strictly to unselected external domains.",
-                "It is deprecated and not included in course materials.",
-                "None of the above."
-            ],
-            'correct_index': 0,
-            'explanation': f"This principle is explicitly covered on Page {c['page_number']} of {c['material_title']}.",
-            'source': f"📚 {c['material_title']} — Page {c['page_number']}"
-        })
-    return items
-
-
-def generate_revision_engine_data(chunks, materials):
-    cards = []
-    for idx, m in enumerate(materials, 1):
-        cards.append({
-            'id': idx,
-            'front': f"What are the key topics in {m.title}?",
-            'back': m.summary_ai or m.description or f"Resource uploaded for {m.classroom.title}.",
-            'source': f"📚 {m.title}"
-        })
-
-    for idx, c in enumerate(chunks[:4], len(cards) + 1):
-        cards.append({
-            'id': idx,
-            'front': f"Key Definition from {c['material_title']} (Page {c['page_number']})",
-            'back': c['text'],
-            'source': f"📚 {c['material_title']} — Page {c['page_number']}"
-        })
-
-    return {'flashcards': cards}
+    if materials:
+        m = materials.first() if hasattr(materials, 'first') else (materials[0] if materials else None)
+        if m:
+            return f"Based on **{m.title}**, here is key information regarding your query: {m.summary_ai or m.description or 'Refer to document.'}"
+    return "Not found in the selected documents."
 
 
 def log_rag_query(user, mode, prompt, response, retrieved_count, sources, strict_mode, not_found, session_id=None, material_ids=None):

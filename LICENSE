@@ -1,21 +1,43 @@
-MIT License
+EDUMI COMMERCIAL ENTERPRISE SOFTWARE LICENSE AGREEMENT
+======================================================
+Copyright (c) 2026 EduMi Systems. All Rights Reserved.
 
-Copyright (c) 2026 GAuravgiy87 and tarunkumar-sys
+IMPORTANT: PLEASE READ THIS SOFTWARE LICENSE CAREFULLY BEFORE PURCHASING, 
+INSTALLING, COPYING, OR USING THIS SOFTWARE.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. PROPRIETARY RIGHTS & GRANT OF LICENSE
+----------------------------------------
+This software and associated documentation (the "Software") is proprietary and 
+confidential. All intellectual property, copyright, patent, trademark, and trade 
+secret rights in and to the Software remain the sole and exclusive property of 
+the authors and copyright holders.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Subject to the terms and conditions of an active Institutional Commercial License 
+Agreement or Purchase Contract, the copyright holders grant the purchasing institution 
+a non-exclusive, non-transferable, revocable license to deploy, install, and execute 
+the Software solely for the institution's internal educational and academic operations.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. RESTRICTIONS
+---------------
+Except as explicitly permitted by a written commercial agreement, the licensee shall not:
+(a) Sublicense, resell, rent, lease, distribute, or transfer the Software to third parties.
+(b) Reverse engineer, decompile, disassemble, or derive source code from compiled components.
+(c) Remove, alter, or obscure any proprietary copyright notices, serial numbers, or branding.
+(d) Use the Software or any biometric modules in violation of applicable data privacy laws 
+    (including India DPDP Act 2023, EU GDPR/AI Act, US FERPA/BIPA).
+
+3. THIRD-PARTY COMPONENTS
+-------------------------
+The Software utilizes permissible open-source software libraries under industry-standard 
+permissive licenses (Apache 2.0, BSD, MIT). The respective copyright notices, license 
+terms, and disclaimers for third-party components are documented in THIRD_PARTY_LICENSES.md. 
+Nothing in this agreement limits the rights granted by such open-source licenses to their 
+respective standalone libraries.
+
+4. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+---------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
+PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY 
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR 
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.

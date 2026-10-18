@@ -15,7 +15,7 @@ class UserProfileInline(admin.StackedInline):
     fields = (
         ('user_type', 'is_verified'),
         ('display_name', 'phone'),
-        ('student_id', 'roll_number', 'branch', 'grade'),
+        ('student_id', 'branch', 'grade'),
         ('employee_id', 'department', 'specialization'),
         ('avatar_url', 'profile_picture'),
         'headline',

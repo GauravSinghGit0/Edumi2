@@ -1,9 +1,10 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from common.models import SoftDeleteMixin
 
 User = get_user_model()
 
-class UserProfile(models.Model):
+class UserProfile(SoftDeleteMixin, models.Model):
     USER_TYPE_CHOICES = (
         ('student', 'Student'),
         ('teacher', 'Teacher'),
@@ -30,15 +31,13 @@ class UserProfile(models.Model):
     availability_friday = models.CharField(max_length=100, blank=True, null=True, default="10:00 – 14:00")
     
     # Student Specific
-    student_id = models.CharField(max_length=20, blank=True, null=True, db_index=True, verbose_name="Roll Number")
-    roll_number = models.CharField(max_length=50, blank=True, null=True)
+    student_id = models.CharField(max_length=50, blank=True, null=True, db_index=True, verbose_name="Student / Roll ID")
     branch = models.CharField(max_length=100, blank=True, null=True)
-    contact_number = models.CharField(max_length=20, blank=True, null=True)
     grade = models.CharField(max_length=20, blank=True, null=True)
     enrollment_date = models.DateField(blank=True, null=True)
     
     # Teacher Specific
-    employee_id = models.CharField(max_length=20, blank=True, null=True, db_index=True)
+    employee_id = models.CharField(max_length=50, blank=True, null=True, db_index=True)
     department = models.CharField(max_length=100, blank=True, null=True)
     specialization = models.CharField(max_length=200, blank=True, null=True)
     join_date = models.DateField(blank=True, null=True)
@@ -56,7 +55,40 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_seen = models.DateTimeField(null=True, blank=True, help_text='Timestamp of last activity')
-    
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['student_id'],
+                name='unique_student_id_non_empty',
+                condition=models.Q(student_id__isnull=False) & ~models.Q(student_id=''),
+            ),
+            models.UniqueConstraint(
+                fields=['employee_id'],
+                name='unique_employee_id_non_empty',
+                condition=models.Q(employee_id__isnull=False) & ~models.Q(employee_id=''),
+            ),
+        ]
+
+    # Backward-compatible Property Aliases for SSOT
+    @property
+    def roll_number(self):
+        """Backward-compatible alias for student_id (SSOT)."""
+        return self.student_id or ''
+
+    @roll_number.setter
+    def roll_number(self, value):
+        self.student_id = (value or '').strip() or None
+
+    @property
+    def contact_number(self):
+        """Backward-compatible alias for phone (SSOT)."""
+        return self.phone or ''
+
+    @contact_number.setter
+    def contact_number(self, value):
+        self.phone = (value or '').strip() or None
+
     def verify_email(self):
         """Mark profile email as verified."""
         from django.utils import timezone
@@ -105,27 +137,35 @@ class UserProfile(models.Model):
 
     def get_identity_dict(self):
         """Standardized serializable identity representation across LMS modules."""
+        pfp = self.get_profile_picture_url()
+        canonical_student_id = self.student_id or ''
+        canonical_phone = self.phone or ''
         return {
             'user_id': self.user_id,
             'username': self.user.username,
             'display_name': self.get_display_name(),
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'email': self.user.email,
+            'first_name': self.user.first_name or '',
+            'last_name': self.user.last_name or '',
+            'email': self.user.email or '',
             'role': self.user_type,
             'is_verified': bool(self.is_verified),
             'is_superuser': bool(self.user.is_superuser),
-            'pfp_url': self.get_profile_picture_url(),
-            'phone': self.phone or self.contact_number or '',
+            'is_active': bool(self.user.is_active),
+            'is_deleted': bool(getattr(self, 'is_deleted', False)),
+            'pfp_url': pfp,
+            'avatar_url': pfp,
+            'phone': canonical_phone,
+            'contact_number': canonical_phone,
             'bio': self.bio or '',
             'headline': self.headline or '',
-            'student_id': self.student_id or self.roll_number or '',
-            'roll_number': self.roll_number or self.student_id or '',
+            'student_id': canonical_student_id,
+            'roll_number': canonical_student_id,
             'branch': self.branch or '',
             'grade': self.grade or '',
             'employee_id': self.employee_id or '',
             'department': self.department or '',
             'specialization': self.specialization or '',
+            'last_seen': self.last_seen.isoformat() if self.last_seen else None,
         }
 
     def get_dashboard_url(self):

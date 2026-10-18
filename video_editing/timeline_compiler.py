@@ -24,8 +24,6 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     t_track = next((t for t in tracks if t.get('type') == 'text'), None)
     a_track = next((t for t in tracks if t.get('type') == 'audio'), None)
     e_track = next((t for t in tracks if t.get('type') == 'effect'), None)
-    i_track = next((t for t in tracks if t.get('type') == 'image'), None)
-    s_track = next((t for t in tracks if t.get('type') == 'sticker'), None)
 
     # Fallback to map flat format
     if not v_track and timeline_json.get('clips'):
@@ -60,7 +58,9 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     inputs = [project.original_file.path]
     cmd = [ffmpeg_bin, '-y', '-i', project.original_file.path]
 
-    # Map extra audio files to FFmpeg inputs
+    # Map extra audio files to FFmpeg inputs (Strictly confined to MEDIA_ROOT)
+    from django.conf import settings
+    media_root = os.path.abspath(str(settings.MEDIA_ROOT))
     audio_inputs_start_idx = len(inputs)
     audio_input_index_map = {}
     next_audio_input_idx = audio_inputs_start_idx
@@ -68,11 +68,16 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         audio_path = ac.get('temp_path') or ac.get('path')
         if not audio_path and ac.get('is_detached'):
             audio_path = project.original_file.path
-        if audio_path and os.path.exists(audio_path):
-            inputs.append(audio_path)
-            cmd.extend(['-i', audio_path])
-            audio_input_index_map[idx] = next_audio_input_idx
-            next_audio_input_idx += 1
+        if audio_path:
+            abs_audio_path = os.path.abspath(str(audio_path))
+            # Security: Path traversal prevention — only allow files inside MEDIA_ROOT or project file
+            is_in_media = abs_audio_path.startswith(media_root + os.sep)
+            is_orig_file = project.original_file and abs_audio_path == os.path.abspath(str(project.original_file.path))
+            if (is_in_media or is_orig_file) and os.path.isfile(abs_audio_path):
+                inputs.append(abs_audio_path)
+                cmd.extend(['-i', abs_audio_path])
+                audio_input_index_map[idx] = next_audio_input_idx
+                next_audio_input_idx += 1
 
     filter_complex = []
     video_outs = []
@@ -233,7 +238,9 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
 
     # Overlay Text layers
     for idx, text_clip in enumerate(text_clips):
-        txt = text_clip.get('text', '').replace("'", "").replace(":", r"\:")
+        raw_txt = str(text_clip.get('text', ''))
+        # Sanitize text for FFmpeg drawtext: escape backslashes, colons, single quotes, percentages
+        txt = raw_txt.replace('\\', r'\\').replace("'", r"\'").replace(":", r"\:").replace("%", r"\%")
         if not txt:
             continue
             
@@ -247,8 +254,10 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         elif isinstance(position, str) and position.startswith("custom:"):
             try:
                 parts = position[7:].split(",")
-                x = f"(w-text_w)*{float(parts[0])/100:.3f}"
-                y = f"(h-text_h)*{float(parts[1])/100:.3f}"
+                px = max(0.0, min(100.0, float(parts[0])))
+                py = max(0.0, min(100.0, float(parts[1])))
+                x = f"(w-text_w)*{px/100:.3f}"
+                y = f"(h-text_h)*{py/100:.3f}"
             except Exception:
                 x = '(w-text_w)/2'
                 y = 'h-text_h-h*0.1'
@@ -256,12 +265,25 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
             x = '(w-text_w)/2'
             y = 'h-text_h-h*0.1'
             
-        fontsize = text_clip.get('fontsize', text_clip.get('font_size', 48))
-        fontcolor = text_clip.get('color', 'white')
-        start = text_clip.get('start', 0.0)
-        end = text_clip.get('end', 10.0)
+        try:
+            fontsize = max(8, min(240, int(float(text_clip.get('fontsize', text_clip.get('font_size', 48))))))
+        except (ValueError, TypeError):
+            fontsize = 48
+
+        raw_color = str(text_clip.get('color', 'white')).strip().lower()
+        import re
+        if re.match(r'^#[0-9a-f]{3,8}$', raw_color) or raw_color in ('white', 'black', 'yellow', 'red', 'blue', 'green', 'cyan', 'magenta', 'orange', 'gray'):
+            fontcolor = raw_color
+        else:
+            fontcolor = 'white'
+
+        try:
+            start = max(0.0, float(text_clip.get('start', 0.0)))
+            end = max(start, float(text_clip.get('end', 10.0)))
+        except (ValueError, TypeError):
+            start, end = 0.0, 10.0
         
-        enable_str = f"between(t,{start},{end})"
+        enable_str = f"between(t\\,{start:.2f}\\,{end:.2f})"
         next_v = f"[v_txt{idx}]"
         
         font_arg = _get_font_arg()
@@ -356,7 +378,11 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         
     cmd.append(output_path)
     
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise FFmpegError("Video rendering timed out after 10 minutes.")
+
     if result.returncode != 0:
         stderr = result.stderr.decode("utf-8", errors="ignore")
         raise FFmpegError(stderr[-3000:])

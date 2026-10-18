@@ -480,8 +480,10 @@ class RecordingEngine:
                                 self.process.kill()
                         except Exception as e:
                             logger.error(f"Error terminating FFmpeg: {e}")
-                            try: self.process.kill()
-                            except: pass
+                            try:
+                                self.process.kill()
+                            except Exception:
+                                pass
                     
                     # Update database logic stays the same but without waiting for process
                     try:
@@ -503,12 +505,16 @@ class RecordingEngine:
                             for chunk_file in remaining_chunks:
                                 chunk_idx = int(chunk_file.replace('chunk_', '').replace('.ts', ''))
                                 self._save_chunk_to_db(os.path.join(chunk_dir, chunk_file), chunk_idx)
-                                try: os.remove(os.path.join(chunk_dir, chunk_file))
-                                except: pass
+                                try:
+                                    os.remove(os.path.join(chunk_dir, chunk_file))
+                                except Exception:
+                                    pass
                             
                             # Clean up the directory if empty
-                            try: os.rmdir(chunk_dir)
-                            except: pass
+                            try:
+                                os.rmdir(chunk_dir)
+                            except Exception:
+                                pass
                         
                         rec.recording_status = 'completed'
                         rec.duration = timezone.now() - self.start_time

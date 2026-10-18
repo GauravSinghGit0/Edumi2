@@ -1,10 +1,8 @@
 import os
-import json
 import logging
 import subprocess
 from datetime import timedelta
 
-from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -15,8 +13,9 @@ from django.core.files import File
 from django.utils import timezone
 
 from common.validators import (
-    sanitize_filename, get_file_extension, ALLOWED_VIDEO_EXTENSIONS,
-    MAX_VIDEO_SIZE, DANGEROUS_EXTENSIONS, get_safe_temp_upload_dir
+    sanitize_filename,
+    MAX_VIDEO_SIZE,
+    get_safe_temp_upload_dir
 )
 
 from meetings.models import Meeting

@@ -39,13 +39,8 @@ def mobile_camera_headcount_feed(request, mobile_camera_id):
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def get_object_or_404_safe(mobile_camera_id):
-    """Return MobileCamera or None (avoids importing get_object_or_404 at module level)."""
-    from django.shortcuts import get_object_or_404
-    from mobile_cameras.models import MobileCamera
-    try:
-        return get_object_or_404(MobileCamera, id=mobile_camera_id)
-    except Exception:
-        return None
+    """Return MobileCamera or None."""
+    return MobileCamera.objects.filter(id=mobile_camera_id).first()
 
 
 def _generate_headcount_frames(mobile_camera):

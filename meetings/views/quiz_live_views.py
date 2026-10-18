@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import transaction
 
 from meetings.models import Meeting
-from assignments.models import Quiz, Question, Choice, QuizSubmission, StudentAnswer
+from assignments.models import Quiz, Choice, QuizSubmission, StudentAnswer
 
 
 @login_required
@@ -113,7 +113,7 @@ def start_meeting_quiz(request, meeting_code):
                     'host_name': request.user.get_full_name() or request.user.username
                 }
             )
-    except Exception as e:
+    except Exception:
         pass
 
     return JsonResponse({
@@ -223,7 +223,7 @@ def submit_meeting_quiz(request, meeting_code):
                     'total_marks': quiz.total_marks
                 }
             )
-    except Exception as e:
+    except Exception:
         pass
 
     return JsonResponse({

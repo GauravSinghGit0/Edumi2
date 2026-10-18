@@ -307,8 +307,8 @@ Write-Host "[5/6] Starting HTTP Application Server..." -ForegroundColor Yellow
 $SITE_HTTP_PORT = 8002
 $lanIp = (Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -eq "Up" } | Select-Object -First 1 -ExpandProperty IPv4Address | Select-Object -First 1 -ExpandProperty IPAddress)
 if (-not $lanIp) { $lanIp = "127.0.0.1" }
-$localUrl = ("http://localhost:{0}" -f $SITE_HTTP_PORT)
-$lanUrl   = ("http://{0}:{1}" -f $lanIp, $SITE_HTTP_PORT)
+$localUrl = ("https://localhost:{0}" -f $SITE_HTTP_PORT)
+$lanUrl   = ("https://{0}:{1}" -f $lanIp, $SITE_HTTP_PORT)
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Green
@@ -325,6 +325,7 @@ Write-Host "   Press Ctrl+C in this window to stop all services." -ForegroundCol
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host ""
 
+$env:USE_SSL = "True"
 try {
     & $VenvPython run_ssl_server.py
 } finally {

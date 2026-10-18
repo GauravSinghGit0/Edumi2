@@ -6,6 +6,7 @@ from django.core.files.base import ContentFile
 from django.core.files.temp import NamedTemporaryFile
 
 from videos.models import Video, VideoQuality, VideoChunk
+from cameras.ffmpeg_helpers import get_ffmpeg_binary, get_video_duration
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def process_video_sync(video_id):
 
         # Get video metadata (duration)
         duration = get_video_duration(video.original_file.path)
-        video.duration_seconds = int(duration)
+        video.duration_seconds = int(duration or 0)
         
         # Auto-extract thumbnail if not present
         if not video.thumbnail:
@@ -46,9 +47,10 @@ def extract_thumbnail(video):
         temp_thumb_path = temp_thumb.name
         temp_thumb.close()
 
+        ffmpeg_bin = get_ffmpeg_binary()
         subprocess.run(
             [
-                'ffmpeg',
+                ffmpeg_bin,
                 '-ss', str(time_pos),
                 '-i', video.original_file.path,
                 '-vframes', '1',
@@ -70,24 +72,6 @@ def extract_thumbnail(video):
         logger.error(f"Error extracting thumbnail for video {video.id}: {e}")
 
 
-def get_video_duration(file_path):
-    """Get video duration using FFprobe."""
-    try:
-        result = subprocess.run(
-            [
-                'ffprobe',
-                '-v', 'error',
-                '-show_entries', 'format=duration',
-                '-of', 'default=noprint_wrappers=1:nokey=1',
-                file_path
-            ],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return float(result.stdout.strip())
-    except Exception:
-        return 0
 
 
 def process_hls_encoding(video):
@@ -121,8 +105,9 @@ def process_hls_encoding(video):
 
         # Transcode with H.265 (libx265) with hvc1 tag for universal Apple/browser HLS compatibility
         used_codec = 'h265'
+        ffmpeg_bin = get_ffmpeg_binary()
         cmd = [
-            'ffmpeg', '-y',
+            ffmpeg_bin, '-y',
             '-i', video.original_file.path,
             '-vf', f"scale={cfg['res']}",
             '-c:v', 'libx265',
@@ -138,7 +123,7 @@ def process_hls_encoding(video):
         ]
 
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
             logger.info(f"HLS H.265 encoding successful for {cfg['name']} (Video ID {video.id})")
         except subprocess.CalledProcessError as err:
             logger.warning(f"libx265 failed for {cfg['name']}, falling back to libx264: {err.stderr[-500:] if err.stderr else err}")

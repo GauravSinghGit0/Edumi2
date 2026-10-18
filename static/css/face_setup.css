@@ -30,7 +30,7 @@
 .face-setup-page {
     max-width: 640px;
     margin: 0 auto;
-    padding: 8px 16px 48px;
+    padding: 10px 20px 48px;
 }
 
 /* ── Compact Executive Status Banner ─────────────────────── */
@@ -340,8 +340,9 @@
     box-sizing: border-box;
 }
 
-.face-guide-circle.state-idle {
-    border: 2px dashed rgba(255, 255, 255, 0.24);
+.face-guide-circle.state-idle,
+.face-guide-circle.state-searching {
+    border: 2px dashed rgba(255, 255, 255, 0.35);
 }
 
 .face-guide-circle.state-red {
@@ -539,14 +540,16 @@
     gap: 8px;
     padding: 8px 18px;
     border-radius: 999px;
-    font-size: 0.84rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 500;
     text-align: center;
-    max-width: 440px;
+    max-width: 96%;
+    white-space: nowrap;
     transition: all 0.25s ease;
 }
 
-.instruction-banner.state-idle {
+.instruction-banner.state-idle,
+.instruction-banner.state-searching {
     background: var(--face-bg-subtle);
     color: var(--face-text-muted);
     border: 1px solid var(--face-border);
@@ -596,7 +599,7 @@
     justify-content: center;
     gap: 12px;
     width: 100%;
-    max-width: 320px;
+    max-width: 380px;
 }
 
 .btn-register-main {
@@ -831,10 +834,10 @@
     margin-top: 16px;
 }
 
-/* ── Tips Grid ───────────────────────────────────────────── */
+/* ── Tips Grid (Fallback) ────────────────────────────────── */
 .tips-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 12px;
     margin-top: 20px;
 }
@@ -1035,6 +1038,12 @@
 @media (max-width: 600px) {
     .face-setup-page {
         padding: 4px 12px 36px;
+    }
+    .instruction-banner {
+        white-space: normal;
+        font-size: 0.76rem;
+        padding: 8px 14px;
+        line-height: 1.35;
     }
     .tips-grid {
         grid-template-columns: 1fr;

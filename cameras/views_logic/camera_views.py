@@ -328,8 +328,12 @@ def _rtsp_feed(request, camera):
     camera_svc  = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8003")
     feed_url    = f"{camera_svc}/cameras/{camera.id}/feed/?q={quality}"
 
+    headers = {
+        "X-Camera-Service-Secret": getattr(settings, "CAMERA_SERVICE_SECRET", ""),
+    }
+
     try:
-        upstream = req_lib.get(feed_url, stream=True, timeout=10, verify=False)
+        upstream = req_lib.get(feed_url, headers=headers, stream=True, timeout=10, verify=False)
         ct = upstream.headers.get("Content-Type", "multipart/x-mixed-replace; boundary=frame")
 
         def _stream():
@@ -428,7 +432,8 @@ def test_camera(request, camera_id):
     try:
         from django.conf import settings
         svc = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8003")
-        r   = req_lib.get(f"{svc}/cameras/{camera_id}/test/", timeout=20, verify=False)
+        headers = {"X-Camera-Service-Secret": getattr(settings, "CAMERA_SERVICE_SECRET", "")}
+        r   = req_lib.get(f"{svc}/cameras/{camera_id}/test/", headers=headers, timeout=20, verify=False)
         if r.status_code == 200:
             return JsonResponse(r.json())
     except req_lib.exceptions.ConnectionError:

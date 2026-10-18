@@ -11,22 +11,34 @@ from requests.auth import HTTPBasicAuth
 logger = logging.getLogger('mobile_cameras')
 
 
-def is_admin(user):
-    """Return True if the user is a superuser/admin."""
-    if not (user and user.is_authenticated):
-        return False
-    return user.is_superuser or getattr(user, 'is_staff', False) or (hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin')
+from common.utils import is_admin
 
 
 def can_view_mobile_camera(user, mobile_camera):
-    """Return True if the user is allowed to see this camera's feed."""
+    """
+    Return True if the user is allowed to see this camera's feed.
+    - Admins: always allowed.
+    - Teachers: only if granted explicit MobileCameraPermission.
+    - Students: only if camera is active AND student belongs to an approved classroom
+      taught by an authorized teacher of this camera.
+    """
     if is_admin(user):
         return True
+    if not (user and user.is_authenticated and getattr(user, 'is_active', True)):
+        return False
     if hasattr(user, 'userprofile'):
         if user.userprofile.user_type == 'teacher':
             return mobile_camera.has_permission(user)
         if user.userprofile.user_type == 'student':
-            return mobile_camera.is_active
+            if not mobile_camera.is_active:
+                return False
+            from meetings.models import ClassroomMembership
+            authorized_teachers = mobile_camera.get_authorized_teachers()
+            return ClassroomMembership.objects.filter(
+                student=user,
+                status='approved',
+                classroom__teacher__in=authorized_teachers
+            ).exists()
     return False
 
 

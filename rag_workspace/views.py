@@ -4,30 +4,18 @@ Views for the dedicated AI Study Workspace application & RAG API endpoints.
 """
 
 import json
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 
-from meetings.models import Classroom, StudyMaterial, MaterialUnit, ClassroomMembership
-from .models import RagSession, RagQueryLog, RagInstructorSetting
+from meetings.models import Classroom, StudyMaterial
+from .models import RagSession, RagInstructorSetting
 from .services import run_rag_workspace_pipeline, run_rag_workspace_pipeline_stream
 
 
-def check_classroom_access(classroom, user):
-    """Returns (has_access, is_teacher) tuple for a given classroom and user."""
-    if not user or not user.is_authenticated:
-        return False, False
-    is_teacher = (classroom.teacher_id == user.id)
-    if is_teacher:
-        return True, True
-    is_approved_student = ClassroomMembership.objects.filter(
-        classroom=classroom,
-        student=user,
-        status='approved'
-    ).exists()
-    return is_approved_student, False
+from meetings.views.material_views import check_classroom_access
 
 
 @login_required
@@ -167,12 +155,31 @@ def rag_chat_api(request):
 
     material_ids = [int(m) for m in material_ids if str(m).isdigit()]
 
+    # Security: Validate classroom membership to prevent cross-classroom IDOR / leakage
+    if request.user.is_superuser:
+        authorized_materials = StudyMaterial.objects.filter(id__in=material_ids, is_published=True)
+    elif hasattr(request.user, 'userprofile') and request.user.userprofile.user_type in ('teacher', 'admin'):
+        authorized_materials = StudyMaterial.objects.filter(
+            id__in=material_ids,
+            is_published=True,
+            classroom__teacher=request.user
+        )
+    else:
+        authorized_materials = StudyMaterial.objects.filter(
+            id__in=material_ids,
+            is_published=True,
+            classroom__memberships__student=request.user,
+            classroom__memberships__status='approved'
+        )
+
+    material_ids = list(authorized_materials.values_list('id', flat=True))
+
     if not material_ids:
         err_payload = {
             'status': 'error',
-            'message': 'No study materials selected. Please select at least one resource.',
+            'message': 'No authorized study materials selected or access denied to the requested resources.',
             'not_found': True,
-            'answer': 'Please select at least one study resource to start an AI study session.'
+            'answer': 'You do not have permission to access the selected study resources or none were selected.'
         }
         stream_flag = str(data.get('stream', '')).lower() in ('1', 'true', 'yes')
         if stream_flag:
@@ -180,7 +187,7 @@ def rag_chat_api(request):
                 yield ('data: ' + json.dumps({'type': 'error', **err_payload}) + '\n\n')
                 yield ('data: ' + json.dumps({'type': 'done', **err_payload}) + '\n\n')
             return StreamingHttpResponse(_empty_err(), content_type='text/event-stream')
-        return JsonResponse(err_payload, status=400)
+        return JsonResponse(err_payload, status=403)
 
     prompt = data.get('prompt', '').strip()
     mode = data.get('mode', 'ask').lower()

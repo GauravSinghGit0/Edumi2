@@ -9,11 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/face_setup.css' %}?v={% now 'U' %}">
 <div class="face-setup-page">
-    <!-- Biometric Privacy & Trust Strip -->
-    {% include 'attendance/partials/face_privacy_strip.html' %}
-
     <!-- Status Banner (Registered / Unregistered) -->
     {% include 'attendance/partials/face_status_banner.html' %}
 
@@ -25,9 +21,6 @@
         <!-- Live Camera Biometric Stage -->
         {% include 'attendance/partials/face_camera_panel.html' %}
     </div>
-
-    <!-- Tips Before Starting Grid -->
-    {% include 'attendance/partials/face_tips_grid.html' %}
 </div>
 
 <!-- Missing Student Profile Modal -->
@@ -41,6 +34,11 @@
 if (typeof faceapi === 'undefined') {
     var cdnScript = document.createElement('script');
     cdnScript.src = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js";
+    cdnScript.onload = function() {
+        if (window.FaceSetupManager && window.FaceSetupManager.ensureFaceApiLoaded) {
+            window.FaceSetupManager.ensureFaceApiLoaded();
+        }
+    };
     document.head.appendChild(cdnScript);
 }
 </script>

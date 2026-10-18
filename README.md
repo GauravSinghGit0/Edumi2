@@ -43,7 +43,7 @@
 
 ### 🌟 Core Design Principles
 - **100% Data Sovereignty**: Self-hosted on on-premise servers or private cloud. Zero external telemetry or per-seat licensing.
-- **Biometric Privacy**: Face embeddings are 128-dimensional mathematical vectors encrypted at rest with **AES-256 (Fernet)**. Raw face images are never permanently stored.
+- **Biometric Privacy**: Face embeddings are 128-dimensional mathematical vectors encrypted at rest with **Fernet (AES-128-CBC + HMAC-SHA256)** and SHA-256 integrity checksums. Raw face images are never stored or retained on disk.
 - **Ultra-Low Latency Media**: Powered by a co-located **LiveKit WebRTC SFU** and **Django Channels (ASGI/Daphne)** over WebSocket.
 - **Zero-Downtime Multi-Database Support**: Native PostgreSQL with automated SQLite fallback for rapid offline development.
 
@@ -54,7 +54,7 @@
 | Module | Features & Capabilities |
 |---|---|
 | **Live Virtual Classrooms** | • WebRTC conferencing with sub-second latency via LiveKit SFU.<br/>• Host permission controls (mute, kick, screen share lock, camera toggle).<br/>• Real-time hand-raising queue, live text chat, and attendance logging. |
-| **AI Biometric Attendance** | • Pre-join instant face verification using `dlib` and OpenCV 128D vectors.<br/>• Passive background verification during live meetings.<br/>• AES-256 encrypted biometric storage. |
+| **AI Biometric Attendance** | • Pre-join instant face verification using `dlib` 128D vectors and Max Euclidean Distance matching (`distance <= 0.55`).<br/>• Passive background verification during live meetings with rolling vote buffers.<br/>• Zero raw photo retention; Fernet (AES-128-CBC + HMAC-SHA256) authenticated encryption. |
 | **Hardware & Mobile CCTV** | • RTSP IP camera feed ingestion and multi-stream live dashboard.<br/>• Mobile IP camera support (turn iOS/Android phones into classroom cameras).<br/>• Automated crowd head-counting with bounding-box analytics. |
 | **Assignments & Quizzes** | • File-based homework submissions with secure multi-mime validation.<br/>• Timed MCQ & text quizzes with automatic grading and scorecards. |
 | **Video Editing Studio** | • Browser-based non-destructive timeline editor.<br/>• Multi-track audio overlay, volume adjust, trimming, rotate, resize, text captioning.<br/>• High-performance FFmpeg filtergraph compiler with zero quality loss. |
@@ -362,7 +362,7 @@ Edumi2/
 ## 🔒 Security & Production Hardening
 
 - **Email Verification & OTPs**: Unverified accounts cannot access student or teacher workspaces until email ownership is confirmed.
-- **Biometric Encryption**: Biometric vector databases are encrypted with AES-256. If database records are leaked, raw biometric reconstruction is impossible.
+- **Biometric Encryption & Privacy**: Biometric vector databases are encrypted with Fernet (`AES-128-CBC` with `HMAC-SHA256` authentication). Raw student photos are never written to disk, preventing biometric photo leaks.
 - **Magic-Byte Signature Verification**: Uploaded assignment and video files undergo binary header inspection ([`common/validators.py`](file:///d:/Edumi2/common/validators.py)) to prevent extension spoofing and executable uploads.
 - **Strict Rate Limiting**: Registration, login, and OTP resend requests are rate-limited via sliding-window IP buckets.
 - **Isolated Microservices**: RTSP camera processing and FFmpeg encoding run in decoupled processes to keep ASGI request loops responsive.

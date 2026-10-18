@@ -36,15 +36,17 @@
         isCapturing: false,
         faceApiReady: false,
         modelLoading: false,
+        isAnalyzing: false,
 
         // Motion & Position History
         lastFaceCenter: null,
+        lastFaceBox: null,
         lastCheckTime: 0,
-        checkThrottleMs: 100, // 10 checks per second for ultra-responsive feedback
+        checkThrottleMs: 180, // Snappy 5.5 checks per sec without overloading JS event loop
 
         // Auto-Capture Countdown
         countdownTimer: null,
-        countdownValue: 3,
+        countdownValue: 2,
         steadyGreenFrames: 0,
         isCountingDown: false,
 
@@ -73,6 +75,14 @@
 
         ensureFaceApiLoaded: async function() {
             if (this.faceApiReady || this.modelLoading) return;
+
+            // Instant Fast-Path: Native browser GPU FaceDetector (Chrome, Edge, Android)
+            if (typeof window !== 'undefined' && 'FaceDetector' in window) {
+                this.faceApiReady = true;
+                this.showModelLoadingBadge(false);
+                return;
+            }
+
             if (typeof faceapi === 'undefined') return;
 
             this.modelLoading = true;
@@ -108,7 +118,7 @@
                     self.faceApiReady = true;
                     self.showModelLoadingBadge(false);
                 } catch(cdnErr) {
-                    console.warn("FaceAPI load failed, using smart canvas vision engine:", cdnErr);
+                    console.warn("FaceAPI load fallback to canvas vision:", cdnErr);
                     self.showModelLoadingBadge(false);
                 }
             } finally {
@@ -146,8 +156,10 @@
 
         saveProfileInfo: async function() {
             var self = this;
-            var roll = (document.getElementById('modal_roll')?.value || '').trim();
-            var branch = (document.getElementById('modal_branch')?.value || '').trim();
+            var rollEl = document.getElementById('modal_roll');
+            var branchEl = document.getElementById('modal_branch');
+            var roll = (rollEl && rollEl.value ? rollEl.value : '').trim();
+            var branch = (branchEl && branchEl.value ? branchEl.value : '').trim();
             var errorEl = document.getElementById('infoModalError');
 
             if (!roll || !branch) {
@@ -233,9 +245,9 @@
                 }
                 if (stopBtn) stopBtn.style.display = 'inline-flex';
 
-                // Initial searching state
-                self.setCircleState('red');
-                self.setInstruction('red', 'Position your face inside the circle', 'search');
+                // Initial searching state (neutral, not alarming red)
+                self.setCircleState('idle');
+                self.setInstruction('idle', 'Center face in frame', 'search');
                 self.refreshIcons();
 
                 // Start intelligent biometric quality loop
@@ -290,7 +302,7 @@
             if (cameraControls) cameraControls.style.display = 'flex';
 
             this.setCircleState('idle');
-            this.setInstruction('idle', 'Click "Start Registration" to begin', 'info');
+            this.setInstruction('idle', 'Ensure neutral background lighting and remove reflective eyewear or face coverings', 'info');
             this.refreshIcons();
         },
 
@@ -322,14 +334,19 @@
             if (errorBanner) errorBanner.style.display = 'none';
         },
 
-        // ── Real-Time Detection Loop ──────────────────────────
+        // ── Real-Time Detection Loop with Non-Blocking Mutex ─
         runDetectionLoop: function(timestamp) {
             var self = this;
             if (!self.cameraStream || self.isCapturing) return;
 
             if (!timestamp || (timestamp - self.lastCheckTime > self.checkThrottleMs)) {
-                self.lastCheckTime = timestamp || 0;
-                self.evaluateBiometricQuality();
+                if (!self.isAnalyzing) {
+                    self.lastCheckTime = timestamp || 0;
+                    self.isAnalyzing = true;
+                    Promise.resolve(self.evaluateBiometricQuality()).finally(function() {
+                        self.isAnalyzing = false;
+                    });
+                }
             }
 
             self.animFrameId = requestAnimationFrame(function(t) {
@@ -341,42 +358,61 @@
         evaluateBiometricQuality: async function() {
             try {
                 var video = document.getElementById('cameraFeed');
-                if (!video || video.readyState < 2 || video.paused || video.ended) return;
+                if (!video || video.readyState < 2 || video.paused || video.ended || this.isCapturing) return;
 
                 var vw = video.videoWidth;
                 var vh = video.videoHeight;
                 if (!vw || !vh || vw <= 0 || vh <= 0) return;
 
+                var minDim = Math.min(vw, vh);
+                var circleCenterX = vw / 2;
+                var circleCenterY = vh / 2;
+                var circleRadius = minDim / 2;
+
+                // Central circular face search region
+                var defaultFaceBox = {
+                    x: Math.round(circleCenterX - minDim * 0.28),
+                    y: Math.round(circleCenterY - minDim * 0.35),
+                    width: Math.round(minDim * 0.56),
+                    height: Math.round(minDim * 0.70)
+                };
+
                 // 1. LIGHTING & BRIGHTNESS CHECK
                 var brightness = this.measureBrightness(video, vw, vh);
-
                 if (brightness < 45) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Lighting is too dark — face towards a light source', 'sun');
+                    this.setInstruction('yellow', 'Low lighting — increase room light', 'sun');
                     this.handleAlignmentFailed();
                     return;
                 }
-
-                if (brightness > 230) {
+                if (brightness > 235) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Too bright / Glare — reduce direct light', 'sun-dim');
+                    this.setInstruction('yellow', 'High glare — reduce direct light', 'sun-dim');
                     this.handleAlignmentFailed();
                     return;
                 }
 
-                // 2. FACE DETECTION WITH 68 LANDMARKS / FEATURE VALIDATION
+                // 2. FACE DETECTION (Native GPU / TinyFace / Canvas)
                 var faceData = await this.detectFaceWithLandmarks(video, vw, vh);
 
+                // If face detector returned 0 faces, check if user is in circle with a mask on!
                 if (!faceData || !faceData.found) {
-                    this.setCircleState('red');
-                    this.setInstruction('red', 'Position your face inside the circle', 'search');
+                    var inCircleCheck = this.checkFaceBiometricIntegrity(video, defaultFaceBox, vw, vh, true);
+                    if (!inCircleCheck.ok) {
+                        this.setCircleState(inCircleCheck.state);
+                        this.setInstruction(inCircleCheck.state, inCircleCheck.msg, inCircleCheck.icon);
+                        this.handleAlignmentFailed();
+                        return;
+                    }
+                    this.setCircleState('idle');
+                    this.setInstruction('idle', 'Center face in frame', 'search');
                     this.handleAlignmentFailed();
                     return;
                 }
 
                 if (faceData.multiple) {
                     this.setCircleState('red');
-                    this.setInstruction('red', 'Only one person should be in the frame', 'users');
+                    this.setInstruction('red', 'Single person only', 'users');
                     this.handleAlignmentFailed();
                     return;
                 }
@@ -384,58 +420,63 @@
                 var box = faceData.box;
                 var landmarks = faceData.landmarks;
 
-                // 3. VISIBLE CIRCLE CENTERING (Normalized for 1:1 circular crop)
-                var minDim = Math.min(vw, vh);
-                var circleCenterX = vw / 2;
-                var circleCenterY = vh / 2;
-                var circleRadius = minDim / 2;
-
+                // 3. VISIBLE CIRCLE CENTERING (Natural portrait tolerances)
                 var faceCenterX = box.x + box.width / 2;
                 var faceCenterY = box.y + box.height / 2;
 
                 var offsetX = Math.abs(faceCenterX - circleCenterX);
                 var offsetY = faceCenterY - circleCenterY;
 
-                // Horizontal Centering: User must be within central 40% of circle radius
-                if (offsetX > (circleRadius * 0.40)) {
+                // Horizontal Centering: User within central 50% of circle radius
+                if (offsetX > (circleRadius * 0.50)) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Center your face in the circle', 'crosshair');
+                    this.setInstruction('yellow', 'Center face in frame', 'crosshair');
                     this.handleAlignmentFailed();
                     return;
                 }
 
-                // Vertical Centering: Hair is on top, chin on bottom — allow natural portrait posture
-                if (offsetY < -(circleRadius * 0.38)) {
+                // Vertical Centering: Accommodate natural laptop/webcam angles
+                if (offsetY < -(circleRadius * 0.48)) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Lower your face slightly into the circle', 'arrow-down');
+                    this.setInstruction('yellow', 'Move down slightly', 'arrow-down');
                     this.handleAlignmentFailed();
                     return;
                 }
-                if (offsetY > (circleRadius * 0.42)) {
+                if (offsetY > (circleRadius * 0.50)) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Raise your face slightly into the circle', 'arrow-up');
+                    this.setInstruction('yellow', 'Move up slightly', 'arrow-up');
                     this.handleAlignmentFailed();
                     return;
                 }
 
-                // 4. DISTANCE & COVERAGE CHECK (Natural face size within circular aperture)
+                // 4. DISTANCE & COVERAGE CHECK (Face size within circular aperture)
                 var coverageRatio = box.width / minDim;
-
-                if (coverageRatio < 0.26) {
+                if (coverageRatio < 0.20) {
                     this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Move closer to the camera', 'zoom-in');
+                    this.setInstruction('yellow', 'Move closer', 'zoom-in');
+                    this.handleAlignmentFailed();
+                    return;
+                }
+                if (coverageRatio > 0.90) {
+                    this.setCircleState('yellow');
+                    this.setInstruction('yellow', 'Move back', 'zoom-out');
                     this.handleAlignmentFailed();
                     return;
                 }
 
-                if (coverageRatio > 0.88) {
-                    this.setCircleState('yellow');
-                    this.setInstruction('yellow', 'Move back a little', 'zoom-out');
+                // Cache active face box for capture validation
+                this.lastFaceBox = box;
+
+                // 5. BIOMETRIC INTEGRITY: Face Mask, Glasses, Background, Lighting
+                var integrity = this.checkFaceBiometricIntegrity(video, box, vw, vh, false);
+                if (!integrity.ok) {
+                    this.setCircleState(integrity.state);
+                    this.setInstruction(integrity.state, integrity.msg, integrity.icon);
                     this.handleAlignmentFailed();
                     return;
                 }
 
-                // 5. HEAD POSE: TILT / ROLL CHECK (Robust absolute dy/dx ratio)
+                // 6. HEAD POSE: TILT / ROLL CHECK
                 if (landmarks) {
                     var leftEye = landmarks.getLeftEye ? landmarks.getLeftEye() : landmarks.leftEye;
                     var rightEye = landmarks.getRightEye ? landmarks.getRightEye() : landmarks.rightEye;
@@ -448,9 +489,9 @@
 
                         if (dx > 5) {
                             var tiltAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-                            if (tiltAngle > 14) {
+                            if (tiltAngle > 20) {
                                 this.setCircleState('yellow');
-                                this.setInstruction('yellow', 'Keep your head level (do not tilt sideways)', 'user');
+                                this.setInstruction('yellow', 'Keep head level', 'user');
                                 this.handleAlignmentFailed();
                                 return;
                             }
@@ -470,9 +511,9 @@
                         var dRight = Math.hypot(noseTip.x - rightJaw.x, noseTip.y - rightJaw.y);
                         var yawRatio = dLeft / (dRight + 0.0001);
 
-                        if (yawRatio < 0.48 || yawRatio > 2.08) {
+                        if (yawRatio < 0.40 || yawRatio > 2.50) {
                             this.setCircleState('yellow');
-                            this.setInstruction('yellow', 'Look straight at the camera', 'user');
+                            this.setInstruction('yellow', 'Look directly at camera', 'user');
                             this.handleAlignmentFailed();
                             return;
                         }
@@ -482,10 +523,10 @@
                 // 7. MOTION & STABILITY CHECK (Hold Still)
                 if (this.lastFaceCenter) {
                     var motionShift = Math.hypot(faceCenterX - this.lastFaceCenter.x, faceCenterY - this.lastFaceCenter.y);
-                    if (motionShift > (minDim * 0.08)) {
+                    if (motionShift > (minDim * 0.10)) {
                         this.lastFaceCenter = { x: faceCenterX, y: faceCenterY };
                         this.setCircleState('yellow');
-                        this.setInstruction('yellow', 'Hold still...', 'hand');
+                        this.setInstruction('yellow', 'Hold steady...', 'hand');
                         this.handleAlignmentFailed();
                         return;
                     }
@@ -494,11 +535,200 @@
 
                 // ── 8. ALL BIOMETRIC QUALITY CHECKS PASSED -> EMERALD GREEN AUTO-CAPTURE!
                 this.setCircleState('green');
-                this.setInstruction('green', 'Perfect alignment! Hold still...', 'check-circle-2');
+                this.setInstruction('green', 'Perfect — hold steady', 'check-circle-2');
                 this.handleAlignmentSuccess();
 
             } catch(e) {
                 console.error("evaluateBiometricQuality error:", e);
+            }
+        },
+
+        // ── Biometric Integrity: Lighting, Mask, Glasses, Background Detection ──
+        checkFaceBiometricIntegrity: function(video, box, vw, vh, isFallback) {
+            try {
+                var canvas = document.getElementById('analysisCanvas');
+                if (!canvas) return { ok: true };
+
+                var fx = Math.max(0, Math.round(box.x));
+                var fy = Math.max(0, Math.round(box.y));
+                var fw = Math.min(vw - fx, Math.round(box.width));
+                var fh = Math.min(vh - fy, Math.round(box.height));
+
+                if (fw < 30 || fh < 30) return { ok: true };
+
+                var sw = 80;
+                var sh = 80;
+                canvas.width = sw;
+                canvas.height = sh;
+                var ctx = canvas.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(video, fx, fy, fw, fh, 0, 0, sw, sh);
+
+                var imgData = ctx.getImageData(0, 0, sw, sh);
+                var d = imgData.data;
+
+                // 1. Face-Specific Lighting Check (center of face)
+                var faceSum = 0, faceCount = 0;
+                var glarePixels = 0;
+                for (var y = 14; y < 66; y += 2) {
+                    for (var x = 18; x < 62; x += 2) {
+                        var idx = (y * sw + x) * 4;
+                        var lum = (0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]);
+                        faceSum += lum;
+                        faceCount++;
+                        if (lum > 240) glarePixels++;
+                    }
+                }
+                var faceLuma = faceCount > 0 ? (faceSum / faceCount) : 120;
+
+                if (!isFallback) {
+                    if (faceLuma < 48) {
+                        return { ok: false, state: 'yellow', msg: 'Low lighting — increase room light', icon: 'sun' };
+                    }
+                    if (faceLuma > 224 || (faceCount > 0 && (glarePixels / faceCount) > 0.15)) {
+                        return { ok: false, state: 'yellow', msg: 'High glare — reduce direct light', icon: 'sun-dim' };
+                    }
+                }
+
+                // 2. Upper Face Band (forehead/cheeks: y: 12 to 38, x: 20 to 60)
+                var uLumaSum = 0, uCount = 0;
+                var uSkinCount = 0;
+                for (var uy = 12; uy < 38; uy++) {
+                    for (var ux = 20; ux < 60; ux++) {
+                        var uIdx = (uy * sw + ux) * 4;
+                        var ur = d[uIdx], ug = d[uIdx + 1], ub = d[uIdx + 2];
+                        uLumaSum += (0.299 * ur + 0.587 * ug + 0.114 * ub);
+                        uCount++;
+                        // Skin chrominance
+                        if (ur > 50 && ug > 32 && ub > 18 && ur > ug && ur > ub && (ur - ug) >= 8) {
+                            uSkinCount++;
+                        }
+                    }
+                }
+                var uLuma = uCount > 0 ? (uLumaSum / uCount) : 120;
+                var uSkinRatio = uCount > 0 ? (uSkinCount / uCount) : 0.5;
+
+                // 3. Lower Face Band (mouth/chin/mask region: y: 48 to 78, x: 20 to 60)
+                var lLumaSum = 0, lCount = 0;
+                var lSkinCount = 0;
+                var lBlueSum = 0, lRedSum = 0;
+                for (var ly = 48; ly < 78; ly++) {
+                    for (var lx = 20; lx < 60; lx++) {
+                        var lIdx = (ly * sw + lx) * 4;
+                        var lr = d[lIdx], lg = d[lIdx + 1], lb = d[lIdx + 2];
+                        lLumaSum += (0.299 * lr + 0.587 * lg + 0.114 * lb);
+                        lBlueSum += lb;
+                        lRedSum += lr;
+                        lCount++;
+                        if (lr > 50 && lg > 32 && lb > 18 && lr > lg && lr > lb && (lr - lg) >= 8) {
+                            lSkinCount++;
+                        }
+                    }
+                }
+                var lLuma = lCount > 0 ? (lLumaSum / lCount) : 120;
+                var lSkinRatio = lCount > 0 ? (lSkinCount / lCount) : 0.5;
+                var avgLBlue = lCount > 0 ? (lBlueSum / lCount) : 50;
+                var avgLRed = lCount > 0 ? (lRedSum / lCount) : 50;
+                var lumaRatio = lLuma / (uLuma + 0.001);
+
+                // If isFallback (face detector didn't find box), check if head is present in circle:
+                if (isFallback) {
+                    var hasUpperHead = (uSkinRatio > 0.16) || (uLuma > 45 && uLuma < 210);
+                    if (!hasUpperHead) {
+                        return { ok: false, state: 'idle', msg: 'Center face in frame', icon: 'search' };
+                    }
+                }
+
+                // ── MASK DETECTION ────────────────────────────────────
+                // Condition A: Black / Dark cloth mask (lower face darker than forehead)
+                if ((lumaRatio < 0.80 && lLuma < 74) || (lLuma < 48 && uLuma > 56)) {
+                    return { ok: false, state: 'red', msg: 'Face covered — remove mask', icon: 'shield-alert' };
+                }
+                // Condition B: Surgical Blue / Cyan mask
+                if (avgLBlue > (avgLRed + 14) && avgLBlue > 65) {
+                    return { ok: false, state: 'red', msg: 'Face covered — remove mask', icon: 'shield-alert' };
+                }
+                // Condition C: White / cloth mask covering mouth & chin (skin disappears on lower face)
+                if (uSkinRatio > 0.28 && lSkinRatio < 0.25) {
+                    return { ok: false, state: 'red', msg: 'Face covered — uncover mouth & nose', icon: 'shield-alert' };
+                }
+
+                // ── GLASSES & SUNGLASSES DETECTION ────────────────────
+                // Eye band (y: 22 to 38, x: 18 to 62)
+                var eyeLumaSum = 0, eyeCount = 0;
+                var eyeGlareCount = 0;
+                for (var ey = 22; ey < 38; ey++) {
+                    for (var ex = 18; ex < 62; ex++) {
+                        var eIdx = (ey * sw + ex) * 4;
+                        var eLum = (0.299 * d[eIdx] + 0.587 * d[eIdx + 1] + 0.114 * d[eIdx + 2]);
+                        eyeLumaSum += eLum;
+                        eyeCount++;
+                        if (eLum > 230) eyeGlareCount++;
+                    }
+                }
+                var eyeLuma = eyeCount > 0 ? (eyeLumaSum / eyeCount) : 100;
+                var eyeGlareRatio = eyeCount > 0 ? (eyeGlareCount / eyeCount) : 0;
+
+                // 1. Dark Sunglasses Check
+                if (eyeLuma < 46 || (uLuma > 65 && eyeLuma < (uLuma * 0.44))) {
+                    return { ok: false, state: 'yellow', msg: 'Eyewear detected — remove glasses', icon: 'glasses' };
+                }
+
+                // 2. Glasses Glare / Lens Reflection Check
+                if (eyeGlareRatio > 0.07) {
+                    return { ok: false, state: 'yellow', msg: 'Lens glare detected — remove glasses', icon: 'glasses' };
+                }
+
+                // 3. Eyeglasses Bridge Frame Edge Check (y: 26 to 36, x: 36 to 44)
+                var bridgeEdges = 0, bridgePixels = 0;
+                for (var by = 26; by < 36; by++) {
+                    for (var bx = 36; bx < 44; bx++) {
+                        var bIdx1 = (by * sw + bx) * 4;
+                        var bIdx2 = ((by + 1) * sw + bx) * 4;
+                        var diff = Math.abs((d[bIdx1] + d[bIdx1+1] + d[bIdx1+2]) - (d[bIdx2] + d[bIdx2+1] + d[bIdx2+2])) / 3;
+                        if (diff > 26) bridgeEdges++;
+                        bridgePixels++;
+                    }
+                }
+                if (bridgePixels > 0 && (bridgeEdges / bridgePixels) > 0.28) {
+                    return { ok: false, state: 'yellow', msg: 'Eyewear detected — remove glasses', icon: 'glasses' };
+                }
+
+                // ── PLAIN BACKGROUND DETECTION ────────────────────────
+                // Sample background corners in video space (outside face bounding box)
+                if (!isFallback && fw > 60) {
+                    var bgCanvas = document.createElement('canvas');
+                    bgCanvas.width = 40;
+                    bgCanvas.height = 30;
+                    var bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
+                    // Draw top-left background corner
+                    var bgW = Math.max(20, Math.round(fx * 0.85));
+                    var bgH = Math.max(20, Math.round(fy * 0.85));
+                    if (bgW > 15 && bgH > 15) {
+                        bgCtx.drawImage(video, 0, 0, bgW, bgH, 0, 0, 40, 30);
+                        var bgData = bgCtx.getImageData(0, 0, 40, 30).data;
+                        var bgSum = 0, bgSq = 0, bgN = 0, bgEdge = 0;
+                        for (var bi = 0; bi < bgData.length; bi += 4) {
+                            var bgl = 0.299 * bgData[bi] + 0.587 * bgData[bi+1] + 0.114 * bgData[bi+2];
+                            bgSum += bgl;
+                            bgSq += (bgl * bgl);
+                            bgN++;
+                            if (bi + 16 < bgData.length) {
+                                var bglNext = 0.299 * bgData[bi+16] + 0.587 * bgData[bi+17] + 0.114 * bgData[bi+18];
+                                if (Math.abs(bgl - bglNext) > 22) bgEdge++;
+                            }
+                        }
+                        var bgMean = bgSum / bgN;
+                        var bgStd = Math.sqrt(Math.max(0, (bgSq / bgN) - (bgMean * bgMean)));
+                        var bgEdgeRatio = bgEdge / bgN;
+                        if (bgStd > 42 && bgEdgeRatio > 0.12) {
+                            return { ok: false, state: 'yellow', msg: 'Busy background — use plain wall', icon: 'image' };
+                        }
+                    }
+                }
+
+                return { ok: true };
+            } catch(e) {
+                return { ok: true };
             }
         },
 
@@ -532,27 +762,7 @@
 
         // Multi-tier Face & Landmark Detector
         detectFaceWithLandmarks: async function(video, vw, vh) {
-            // Tier 1: FaceAPI Neural Network with 68 Landmarks
-            if (this.faceApiReady && typeof faceapi !== 'undefined') {
-                try {
-                    var options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.26 });
-                    var detections = await faceapi.detectAllFaces(video, options).withFaceLandmarks(true);
-
-                    if (detections && detections.length > 0) {
-                        if (detections.length > 1) {
-                            return { found: true, multiple: true };
-                        }
-                        return {
-                            found: true,
-                            multiple: false,
-                            box: detections[0].detection.box,
-                            landmarks: detections[0].landmarks
-                        };
-                    }
-                } catch(e) {}
-            }
-
-            // Tier 2: Native Browser FaceDetector (Chrome/Edge API)
+            // Tier 1 (Fastest): Native Browser FaceDetector (Chrome/Edge OS Hardware GPU)
             if (typeof window !== 'undefined' && 'FaceDetector' in window) {
                 try {
                     var nativeDet = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
@@ -570,8 +780,27 @@
                 } catch(e) {}
             }
 
+            // Tier 2: FaceAPI Lightweight TinyFaceDetector with sensitive threshold for occluded/masked faces
+            if (this.faceApiReady && typeof faceapi !== 'undefined' && faceapi.nets.tinyFaceDetector) {
+                try {
+                    var options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.15 });
+                    var detections = await faceapi.detectAllFaces(video, options);
+
+                    if (detections && detections.length > 0) {
+                        if (detections.length > 1) {
+                            return { found: true, multiple: true };
+                        }
+                        return {
+                            found: true,
+                            multiple: false,
+                            box: detections[0].box,
+                            landmarks: null
+                        };
+                    }
+                } catch(e) {}
+            }
+
             // Tier 3: Biometric Facial Feature Contrast Valley Vision Engine
-            // Detects face oval + eyes/eyebrows horizontal contrast valley across upper 1/3
             return this.detectFacialFeaturesCanvas(video, vw, vh);
         },
 
@@ -694,16 +923,17 @@
             this.cancelCountdown();
         },
 
-        // ── 3-2-1 Countdown Timer ─────────────────────────────
+        // ── Snappy 1-Second Auto-Capture Countdown Timer ────
         startCountdown: function() {
             var self = this;
+            if (self.isCountingDown || self.isCapturing) return;
             self.isCountingDown = true;
-            self.countdownValue = 3;
+            self.countdownValue = 2;
 
             var overlay = document.getElementById('countdownOverlay');
             var numberEl = document.getElementById('countdownNumber');
             if (overlay) overlay.classList.add('active');
-            if (numberEl) numberEl.textContent = '3';
+            if (numberEl) numberEl.textContent = '2';
 
             if (self.countdownTimer) clearInterval(self.countdownTimer);
 
@@ -715,7 +945,7 @@
                     self.cancelCountdown();
                     self.executeCapture();
                 }
-            }, 700);
+            }, 500);
         },
 
         cancelCountdown: function() {
@@ -762,34 +992,63 @@
                 setTimeout(() => flash.classList.remove('flash'), 180);
             }
 
-            // Crisp native camera snapshot
-            var vw = video.videoWidth || 1280;
-            var vh = video.videoHeight || 720;
-            canvas.width = vw;
-            canvas.height = vh;
+            // Compliance validation before capture (Mask, Glasses, Background, Lighting)
+            var vw = video.videoWidth || 640;
+            var vh = video.videoHeight || 480;
+            var minDim = Math.min(vw, vh);
+            var activeBox = self.lastFaceBox || {
+                x: Math.round(vw / 2 - minDim * 0.28),
+                y: Math.round(vh / 2 - minDim * 0.35),
+                width: Math.round(minDim * 0.56),
+                height: Math.round(minDim * 0.70)
+            };
+            var integrity = self.checkFaceBiometricIntegrity(video, activeBox, vw, vh, !self.lastFaceBox);
+            if (!integrity.ok) {
+                self.setCircleState(integrity.state);
+                self.setInstruction(integrity.state, 'Cannot capture: ' + integrity.msg, integrity.icon);
+                self.isCapturing = false;
+                return;
+            }
+
+            // High-Performance Normalized Capture (Max 640px portrait for instant upload & sub-250ms backend processing)
+            var maxDim = 640;
+            var scale = Math.min(1, maxDim / Math.max(vw, vh));
+            var cw = Math.round(vw * scale);
+            var ch = Math.round(vh * scale);
+            canvas.width = cw;
+            canvas.height = ch;
 
             var ctx = canvas.getContext('2d');
             ctx.save();
-            ctx.translate(vw, 0);
+            ctx.translate(cw, 0);
             ctx.scale(-1, 1); // Mirrored natural selfie orientation
-            ctx.drawImage(video, 0, 0, vw, vh);
+            ctx.drawImage(video, 0, 0, cw, ch);
             ctx.restore();
 
-            var b64 = canvas.toDataURL('image/jpeg', 0.94);
-            self.bestCapturedData = { b64: b64 };
-            self.burstFrames = [b64];
+            var frameB64 = canvas.toDataURL('image/jpeg', 0.88);
+            self.bestCapturedData = { b64: frameB64 };
+            self.burstFrames = [frameB64];
 
             // Display captured snapshot directly in the SAME circular viewfinder!
-            self.freezeInCircle(b64);
+            self.freezeInCircle(frameB64);
         },
 
         // ── In-Circle Unified Review ──────────────────────────
         freezeInCircle: function(b64) {
+            // Stop active detection loop so review state remains persistent and clean
+            if (this.animFrameId) {
+                cancelAnimationFrame(this.animFrameId);
+                this.animFrameId = null;
+            }
+            this.isCapturing = true;
+
             var video = document.getElementById('cameraFeed');
             var capturedImg = document.getElementById('capturedFrameImg');
             var inCircleBadge = document.getElementById('inCircleBadge');
             var cameraControls = document.getElementById('cameraControls');
             var reviewControls = document.getElementById('reviewControls');
+            var resToast = document.getElementById('captureResult');
+            if (resToast) resToast.style.display = 'none';
 
             // Hide live video, show frozen snapshot inside the exact same circular frame
             if (video) video.style.display = 'none';
@@ -803,7 +1062,7 @@
 
             // Keep guide ring emerald green
             this.setCircleState('green');
-            this.setInstruction('green', 'Photo captured! Confirm below to register', 'check-circle-2');
+            this.setInstruction('green', 'Captured — confirm below', 'check-circle-2');
 
             // Swap controls directly below the circle
             if (cameraControls) cameraControls.style.display = 'none';
@@ -830,8 +1089,8 @@
             if (video) video.style.display = 'block';
 
             this.resetCaptureState();
-            this.setCircleState('red');
-            this.setInstruction('red', 'Position your face inside the circle', 'search');
+            this.setCircleState('idle');
+            this.setInstruction('idle', 'Center face in frame', 'search');
             this.refreshIcons();
 
             // Resume detection loop
@@ -846,11 +1105,11 @@
             var retakeBtn = document.getElementById('retakeBtn');
             if (confirmBtn) {
                 confirmBtn.disabled = true;
-                confirmBtn.innerHTML = '<span class="model-spinner"></span> Saving Biometrics...';
+                confirmBtn.innerHTML = '<span class="model-spinner"></span> Saving Identity...';
             }
             if (retakeBtn) retakeBtn.disabled = true;
 
-            self.showCaptureResult('processing', 'Saving your biometric identity...');
+            self.showCaptureResult('processing', 'Saving biometric identity...');
 
             try {
                 var payload = {
@@ -866,8 +1125,8 @@
                 var data = await resp.json();
 
                 if (data.status === 'success') {
-                    self.showCaptureResult('success', '✅ Biometric identity registered successfully!');
-                    setTimeout(() => window.location.reload(), 1400);
+                    self.showCaptureResult('success', 'Biometric identity registered successfully');
+                    setTimeout(() => window.location.reload(), 700);
                 } else {
                     self.showCaptureResult('error', data.message || 'Registration failed. Click Retake to try again.');
                     if (confirmBtn) {
@@ -878,7 +1137,7 @@
                     if (retakeBtn) retakeBtn.disabled = false;
                 }
             } catch(e) {
-                self.showCaptureResult('error', 'Network error. Please check your connection and try again.');
+                self.showCaptureResult('error', 'Network error. Please try again.');
                 if (confirmBtn) {
                     confirmBtn.disabled = false;
                     confirmBtn.innerHTML = '<i data-lucide="check" style="width:18px; height:18px;"></i> Confirm & Save';

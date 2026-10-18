@@ -99,7 +99,6 @@ def login_view(request):
             try:
                 prof = UserProfile.objects.filter(
                     Q(student_id__iexact=username_or_email) |
-                    Q(roll_number__iexact=username_or_email) |
                     Q(employee_id__iexact=username_or_email)
                 ).select_related('user').first()
                 if prof and prof.user:
@@ -544,9 +543,11 @@ def password_reset_done(request):
     return render(request, 'accounts/auth/password_reset_done.html')
 
 
+@ratelimit(action='password_reset_confirm', limit=10, period=900)
 def password_reset_confirm(request):
     """
     Step 2: User sets their new password using either signed token from email link OR 6-digit OTP.
+    Preserves verified user state in session if password validation fails so OTP is not burned on typos.
     """
     if request.user.is_authenticated:
         return redirect('home')
@@ -555,11 +556,21 @@ def password_reset_confirm(request):
     token_verified = False
     verified_user = None
 
-    if token:
+    # Check if user was already verified in this session (e.g. from previous attempt with password typo)
+    session_user_id = request.session.get('verified_reset_user_id')
+    if session_user_id:
+        try:
+            verified_user = User.objects.get(id=session_user_id)
+            token_verified = True
+        except User.DoesNotExist:
+            request.session.pop('verified_reset_user_id', None)
+
+    if token and not verified_user:
         user, err = verify_password_reset_token(token)
         if user:
             token_verified = True
             verified_user = user
+            request.session['verified_reset_user_id'] = user.id
         elif request.method == 'GET':
             return render(request, 'accounts/auth/password_reset_confirm.html', {
                 'token': token,
@@ -571,11 +582,9 @@ def password_reset_confirm(request):
         new_password1 = request.POST.get('new_password1', '')
         new_password2 = request.POST.get('new_password2', '')
 
-        # Resolve user via token or OTP
-        user = None
-        if token_verified and verified_user:
-            user = verified_user
-        else:
+        # Resolve user via session, token or OTP
+        user = verified_user
+        if not user:
             email_or_username = request.POST.get('email_or_username', '').strip()
             otp_code = request.POST.get('otp_code', '').strip()
 
@@ -589,6 +598,9 @@ def password_reset_confirm(request):
                         'token': token,
                         'token_verified': False,
                     }, status=400)
+                # Store in session so user isn't locked out if password rules fail
+                request.session['verified_reset_user_id'] = user.id
+                token_verified = True
             elif token:
                 user, err = verify_password_reset_token(token)
                 if not user:
@@ -597,6 +609,8 @@ def password_reset_confirm(request):
                         'error': err,
                         'token_verified': False,
                     }, status=400)
+                request.session['verified_reset_user_id'] = user.id
+                token_verified = True
             else:
                 return render(request, 'accounts/auth/password_reset_confirm.html', {
                     'error': "Please enter your email/username and 6-digit code or use a valid reset link.",
@@ -633,6 +647,9 @@ def password_reset_confirm(request):
         # Update password
         user.set_password(new_password1)
         user.save()
+
+        # Clean session verified flag
+        request.session.pop('verified_reset_user_id', None)
 
         # If user was unverified, password reset via their verified email also activates their account
         if hasattr(user, 'userprofile') and not user.userprofile.is_verified:

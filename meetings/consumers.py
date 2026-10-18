@@ -21,8 +21,14 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             self.room_group_name = f'meeting_{self.meeting_code}'
             self.user = self.scope.get('user')
             
-            if not self.user or not self.user.is_authenticated:
-                await self.close()
+            if not self.user or not self.user.is_authenticated or not getattr(self.user, 'is_active', True):
+                await self.close(code=4003)
+                return
+
+            has_access = await self.verify_meeting_access()
+            if not has_access:
+                logger.warning(f"Unauthorized meeting WebSocket join attempt by {getattr(self.user, 'username', 'anonymous')} for meeting {self.meeting_code}")
+                await self.close(code=4003)
                 return
 
             # Accept connection first to complete handshake and prevent ERR_CONNECTION_RESET
@@ -36,6 +42,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             
             # Record join and get user meta
             user_data = await self.get_user_meta()
+            self.is_host = bool(user_data.get('is_host', False)) if user_data else False
 
             # Track for CAM_* rooms
             if self.meeting_code.startswith('CAM_'):
@@ -72,6 +79,40 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 await self.close()
             except Exception:
                 pass
+
+    @database_sync_to_async
+    def verify_meeting_access(self):
+        from .models import Meeting, ClassroomMembership
+        try:
+            meeting = Meeting.objects.select_related('classroom').get(meeting_code=self.meeting_code)
+        except Meeting.DoesNotExist:
+            if self.meeting_code.startswith('CAM_'):
+                return True
+            return False
+
+        if not self.user or not self.user.is_authenticated or not getattr(self.user, 'is_active', True):
+            return False
+
+        # Superusers and Admins
+        if self.user.is_superuser or getattr(self.user, 'is_staff', False):
+            return True
+        if hasattr(self.user, 'userprofile') and self.user.userprofile.user_type == 'admin':
+            return True
+
+        # Host / Teacher of meeting
+        if meeting.teacher_id == self.user.id:
+            return True
+
+        # If meeting is linked to a classroom, require approved membership
+        if meeting.classroom_id:
+            return ClassroomMembership.objects.filter(
+                classroom_id=meeting.classroom_id,
+                student_id=self.user.id,
+                status='approved'
+            ).exists()
+
+        # Open / standalone meeting
+        return True
 
     @database_sync_to_async
     def get_user_meta(self):
@@ -303,22 +344,28 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 await self.process_continue_meeting()
 
             elif message_type == 'start_recording':
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'recording_started',
-                        'host_name': self.user.username
-                    }
-                )
+                if not getattr(self, 'is_host', False):
+                    logger.warning("Unauthorized start_recording by user %s", self.user.id)
+                else:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'recording_started',
+                            'host_name': self.user.username
+                        }
+                    )
 
             elif message_type == 'stop_recording':
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'recording_stopped',
-                        'host_name': self.user.username
-                    }
-                )
+                if not getattr(self, 'is_host', False):
+                    logger.warning("Unauthorized stop_recording by user %s", self.user.id)
+                else:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'recording_stopped',
+                            'host_name': self.user.username
+                        }
+                    )
 
             elif message_type == 'quiz_tab_switch_warning':
                 await self.channel_layer.group_send(
@@ -345,13 +392,16 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 )
 
             elif message_type == 'teacher_left_quiz_ended':
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'teacher_left_quiz_ended',
-                        'quiz_id': data.get('quiz_id')
-                    }
-                )
+                if not getattr(self, 'is_host', False):
+                    logger.warning("Unauthorized teacher_left_quiz_ended by user %s", self.user.id)
+                else:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'teacher_left_quiz_ended',
+                            'quiz_id': data.get('quiz_id')
+                        }
+                    )
         except Exception as e:
             logger.error(f"Receive error: {e}")
 

@@ -1,11 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.views.generic import RedirectView
 from django.http import JsonResponse
 from django.db import connection
-from django.views.static import serve
 from meetings.livekit_http_proxy import livekit_http_proxy
 from cameras.views_logic.streaming_views import camera_feed_proxy
 from common.media_views import protected_media_serve

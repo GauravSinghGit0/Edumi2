@@ -205,9 +205,12 @@ class CameraRecording(models.Model):
         except subprocess.TimeoutExpired:
             logger.warning("FFmpeg timed out, skipping thumbnail generation")
             return None
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.decode(errors='ignore') if e.stderr else str(e)
+            logger.warning(f"FFmpeg thumbnail extraction failed for recording {self.id}: {err_msg[:200]}")
+            return None
         except Exception as e:
             logger.error(f"Error generating thumbnail: {e}")
-            logger.exception("Thumbnail generation exception")
             return None
 
     def apply_trim(self):

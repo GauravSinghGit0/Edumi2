@@ -13,8 +13,6 @@ if sys.platform == 'win32':
 # This will make sure the app is always imported when
 # Django starts so that shared_task will use this app.
 from .celery import app as celery_app
-import django.template.context
-import copy
 
 # Monkey-patch Django's Context.__copy__ for Python 3.13+ compatibility
 # The original implementation uses duplicate = copy(super()) which fails in 3.13+

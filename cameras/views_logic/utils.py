@@ -24,14 +24,7 @@ def get_video_stream(file_path, start, end):
             remaining -= read_size
 
 
-def is_admin(user):
-    """Check if user is admin"""
-    if user and user.is_authenticated:
-        if user.is_superuser or getattr(user, 'is_staff', False):
-            return True
-        if hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin':
-            return True
-    return False
+from common.utils import is_admin
 
 
 def can_view_camera(user, camera):

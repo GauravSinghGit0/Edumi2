@@ -29,8 +29,18 @@ ip_cam_listeners = {}
 class AudioConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.camera_id = self.scope['url_route']['kwargs']['camera_id']
-        self.user = self.scope['user']
+        self.user = self.scope.get('user')
         
+        # Enforce authentication and active account status
+        if not self.user or not self.user.is_authenticated or not getattr(self.user, 'is_active', True):
+            await self.close(code=4003)
+            return
+
+        has_access = await self.check_camera_access()
+        if not has_access:
+            await self.close(code=4003)
+            return
+
         # Get source from query string
         query_params = self.scope.get('query_string', b'').decode()
         self.source = 'pc'
@@ -212,6 +222,47 @@ class AudioConsumer(AsyncWebsocketConsumer):
             return await get_camera_teacher()
         except Exception as e:
             logger.warning(f"Error checking is_teacher: {e}")
+            return False
+
+    async def check_camera_access(self):
+        try:
+            @database_sync_to_async
+            def verify():
+                try:
+                    if self.user.is_superuser or getattr(self.user, 'is_staff', False):
+                        return True
+                    if hasattr(self.user, 'userprofile') and self.user.userprofile.user_type == 'admin':
+                        return True
+                    from cameras.models import Camera, CameraPermission
+                    camera = Camera.objects.get(id=self.camera_id)
+                    if hasattr(self.user, 'userprofile') and self.user.userprofile.user_type == 'teacher':
+                        return camera.live_teacher == self.user or CameraPermission.objects.filter(camera=camera, teacher=self.user).exists()
+                    if hasattr(self.user, 'userprofile') and self.user.userprofile.user_type == 'student':
+                        if not camera.is_active:
+                            return False
+                        from meetings.models import ClassroomMembership
+                        # Check if camera is permitted for students under a teacher of student's approved classroom
+                        perm_teacher_ids = list(CameraPermission.objects.filter(
+                            camera=camera, show_to_students=True
+                        ).values_list('teacher_id', flat=True))
+                        if camera.live_teacher_id:
+                            perm_teacher_ids.append(camera.live_teacher_id)
+
+                        if not perm_teacher_ids:
+                            return False
+
+                        return ClassroomMembership.objects.filter(
+                            classroom__teacher_id__in=perm_teacher_ids,
+                            student=self.user,
+                            status='approved'
+                        ).exists()
+                    return False
+                except Exception as e:
+                    logger.warning(f"Error checking camera access: {e}")
+                    return False
+            return await verify()
+        except Exception as e:
+            logger.warning(f"Error checking camera access: {e}")
             return False
 
     async def start_rtsp_audio_relay(self):

@@ -11,11 +11,11 @@
         <div id="infoModalError" style="color:#ef4444; font-size:0.85rem; margin-bottom:12px; text-align:center; display:none;"></div>
         <div class="info-form-group">
             <label>Roll Number / Student ID</label>
-            <input type="text" id="modal_roll" class="info-form-control" placeholder="e.g. 21CS045" value="{{ user_identity.roll_number|default:user_identity.student_id|default:u_profile.roll_number|default:'' }}">
+            <input type="text" id="modal_roll" class="info-form-control" placeholder="e.g. 21CS045" value="{% firstof user_identity.roll_number user_identity.student_id u_profile.roll_number u_profile.student_id request.user.username '' %}">
         </div>
         <div class="info-form-group">
             <label>Branch / Department</label>
-            <input type="text" id="modal_branch" class="info-form-control" placeholder="e.g. Computer Science" value="{{ user_identity.branch|default:u_profile.branch|default:'' }}">
+            <input type="text" id="modal_branch" class="info-form-control" placeholder="e.g. Computer Science" value="{% firstof user_identity.branch u_profile.branch '' %}">
         </div>
         <button type="button" class="btn-primary" style="width:100%; justify-content:center; margin-top:12px;" onclick="saveProfileInfo()">
             <i data-lucide="save" style="width:18px; height:18px;"></i>

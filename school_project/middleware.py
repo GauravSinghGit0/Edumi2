@@ -8,11 +8,9 @@ import uuid
 import logging
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
 from django.http import JsonResponse
 from django.db import OperationalError
 from django.shortcuts import render
-from django.conf import settings
 
 try:
     import psutil
@@ -21,14 +19,12 @@ except ImportError:
 
 from common.telemetry import (
     get_client_ip,
-    parse_user_agent,
     get_request_context,
     detect_attack_signatures,
     write_security_alert,
     write_access_log,
     write_json_audit_log,
     log_crash_forensics,
-    get_dated_log_dir
 )
 
 logger = logging.getLogger(__name__)

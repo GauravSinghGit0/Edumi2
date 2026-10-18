@@ -9,7 +9,7 @@ class Classroom(models.Model):
     class_code = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=200)
     password = models.CharField(max_length=128)  # Will be hashed
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_classrooms')
+    teacher = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_classrooms')
     description = models.TextField(blank=True)
     auto_approve = models.BooleanField(default=False, help_text="Automatically approve students who join with valid class code & password")
     is_active = models.BooleanField(default=True)

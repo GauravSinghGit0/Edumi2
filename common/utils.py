@@ -131,35 +131,11 @@ def get_user_avatar_url(user):
 def get_user_identity(user):
     """
     Unified identity dictionary for any user across LMS modules.
+    Delegates to IdentityService (Single Source of Truth).
     """
     if not user:
         return {}
-    profile = getattr(user, 'userprofile', None)
-    if profile and hasattr(profile, 'get_identity_dict'):
-        return profile.get_identity_dict()
-
-    display_name = get_user_display_name(user)
-    pfp_url = get_user_avatar_url(user)
-    return {
-        'user_id': user.id,
-        'username': user.username,
-        'display_name': display_name,
-        'first_name': getattr(user, 'first_name', ''),
-        'last_name': getattr(user, 'last_name', ''),
-        'email': getattr(user, 'email', ''),
-        'role': profile.user_type if profile else ('admin' if getattr(user, 'is_superuser', False) else 'student'),
-        'is_superuser': bool(getattr(user, 'is_superuser', False)),
-        'pfp_url': pfp_url,
-        'phone': getattr(profile, 'phone', '') or getattr(profile, 'contact_number', ''),
-        'bio': getattr(profile, 'bio', ''),
-        'headline': getattr(profile, 'headline', ''),
-        'student_id': getattr(profile, 'student_id', '') or getattr(profile, 'roll_number', ''),
-        'roll_number': getattr(profile, 'roll_number', '') or getattr(profile, 'student_id', ''),
-        'branch': getattr(profile, 'branch', ''),
-        'grade': getattr(profile, 'grade', ''),
-        'employee_id': getattr(profile, 'employee_id', ''),
-        'department': getattr(profile, 'department', ''),
-        'specialization': getattr(profile, 'specialization', ''),
-    }
+    from accounts.identity import IdentityService
+    return IdentityService.get_identity(user)
 
 

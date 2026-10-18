@@ -1,6 +1,7 @@
 """
 accounts/views/identity_views.py
 REST API endpoints for the Centralized Identification System (SSOT).
+Enforces authentication and classroom boundary checks on all endpoints.
 """
 
 import json
@@ -23,8 +24,9 @@ def identity_me_view(request):
         return JsonResponse({
             'success': False,
             'authenticated': False,
-            'identity': None
-        }, status=200)
+            'identity': None,
+            'error': 'Authentication required.'
+        }, status=401)
 
     identity = getattr(request, 'identity', None) or IdentityService.get_identity(request.user)
     return JsonResponse({
@@ -34,30 +36,42 @@ def identity_me_view(request):
     })
 
 
+@login_required
 @require_http_methods(["GET"])
 def identity_user_view(request, user_id):
     """
     Returns the canonical identity dictionary for any user by user_id.
+    Guarded by authentication and classroom/role boundary validation.
     """
-    identity = IdentityService.get_identity_by_id(user_id)
-    if not identity or not identity.get('user_id'):
+    try:
+        target_uid = int(user_id)
+    except (ValueError, TypeError):
+        return JsonResponse({'success': False, 'error': 'Invalid user ID'}, status=400)
+
+    # Check existence
+    if not User.objects.filter(id=target_uid).exists():
+        return JsonResponse({'success': False, 'error': 'User identity not found'}, status=404)
+
+    # Enforce institutional classroom boundary & authorization
+    if not IdentityService.is_identity_visible(request.user, target_uid):
         return JsonResponse({
             'success': False,
-            'error': 'User identity not found'
-        }, status=404)
+            'error': 'Forbidden: You do not have permission to view this identity.'
+        }, status=403)
 
+    identity = IdentityService.get_identity_by_id(target_uid)
     return JsonResponse({
         'success': True,
         'identity': identity
     })
 
 
+@login_required
 @require_http_methods(["POST"])
 def identity_batch_view(request):
     """
     Batch resolves up to 100 user IDs into identity dictionaries.
-    Ideal for roster rendering (meetings, classrooms, admin lists).
-    Payload JSON: { "user_ids": [1, 2, 3] }
+    Only returns identities that the requesting user is authorized to view.
     """
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -71,7 +85,11 @@ def identity_batch_view(request):
             'error': 'user_ids must be a list'
         }, status=400)
 
-    identities = IdentityService.get_identities_batch(user_ids)
+    # Filter to authorized IDs based on classroom boundaries
+    clean_ids = [int(uid) for uid in user_ids if str(uid).isdigit()][:100]
+    authorized_ids = [uid for uid in clean_ids if IdentityService.is_identity_visible(request.user, uid)]
+
+    identities = IdentityService.get_identities_batch(authorized_ids)
     return JsonResponse({
         'success': True,
         'count': len(identities),
@@ -86,7 +104,7 @@ def identity_update_view(request):
     API endpoint to update user identity. Saves models and triggers real-time WebSocket sync.
     """
     target_user_id = request.POST.get('user_id') or request.POST.get('target_user_id')
-    if target_user_id and request.user.is_superuser:
+    if target_user_id and (request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin')):
         try:
             target_user = User.objects.get(id=int(target_user_id))
         except User.DoesNotExist:
@@ -96,7 +114,6 @@ def identity_update_view(request):
 
     try:
         data = dict(request.POST.items())
-        # Handle JSON body if submitted as JSON
         if request.content_type == 'application/json':
             try:
                 data.update(json.loads(request.body.decode('utf-8')))
@@ -117,5 +134,7 @@ def identity_update_view(request):
         })
     except PermissionError as pe:
         return JsonResponse({'success': False, 'error': str(pe)}, status=403)
+    except ValueError as ve:
+        return JsonResponse({'success': False, 'error': str(ve)}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

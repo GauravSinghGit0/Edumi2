@@ -658,10 +658,14 @@ server {
         include /etc/nginx/mime.types;
     }
 
-    location /media/ {
+    # Protected internal media location for X-Accel-Redirect from Django
+    location /internal_media/ {
+        internal;
         alias ${APP_DIR}/database/media/;
-        expires 7d;
-        access_log off;
+        add_header Accept-Ranges bytes;
+        sendfile on;
+        sendfile_max_chunk 1m;
+        tcp_nopush on;
     }
 
     location / {

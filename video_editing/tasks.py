@@ -49,7 +49,6 @@ def extract_metadata_and_proxies_task(project_id):
     Asynchronously extracts video metadata (duration, resolution, has_audio)
     and initializes clips_json in the background.
     """
-    import json
     import os
     try:
         project = VideoProject.objects.get(pk=project_id)

@@ -17,10 +17,10 @@ class StudentFaceProfile(models.Model):
         User, on_delete=models.CASCADE,
         related_name='face_profile'
     )
-    # AES-256 (Fernet) encrypted JSON of the float array
-    face_embedding_encrypted = models.BinaryField()
+    # Fernet (AES-128-CBC + HMAC-SHA256) encrypted JSON of the float array
+    face_embedding_encrypted = models.BinaryField(blank=True, null=True)
     # SHA-256 hash for integrity verification on decryption
-    embedding_checksum = models.CharField(max_length=64)
+    embedding_checksum = models.CharField(max_length=64, blank=True)
 
     # Original registration photo — admin-only visibility
     face_photo = models.ImageField(upload_to='face_photos/', blank=True, null=True)
@@ -28,6 +28,11 @@ class StudentFaceProfile(models.Model):
     is_active = models.BooleanField(default=True, db_index=True)
     face_quality_score = models.FloatField(default=0.0)   # 0.0–1.0
     registration_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    consent_version = models.CharField(max_length=32, blank=True, default='v1.0')
+    consent_at = models.DateTimeField(null=True, blank=True)
+    enrolled_at = models.DateTimeField(null=True, blank=True)
+    needs_reenroll = models.BooleanField(default=False, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -94,7 +99,7 @@ class AttendanceRecord(models.Model):
     ]
 
     student = models.ForeignKey(
-        User, on_delete=models.CASCADE,
+        User, on_delete=models.PROTECT,
         related_name='attendance_records'
     )
     meeting = models.ForeignKey(
@@ -189,8 +194,17 @@ class AttendanceSettings(models.Model):
         related_name='attendance_settings'
     )
     face_recognition_enabled = models.BooleanField(default=True)
-    # Minimum cosine-similarity confidence (0–1) to count as a match
-    confidence_threshold = models.FloatField(default=0.55)
+    match_similarity = models.FloatField(
+        default=0.363,
+        verbose_name="Minimum Face Similarity",
+        help_text="Minimum Cosine Similarity (SFace 128-d) to count as a match. Higher is stricter. Default is 0.363."
+    )
+    # Maximum Euclidean Distance (dlib 128-d) to count as a match (lower is stricter)
+    confidence_threshold = models.FloatField(
+        default=0.55,
+        verbose_name="Legacy Euclidean Distance Threshold",
+        help_text="Legacy Euclidean distance (dlib 128-d) threshold. Default is 0.55."
+    )
     # Cumulative verified seconds needed to be marked Present
     presence_duration_seconds = models.IntegerField(default=30)
     # Minutes after session start past which student is marked Late

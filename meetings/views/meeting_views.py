@@ -319,18 +319,29 @@ def verify_face_prejoin(request):
     except StudentFaceProfile.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'No face profile found'})
 
+    match_threshold = getattr(settings, 'FACE_MATCH_THRESHOLD', 0.55)
+    meeting = None
+    if meeting_code:
+        try:
+            meeting = Meeting.objects.select_related('classroom__attendance_settings').get(meeting_code=meeting_code)
+            if meeting.classroom and hasattr(meeting.classroom, 'attendance_settings'):
+                match_threshold = meeting.classroom.attendance_settings.confidence_threshold
+        except Meeting.DoesNotExist:
+            pass
+
     fs = get_face_service()
     result = fs.compare_frame_to_stored(
         frame_bytes=image_bytes,
         encrypted_embedding=profile.face_embedding_encrypted,
-        threshold=0.55
+        threshold=match_threshold
     )
 
     if result['match']:
         if meeting_code:
             request.session[f'verified_meeting_{meeting_code}'] = True
             try:
-                meeting = Meeting.objects.get(meeting_code=meeting_code)
+                if not meeting:
+                    meeting = Meeting.objects.get(meeting_code=meeting_code)
                 # Update last verified time
                 profile.last_verified_at = timezone.now()
                 profile.save()

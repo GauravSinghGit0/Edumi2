@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files import File
-from django.http import FileResponse, JsonResponse, HttpResponseForbidden, StreamingHttpResponse, Http404
+from django.http import FileResponse, JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -35,60 +35,15 @@ from common.validators import (
 )
 
 
-
-import mimetypes
-
 @login_required
 def serve_media_ranges(request, path):
-    media_root = os.path.abspath(str(settings.MEDIA_ROOT))
-    target_path = os.path.abspath(os.path.join(media_root, path))
+    """
+    Streaming media endpoint for video editor timelines.
+    Consolidated into protected_media_serve to enforce global access controls.
+    """
+    from common.media_views import protected_media_serve
+    return protected_media_serve(request, path)
 
-    # Prevent directory traversal attacks
-    if not target_path.startswith(media_root) or not os.path.isfile(target_path):
-        raise Http404("File not found")
-
-    file_path = target_path
-    file_size = os.path.getsize(file_path)
-    range_header = request.META.get('HTTP_RANGE', '').strip()
-    
-    mime_type, _ = mimetypes.guess_type(target_path)
-    if not mime_type:
-        mime_type = 'video/mp4'
-
-    def file_iterator(fn, offset, length):
-        with open(fn, 'rb') as f:
-            f.seek(offset)
-            remaining = length
-            # Use 512KB chunks for high throughput and reduced Python context switching
-            while remaining > 0:
-                chunk_size = min(remaining, 524288)
-                data = f.read(chunk_size)
-                if not data:
-                    break
-                remaining -= len(data)
-                yield data
-
-    if range_header:
-        match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if match:
-            start = int(match.group(1))
-            end = match.group(2)
-            end = int(end) if end else file_size - 1
-            
-            if start >= file_size:
-                return StreamingHttpResponse(status=416)
-                
-            length = end - start + 1
-            response = StreamingHttpResponse(file_iterator(file_path, start, length), status=206, content_type=mime_type)
-            response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
-            response['Accept-Ranges'] = 'bytes'
-            response['Content-Length'] = str(length)
-            return response
-
-    response = StreamingHttpResponse(file_iterator(file_path, 0, file_size), content_type=mime_type)
-    response['Accept-Ranges'] = 'bytes'
-    response['Content-Length'] = str(file_size)
-    return response
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +106,6 @@ def _get_owned_project(request, pk):
 
 
 def convert_legacy_project_to_timeline(project):
-    import re
     state = {
         "trim": {
             "start": project.trim_start or 0.0,
@@ -1009,7 +963,6 @@ def publish_to_lecture(request, pk):
 
 
 from django.views.decorators.csrf import csrf_exempt
-from django.core.files import File
 
 _upload_assembly_lock = threading.Lock()
 
@@ -1152,7 +1105,6 @@ def chunked_upload_view(request):
                     project.original_file.save(clean_filename, File(final_file))
                     
                 # Initialize metadata immediately from client values so editor opens in < 0.01s
-                orig_filename = os.path.basename(project.original_file.name)
                 project.duration_seconds = client_duration if client_duration > 0 else None
                 project.width = client_width
                 project.height = client_height

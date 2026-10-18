@@ -99,7 +99,7 @@ class AssignmentSubmission(models.Model):
     ]
 
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='submissions')
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignment_submissions')
+    student = models.ForeignKey(User, on_delete=models.PROTECT, related_name='assignment_submissions')
     submitted_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     marks_obtained = models.IntegerField(null=True, blank=True)
@@ -221,7 +221,7 @@ class Choice(models.Model):
 class QuizSubmission(models.Model):
     """Model for student submissions to quizzes (both Classroom and Live Meeting quizzes)"""
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="submissions")
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_submissions")
+    student = models.ForeignKey(User, on_delete=models.PROTECT, related_name="quiz_submissions")
     meeting = models.ForeignKey('meetings.Meeting', on_delete=models.CASCADE, null=True, blank=True, related_name="quiz_submissions")
     is_live_meeting_quiz = models.BooleanField(default=False, db_index=True)
     tab_switch_count = models.IntegerField(default=0, help_text="Number of anti-cheating tab switch violations")

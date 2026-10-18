@@ -47,7 +47,7 @@
                         <i data-lucide="user" style="width:48px; height:48px;"></i>
                     </div>
                     <h4>Camera Inactive</h4>
-                    <p>Click "Start Registration" below to begin live biometric scan</p>
+                    <p>Click "Initialize Biometric Registration" below to begin live biometric scan</p>
                 </div>
 
                 <!-- Camera Access Error Banner -->
@@ -67,11 +67,11 @@
 
         <!-- Single Real-Time Guidance Instruction -->
         <div class="instruction-wrap">
-            <div class="instruction-banner state-idle" id="instructionBanner">
+            <div class="instruction-banner state-idle" id="instructionBanner" aria-live="polite" role="status">
                 <span id="instructionIconWrap">
                     <i data-lucide="info" style="width:18px; height:18px;"></i>
                 </span>
-                <span id="instructionText">Center your face in the circle to start</span>
+                <span id="instructionText">Ensure neutral background lighting and remove reflective eyewear or face coverings</span>
             </div>
         </div>
 
@@ -81,7 +81,7 @@
             <div class="btn-group" id="cameraControls">
                 <button type="button" class="btn-primary btn-register-main" id="startCamBtn" onclick="startCamera()">
                     <i data-lucide="camera" style="width:18px; height:18px;"></i>
-                    <span>Start Registration</span>
+                    <span>Initialize Biometric Registration</span>
                 </button>
                 <button type="button" class="btn-primary btn-register-main btn-take-photo" id="captureBtn" onclick="manualCapture()" style="display:none;">
                     <i data-lucide="aperture" style="width:18px; height:18px;"></i>
@@ -107,7 +107,7 @@
         </div>
 
         <!-- Result Message Toast -->
-        <div id="captureResult"></div>
+        <div id="captureResult" aria-live="polite" role="status"></div>
 
         <!-- Silent Quality Checks (Hidden from UI, runs in background) -->
         <div class="checklist-container" id="checklistContainer" style="display:none !important;" aria-hidden="true">

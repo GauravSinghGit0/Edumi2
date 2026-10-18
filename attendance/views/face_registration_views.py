@@ -15,6 +15,9 @@ from django.core.files.base import ContentFile
 
 from attendance.models import StudentFaceProfile
 from attendance.face_service import get_face_service
+from django.db import transaction
+from django.utils import timezone
+from accounts.identity import IdentityService
 
 logger = logging.getLogger('attendance')
 
@@ -27,23 +30,7 @@ def _get_client_ip(request):
 
 
 def sync_profile_details(u_profile):
-    modified = False
-    if not u_profile.roll_number and u_profile.student_id:
-        u_profile.roll_number = u_profile.student_id
-        modified = True
-    elif not u_profile.student_id and u_profile.roll_number:
-        u_profile.student_id = u_profile.roll_number
-        modified = True
-
-    if not u_profile.contact_number and u_profile.phone:
-        u_profile.contact_number = u_profile.phone
-        modified = True
-    elif not u_profile.phone and u_profile.contact_number:
-        u_profile.phone = u_profile.contact_number
-        modified = True
-
-    if modified:
-        u_profile.save()
+    """Profile details are unified via UserProfile canonical SSOT properties."""
     return u_profile
 
 
@@ -78,13 +65,9 @@ def upload_face_photo(request):
         return redirect('face_setup')
 
     u_profile = sync_profile_details(request.user.userprofile)
-    roll = request.POST.get('roll_number') or u_profile.roll_number
-    branch = request.POST.get('branch') or u_profile.branch
+    roll = request.POST.get('roll_number') or u_profile.roll_number or getattr(request.user, 'username', 'STUDENT')
+    branch = request.POST.get('branch') or u_profile.branch or 'GENERAL'
     contact = request.POST.get('contact_number') or u_profile.contact_number
-
-    if not all([roll, branch]):
-        messages.error(request, 'Student details (Roll, Branch) are missing. Please complete your profile.')
-        return redirect('face_setup')
 
     u_profile.roll_number = roll
     u_profile.branch = branch
@@ -93,17 +76,23 @@ def upload_face_photo(request):
         u_profile.phone = contact
     u_profile.save()
 
-    encrypted, checksum = svc.prepare_for_storage(result['embedding'])
-    photo_file = ContentFile(image_bytes, name=f"{request.user.username}_face.jpg")
+    algo = result.get('algo') or 'sface_128d'
+    encrypted, checksum = svc.prepare_for_storage(result['embedding'], algo=algo)
 
     StudentFaceProfile.objects.update_or_create(
         student=request.user,
         defaults={
             'face_embedding_encrypted': encrypted, 'embedding_checksum': checksum,
             'face_quality_score': result['quality'], 'is_active': True,
-            'registration_ip': _get_client_ip(request), 'face_photo': photo_file,
+            'consent_version': 'v1.0',
+            'consent_at': timezone.now(),
+            'enrolled_at': timezone.now(),
+            'registration_ip': _get_client_ip(request),
         }
     )
+    user_id = request.user.id
+    transaction.on_commit(lambda: IdentityService.invalidate_identity_cache(user_id))
+
     messages.success(request, "✅ Face registered successfully!")
     return redirect('face_setup')
 
@@ -111,52 +100,53 @@ def upload_face_photo(request):
 @login_required
 @require_POST
 def capture_face_photo(request):
-    """Handle camera-captured base64 frame (or burst of frames) for face registration."""
+    """Handle camera-captured base64 frame for instant government/enterprise-grade face registration."""
     try:
         body = json.loads(request.body)
         frames = body.get('frames_b64') or []
         single_frame = body.get('frame_b64', '')
         if single_frame and single_frame not in frames:
-            frames.append(single_frame)
+            frames.insert(0, single_frame)
 
         u_profile = sync_profile_details(request.user.userprofile)
-        roll = body.get('roll_number') or u_profile.roll_number
-        branch = body.get('branch') or u_profile.branch
+        roll = body.get('roll_number') or u_profile.roll_number or getattr(request.user, 'username', 'STUDENT')
+        branch = body.get('branch') or u_profile.branch or 'GENERAL'
         contact = body.get('contact_number') or u_profile.contact_number
 
         if not frames:
             return JsonResponse({'status': 'error', 'message': 'No frame data received.'}, status=400)
-        if not all([roll, branch]):
-            return JsonResponse({'status': 'error', 'message': 'Student details are missing. Please complete your profile first.'}, status=400)
 
         svc = get_face_service()
-        best_result = None
-        best_bytes = None
-        best_quality = -1.0
+        final_embedding = None
+        final_quality = 0.0
+        final_algo = 'sface_128d'
+        error_msg = None
 
-        # Evaluate frames in burst to keep the best one (Requirement 5)
-        for frame_raw in frames:
+        # Fast-path: extract embedding from the primary frame; if high quality, return immediately!
+        for frame_raw in frames[:3]:
             if not frame_raw:
                 continue
             b64_str = frame_raw.split(',', 1)[1] if ',' in frame_raw else frame_raw
-            img_bytes = base64.b64decode(b64_str)
-            res = svc.extract_embedding(img_bytes)
-            if res.get('status') == 'success':
-                q = float(res.get('quality', 0.0))
-                if q > best_quality:
-                    best_quality = q
-                    best_result = res
-                    best_bytes = img_bytes
+            try:
+                img_bytes = base64.b64decode(b64_str)
+            except Exception:
+                continue
 
-        # If none succeeded, fallback to first frame error
-        if not best_result:
-            first_raw = frames[0]
-            b64_str = first_raw.split(',', 1)[1] if ',' in first_raw else first_raw
-            first_bytes = base64.b64decode(b64_str)
-            best_result = svc.extract_embedding(first_bytes)
-            if best_result.get('status') != 'success':
-                return JsonResponse({'status': 'error', 'message': best_result.get('message', 'Face registration failed.')})
-            best_bytes = first_bytes
+            res = svc.extract_embedding(img_bytes, live=False)
+            if res.get('status') == 'success':
+                final_embedding = res['embedding']
+                final_quality = float(res.get('quality', 0.8))
+                final_algo = res.get('algo') or 'sface_128d'
+                # Immediate exit if quality is solid
+                if final_quality >= 0.15:
+                    break
+            elif res.get('status') in ('multiple_faces', 'poor_quality', 'mask_detected', 'sunglasses_detected', 'glasses_detected', 'busy_background', 'poor_lighting'):
+                error_msg = res.get('message')
+                break
+
+        if not final_embedding:
+            msg = error_msg or 'No clear single face detected in captured frame. Please center your face and try again.'
+            return JsonResponse({'status': 'error', 'message': msg})
 
         u_profile.roll_number = roll
         u_profile.branch = branch
@@ -165,19 +155,24 @@ def capture_face_photo(request):
             u_profile.phone = contact
         u_profile.save()
 
-        encrypted, checksum = svc.prepare_for_storage(best_result['embedding'])
-        photo_file = ContentFile(best_bytes, name=f"{request.user.username}_face.jpg")
+        encrypted, checksum = svc.prepare_for_storage(final_embedding, algo=final_algo)
         StudentFaceProfile.objects.update_or_create(
             student=request.user,
             defaults={
                 'face_embedding_encrypted': encrypted, 'embedding_checksum': checksum,
-                'face_quality_score': best_result.get('quality', 0.0), 'is_active': True,
-                'registration_ip': _get_client_ip(request), 'face_photo': photo_file,
+                'face_quality_score': final_quality, 'is_active': True,
+                'consent_version': 'v1.0',
+                'consent_at': timezone.now(),
+                'enrolled_at': timezone.now(),
+                'registration_ip': _get_client_ip(request),
             }
         )
+        user_id = request.user.id
+        transaction.on_commit(lambda: IdentityService.invalidate_identity_cache(user_id))
+
         return JsonResponse({
             'status': 'success',
-            'quality': best_result.get('quality', 0.0),
+            'quality': final_quality,
             'message': '✅ Face registered successfully!'
         })
     except Exception as exc:
@@ -220,7 +215,7 @@ def detect_face(request):
     if not lighting_ok:
         return JsonResponse({
             'status': 'too_dark',
-            'message': 'Find better lighting',
+            'message': 'Low lighting — increase room light',
             'state': 'red',
             'checks': {'face': False, 'lighting': False, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
         })
@@ -236,7 +231,7 @@ def detect_face(request):
     if len(faces) == 0:
         return JsonResponse({
             'status': 'no_face',
-            'message': 'Position your face inside the circle',
+            'message': 'Center face in frame',
             'state': 'red',
             'checks': {'face': False, 'lighting': lighting_ok, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
         })
@@ -244,7 +239,7 @@ def detect_face(request):
     if len(faces) > 1:
         return JsonResponse({
             'status': 'multiple_faces',
-            'message': 'Only one person should be visible',
+            'message': 'Multiple faces — single face required',
             'state': 'red',
             'checks': {'face': False, 'lighting': lighting_ok, 'center': False, 'pose': False, 'straight': False, 'eyes': False}
         })
@@ -272,7 +267,7 @@ def detect_face(request):
     if too_big:
         return JsonResponse({
             'status': 'too_big',
-            'message': 'Move back a little',
+            'message': 'Move back',
             'state': 'yellow',
             'checks': {'face': True, 'lighting': lighting_ok, 'center': False, 'pose': True, 'straight': True, 'eyes': True}
         })
@@ -280,7 +275,7 @@ def detect_face(request):
     if not centered_ok:
         return JsonResponse({
             'status': 'not_centered',
-            'message': 'Center your face in the circle',
+            'message': 'Center face in frame',
             'state': 'yellow',
             'checks': {'face': True, 'lighting': lighting_ok, 'center': False, 'pose': True, 'straight': True, 'eyes': True}
         })
@@ -288,7 +283,7 @@ def detect_face(request):
     if not blur_ok:
         return JsonResponse({
             'status': 'blurry',
-            'message': 'Hold still',
+            'message': 'Hold steady',
             'state': 'yellow',
             'checks': {'face': True, 'lighting': lighting_ok, 'center': True, 'pose': True, 'straight': True, 'eyes': False}
         })
@@ -302,7 +297,7 @@ def detect_face(request):
     if not eyes_ok:
         return JsonResponse({
             'status': 'eyes_closed_or_masked',
-            'message': 'Open your eyes or remove mask / glasses',
+            'message': 'Face covered — remove mask or glasses',
             'state': 'yellow',
             'checks': {'face': True, 'lighting': lighting_ok, 'center': True, 'pose': True, 'straight': True, 'eyes': False}
         })
@@ -314,7 +309,7 @@ def detect_face(request):
 
     return JsonResponse({
         'status': 'success',
-        'message': '✨ Perfect! Hold still...',
+        'message': 'Perfect — hold steady',
         'state': 'green',
         'quality': quality,
         'checks': {'face': True, 'lighting': True, 'center': True, 'pose': True, 'straight': True, 'eyes': True}

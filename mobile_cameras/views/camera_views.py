@@ -88,8 +88,12 @@ def mobile_camera_feed(request, mobile_camera_id):
     if query_params:
         feed_url += f'?{query_params}'
 
+    headers = {
+        'X-Camera-Service-Secret': getattr(settings, 'CAMERA_SERVICE_SECRET', ''),
+    }
+
     try:
-        upstream = req_lib.get(feed_url, stream=True, timeout=10, verify=False)
+        upstream = req_lib.get(feed_url, headers=headers, stream=True, timeout=10, verify=False)
         content_type = upstream.headers.get('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
 
         def stream():

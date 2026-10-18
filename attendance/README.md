@@ -19,18 +19,20 @@ Separated from `meetings` to encapsulate heavy data processing (face encoding, L
 </details>
 
 <details>
-<summary><b>4. System Integrations</b></summary>
-- **External/AI**: Integrates with the `camera_service` which runs OpenCV and `face_recognition`.
-- **Database**: Reads/Writes to `database/media/face_photos/` for reference images.
+<summary><b>4. System Integrations & Biometric Security</b></summary>
+- **Zero Raw Photo Retention**: Raw student face photos are never written to disk. Only mathematically extracted 128-d biometric embeddings and quality scores are retained.
+- **Biometric Encryption**: Encrypted at rest using Fernet authenticated cryptography (`AES-128-CBC` with `HMAC-SHA256` integrity and SHA-256 verification checksums).
+- **Matching Semantics**: Uses Max Euclidean Distance thresholding (`distance <= threshold`, default 0.55 or per-classroom `AttendanceSettings.confidence_threshold`). Displayed confidence is mapped as `max(0, min(1, 1 - distance / 0.8))`.
+- **External/AI**: Integrates with OpenCV and `face_recognition` (dlib 128-d ResNet model).
 - **Celery**: Dispatches long-running engagement aggregation tasks to background workers.
 </details>
 
 <details>
 <summary><b>5. Key Files Breakdown</b></summary>
 
-- `models.py`: Contains `StudentFaceProfile` (encrypted face encodings), `AttendanceRecord`, and `StudentEngagementSnapshot`.
-- `face_service.py`: Core logic for extracting 128-d face embeddings and calculating similarity thresholds.
-- `encryption_service.py`: Uses Fernet symmetric encryption to secure biometric data at rest.
+- `models.py`: Contains `StudentFaceProfile` (encrypted face encodings), `AttendanceRecord`, `AttendanceSettings`, and `StudentEngagementSnapshot`.
+- `face_service.py`: Core logic for extracting 128-d face embeddings, face ROI sizing (min 80x80 px), and calculating Euclidean distance thresholds.
+- `encryption_service.py`: Uses Fernet symmetric authenticated encryption (`AES-128-CBC` + `HMAC-SHA256`) to secure biometric data at rest.
 - `tasks.py`: Celery tasks for calculating daily attendance aggregates from raw event logs.
 - `face_tracking_consumer.py`: WebSocket endpoint for receiving real-time face detection coordinates from the client/camera service.
 </details>

@@ -20,12 +20,14 @@ def classroom_quizzes(request, classroom_id):
     """View quizzes for a classroom (both teacher and student)"""
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
-    is_teacher = (
+    is_admin = bool(request.user.is_superuser or getattr(request.user, 'is_staff', False) or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin'))
+    is_teacher = is_admin or (
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'teacher' and 
         classroom.teacher == request.user
     )
     is_student = (
+        not is_admin and
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'student' and
         classroom.memberships.filter(student=request.user, status='approved').exists()
@@ -499,15 +501,24 @@ def take_quiz(request, quiz_id):
         messages.warning(request, 'You have already submitted this quiz')
         return redirect('quiz_detail', quiz_id=quiz_id)
 
-    # ── Record when the student first opens the quiz ──────────────────────────
-    session_key = f'quiz_{quiz_id}_started_at'
-    if session_key not in request.session:
-        request.session[session_key] = timezone.now().isoformat()
+    # ── Record when the student first opens the quiz (Server-side Cache + Session) ──
+    from django.core.cache import cache
+    from django.db import transaction
 
-    try:
-        started_at = timezone.datetime.fromisoformat(request.session[session_key])
-    except Exception:
-        started_at = timezone.now()
+    cache_start_key = f"quiz_attempt_{quiz_id}_{request.user.id}_start"
+    started_at = cache.get(cache_start_key)
+
+    session_key = f'quiz_{quiz_id}_started_at'
+    if not started_at:
+        session_val = request.session.get(session_key)
+        if session_val:
+            try:
+                started_at = timezone.datetime.fromisoformat(session_val)
+            except Exception:
+                started_at = timezone.now()
+        else:
+            started_at = timezone.now()
+        cache.set(cache_start_key, started_at, 86400)
         request.session[session_key] = started_at.isoformat()
 
     if timezone.is_naive(started_at):
@@ -520,57 +531,70 @@ def take_quiz(request, quiz_id):
         seconds_remaining = max(0, quiz.time_limit * 60 - elapsed)
 
     if request.method == 'POST':
-        # Prevent double submission
-        if QuizSubmission.objects.filter(quiz=quiz, student=request.user).exists():
-            return redirect('quiz_detail', quiz_id=quiz_id)
+        with transaction.atomic():
+            # Prevent double submission under concurrency
+            if QuizSubmission.objects.filter(quiz=quiz, student=request.user).exists():
+                return redirect('quiz_detail', quiz_id=quiz_id)
 
-        time_taken = int((timezone.now() - started_at).total_seconds())
+            time_taken = int((timezone.now() - started_at).total_seconds())
 
-        submission = QuizSubmission.objects.create(
-            quiz=quiz,
-            student=request.user,
-            started_at=started_at,
-            time_taken_seconds=time_taken,
-        )
+            # Server-side time limit enforcement (with 120s network latency grace period)
+            is_overdue = False
+            feedback_notes = []
+            if quiz.time_limit:
+                max_allowed = (quiz.time_limit * 60) + 120
+                if time_taken > max_allowed:
+                    is_overdue = True
+                    over_mins = (time_taken - (quiz.time_limit * 60)) // 60
+                    feedback_notes.append(f"⚠️ Submission received {over_mins}m past the {quiz.time_limit}-minute time limit.")
 
-        questions = quiz.questions.all()
-        for question in questions:
-            if question.question_type == 'mcq':
-                choice_id = request.POST.get(f'question_{question.id}')
-                selected_choice = Choice.objects.filter(id=choice_id, question=question).first()
-                StudentAnswer.objects.create(
-                    submission=submission,
-                    question=question,
-                    selected_choice=selected_choice
-                )
-            elif question.question_type == 'text':
-                text_answer = request.POST.get(f'question_{question.id}', '')
-                StudentAnswer.objects.create(
-                    submission=submission,
-                    question=question,
-                    text_answer=text_answer
-                )
+            submission = QuizSubmission.objects.create(
+                quiz=quiz,
+                student=request.user,
+                started_at=started_at,
+                time_taken_seconds=time_taken,
+                feedback=" ".join(feedback_notes),
+            )
 
-        # Auto-grade MCQ questions
-        total = 0
-        all_graded = True
-        for answer in submission.answers.select_related('question', 'selected_choice'):
-            if answer.question.question_type == 'mcq':
-                pts = answer.question.marks if (answer.selected_choice and answer.selected_choice.is_correct) else 0
-                answer.marks_obtained = pts
-                total += pts
-                answer.save()
-            else:
-                all_graded = False  # text answers need manual grading
+            questions = quiz.questions.all()
+            for question in questions:
+                if question.question_type == 'mcq':
+                    choice_id = request.POST.get(f'question_{question.id}')
+                    selected_choice = Choice.objects.filter(id=choice_id, question=question).first()
+                    StudentAnswer.objects.create(
+                        submission=submission,
+                        question=question,
+                        selected_choice=selected_choice
+                    )
+                elif question.question_type == 'text':
+                    text_answer = request.POST.get(f'question_{question.id}', '')
+                    StudentAnswer.objects.create(
+                        submission=submission,
+                        question=question,
+                        text_answer=text_answer
+                    )
 
-        if all_graded:
-            submission.marks_obtained = total
-            submission.evaluated_at = timezone.now()
-            submission.evaluated_by = None  # auto-graded
-            submission.save()
+            # Auto-grade MCQ questions
+            total = 0
+            all_graded = True
+            for answer in submission.answers.select_related('question', 'selected_choice'):
+                if answer.question.question_type == 'mcq':
+                    pts = answer.question.marks if (answer.selected_choice and answer.selected_choice.is_correct) else 0
+                    answer.marks_obtained = pts
+                    total += pts
+                    answer.save()
+                else:
+                    all_graded = False  # text answers need manual grading
 
-        # Clean session key
+            if all_graded:
+                submission.marks_obtained = total
+                submission.evaluated_at = timezone.now()
+                submission.evaluated_by = None  # auto-graded
+                submission.save()
+
+        # Clean session key & start cache
         request.session.pop(session_key, None)
+        cache.delete(cache_start_key)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'status': 'ok', 'redirect': f'/assignments/quizzes/{quiz_id}/'})
@@ -594,15 +618,19 @@ def quiz_time_status(request, quiz_id):
     if not quiz.time_limit:
         return JsonResponse({'has_timer': False})
 
-    session_key = f'quiz_{quiz_id}_started_at'
-    started_str = request.session.get(session_key)
-    if not started_str:
-        return JsonResponse({'has_timer': False})
+    from django.core.cache import cache
+    cache_start_key = f"quiz_attempt_{quiz_id}_{request.user.id}_start"
+    started_at = cache.get(cache_start_key)
 
-    try:
-        started_at = timezone.datetime.fromisoformat(started_str)
-    except Exception:
-        return JsonResponse({'has_timer': False})
+    if not started_at:
+        session_key = f'quiz_{quiz_id}_started_at'
+        started_str = request.session.get(session_key)
+        if not started_str:
+            return JsonResponse({'has_timer': False})
+        try:
+            started_at = timezone.datetime.fromisoformat(started_str)
+        except Exception:
+            return JsonResponse({'has_timer': False})
 
     if timezone.is_naive(started_at):
         started_at = timezone.make_aware(started_at)

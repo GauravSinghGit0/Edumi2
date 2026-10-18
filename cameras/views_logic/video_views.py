@@ -472,7 +472,7 @@ def edit_recording(request, recording_id):
             try:
                 os.remove(temp_video_path)
                 os.remove(mp4_path)
-            except:
+            except Exception:
                 pass
         else:
             if not recording.video_file or not os.path.exists(recording.video_file.path):
@@ -492,8 +492,10 @@ def edit_recording(request, recording_id):
                 subprocess.run(cmd, capture_output=True, check=True)
                 with open(mp4_path, 'rb') as f:
                     project.original_file.save(f"{uuid.uuid4().hex}.mp4", File(f), save=False)
-                try: os.remove(mp4_path)
-                except: pass
+                try:
+                    os.remove(mp4_path)
+                except Exception:
+                    pass
             else:
                 with open(file_path, 'rb') as f:
                     filename = os.path.basename(file_path)

@@ -162,7 +162,7 @@ def join_classroom_request(request):
         # Create new membership
         if classroom.auto_approve:
             # Instant Auto-Join (like Google Classroom)
-            membership = ClassroomMembership.objects.create(
+            ClassroomMembership.objects.create(
                 classroom=classroom,
                 student=request.user,
                 status='approved',

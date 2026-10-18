@@ -65,5 +65,6 @@ def process_recording_task(recording_id):
             rec = CameraRecording.objects.get(id=recording_id)
             rec.recording_status = 'failed'
             rec.save()
-        except: pass
+        except Exception:
+            pass
         return False

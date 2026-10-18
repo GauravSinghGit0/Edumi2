@@ -198,7 +198,10 @@ def admin_edit_user(request, user_id):
 
 @login_required
 def delete_user(request, user_id):
-    """Delete a user account and clean up related objects."""
+    """
+    Safely deactivate/soft-delete a user account while preserving historical
+    academic records (attendance, submissions, classroom materials, audit trails).
+    """
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
 
     if not check_admin(request.user):
@@ -217,26 +220,25 @@ def delete_user(request, user_id):
     try:
         username = user.username
         with transaction.atomic():
-            ClassroomMembership.objects.filter(student=user).delete()
-            ClassroomMembership.objects.filter(approved_by=user).update(approved_by=None)
-            CameraRecording.objects.filter(teacher=user).delete()
-            CameraPermission.objects.filter(teacher=user).delete()
-            Meeting.objects.filter(teacher=user).delete()
-            Classroom.objects.filter(teacher=user).delete()
-            from accounts.messaging_models import Conversation
-            Conversation.objects.filter(classroom__isnull=True, participants=user).delete()
-            user.delete()
+            user.is_active = False
+            user.save(update_fields=['is_active'])
+            if hasattr(user, 'userprofile'):
+                user.userprofile.soft_delete()
+
+            # Invalidate session cache
+            from accounts.identity import IdentityService
+            IdentityService.invalidate_identity_cache(user.id)
 
         if is_ajax:
-            return JsonResponse({'status': 'success', 'message': f'User @{username} deleted successfully.'})
+            return JsonResponse({'status': 'success', 'message': f'User @{username} deactivated and archived successfully.'})
 
-        messages.success(request, f"User @{username} has been permanently deleted.")
+        messages.success(request, f"User @{username} has been safely deactivated and archived.")
         return redirect('user_management')
     except Exception as e:
-        logger.error(f"Failed to delete user {user_id}: {e}")
+        logger.error(f"Failed to deactivate user {user_id}: {e}")
         if is_ajax:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-        messages.error(request, f"Failed to delete user: {e}")
+        messages.error(request, f"Failed to deactivate user: {e}")
         return redirect('user_management')
 
 
@@ -254,6 +256,8 @@ def architecture_view(request):
 # =========================================================
 import csv
 import uuid
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 @login_required
 @require_POST
@@ -264,7 +268,7 @@ def admin_create_user(request):
         return redirect('admin_panel')
 
     username = request.POST.get('username', '').strip()
-    email = request.POST.get('email', '').strip()
+    email = request.POST.get('email', '').strip().lower()
     password = request.POST.get('password', '').strip()
     first_name = request.POST.get('first_name', '').strip()
     last_name = request.POST.get('last_name', '').strip()
@@ -275,9 +279,19 @@ def admin_create_user(request):
         messages.error(request, "Username and password are required.")
         return redirect('user_management')
 
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(username__iexact=username).exists():
         messages.error(request, f"Username @{username} is already taken.")
         return redirect('user_management')
+
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, "Please enter a valid email address.")
+            return redirect('user_management')
+        if User.objects.filter(email__iexact=email).exists():
+            messages.error(request, f"An account with email '{email}' already exists.")
+            return redirect('user_management')
 
     try:
         with transaction.atomic():

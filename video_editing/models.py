@@ -19,6 +19,24 @@ def project_upload_path(instance, filename):
     return f"videos/{owner_id}/{new_name}"
 
 
+def _format_display_duration(duration_seconds):
+    """Format duration in seconds into H:MM:SS.ms or M:SS.ms string."""
+    if not duration_seconds:
+        return ""
+    secs = duration_seconds
+    h = int(secs // 3600)
+    m = int((secs % 3600) // 60)
+    s = int(secs % 60)
+    ms = int(round((secs % 1) * 10))
+    if h > 0:
+        time_str = f"{h}:{m:02d}:{s:02d}"
+    else:
+        time_str = f"{m}:{s:02d}"
+    if ms > 0:
+        time_str += f".{ms}"
+    return time_str
+
+
 class VideoProject(models.Model):
     """
     A VideoProject wraps a single working video plus its metadata.
@@ -114,20 +132,7 @@ class VideoProject(models.Model):
 
     @property
     def display_duration(self):
-        if not self.duration_seconds:
-            return ""
-        secs = self.duration_seconds
-        h = int(secs // 3600)
-        m = int((secs % 3600) // 60)
-        s = int(secs % 60)
-        ms = int(round((secs % 1) * 10))
-        if h > 0:
-            time_str = f"{h}:{m:02d}:{s:02d}"
-        else:
-            time_str = f"{m}:{s:02d}"
-        if ms > 0:
-            time_str += f".{ms}"
-        return time_str
+        return _format_display_duration(self.duration_seconds)
 
     @property
     def working_file(self):
@@ -183,20 +188,7 @@ class ProjectAsset(models.Model):
 
     @property
     def display_duration(self):
-        if not self.duration_seconds:
-            return ""
-        secs = self.duration_seconds
-        h = int(secs // 3600)
-        m = int((secs % 3600) // 60)
-        s = int(secs % 60)
-        ms = int(round((secs % 1) * 10))
-        if h > 0:
-            time_str = f"{h}:{m:02d}:{s:02d}"
-        else:
-            time_str = f"{m}:{s:02d}"
-        if ms > 0:
-            time_str += f".{ms}"
-        return time_str
+        return _format_display_duration(self.duration_seconds)
 
 
 class EditOperation(models.Model):

@@ -34,12 +34,14 @@ def classroom_assignments(request, classroom_id):
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
     # Check access
-    is_teacher = (
+    is_admin = bool(request.user.is_superuser or getattr(request.user, 'is_staff', False) or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin'))
+    is_teacher = is_admin or (
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'teacher' and 
         classroom.teacher == request.user
     )
     is_student = (
+        not is_admin and
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'student' and
         classroom.memberships.filter(student=request.user, status='approved').exists()
@@ -72,8 +74,11 @@ def create_assignment(request, classroom_id):
     """Teacher creates a new assignment for a classroom"""
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
-    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher' or classroom.teacher != request.user:
-        messages.error(request, 'Only the classroom teacher can create assignments')
+    is_admin = bool(request.user.is_superuser or getattr(request.user, 'is_staff', False) or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin'))
+    is_teacher = is_admin or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher' and classroom.teacher == request.user)
+
+    if not is_teacher:
+        messages.error(request, 'Only the classroom teacher or administrator can create assignments')
         return redirect('teacher_classrooms')
     
     if request.method == 'POST':

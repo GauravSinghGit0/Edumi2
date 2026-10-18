@@ -15,7 +15,7 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U edumi_user"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edumi_user} -d ${POSTGRES_DB:-edumi_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -95,6 +95,8 @@ services:
     restart: unless-stopped
     command: ["daphne", "-b", "0.0.0.0", "-p", "8004", "school_project.asgi:application"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
     depends_on:
       db:
         condition: service_healthy
@@ -111,6 +113,8 @@ services:
     restart: unless-stopped
     command: ["python", "camera_service/serve.py"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
     depends_on:
       db:
         condition: service_healthy
@@ -143,6 +147,8 @@ services:
     restart: unless-stopped
     command: ["daphne", "-b", "0.0.0.0", "-p", "8006", "school_project.asgi:application"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
     depends_on:
       db:
         condition: service_healthy
@@ -159,29 +165,12 @@ services:
     restart: unless-stopped
     command: ["daphne", "-b", "0.0.0.0", "-p", "8007", "school_project.asgi:application"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
-
-
-  live_stream:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_live_stream
-    restart: unless-stopped
-    command: ["python", "live_stream/run_stream.py"]
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      livekit:
         condition: service_started
 
   # -------------------------------------------------
@@ -197,6 +186,8 @@ services:
     restart: unless-stopped
     command: ["celery", "-A", "school_project", "worker", "-l", "info", "-P", "threads"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
     depends_on:
       db:
         condition: service_healthy
@@ -217,7 +208,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certs:/etc/nginx/certs:ro
       - ./staticfiles:/app/staticfiles:ro
-      - ./media:/app/media:ro
+      - ./database/media:/app/database/media:ro
     depends_on:
       - auth
       - admin
@@ -226,5 +217,4 @@ services:
       - msg
       - profile
       - video
-      - live_stream
 

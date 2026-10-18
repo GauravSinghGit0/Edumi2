@@ -43,8 +43,8 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         self.user         = self.scope.get('user')
         self.meeting_code = self.scope['url_route']['kwargs']['meeting_code']
 
-        if not self.user or not self.user.is_authenticated:
-            await self.close()
+        if not self.user or not self.user.is_authenticated or not getattr(self.user, 'is_active', True):
+            await self.close(code=4003)
             return
 
         # Only the meeting host (teacher) or admin may connect
@@ -57,8 +57,9 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         try:
-            # Load all registered embeddings for this meeting's classroom
+            # Load all registered embeddings and match threshold for this meeting's classroom
             self._embeddings = await self._load_all_embeddings()
+            self._match_threshold = await self._get_match_threshold()
             self._frame_count = defaultdict(int)   # per student_id frame counter
 
             await self.send(json.dumps({
@@ -150,98 +151,103 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
 
     def _process_frame(self, frame_bytes: bytes, hint_student_id=None) -> dict:
         """
-        Detect faces, match to DB, estimate emotion.
-        Returns overlay data for the client.
+        Detect faces, match against enrolled students, estimate attention.
+        Returns visual overlay tracking data for the client.
+        Uses 100% Apache 2.0 compliant YuNet + SFace.
         """
         try:
-            import numpy as np
-            from PIL import Image
             import io
             import cv2
+            import numpy as np
+            from PIL import Image
+            from .face_service import get_face_service
 
+            svc = get_face_service()
             pil_img = Image.open(io.BytesIO(frame_bytes)).convert('RGB')
-            np_img  = np.array(pil_img)
-            
-            # ── Low-light enhancement ─────────────────────
-            try:
-                avg_brightness = np.mean(np_img)
-                if avg_brightness < 65:
-                    lab = cv2.cvtColor(np_img, cv2.COLOR_RGB2LAB)
-                    l, a, b = cv2.split(lab)
-                    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-                    cl = clahe.apply(l)
-                    limg = cv2.merge((cl, a, b))
-                    np_img = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
-            except Exception as e:
-                logger.warning(f"Low-light enhancement inline failed: {e}")
+            np_img = np.array(pil_img)
 
-            h, w    = np_img.shape[:2]
+            # Low-light enhancement via shared FaceService
+            np_img = svc._enhance_low_light(np_img)
+            bgr_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
+            h, w = bgr_img.shape[:2]
 
             face_locations = []
-            try:
-                import face_recognition
-                face_locations = face_recognition.face_locations(np_img, model='hog')
-            except Exception:
-                # Fallback to OpenCV
+            encodings = []
+            face_landmarks_list = []
+
+            # 1. Detect faces using YuNet (Apache 2.0)
+            if svc._models_loaded and svc._detector is not None and svc._recognizer is not None:
+                try:
+                    with svc._model_lock:
+                        svc._detector.setInputSize((w, h))
+                        _, detected_faces = svc._detector.detect(bgr_img)
+
+                    if detected_faces is not None and len(detected_faces) > 0:
+                        for face_data in detected_faces:
+                            fx, fy, fw, fh = int(face_data[0]), int(face_data[1]), int(face_data[2]), int(face_data[3])
+                            top = max(0, fy)
+                            left = max(0, fx)
+                            bottom = min(h, fy + fh)
+                            right = min(w, fx + fw)
+                            face_locations.append((top, right, bottom, left))
+
+                            # 5 Landmarks: right eye, left eye, nose, right mouth, left mouth
+                            landmarks = [
+                                (float(face_data[4]), float(face_data[5])),
+                                (float(face_data[6]), float(face_data[7])),
+                                (float(face_data[8]), float(face_data[9])),
+                                (float(face_data[10]), float(face_data[11])),
+                                (float(face_data[12]), float(face_data[13])),
+                            ]
+                            face_landmarks_list.append(landmarks)
+
+                            with svc._model_lock:
+                                aligned = svc._recognizer.alignCrop(bgr_img, face_data)
+                                feat = svc._recognizer.feature(aligned)
+                            if feat is not None and len(feat) > 0:
+                                encodings.append(feat[0].tolist())
+                            else:
+                                encodings.append([0.0] * 128)
+                except Exception as e:
+                    logger.warning(f"YuNet/SFace detection failed in tracking consumer: {e}")
+
+            # Fallback to Haar cascade if YuNet is offline
+            if not face_locations:
                 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-                gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
+                gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
                 faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-                face_locations = [(y, x + w, y + h, x) for (x, y, w, h) in faces]
+                for (x, y, fw, fh) in faces:
+                    face_locations.append((y, x + fw, y + fh, x))
+                    encodings.append([0.0] * 128)
+                    face_landmarks_list.append(None)
 
             if not face_locations:
                 return {
                     'face_visible': False,
-                    'faces':        [],
-                    'emotion':      'absent',
+                    'faces': [],
+                    'emotion': 'absent',
                     'emotion_label': '📵 Not Visible',
                     'matched_user_id': None,
-                    'matched_name':    'Unknown',
-                    'confidence':      0.0,
+                    'matched_name': 'Unknown',
+                    'confidence': 0.0,
                 }
 
-            # Encode all detected faces
-            encodings = []
-            try:
-                import face_recognition
-                encodings = face_recognition.face_encodings(
-                    np_img, face_locations, num_jitters=1, model='large'
-                )
-            except (ImportError, Exception):
-                # Robust Fallback for each face
-                gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
-                for (top, right, bottom, left) in face_locations:
-                    try:
-                        face_crop = gray[max(0,top):min(h,bottom), max(0,left):min(w,right)]
-                        if face_crop.size == 0:
-                            encodings.append([0.0]*128)
-                            continue
-                            
-                        # Normalize lighting
-                        face_norm = cv2.equalizeHist(face_crop)
-                        
-                        # Grayscale features
-                        g_feat = cv2.resize(face_norm, (8, 8)).flatten() / 255.0
-                        
-                        # Edge features
-                        sobelx = cv2.Sobel(face_norm, cv2.CV_64F, 1, 0, ksize=3)
-                        sobely = cv2.Sobel(face_norm, cv2.CV_64F, 0, 1, ksize=3)
-                        mag = cv2.magnitude(sobelx, sobely)
-                        e_feat = cv2.resize(mag, (8, 8)).flatten()
-                        e_feat = e_feat / (np.max(e_feat) + 1e-6)
-                        
-                        encodings.append(np.concatenate([g_feat, e_feat]).tolist())
-                    except Exception as e:
-                        logger.warning(f"Face crop processing failed: {e}")
-                        encodings.append([0.0]*128)
+            # Pre-compute normalized matrix of stored student embeddings once
+            stored_normed = None
+            if self._embeddings:
+                stored_mat = np.array([e['vec'] for e in self._embeddings], dtype=np.float32)
+                norms = np.linalg.norm(stored_mat, axis=1, keepdims=True) + 1e-8
+                stored_normed = stored_mat / norms
 
             faces_out = []
-            best_match_uid  = None
+            best_match_uid = None
             best_match_name = 'Unknown'
             best_confidence = 0.0
-            best_emotion    = 'unknown'
+            best_emotion = 'unknown'
+            threshold = getattr(self, '_match_threshold', 0.55)
 
-            for (top, right, bottom, left), enc in zip(face_locations, encodings):
-                # Normalise bounding box to 0-1
+            for idx, (loc, enc) in enumerate(zip(face_locations, encodings)):
+                top, right, bottom, left = loc
                 box = {
                     'x': round(left / w, 4),
                     'y': round(top / h, 4),
@@ -249,164 +255,92 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
                     'h': round((bottom - top) / h, 4),
                 }
 
-                # Match against all registered embeddings
-                matched_uid  = None
+                matched_uid = None
                 matched_name = 'Unknown'
-                confidence   = 0.0
+                confidence = 0.0
 
-                if self._embeddings:
-                    stored_vecs = np.array([e['vec'] for e in self._embeddings])
-                    enc_vec = np.array(enc)
-                    
-                    try:
-                        import face_recognition
-                        distances = face_recognition.face_distance(stored_vecs, enc_vec)
-                    except (ImportError, Exception):
-                        # Fallback Euclidean distance with normalization
-                        raw_dists = np.linalg.norm(stored_vecs - enc_vec, axis=1)
-                        # Normalize to 0-1 range compatible with threshold
-                        distances = np.clip(raw_dists / 7.5, 0, 1)
+                # Vectorized matching across all stored embeddings
+                if stored_normed is not None and len(stored_normed) > 0:
+                    enc_vec = np.array(enc, dtype=np.float32)
+                    enc_norm = enc_vec / (np.linalg.norm(enc_vec) + 1e-8)
+                    sims = np.dot(stored_normed, enc_norm)
+                    best_idx = int(np.argmax(sims))
+                    best_sim = float(sims[best_idx])
+                    dist = max(0.0, min(1.0, 1.0 - best_sim))
+                    conf = round(max(0.0, min(1.0, best_sim)), 3)
 
-                    best_idx    = int(np.argmin(distances))
-                    best_dist   = float(distances[best_idx])
-                    conf        = round(max(0.0, 1.0 - best_dist), 3)
-
-                    if best_dist <= 0.45:   # threshold: distance ≤ 0.45 → match
-                        matched_uid  = self._embeddings[best_idx]['user_id']
+                    # Cosine similarity >= 0.363 or normalized distance <= threshold
+                    if dist <= threshold or best_sim >= 0.363:
+                        matched_uid = self._embeddings[best_idx]['user_id']
                         matched_name = self._embeddings[best_idx]['name']
-                        confidence   = conf
+                        confidence = conf
 
-                # Estimate emotion from facial landmarks
-                emotion = self._estimate_emotion(np_img, (top, right, bottom, left))
+                landmarks = face_landmarks_list[idx] if idx < len(face_landmarks_list) else None
+                emotion = self._estimate_emotion(np_img, loc, landmarks=landmarks)
 
                 faces_out.append({
-                    'box':        box,
-                    'name':       matched_name,
-                    'user_id':    matched_uid,
+                    'box': box,
+                    'name': matched_name,
+                    'user_id': matched_uid,
                     'confidence': confidence,
-                    'emotion':    emotion,
+                    'emotion': emotion,
                     'emotion_label': EMOTION_LABELS.get(emotion, '❓ Unknown'),
                 })
 
                 if confidence > best_confidence:
                     best_confidence = confidence
-                    best_match_uid  = matched_uid
+                    best_match_uid = matched_uid
                     best_match_name = matched_name
-                    best_emotion    = emotion
+                    best_emotion = emotion
 
             return {
-                'face_visible':    True,
-                'faces':           faces_out,
-                'emotion':         best_emotion,
-                'emotion_label':   EMOTION_LABELS.get(best_emotion, '❓ Unknown'),
+                'face_visible': True,
+                'faces': faces_out,
+                'emotion': best_emotion,
+                'emotion_label': EMOTION_LABELS.get(best_emotion, '❓ Unknown'),
                 'matched_user_id': best_match_uid,
-                'matched_name':    best_match_name,
-                'confidence':      best_confidence,
+                'matched_name': best_match_name,
+                'confidence': best_confidence,
             }
 
         except Exception as exc:
             logger.exception(f"Processing frame failed: {exc}")
             return {
                 'face_visible': False,
-                'faces':        [],
-                'emotion':      'error',
+                'faces': [],
+                'emotion': 'error',
                 'emotion_label': '❌ Processing Error',
                 'matched_user_id': None,
-                'matched_name':    'Error',
-                'confidence':      0.0,
+                'matched_name': 'Error',
+                'confidence': 0.0,
             }
 
-    def _estimate_emotion(self, np_img, face_location) -> str:
+    def _estimate_emotion(self, np_img, face_location, landmarks=None) -> str:
         """
-        Lightweight emotion estimation using facial landmark geometry.
-        No external emotion model needed — uses face_recognition landmarks.
+        Lightweight attention & pose estimation using YuNet landmarks geometry.
+        Self-contained, Apache 2.0 compliant (zero external models or dlib).
+        """
+        if not landmarks or len(landmarks) < 5:
+            return 'focused'
 
-        Heuristics:
-          - Mouth open wide + raised brows → happy
-          - Brows furrowed (close together) → confused
-          - Eyes looking sideways (asymmetric) → distracted
-          - Default → focused
-        """
         try:
-            import face_recognition
-            import numpy as np
+            r_eye, l_eye, nose, r_mouth, l_mouth = landmarks[:5]
+            # Eye horizontal tilt (head roll / distraction proxy)
+            eye_dy = abs(r_eye[1] - l_eye[1])
+            eye_dx = abs(r_eye[0] - l_eye[0]) + 1e-6
+            tilt_ratio = eye_dy / eye_dx
 
-            landmarks_list = face_recognition.face_landmarks(np_img, [face_location])
-            if not landmarks_list:
-                return 'unknown'
+            # Mouth width vs eye distance
+            mouth_w = abs(r_mouth[0] - l_mouth[0])
 
-            lm = landmarks_list[0]
-
-            # ── Mouth openness ──────────────────────────────
-            top_lip    = lm.get('top_lip', [])
-            bottom_lip = lm.get('bottom_lip', [])
-            if top_lip and bottom_lip:
-                top_y    = np.mean([p[1] for p in top_lip])
-                bottom_y = np.mean([p[1] for p in bottom_lip])
-                mouth_open = abs(bottom_y - top_y)
-            else:
-                mouth_open = 0
-
-            # ── Eyebrow height (relative to eye) ───────────
-            left_brow  = lm.get('left_eyebrow', [])
-            right_brow = lm.get('right_eyebrow', [])
-            left_eye   = lm.get('left_eye', [])
-            right_eye  = lm.get('right_eye', [])
-
-            brow_raise = 0
-            if left_brow and left_eye:
-                brow_y = np.mean([p[1] for p in left_brow])
-                eye_y  = np.mean([p[1] for p in left_eye])
-                brow_raise = eye_y - brow_y   # positive = brows raised
-
-            # ── Brow furrow (horizontal distance between brows) ─
-            brow_furrow = 0
-            if left_brow and right_brow:
-                left_inner  = max(left_brow,  key=lambda p: p[0])
-                right_inner = min(right_brow, key=lambda p: p[0])
-                brow_furrow = right_inner[0] - left_inner[0]
-
-            # ── Eye symmetry (distraction proxy) ───────────
-            eye_asym = 0
-            if left_eye and right_eye:
-                left_cx  = np.mean([p[0] for p in left_eye])
-                right_cx = np.mean([p[0] for p in right_eye])
-                left_cy  = np.mean([p[1] for p in left_eye])
-                right_cy = np.mean([p[1] for p in right_eye])
-                eye_asym = abs(left_cy - right_cy)
-
-            # ── Eye openness (EAR proxy) ────────────────────
-            def get_ear(eye_points):
-                if not eye_points or len(eye_points) < 6: return 1.0
-                # Roughly dist(P2,P6)+dist(P3,P5) / 2*dist(P1,P4)
-                p1, p2, p3, p4, p5, p6 = eye_points[0], eye_points[1], eye_points[2], eye_points[3], eye_points[4], eye_points[5]
-                ver1 = np.linalg.norm(np.array(p2) - np.array(p6))
-                ver2 = np.linalg.norm(np.array(p3) - np.array(p5))
-                hor  = np.linalg.norm(np.array(p1) - np.array(p4))
-                return (ver1 + ver2) / (2.0 * hor)
-
-            left_ear  = get_ear(lm.get('left_eye'))
-            right_ear = get_ear(lm.get('right_eye'))
-            avg_ear   = (left_ear + right_ear) / 2.0
-
-            # ── Decision tree ───────────────────────────────
-            face_h = face_location[2] - face_location[0]   # bottom - top
-
-            if avg_ear < 0.21:
-                return 'tired'
-            elif mouth_open > face_h * 0.25:
-                return 'surprised'
-            elif mouth_open > face_h * 0.12 and brow_raise > face_h * 0.08:
-                return 'happy'
-            elif brow_furrow < face_h * 0.15 and brow_raise < face_h * 0.04:
-                return 'confused'
-            elif eye_asym > face_h * 0.06:
+            if tilt_ratio > 0.35:
                 return 'distracted'
+            elif mouth_w > eye_dx * 0.85:
+                return 'happy'
             else:
                 return 'focused'
-
         except Exception:
-            return 'unknown'
+            return 'focused'
 
     # ── DB helpers ────────────────────────────────────────────────
 
@@ -425,7 +359,6 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         from meetings.models import Meeting
         from .models import StudentFaceProfile
         from .encryption_service import FaceEncryptionService
-        import numpy as np
 
         try:
             meeting   = Meeting.objects.select_related('classroom').get(
@@ -453,6 +386,10 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         for p in profiles:
             try:
                 vec = enc_svc.decrypt_embedding(bytes(p.face_embedding_encrypted))
+                if isinstance(vec, dict):
+                    vec = vec.get('data', [])
+                if not vec:
+                    continue
                 name = (
                     p.student.get_full_name()
                     or getattr(p.student, 'userprofile', None) and p.student.userprofile.display_name
@@ -467,6 +404,22 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
                 logger.warning(f'Could not load embedding for {p.student.username}: {exc}')
 
         return result
+
+    @database_sync_to_async
+    def _get_match_threshold(self) -> float:
+        from django.conf import settings
+        from meetings.models import Meeting
+        from .models import AttendanceSettings
+        default_th = getattr(settings, 'FACE_MATCH_THRESHOLD', 0.55)
+        try:
+            meeting = Meeting.objects.select_related('classroom').get(meeting_code=self.meeting_code)
+            if meeting.classroom:
+                att_s = AttendanceSettings.objects.filter(classroom=meeting.classroom).first()
+                if att_s:
+                    return att_s.confidence_threshold
+        except Exception:
+            pass
+        return default_th
 
     @database_sync_to_async
     def _save_snapshot(self, user_id: int, emotion: str, confidence: float, face_visible: bool):
