@@ -15,8 +15,8 @@ from django.http import (
 from django.contrib.auth.decorators import login_required
 
 
-def file_iterator(file_path, offset=0, length=None, chunk_size=524288):
-    """Memory-efficient streaming file iterator (512KB chunks)."""
+def file_iterator(file_path, offset=0, length=None, chunk_size=1048576):
+    """Memory-efficient streaming file iterator (1MB chunks). Never reads full file into memory."""
     with open(file_path, 'rb') as f:
         f.seek(offset)
         remaining = length if length is not None else os.path.getsize(file_path) - offset
@@ -40,8 +40,8 @@ def is_media_access_permitted(user, relative_path):
     """
     clean_path = relative_path.replace('\\', '/').strip('/')
 
-    # 1. Public media (avatars, thumbnails, icons, covers)
-    public_prefixes = ('avatars/', 'thumbnails/', 'icons/', 'covers/', 'profile_pictures/')
+    # 1. Public media (avatars, thumbnails, icons, covers, editor proxies & filmstrips)
+    public_prefixes = ('avatars/', 'thumbnails/', 'icons/', 'covers/', 'profile_pictures/', 'proxies/', 'filmstrip/')
     if any(clean_path.startswith(p) for p in public_prefixes):
         return True
 
@@ -168,6 +168,9 @@ def protected_media_serve(request, path):
 
     def _apply_security_headers(resp):
         resp['X-Content-Type-Options'] = 'nosniff'
+        resp['Access-Control-Allow-Origin'] = '*'
+        resp['Access-Control-Allow-Headers'] = 'Range, Content-Type, Authorization'
+        resp['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
         if is_scriptable:
             resp['Content-Security-Policy'] = "default-src 'none'; sandbox"
             resp['Content-Disposition'] = f'attachment; filename="{os.path.basename(target_path)}"'
@@ -180,23 +183,31 @@ def protected_media_serve(request, path):
         response['Content-Type'] = content_type
         return _apply_security_headers(response)
 
-    # Support HTTP Range requests (crucial for video scrubbing & seeking)
+    # Support HTTP Range requests with strict 1MB chunk bounds (prevents Daphne 3.6GB memory bloat)
+    MAX_SERVE_CHUNK = 1048576  # 1 MB
     range_header = request.META.get('HTTP_RANGE', '').strip()
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
         if range_match:
             start = int(range_match.group(1))
-            end = range_match.group(2)
-            end = int(end) if end else file_size - 1
+            end_val = range_match.group(2)
+            if end_val:
+                end = int(end_val)
+            else:
+                end = min(file_size - 1, start + MAX_SERVE_CHUNK - 1)
 
             if start >= file_size or start > end:
                 resp = HttpResponse(status=416)
                 resp['Content-Range'] = f'bytes */{file_size}'
                 return _apply_security_headers(resp)
 
+            # Cap range chunk to MAX_SERVE_CHUNK so ASGI layer never buffers massive ranges
+            if (end - start + 1) > MAX_SERVE_CHUNK:
+                end = start + MAX_SERVE_CHUNK - 1
+
             length = end - start + 1
             response = StreamingHttpResponse(
-                file_iterator(target_path, offset=start, length=length),
+                file_iterator(target_path, offset=start, length=length, chunk_size=MAX_SERVE_CHUNK),
                 status=206,
                 content_type=content_type
             )
@@ -206,7 +217,7 @@ def protected_media_serve(request, path):
             return _apply_security_headers(response)
 
     response = StreamingHttpResponse(
-        file_iterator(target_path, offset=0, length=file_size),
+        file_iterator(target_path, offset=0, length=file_size, chunk_size=MAX_SERVE_CHUNK),
         content_type=content_type
     )
     response['Accept-Ranges'] = 'bytes'

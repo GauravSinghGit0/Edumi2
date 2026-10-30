@@ -8,6 +8,7 @@ from meetings.views import (
     get_available_classroom_quizzes, start_meeting_quiz, submit_meeting_quiz,
     get_meeting_quiz_submissions,
 )
+from attendance.views import engagement_report_view as from_attendance_engagement_report
 
 urlpatterns = [
     path('create/',                                  create_meeting,                  name='create_meeting'),
@@ -22,6 +23,8 @@ urlpatterns = [
     path('delete/<int:meeting_id>/',                 delete_meeting,                  name='delete_meeting'),
     path('cancel/<int:meeting_id>/',                 cancel_meeting,                  name='cancel_meeting'),
     path('attendance/<str:meeting_code>/',           meeting_attendance,              name='meeting_attendance'),
+    path('attendance/engagement-report/<str:meeting_ident>/', from_attendance_engagement_report, name='meeting_attendance_engagement_report'),
+    path('engagement-report/<str:meeting_ident>/',   from_attendance_engagement_report, name='engagement_report'),
     path('summary/<str:meeting_code>/',              meeting_summary,                 name='meeting_summary'),
     path('prep/<str:meeting_code>/',                 pre_join,                        name='pre_join'),
     path('verify-prejoin/',                          verify_face_prejoin,             name='verify_face_prejoin'),

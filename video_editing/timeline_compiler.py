@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 from .ffmpeg_utils import FFmpegError, get_metadata, _get_font_arg
 
 def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
@@ -58,9 +59,64 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     inputs = [project.original_file.path]
     cmd = [ffmpeg_bin, '-y', '-i', project.original_file.path]
 
-    # Map extra audio files to FFmpeg inputs (Strictly confined to MEDIA_ROOT)
+    # Gather metadata on base input
+    has_audio = False
+    try:
+        meta = get_metadata(project.original_file.path)
+        has_audio = meta.get("has_audio", False)
+    except Exception:
+        pass
+
+    # Process video clips and map extra video asset files to FFmpeg inputs
     from django.conf import settings
     media_root = os.path.abspath(str(settings.MEDIA_ROOT))
+    clips = v_track.get('clips', [])
+    clip_input_index_map = {}
+    input_audio_map = {0: has_audio}
+
+    for i, clip in enumerate(clips):
+        clip_path = None
+        asset_id = clip.get('id')
+        if asset_id:
+            try:
+                from .models import ProjectAsset
+                asset_obj = ProjectAsset.objects.filter(id=asset_id).first()
+                if asset_obj and asset_obj.file:
+                    clip_path = asset_obj.file.path
+            except Exception:
+                pass
+        if not clip_path:
+            clip_url = clip.get('url') or clip.get('path')
+            if clip_url:
+                if str(clip_url).startswith('/media/'):
+                    rel_path = str(clip_url)[len('/media/'):]
+                    cand_path = os.path.join(media_root, rel_path.replace('/', os.sep))
+                    if os.path.isfile(cand_path):
+                        clip_path = cand_path
+                elif os.path.isfile(str(clip_url)):
+                    clip_path = str(clip_url)
+
+        if clip_path:
+            abs_clip_path = os.path.abspath(clip_path)
+            is_in_media = abs_clip_path.startswith(media_root + os.sep)
+            is_orig_file = project.original_file and abs_clip_path == os.path.abspath(str(project.original_file.path))
+            if (is_in_media or is_orig_file) and os.path.isfile(abs_clip_path):
+                if abs_clip_path in inputs:
+                    clip_input_index_map[i] = inputs.index(abs_clip_path)
+                else:
+                    new_idx = len(inputs)
+                    inputs.append(abs_clip_path)
+                    cmd.extend(['-i', abs_clip_path])
+                    clip_input_index_map[i] = new_idx
+                    try:
+                        m = get_metadata(abs_clip_path)
+                        input_audio_map[new_idx] = m.get("has_audio", False)
+                    except Exception:
+                        input_audio_map[new_idx] = False
+                continue
+        clip_input_index_map[i] = 0
+
+    # Map extra audio files to FFmpeg inputs (Strictly confined to MEDIA_ROOT)
     audio_inputs_start_idx = len(inputs)
     audio_input_index_map = {}
     next_audio_input_idx = audio_inputs_start_idx
@@ -82,52 +138,56 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     filter_complex = []
     video_outs = []
     audio_outs = []
+    has_detached_audio = any(ac.get('is_detached') for ac in audio_clips)
 
-    has_audio = False
-    try:
-        meta = get_metadata(project.original_file.path)
-        has_audio = meta.get("has_audio", False)
-    except Exception:
-        pass
-
-    # Process video clips
-    clips = v_track.get('clips', [])
+    # Process and slice video clips
     for i, clip in enumerate(clips):
         trim_start = clip.get('trimStart', clip.get('start', 0))
         trim_end = clip.get('trimEnd', clip.get('end', 10))
+        in_idx = clip_input_index_map.get(i, 0)
+        has_in_audio = input_audio_map.get(in_idx, False)
         
         v_label = f"[v{i}]"
         a_label = f"[a{i}]"
         
-        # Trim video stream
-        filter_complex.append(f"[0:v]trim=start={trim_start}:end={trim_end},setpts=PTS-STARTPTS{v_label}")
+        # Trim video stream with format normalization for smooth concat across mixed inputs
+        filter_complex.append(f"[{in_idx}:v]trim=start={trim_start}:end={trim_end},setpts=PTS-STARTPTS,scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30{v_label}")
         video_outs.append(v_label)
         
-        if has_audio:
-            # Trim audio stream
-            filter_complex.append(f"[0:a]atrim=start={trim_start}:end={trim_end},asetpts=PTS-STARTPTS{a_label}")
-            audio_outs.append(a_label)
-        else:
-            # Create silent audio channel matching video clip duration
-            dur = max(0.5, trim_end - trim_start)
-            filter_complex.append(f"anullsrc=d={dur}{a_label}")
-            audio_outs.append(a_label)
+        if not has_detached_audio:
+            if has_in_audio:
+                # Trim audio stream
+                filter_complex.append(f"[{in_idx}:a]atrim=start={trim_start}:end={trim_end},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo{a_label}")
+                audio_outs.append(a_label)
+            else:
+                # Create silent audio channel matching video clip duration
+                dur = max(0.5, trim_end - trim_start)
+                filter_complex.append(f"anullsrc=d={dur}:r=44100:cl=stereo{a_label}")
+                audio_outs.append(a_label)
             
     # Concatenate clips
     current_v = None
     current_a = None
     if len(clips) > 1:
-        concat_inputs = "".join(f"{v}{a}" for v, a in zip(video_outs, audio_outs))
-        n = len(clips)
-        filter_complex.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v_concat][a_concat]")
-        current_v = "[v_concat]"
-        current_a = "[a_concat]"
+        if has_detached_audio:
+            concat_inputs = "".join(video_outs)
+            n = len(clips)
+            filter_complex.append(f"{concat_inputs}concat=n={n}:v=1:a=0[v_concat]")
+            current_v = "[v_concat]"
+        else:
+            concat_inputs = "".join(f"{v}{a}" for v, a in zip(video_outs, audio_outs))
+            n = len(clips)
+            filter_complex.append(f"{concat_inputs}concat=n={n}:v=1:a=1[v_concat][a_concat]")
+            current_v = "[v_concat]"
+            current_a = "[a_concat]"
     elif len(clips) == 1:
         current_v = video_outs[0]
-        current_a = audio_outs[0]
+        if not has_detached_audio:
+            current_a = audio_outs[0]
     else:
         current_v = "[0:v]"
-        current_a = "[0:a]"
+        if not has_detached_audio:
+            current_a = "[0:a]"
 
     # Video speed adjust
     speed_factor = float(timeline_json.get('speed', 1.0))
@@ -137,18 +197,19 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         current_v = next_v
         
         # Audio speed tempo filters
-        atempo_filters = []
-        rem = speed_factor
-        while rem > 2.0:
-            atempo_filters.append("atempo=2.0")
-            rem /= 2.0
-        while rem < 0.5:
-            atempo_filters.append("atempo=0.5")
-            rem /= 0.5
-        atempo_filters.append(f"atempo={rem}")
-        next_a = "[a_speed]"
-        filter_complex.append(f"{current_a}{','.join(atempo_filters)}{next_a}")
-        current_a = next_a
+        if not has_detached_audio and current_a:
+            atempo_filters = []
+            rem = speed_factor
+            while rem > 2.0:
+                atempo_filters.append("atempo=2.0")
+                rem /= 2.0
+            while rem < 0.5:
+                atempo_filters.append("atempo=0.5")
+                rem /= 0.5
+            atempo_filters.append(f"atempo={rem}")
+            next_a = "[a_speed]"
+            filter_complex.append(f"{current_a}{','.join(atempo_filters)}{next_a}")
+            current_a = next_a
 
     # Apply video rotation & crop & grayscale effects
     effects_state = timeline_json.get('effects', {})
@@ -237,12 +298,18 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
             current_a = next_a
 
     # Overlay Text layers
+    temp_text_files = []
     for idx, text_clip in enumerate(text_clips):
         raw_txt = str(text_clip.get('text', ''))
-        # Sanitize text for FFmpeg drawtext: escape backslashes, colons, single quotes, percentages
-        txt = raw_txt.replace('\\', r'\\').replace("'", r"\'").replace(":", r"\:").replace("%", r"\%")
-        if not txt:
+        if not raw_txt:
             continue
+
+        # Write text to a temporary UTF-8 file to avoid FFmpeg drawtext filtergraph injection/parsing issues
+        tf = tempfile.NamedTemporaryFile('w', delete=False, suffix='.txt', encoding='utf-8')
+        tf.write(raw_txt)
+        tf.close()
+        temp_text_files.append(tf.name)
+        safe_text_path = tf.name.replace('\\', '/').replace(':', r'\:')
             
         position = text_clip.get('position', 'bottom')
         if position == 'top':
@@ -287,7 +354,7 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         next_v = f"[v_txt{idx}]"
         
         font_arg = _get_font_arg()
-        drawtext_filter = (f"{current_v}drawtext={font_arg}text='{txt}':x={x}:y={y}:"
+        drawtext_filter = (f"{current_v}drawtext={font_arg}textfile='{safe_text_path}':x={x}:y={y}:"
                            f"fontsize={fontsize}:fontcolor={fontcolor}:box=1:boxcolor=black@0.5:boxborderw=8:enable='{enable_str}'{next_v}")
         filter_complex.append(drawtext_filter)
         current_v = next_v
@@ -327,8 +394,11 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
             current_a = next_a
 
     # Mix background audio inputs
-    mixed_audio_out = current_a
-    audio_mix_labels = [current_a]
+    has_detached_audio = any(ac.get('is_detached') for ac in audio_clips)
+    if has_detached_audio:
+        audio_mix_labels = []
+    else:
+        audio_mix_labels = [current_a] if has_audio else []
     
     # Process multiple audio inputs
     for idx, ac in enumerate(audio_clips):
@@ -348,41 +418,58 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         vol = float(ac.get('bg_volume', ac.get('volume', 0.5)))
         
         label_trim = f"[a_trimmed_{idx}]"
-        filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start}:{ac_trim_end},asetpts=PTS-STARTPTS{delay_str},volume={vol}{label_trim}")
+        filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start}:{ac_trim_end},asetpts=PTS-STARTPTS{delay_str},volume={vol},aformat=sample_rates=44100:channel_layouts=stereo{label_trim}")
         audio_mix_labels.append(label_trim)
 
     # Perform amix if multiple audio streams are active
     if len(audio_mix_labels) > 1:
         mix_inputs = "".join(audio_mix_labels)
         n_inputs = len(audio_mix_labels)
-        filter_complex.append(f"{mix_inputs}amix=inputs={n_inputs}:duration=first:dropout_transition=2[a_mixed]")
+        filter_complex.append(f"{mix_inputs}amix=inputs={n_inputs}:duration=longest:dropout_transition=0[a_mixed]")
         mixed_audio_out = "[a_mixed]"
+    elif len(audio_mix_labels) == 1:
+        mixed_audio_out = audio_mix_labels[0]
+    elif has_audio:
+        mixed_audio_out = current_a
+    else:
+        filter_complex.append("anullsrc=r=44100:cl=stereo[a_silent]")
+        mixed_audio_out = "[a_silent]"
 
     if filter_complex:
         cmd.extend(['-filter_complex', ";".join(filter_complex)])
         cmd.extend(['-map', current_v, '-map', mixed_audio_out])
-        cmd.extend(['-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac'])
+        cmd.extend(['-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac', '-b:a', '128k'])
     else:
         cmd.extend(['-c', 'copy'])
-        
-    # Bitrate/Quality settings based on exportQuality
+
+    # Bitrate/Quality settings based on exportQuality (M4 Winner: CRF 23 for universal web playback)
     quality = timeline_json.get('exportQuality', 'high')
     if quality == 'low':
         cmd.extend(['-crf', '28'])
     elif quality == 'medium':
         cmd.extend(['-crf', '23'])
     elif quality == 'ultra':
-        cmd.extend(['-crf', '14'])
+        cmd.extend(['-crf', '16'])
     else: # high (default)
-        cmd.extend(['-crf', '18'])
-        
+        cmd.extend(['-crf', '20'])
+
+    # Enable faststart for instant student playback streaming
+    cmd.extend(['-movflags', '+faststart'])
     cmd.append(output_path)
     
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
-    except subprocess.TimeoutExpired:
-        raise FFmpegError("Video rendering timed out after 10 minutes.")
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise FFmpegError("Video rendering timed out after 10 minutes.")
 
-    if result.returncode != 0:
-        stderr = result.stderr.decode("utf-8", errors="ignore")
-        raise FFmpegError(stderr[-3000:])
+        if result.returncode != 0:
+            stderr = result.stderr.decode("utf-8", errors="ignore")
+            raise FFmpegError(stderr[-3000:])
+    finally:
+        for tf_path in temp_text_files:
+            try:
+                if os.path.exists(tf_path):
+                    os.remove(tf_path)
+            except Exception:
+                pass

@@ -27,7 +27,7 @@ Standard Django convention. It holds global settings, ASGI/WSGI entry points, an
 <details>
 <summary><b>5. Key Files Breakdown</b></summary>
 
-- `settings.py`: The master configuration file. Contains database paths, security policies, and LiveKit credentials.
+- `settings.py`: The master configuration file. Contains database paths, security policies, LiveKit credentials, and automated FFmpeg/FFprobe binary detection (`FFMPEG_BINARY`, `FFPROBE_BINARY`) for `EduMiCompressionService`.
 - `asgi.py`: The entry point for Daphne/Uvicorn. Configures protocol routers for HTTP and WebSockets (Django Channels).
 - `celery.py`: Initializes the Celery application and auto-discovers tasks across all installed apps.
 - `middleware.py`: Custom middleware, including `DatabaseErrorMiddleware` which gracefully catches and reports SQLite locking issues.

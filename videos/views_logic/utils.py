@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from django.core.files.temp import NamedTemporaryFile
 
 from videos.models import Video, VideoQuality, VideoChunk
-from cameras.ffmpeg_helpers import get_ffmpeg_binary, get_video_duration
+from cameras.ffmpeg_helpers import get_ffmpeg_binary, get_video_duration, has_audio_stream
 
 logger = logging.getLogger(__name__)
 
@@ -38,38 +38,24 @@ def process_video_sync(video_id):
 
 
 def extract_thumbnail(video):
-    """Extract a thumbnail from the middle of the video."""
+    """Extract a high-efficiency WebP thumbnail (M1 Winner) from the video."""
     try:
-        # Extract frame at 25% of the video
-        time_pos = video.duration_seconds * 0.25 if video.duration_seconds else 1
-        
-        temp_thumb = NamedTemporaryFile(suffix='.jpg', delete=False)
+        from common.compression_service import EduMiCompressionService
+        time_pos = video.duration_seconds * 0.25 if video.duration_seconds else 1.0
+
+        temp_thumb = NamedTemporaryFile(suffix='.webp', delete=False)
         temp_thumb_path = temp_thumb.name
         temp_thumb.close()
 
-        ffmpeg_bin = get_ffmpeg_binary()
-        subprocess.run(
-            [
-                ffmpeg_bin,
-                '-ss', str(time_pos),
-                '-i', video.original_file.path,
-                '-vframes', '1',
-                '-q:v', '2',
-                '-y',
-                temp_thumb_path
-            ],
-            capture_output=True,
-            check=True
-        )
+        if EduMiCompressionService.generate_video_thumbnail_webp(video.original_file.path, temp_thumb_path, time_sec=time_pos, quality=80):
+            with open(temp_thumb_path, 'rb') as f:
+                video.thumbnail.save(f'thumb_{video.id}.webp', ContentFile(f.read()), save=False)
 
-        with open(temp_thumb_path, 'rb') as f:
-            video.thumbnail.save(f'thumb_{video.id}.jpg', ContentFile(f.read()), save=False)
-        
         if os.path.exists(temp_thumb_path):
             os.remove(temp_thumb_path)
-            
+
     except Exception as e:
-        logger.error(f"Error extracting thumbnail for video {video.id}: {e}")
+        logger.error(f"Error extracting WebP thumbnail for video {video.id}: {e}")
 
 
 
@@ -96,6 +82,8 @@ def process_hls_encoding(video):
         ''
     ]
 
+    has_audio = has_audio_stream(video.original_file.path)
+
     for cfg in quality_configs:
         quality_dir = os.path.join(hls_root, cfg['name'])
         os.makedirs(quality_dir, exist_ok=True)
@@ -106,6 +94,7 @@ def process_hls_encoding(video):
         # Transcode with H.265 (libx265) with hvc1 tag for universal Apple/browser HLS compatibility
         used_codec = 'h265'
         ffmpeg_bin = get_ffmpeg_binary()
+        audio_args = ['-c:a', 'aac', '-b:a', cfg['audio_bitrate']] if has_audio else ['-an']
         cmd = [
             ffmpeg_bin, '-y',
             '-i', video.original_file.path,
@@ -114,8 +103,7 @@ def process_hls_encoding(video):
             '-crf', cfg['crf'],
             '-preset', 'fast',
             '-tag:v', 'hvc1',
-            '-c:a', 'aac',
-            '-b:a', cfg['audio_bitrate'],
+            *audio_args,
             '-hls_time', '6',
             '-hls_playlist_type', 'vod',
             '-hls_segment_filename', segment_pattern,
@@ -174,8 +162,9 @@ def process_hls_encoding(video):
             )
 
         # Add variant to Master Playlist
+        codec_str = f"{cfg['codec_str']},mp4a.40.2" if has_audio else cfg['codec_str']
         master_playlist_lines.append(
-            f"#EXT-X-STREAM-INF:BANDWIDTH={cfg['bandwidth']},RESOLUTION={cfg['res']},CODECS=\"{cfg['codec_str']},mp4a.40.2\""
+            f"#EXT-X-STREAM-INF:BANDWIDTH={cfg['bandwidth']},RESOLUTION={cfg['res']},CODECS=\"{codec_str}\""
         )
         master_playlist_lines.append(f"{cfg['name']}/playlist.m3u8")
         master_playlist_lines.append('')

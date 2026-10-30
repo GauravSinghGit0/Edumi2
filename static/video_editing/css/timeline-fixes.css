@@ -1,0 +1,335 @@
+/**
+ * Timeline Unified Track Fixes
+ * Add these styles to improve track consistency and visual feedback
+ * Include this file in project_detail.html template
+ */
+
+/* =============================================================================
+   UNIFIED TRACK STYLING
+   ============================================================================= */
+
+/* Unified cursor for all draggable items */
+.timeline-generic-block,
+.timeline-clip-block,
+.timeline-text-block,
+.timeline-audio-block,
+.timeline-effect-block {
+  cursor: grab !important;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timeline-generic-block:active,
+.timeline-clip-block:active,
+.timeline-text-block:active,
+.timeline-audio-block:active,
+.timeline-effect-block:active {
+  cursor: grabbing !important;
+  transform: scale(0.98);
+}
+
+/* Hover effects for all track items */
+.timeline-generic-block:hover,
+.timeline-clip-block:hover,
+.timeline-text-block:hover,
+.timeline-audio-block:hover,
+.timeline-effect-block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+/* =============================================================================
+   UNIFIED RESIZE HANDLE STYLING
+   ============================================================================= */
+
+.video-resize-handle,
+.audio-resize-handle,
+.text-resize-handle,
+.effect-resize-handle,
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize !important;
+  z-index: 6;
+  transition: width 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(255, 255, 255, 0.4);
+  user-select: none;
+}
+
+/* Audio tracks get green handles */
+.audio-resize-handle {
+  background: rgba(34, 197, 94, 0.75);
+}
+
+/* Hover effects - make handles more prominent */
+.video-resize-handle:hover,
+.audio-resize-handle:hover,
+.text-resize-handle:hover,
+.effect-resize-handle:hover {
+  width: 14px !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.video-resize-handle:hover,
+.text-resize-handle:hover,
+.effect-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.audio-resize-handle:hover {
+  background: rgba(34, 197, 94, 1);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+/* Handle positioning */
+.handle-left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.handle-right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Active state for handles */
+.video-resize-handle:active,
+.audio-resize-handle:active,
+.text-resize-handle:active,
+.effect-resize-handle:active {
+  width: 16px !important;
+  opacity: 1;
+}
+
+/* =============================================================================
+   TRACK ROW IMPROVEMENTS
+   ============================================================================= */
+
+.timeline-track-row {
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.timeline-track-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Better visual separation between tracks */
+.timeline-track-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =============================================================================
+   LOADING & ERROR STATES
+   ============================================================================= */
+
+/* Loading state for thumbnails */
+.timeline-clip-thumb.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-clip-thumb.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Placeholder styling */
+.thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-right: 1px dashed rgba(255, 255, 255, 0.12);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Error state for invalid clips */
+.timeline-clip-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  gap: 4px;
+}
+
+/* =============================================================================
+   DRAG AND DROP VISUAL FEEDBACK
+   ============================================================================= */
+
+/* Timeline container when drag is active */
+.visual-trim-container.drag-hover-active {
+  background: rgba(139, 92, 246, 0.06) !important;
+  border-color: var(--ve-primary) !important;
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* Drop zone indicator */
+.timeline-drop-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ve-primary);
+  box-shadow: 0 0 10px var(--ve-primary);
+  pointer-events: none;
+  z-index: 100;
+  animation: dropIndicatorPulse 1s ease-in-out infinite;
+}
+
+@keyframes dropIndicatorPulse {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.7; transform: scaleY(0.95); }
+}
+
+/* =============================================================================
+   SELECTION STATES
+   ============================================================================= */
+
+/* Unified selection styling */
+.timeline-generic-block.selected,
+.timeline-clip-block.selected,
+.timeline-text-block.selected,
+.timeline-audio-block.selected,
+.timeline-effect-block.selected,
+.timeline-item--selected {
+  outline: 2px solid #ffa200 !important;
+  outline-offset: 0px;
+  box-shadow: 
+    0 0 0 4px rgba(255, 162, 0, 0.2),
+    0 0 16px rgba(255, 162, 0, 0.4) !important;
+  z-index: 10 !important;
+}
+
+/* Selected item handles */
+.timeline-generic-block.selected .video-resize-handle,
+.timeline-generic-block.selected .audio-resize-handle,
+.timeline-generic-block.selected .text-resize-handle,
+.timeline-item--selected .video-resize-handle,
+.timeline-item--selected .audio-resize-handle,
+.timeline-item--selected .text-resize-handle {
+  background: #ffa200 !important;
+  width: 14px !important;
+}
+
+/* =============================================================================
+   RESPONSIVE & ACCESSIBILITY
+   ============================================================================= */
+
+/* Touch-friendly larger hit areas on mobile */
+@media (max-width: 768px) {
+  .video-resize-handle,
+  .audio-resize-handle,
+  .text-resize-handle,
+  .effect-resize-handle {
+    width: 16px !important;
+  }
+  
+  .timeline-generic-block,
+  .timeline-clip-block,
+  .timeline-text-block,
+  .timeline-audio-block,
+  .timeline-effect-block {
+    min-height: 44px; /* iOS minimum touch target */
+  }
+}
+
+/* Focus states for keyboard navigation */
+.timeline-generic-block:focus,
+.timeline-clip-block:focus,
+.timeline-text-block:focus,
+.timeline-audio-block:focus,
+.timeline-effect-block:focus {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .timeline-generic-block,
+  .timeline-clip-block,
+  .timeline-text-block,
+  .timeline-audio-block,
+  .timeline-effect-block,
+  .video-resize-handle,
+  .audio-resize-handle,
+  .text-resize-handle,
+  .effect-resize-handle {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Use GPU acceleration for dragging */
+.timeline-generic-block.dragging,
+.timeline-clip-block.dragging {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Smooth scrolling for timeline */
+.timeline-scroll-area {
+  scroll-behavior: smooth;
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+.timeline-hidden {
+  display: none !important;
+}
+
+.timeline-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed !important;
+}
+
+.timeline-processing {
+  position: relative;
+}
+
+.timeline-processing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1000;
+}

@@ -84,7 +84,27 @@ def get_video_duration(file_path):
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
         return float(output)
-    except Exception as e:
-        # Silently return None
+    except Exception:
         return None
+
+
+def has_audio_stream(file_path):
+    """Check if the media file has an audio stream using ffprobe."""
+    import subprocess
+    if not file_path or not os.path.exists(file_path):
+        return False
+    ffprobe_bin = get_ffprobe_binary()
+    cmd = [
+        ffprobe_bin,
+        '-v', 'error',
+        '-select_streams', 'a',
+        '-show_entries', 'stream=codec_type',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        file_path
+    ]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
+        return bool(output and 'audio' in output.lower())
+    except Exception:
+        return False
 

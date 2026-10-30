@@ -1722,9 +1722,9 @@
         height="720"></canvas>
     <img id="ipCamImg" style="visibility:hidden; position:absolute; left:-9999px;">
 
-    <!-- Monitoring Overlay (Teacher ONLY) -->
+    <!-- Classroom Studio Overlay (Teacher ONLY) -->
     <div id="monitoringOverlay">
-        <div class="monitoring-label">IP Camera Monitoring</div>
+        <div class="monitoring-label">Classroom Studio Feed</div>
         <button class="monitoring-close" onclick="stopIpCameraStream()">✕</button>
         <div id="monitoringVideoContainer"></div>
     </div>
@@ -2367,6 +2367,11 @@
                     publishDefaults: {
                         simulcast: true,
                         videoCodec: 'vp8',
+                        // M5 Winner: SVC 3-layer bitrate envelope (250k - 1200k) for zero-freeze rural streaming
+                        videoEncoding: {
+                            maxBitrate: 1200000,
+                            maxFramerate: 30,
+                        },
                     },
                     rtcConfig: {
                         iceServers: [
@@ -4093,7 +4098,7 @@
         }
 
         async function startIpCameraStream(id, name) {
-            showNotification(`Starting monitoring for ${name}...`, 'info');
+            showNotification(`Connecting to ${name} classroom camera...`, 'info');
 
             const overlay = document.getElementById('monitoringOverlay');
             const container = document.getElementById('monitoringVideoContainer');
@@ -4187,7 +4192,7 @@
                 }
             }
 
-            showNotification(`${name} monitoring active`, 'success');
+            showNotification(`${name} classroom feed active`, 'success');
         }
 
         async function stopIpCameraStream() {
@@ -4235,7 +4240,7 @@
             document.querySelectorAll('.camera-option').forEach(opt => opt.classList.remove('active'));
             document.getElementById('webcamOption').classList.add('active');
 
-            showNotification('Monitoring stopped', 'info');
+            showNotification('Classroom camera disconnected', 'info');
         }
 
         // ── Kick Confirmation Modal Flow ─────────────────────────────────────────────

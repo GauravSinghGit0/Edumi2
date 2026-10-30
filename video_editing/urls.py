@@ -10,10 +10,14 @@ urlpatterns = [
     path("chunked-upload/", views.chunked_upload_view, name="chunked_upload"),
     path("project/<int:pk>/", views.project_detail, name="project_detail"),
     path("project/<int:pk>/proxy-status/", views.proxy_status_view, name="proxy_status"),
+    path("project/<int:pk>/filmstrip/", views.project_filmstrip, name="project_filmstrip"),
+    path("project/<int:pk>/filmstrip/<str:filename>", views.project_filmstrip_frame, name="project_filmstrip_frame"),
+    path("project/<int:pk>/waveform/", views.project_waveform, name="project_waveform"),
     path("project/<int:pk>/delete/", views.project_delete, name="project_delete"),
     path("project/<int:pk>/download/", views.project_download, name="project_download"),
     path("project/<int:pk>/download/mkv/", views.project_download_mkv, name="project_download_mkv"),
     path("project/<int:pk>/status/", views.project_status, name="project_status"),
+    path("project/<int:pk>/rename/", views.project_rename, name="project_rename"),
 
     # Media range requests for smooth timeline scrubbing
     path("media-ranges/<path:path>", views.serve_media_ranges, name="serve_media_ranges"),
@@ -34,4 +38,6 @@ urlpatterns = [
     path("project/<int:pk>/publish/", views.publish_to_lecture, name="publish_to_lecture"),
     path("project/<int:pk>/upload-audio/", views.upload_audio_temp, name="upload_audio_temp"),
     path("project/<int:pk>/upload-asset/", views.upload_asset, name="upload_asset"),
+    path("project/<int:pk>/asset/<int:asset_id>/delete/", views.delete_asset, name="delete_asset"),
+    path("project/<int:pk>/asset/<int:asset_id>/rename/", views.rename_asset, name="rename_asset"),
 ]

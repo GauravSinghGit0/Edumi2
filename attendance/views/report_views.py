@@ -176,26 +176,40 @@ def check_schedule_api(request, meeting_code):
 
 
 @login_required
-def engagement_report_view(request, meeting_id):
-    """Teacher views the engagement report for a completed meeting."""
-    meeting = get_object_or_404(Meeting, id=meeting_id)
+def engagement_report_view(request, meeting_id=None, meeting_ident=None):
+    """Teacher views the engagement report for a completed meeting (by ID or meeting code)."""
+    ident = meeting_ident if meeting_ident is not None else meeting_id
+    from meetings.models import Meeting
+    
+    meeting = None
+    ident_str = str(ident).strip()
+    if ident_str.isdigit():
+        meeting = Meeting.objects.filter(id=int(ident_str)).first()
+    
+    if not meeting:
+        meeting = Meeting.objects.filter(meeting_code__iexact=ident_str).first()
+        
+    if not meeting:
+        from django.http import Http404
+        raise Http404(f"Meeting with identifier '{ident}' not found.")
+
     if meeting.teacher != request.user and not request.user.is_superuser:
         return HttpResponseForbidden("Access denied.")
 
     from attendance.models import EngagementReport
-    report = EngagementReport.objects.filter(meeting=meeting).first()
+    from attendance.engagement_service import generate_engagement_report
 
-    if not report and meeting.status == 'ended':
-        from attendance.engagement_service import generate_engagement_report
-        generate_engagement_report(meeting.id)
-        report = EngagementReport.objects.filter(meeting=meeting).first()
+    # Ensure report is created or refreshed
+    generate_engagement_report(meeting.id)
+    report = EngagementReport.objects.filter(meeting=meeting).first()
 
     log_filename = f'engagement_{meeting.meeting_code}.csv'
     log_path = os.path.join(settings.MEDIA_ROOT, 'meeting_logs', log_filename)
     log_exists = os.path.exists(log_path)
 
     return render(request, 'attendance/engagement_report.html', {
-        'meeting': meeting, 'report': report,
+        'meeting': meeting,
+        'report': report,
         'page_title': f'Engagement Report — {meeting.title}',
         'log_exists': log_exists,
         'log_url': f"{settings.MEDIA_URL}meeting_logs/{log_filename}" if log_exists else None,

@@ -121,96 +121,68 @@ class CameraRecording(models.Model):
     classrooms = models.ManyToManyField('meetings.Classroom', blank=True, related_name='assigned_recordings')
 
     def generate_chunked_thumbnail(self):
-        """Generate a thumbnail for a chunked recording from its first chunk in DB"""
+        """Generate a WebP thumbnail for a chunked recording from its first chunk in DB (M1 Winner)"""
         import tempfile
-        import subprocess
         import os
         from django.conf import settings
-        
+        from common.compression_service import EduMiCompressionService
+
         first_chunk = self.chunks.order_by('sequence').first()
         if not first_chunk or not first_chunk.data:
             logger.warning("No chunks found for chunked thumbnail generation")
             return None
-            
+
         with tempfile.NamedTemporaryFile(suffix='.ts', delete=False) as temp_ts:
             temp_ts.write(first_chunk.data)
             temp_ts_path = temp_ts.name
-            
+
         thumbnail_dir = os.path.join(settings.MEDIA_ROOT, 'recordings', self.teacher.username, 'thumbnails')
         os.makedirs(thumbnail_dir, exist_ok=True)
-        thumbnail_filename = f'{self.id}_thumbnail.jpg'
+        thumbnail_filename = f'{self.id}_thumbnail.webp'
         thumbnail_path = os.path.join(thumbnail_dir, thumbnail_filename)
-        
-        cmd = [
-            get_ffmpeg_binary(), '-y',
-            '-i', temp_ts_path,
-            '-vframes', '1',
-            '-vf', 'scale=640:360',
-            thumbnail_path
-        ]
-        
+
         try:
-            logger.debug(f"Running FFmpeg for chunked thumbnail: {' '.join(cmd)}")
-            subprocess.run(cmd, capture_output=True, check=True, timeout=30)
-            self.thumbnail = f'recordings/{self.teacher.username}/thumbnails/{thumbnail_filename}'
-            self.save()
-            logger.info("Chunked thumbnail generated successfully!")
-            return self.thumbnail
+            if EduMiCompressionService.generate_video_thumbnail_webp(temp_ts_path, thumbnail_path, time_sec=0.0, quality=80):
+                self.thumbnail = f'recordings/{self.teacher.username}/thumbnails/{thumbnail_filename}'
+                self.save()
+                logger.info(f"Chunked WebP thumbnail generated successfully for recording {self.id}")
+                return self.thumbnail
+            return None
         except Exception as e:
-            logger.error(f"Error generating chunked thumbnail: {e}")
+            logger.error(f"Error generating chunked WebP thumbnail: {e}")
             return None
         finally:
             if os.path.exists(temp_ts_path):
-                os.remove(temp_ts_path)
+                try:
+                    os.remove(temp_ts_path)
+                except Exception:
+                    pass
 
     def generate_thumbnail(self, time_sec=1.0):
-        """Generate a thumbnail from the video file at the given time (in seconds)"""
-        import subprocess
+        """Generate a high-efficiency WebP thumbnail from the video file (M1 Winner, 35% saving)"""
         import os
         from django.conf import settings
+        from common.compression_service import EduMiCompressionService
 
         if not self.video_file or not self.video_file.path or not os.path.exists(self.video_file.path):
             logger.warning("Video file not found, skipping thumbnail generation")
             return None
 
-        thumbnail_dir = os.path.join(settings.MEDIA_ROOT, 'recordings', 'thumbnails')
+        teacher_username = self.teacher.username if self.teacher else 'system'
+        thumbnail_dir = os.path.join(settings.MEDIA_ROOT, 'recordings', teacher_username, 'thumbnails')
         os.makedirs(thumbnail_dir, exist_ok=True)
-        thumbnail_path = os.path.join(thumbnail_dir, f'{self.id}_thumbnail.jpg')
-        
-        # FFmpeg command to extract thumbnail
-        cmd = [
-            get_ffmpeg_binary(), '-y',
-            '-ss', str(time_sec),
-            '-i', self.video_file.path,
-            '-vframes', '1',
-            '-vf', 'scale=640:360',
-            thumbnail_path
-        ]
-        
+        thumbnail_filename = f'{self.id}_thumbnail.webp'
+        thumbnail_path = os.path.join(thumbnail_dir, thumbnail_filename)
+
         try:
-            logger.debug(f"Running FFmpeg: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, check=True, timeout=60)
-            logger.debug(f"FFmpeg output: {result.stdout.decode()}")
-            if result.stderr:
-                logger.debug(f"FFmpeg stderr: {result.stderr.decode()}")
-                
-            # Save relative path
-            self.thumbnail = f'recordings/thumbnails/{self.id}_thumbnail.jpg'
-            self.save()
-            logger.info("Thumbnail saved successfully!")
-            return self.thumbnail
-        except FileNotFoundError:
-            logger.warning("FFmpeg not found, skipping thumbnail generation")
-            return None
-        except subprocess.TimeoutExpired:
-            logger.warning("FFmpeg timed out, skipping thumbnail generation")
-            return None
-        except subprocess.CalledProcessError as e:
-            err_msg = e.stderr.decode(errors='ignore') if e.stderr else str(e)
-            logger.warning(f"FFmpeg thumbnail extraction failed for recording {self.id}: {err_msg[:200]}")
+            if EduMiCompressionService.generate_video_thumbnail_webp(self.video_file.path, thumbnail_path, time_sec=time_sec, quality=80):
+                self.thumbnail = f'recordings/{teacher_username}/thumbnails/{thumbnail_filename}'
+                self.save()
+                logger.info(f"WebP thumbnail generated and saved successfully for recording {self.id}")
+                return self.thumbnail
             return None
         except Exception as e:
-            logger.error(f"Error generating thumbnail: {e}")
+            logger.error(f"Error generating WebP thumbnail: {e}")
             return None
 
     def apply_trim(self):

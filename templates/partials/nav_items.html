@@ -49,7 +49,7 @@
             <div class="sidebar-nav-title">Fleet & Content</div>
             <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'admin_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
-                <span class="sidebar-nav-text">Camera Fleet</span>
+                <span class="sidebar-nav-text">Classroom Cameras</span>
             </a>
             <a href="{% url 'admin_content_manager' %}" class="sidebar-nav-item {% is_active_nav request 'admin_content_manager' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="folder-kanban"></i></span>
@@ -82,7 +82,7 @@
             </a>
             <a href="{% url 'teacher_camera_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_camera_dashboard' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
-                <span class="sidebar-nav-text">Live / Videos</span>
+                <span class="sidebar-nav-text">Classroom Studio</span>
             </a>
         </div>
         <div class="sidebar-nav-section">
@@ -118,7 +118,7 @@
             </a>
             <a href="{% url 'student_lecture_list' %}" class="sidebar-nav-item {% is_active_nav request 'student_lecture_list' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
-                <span class="sidebar-nav-text">Live / Videos</span>
+                <span class="sidebar-nav-text">Lectures & Live</span>
             </a>
             <a href="{% url 'face_setup' %}" data-turbo="false" class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
                 <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>

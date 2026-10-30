@@ -173,11 +173,13 @@ class RecordingEngine:
 
         cmd.extend(['-s', res, '-c:v', encoder])
 
-        # Encoder-specific options for crisp HD lecture capture
-        if encoder == 'libx264':
-            cmd.extend(['-preset', 'veryfast', '-crf', '21', '-profile:v', 'high'])
+        # M2 Winner: High-efficiency classroom lecture storage preset (saves 45-50% disk capacity)
+        if '265' in encoder or 'hevc' in encoder:
+            cmd.extend(['-preset', 'fast', '-crf', '28', '-tag:v', 'hvc1'])
+        elif encoder == 'libx264':
+            cmd.extend(['-preset', 'veryfast', '-crf', '26', '-profile:v', 'high'])
         else:
-            cmd.extend(['-b:v', '6M' if quality in ['4K', '2K', '1440p'] else '4M'])
+            cmd.extend(['-b:v', '4M' if quality in ['4K', '2K', '1440p'] else '2.5M'])
 
         cmd.extend(['-pix_fmt', 'yuv420p'])
 

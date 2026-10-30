@@ -8,7 +8,30 @@
     <!-- Topbar (Theme: System of Edumi) -->
     <header class="ve-editor-head">
         <div class="ve-editor-head-left">
-            <h1 class="ve-editor-title">{{ project.display_title }}</h1>
+            <div class="ve-project-name-container" id="project-name-container" title="Click to rename project ({{ project.display_title }})">
+                <input type="text"
+                       class="ve-project-name-input"
+                       id="project-name-input"
+                       value="{{ project.display_title }}"
+                       data-original-val="{{ project.display_title }}"
+                       data-rename-url="{% url 'project_rename' project.pk %}"
+                       placeholder="Untitled Project"
+                       maxlength="255"
+                       autocomplete="off"
+                       spellcheck="false"
+                       aria-label="Project name" />
+                <button type="button" class="ve-project-name-edit-btn" id="project-name-edit-btn" title="Rename project" tabindex="-1">
+                    <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+                </button>
+                <div class="ve-project-name-save-indicator" id="project-name-save-indicator" aria-live="polite">
+                    <span class="save-status-saving" id="save-status-saving" style="display:none;">
+                        <i data-lucide="loader" style="width:12px;height:12px;" class="ve-spin"></i> Saving...
+                    </span>
+                    <span class="save-status-saved" id="save-status-saved" style="display:none;">
+                        <i data-lucide="check" style="width:12px;height:12px;color:#22c55e;"></i> Saved
+                    </span>
+                </div>
+            </div>
         </div>
 
         <div class="ve-editor-head-actions">
@@ -44,6 +67,13 @@
                 action="{% url 'publish_to_lecture' project.pk %}?recording_id={{ request.GET.recording_id }}"
                 style="display:inline-block;">
                 {% csrf_token %}
+                {% if project.has_unexported_edits %}
+                <button type="button" class="ve-btn ve-btn-success"
+                    title="Publish to Lectures"
+                    onclick="EdumiPopup.warning({ title: 'Unexported Edits', message: 'You have unexported timeline edits. Please click \'Export\' to render your video before publishing.' })">
+                    <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Publish
+                </button>
+                {% else %}
                 <button type="submit" class="ve-btn ve-btn-success"
                     title="Publish to Lectures"
                     data-confirm="Publish this edited video to your lectures for classroom students?"
@@ -52,6 +82,7 @@
                     data-confirm-btn="Publish">
                     <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> Publish
                 </button>
+                {% endif %}
             </form>
             {% else %}
             <button type="button" class="ve-btn ve-btn-success"
@@ -81,16 +112,23 @@
                     <p style="margin: 4px 0 0 0; font-size: 12px;">{{ project.error_message|truncatechars:300 }}</p>
                 </div>
                 {% endif %}
-                <video preload="auto" id="main-video"
-                    {% if project.working_file and project.working_file.name %}
-                    src="{% url 'serve_media_ranges' path=project.working_file.name %}"
-                    {% elif project.original_file and project.original_file.name %}
-                    src="{% url 'serve_media_ranges' path=project.original_file.name %}"
+                <div class="preview-preparing-overlay" id="preview-preparing-overlay"
+                    style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 8; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #fff;">
+                    <div class="spinner"></div>
+                    <p style="margin: 0; font-size: 13px; font-weight: 600;">Preparing preview proxy…</p>
+                </div>
+                <video preload="auto" id="main-video" crossorigin="anonymous"
+                    {% if project.proxy_status == 'completed' and project.proxy_url %}
+                    src="{{ project.proxy_url }}"
+                    {% elif project.working_file %}
+                    src="{{ project.working_file.url }}"
+                    {% elif project.original_file %}
+                    src="{{ project.original_file.url }}"
                     {% endif %}
                 ></video>
                 <div id="text-overlay-container"></div>
                 <canvas id="fabric-stage-canvas"
-                    style="position: absolute; top: 0; left: 0; pointer-events: auto;"></canvas>
+                    style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
             </div>
 
             <!-- Player Controls -->
@@ -160,42 +198,162 @@
                 <!-- Media Panel -->
                 <div class="ve-tool-section tool-section ve-tool-section--active tool-section--active"
                     data-panel="import">
-                    <h3 class="ve-section-title">Media Library</h3>
 
-                    <div style="display: flex; gap: 8px; margin-top: 6px; margin-bottom: 12px;">
-                        <button class="ve-btn ve-btn-secondary ve-btn-full" id="btn-trigger-upload-asset">
-                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Add File
+                    <!-- Top Upload Row (Purple Button + 3-dot Menu) -->
+                    <div class="ve-sidebar-upload-row">
+                        <button type="button" class="ve-btn-upload-files" id="btn-trigger-upload-asset">
+                            <i data-lucide="upload" style="width:16px;height:16px;"></i>
+                            <span>Upload files</span>
                         </button>
-                        <input type="file" id="asset-file-input" accept="video/*" style="display: none;">
+                        <div class="ve-upload-more-wrapper">
+                            <button type="button" class="ve-btn-upload-more" id="btn-upload-more-menu" title="Upload options">
+                                <i data-lucide="more-horizontal" style="width:18px;height:18px;"></i>
+                            </button>
+                            <div class="ve-upload-dropdown-menu" id="upload-dropdown-menu" style="display: none;">
+                                <button type="button" class="ve-dropdown-item" data-upload-type="image">
+                                    <i data-lucide="image" style="width:14px;height:14px;"></i> Upload Images
+                                </button>
+                                <button type="button" class="ve-dropdown-item" data-upload-type="video">
+                                    <i data-lucide="video" style="width:14px;height:14px;"></i> Upload Videos
+                                </button>
+                                <button type="button" class="ve-dropdown-item" data-upload-type="audio">
+                                    <i data-lucide="music" style="width:14px;height:14px;"></i> Upload Audio
+                                </button>
+                                <div class="ve-dropdown-divider"></div>
+                                <button type="button" class="ve-dropdown-item" id="btn-create-folder">
+                                    <i data-lucide="folder-plus" style="width:14px;height:14px;"></i> New Folder
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="asset-file-input" accept="image/*,video/*,audio/*" multiple style="display: none;">
                     </div>
 
-                    <!-- Assets List / Grid -->
-                    <div id="assets-grid-container" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Category Tabs: Images, Videos, Audio, Folders -->
+                    <div class="ve-sidebar-category-nav" id="sidebar-category-nav">
+                        <button type="button" class="ve-category-btn" data-category="image">
+                            <span>Images</span>
+                            <div class="ve-category-indicator"></div>
+                        </button>
+                        <button type="button" class="ve-category-btn active" data-category="video">
+                            <span>Videos</span>
+                            <div class="ve-category-indicator"></div>
+                        </button>
+                        <button type="button" class="ve-category-btn" data-category="audio">
+                            <span>Audio</span>
+                            <div class="ve-category-indicator"></div>
+                        </button>
+                        <button type="button" class="ve-category-btn" data-category="folder">
+                            <span>Folders</span>
+                            <div class="ve-category-indicator"></div>
+                        </button>
+                    </div>
+
+                    <!-- Responsive Thumbnail Grid -->
+                    <div class="ve-media-grid" id="assets-grid-container">
+                        {% if project.original_file %}
+                        <div class="ve-grid-item asset-card main-video-asset" draggable="true" data-asset-id="main-video"
+                            data-asset-type="video"
+                            data-asset-title="{{ project.display_title }}"
+                            data-asset-duration="{{ project.duration_seconds|default:0.0 }}"
+                            data-asset-url="{{ project.original_file.url }}">
+                            <div class="ve-grid-thumb">
+                                <video src="{{ project.original_file.url }}" preload="metadata" muted playsinline></video>
+                                <div class="ve-grid-thumb-overlay">
+                                    <i data-lucide="play" class="ve-thumb-play-icon"></i>
+                                </div>
+                                <span class="ve-grid-duration-badge">{{ project.display_duration|default:"0:00" }}</span>
+                            </div>
+                            <div class="ve-grid-footer">
+                                <span class="ve-grid-title" title="{{ project.display_title }}">{{ project.display_title }}</span>
+                            </div>
+                            <button type="button" class="ve-grid-menu-btn" title="Options">
+                                <i data-lucide="more-horizontal" style="width:14px;height:14px;"></i>
+                            </button>
+                            <div class="ve-grid-context-menu" style="display:none;">
+                                <button type="button" class="ve-context-action action-insert">
+                                    <i data-lucide="plus" style="width:13px;height:13px;"></i> Insert
+                                </button>
+                                <a href="{{ project.original_file.url }}" download class="ve-context-action action-download">
+                                    <i data-lucide="download" style="width:13px;height:13px;"></i> Download
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% for asset in project.assets.all %}
-                        <div class="ve-media-item asset-card" draggable="true" data-asset-id="{{ asset.id }}"
+                        <div class="ve-grid-item asset-card" draggable="true" data-asset-id="{{ asset.id }}"
+                            data-asset-type="{{ asset.asset_type }}"
                             data-asset-title="{{ asset.display_title }}"
                             data-asset-duration="{{ asset.duration_seconds|default:0.0 }}"
-                            data-asset-url="{{ asset.file.url }}">
-                            <div class="ve-media-thumb">
-                                <i data-lucide="video" style="width: 20px; height: 20px; color: var(--ve-muted);"></i>
+                            data-asset-url="{{ asset.file.url }}"
+                            data-delete-url="{% url 'delete_asset' project.pk asset.id %}"
+                            data-rename-url="{% url 'rename_asset' project.pk asset.id %}">
+                            <div class="ve-grid-thumb">
+                                {% if asset.asset_type == "image" %}
+                                <img src="{{ asset.file.url }}" alt="{{ asset.display_title }}" loading="lazy" />
+                                {% elif asset.asset_type == "audio" %}
+                                <div class="ve-audio-thumb-placeholder">
+                                    <i data-lucide="music" style="width:26px;height:26px;color:#4ade80;"></i>
+                                    <div class="ve-mini-soundwaves">
+                                        <span></span><span></span><span></span><span></span><span></span>
+                                    </div>
+                                </div>
+                                <span class="ve-grid-duration-badge">{{ asset.display_duration|default:"0:00" }}</span>
+                                {% else %}
+                                <video src="{{ asset.file.url }}" preload="metadata" muted playsinline></video>
+                                <div class="ve-grid-thumb-overlay">
+                                    <i data-lucide="play" class="ve-thumb-play-icon"></i>
+                                </div>
+                                <span class="ve-grid-duration-badge">{{ asset.display_duration|default:"0:00" }}</span>
+                                {% endif %}
                             </div>
-                            <div class="ve-media-info">
-                                <p class="ve-media-name" title="{{ asset.display_title }}">{{ asset.display_title }}</p>
-                                <p class="ve-media-meta">{{ asset.display_duration }}</p>
+                            <div class="ve-grid-footer">
+                                <span class="ve-grid-title" title="{{ asset.display_title }}">{{ asset.display_title }}</span>
                             </div>
-                            <button type="button" class="btn-insert-asset ve-btn ve-btn-ghost ve-btn-icon"
-                                style="padding:4px; width:28px; height:28px;" title="Insert at playhead">
-                                <i data-lucide="plus-circle" style="width:16px;height:16px;"></i>
+                            <button type="button" class="ve-grid-menu-btn" title="Options">
+                                <i data-lucide="more-horizontal" style="width:14px;height:14px;"></i>
                             </button>
-                        </div>
-                        {% empty %}
-                        <div id="empty-assets-state"
-                            style="text-align: center; padding: 24px 10px; border: 1px dashed var(--ve-border); border-radius: var(--ve-r); background: var(--ve-bg-sub);">
-                            <i data-lucide="image"
-                                style="width: 24px; height: 24px; color: var(--ve-muted); opacity: 0.5; margin-bottom: 8px;"></i>
-                            <p style="margin: 0; font-size: 12px; color: var(--ve-muted);">No files imported yet.</p>
+                            <div class="ve-grid-context-menu" style="display:none;">
+                                <button type="button" class="ve-context-action action-insert">
+                                    <i data-lucide="plus" style="width:13px;height:13px;"></i> Insert
+                                </button>
+                                <button type="button" class="ve-context-action action-rename">
+                                    <i data-lucide="pencil" style="width:13px;height:13px;"></i> Rename
+                                </button>
+                                <a href="{{ asset.file.url }}" download class="ve-context-action action-download">
+                                    <i data-lucide="download" style="width:13px;height:13px;"></i> Download
+                                </a>
+                                <button type="button" class="ve-context-action action-delete" style="color:#ef4444;">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Delete
+                                </button>
+                            </div>
                         </div>
                         {% endfor %}
+
+                        <!-- Folders Tab Placeholder Cards -->
+                        <div class="ve-grid-item ve-folder-item" data-asset-type="folder" style="display:none;">
+                            <div class="ve-grid-thumb ve-folder-thumb">
+                                <i data-lucide="folder" style="width:34px;height:34px;color:var(--ve-primary);"></i>
+                            </div>
+                            <div class="ve-grid-footer">
+                                <span class="ve-grid-title">Class Recordings</span>
+                            </div>
+                        </div>
+                        <div class="ve-grid-item ve-folder-item" data-asset-type="folder" style="display:none;">
+                            <div class="ve-grid-thumb ve-folder-thumb">
+                                <i data-lucide="folder" style="width:34px;height:34px;color:var(--ve-primary);"></i>
+                            </div>
+                            <div class="ve-grid-footer">
+                                <span class="ve-grid-title">B-Roll & Graphics</span>
+                            </div>
+                        </div>
+
+                        <!-- Empty state container (dynamically styled based on active category) -->
+                        <div id="empty-assets-state" class="ve-grid-empty" style="display:none;">
+                            <i data-lucide="layers" class="ve-empty-icon"></i>
+                            <p class="ve-empty-title">No files found</p>
+                            <p class="ve-empty-desc">Upload files to get started.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -371,18 +529,26 @@
                     <i data-lucide="scissors" style="width:13px;height:13px;"></i>
                     <span>Split</span>
                 </button>
+                <button type="button" class="tb-btn" id="tb-merge" title="Merge Selected Clip with Adjacent Clip (M)" disabled>
+                    <i data-lucide="git-merge" style="width:13px;height:13px;"></i>
+                    <span>Merge</span>
+                </button>
                 <button type="button" class="tb-btn" id="tb-duplicate" title="Duplicate Selected Item (Ctrl+D)"
                     disabled>
                     <i data-lucide="copy" style="width:13px;height:13px;"></i>
                     <span>Duplicate</span>
+                </button>
+                <button type="button" class="tb-btn" id="tb-add-clip" title="Add Video / Media to Timeline">
+                    <i data-lucide="plus-circle" style="width:13px;height:13px;"></i>
+                    <span>Add Clip</span>
                 </button>
 
                 <!-- Speed controls in the timeline toolbar -->
                 <div class="timeline-speed-control" id="timeline-speed-control"
                     style="display: flex; align-items: center; gap: 6px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--ve-border);">
                     <span style="font-size: 12px; font-weight: 500; color: var(--ve-text-muted); white-space: nowrap;">Speed</span>
-                    <div class="speed-dropdown-wrapper" style="position: relative; display: inline-block;">
-                        <select id="speed-dropdown" class="ve-select" style="font-size: 12px; height: 26px; padding: 2px 20px 2px 8px; border-radius: 4px; border: 1px solid var(--ve-border, #333); background: var(--ve-bg-card, #1e1e1e); color: var(--ve-text, #fff); cursor: pointer; appearance: none; -webkit-appearance: none;">
+                    <div class="speed-dropdown-wrapper">
+                        <select id="speed-dropdown" class="ve-select tb-speed-select">
                             <option value="0.5">0.5×</option>
                             <option value="0.75">0.75×</option>
                             <option value="1.0" selected>1×</option>
@@ -390,7 +556,7 @@
                             <option value="1.5">1.5×</option>
                             <option value="2.0">2×</option>
                         </select>
-                        <span style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--ve-text-muted);">▾</span>
+                        <span class="speed-dropdown-caret">▾</span>
                     </div>
                 </div>
             </div>
@@ -441,27 +607,10 @@
                     style="display:none;">
                 <span id="timeline-bg-volume-val" style="display:none;">0.5</span>
 
-                <!-- 1. Text Track Row -->
-                <div class="timeline-track-row text-track-row timeline-track-row--text" id="text-track-row">
-                    <div class="track-content-cell" id="text-track-content">
-                        <!-- Text overlay blocks rendered here dynamically by JS -->
-                    </div>
-                </div>
-
-                <!-- 2. Effects & Filters Track Row -->
-                <div class="timeline-track-row effect-track-row timeline-track-row--effect" id="effect-track-row">
-                    <div class="track-content-cell" id="effect-track-content">
-                        <!-- Compact effect badges rendered here dynamically by JS -->
-                    </div>
-                </div>
-
-                <!-- 3. Video Track Row -->
+                <!-- 1. Video Track Row (Primary track - always visible with thumbnails) -->
                 <div class="timeline-track-row video-track-row timeline-track-row--video" id="video-track-row">
                     <div class="track-content-cell trim-track" id="trim-track">
-                        <!-- Filmstrip thumbnails -->
-                        <div class="trim-thumbnails" id="trim-thumbnails"></div>
-
-                        <!-- Labeled clip blocks -->
+                        <!-- Labeled clip blocks with video thumbnails -->
                         <div class="timeline-clip-blocks" id="timeline-clip-blocks"></div>
 
                         <!-- Dimmed left overlay -->
@@ -486,7 +635,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Audio Track Row -->
+                <!-- 2. Audio Track Row (Audio waveform & background music track) -->
                 <div class="timeline-track-row audio-track-row timeline-track-row--audio" id="audio-track-row">
                     <div class="track-content-cell audio-track" id="audio-track">
                         {% if project.has_audio %}
@@ -495,9 +644,6 @@
                             <div id="original-audio-waveform"
                                 style="position:absolute;inset:0;display:flex;align-items:center;opacity:0.85;z-index: 1;">
                             </div>
-                            <span class="audio-name"
-                                style="position:relative;z-index:2; padding: 0 12px; font-size: 13px; font-weight: 700; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">Original
-                                Soundtrack</span>
                         </div>
                         {% endif %}
                         <!-- Canva-style empty-state prompt; JS toggles this via updateAddAudioPlaceholder() -->
@@ -506,6 +652,20 @@
                             <i data-lucide="music" style="width:15px;height:15px;"></i>
                             <span>Add audio</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- 3. Text Track Row (Text overlay track) -->
+                <div class="timeline-track-row text-track-row timeline-track-row--text" id="text-track-row">
+                    <div class="track-content-cell" id="text-track-content">
+                        <!-- Text overlay blocks rendered here dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- 4. Effects & Filters Track Row (Effects & filters track) -->
+                <div class="timeline-track-row effect-track-row timeline-track-row--effect" id="effect-track-row">
+                    <div class="track-content-cell" id="effect-track-content">
+                        <!-- Compact effect badges rendered here dynamically by JS -->
                     </div>
                 </div>
 
@@ -525,7 +685,7 @@
             <!-- Left Section: Track status -->
             <div class="tb-bottom-section tb-bottom-left">
                 <span class="tb-bottom-badge" id="tb-bottom-track-info" title="Active Timeline Tracks">
-                    <i data-lucide="layers" style="width:13px;height:13px;color:var(--ve-primary);"></i> 3 Tracks
+                    <i data-lucide="layers" style="width:13px;height:13px;color:var(--ve-primary);"></i> <span id="track-count-display">4 Tracks</span>
                 </span>
             </div>
 
@@ -622,6 +782,8 @@
     window.REEL_PROJECT_ID = "{{ project.pk }}";
     window.REEL_CHUNKED_UPLOAD_URL = "{% url 'chunked_upload' %}";
     window.REEL_STATUS_URL = "{% url 'project_status' project.pk %}";
+    window.REEL_PROJECT_FILMSTRIP_URL = "{% url 'project_filmstrip' project.pk %}";
+    window.REEL_PROJECT_WAVEFORM_URL = "{% url 'project_waveform' project.pk %}";
     window.REEL_PROJECT_SAVE_TIMELINE_URL = "{% url 'save_timeline' project.pk %}";
     window.REEL_PROJECT_STATUS = "{{ project.status }}";
     window.REEL_UPLOAD_ASSET_URL = "{% url 'upload_asset' project.pk %}";
@@ -631,7 +793,23 @@
     window.REEL_PROJECT_TRIM_END = JSON.parse("{{ project.trim_end|default_if_none:'null' }}");
     window.REEL_PROJECT_HEIGHT = Number("{{ project.height|default:720 }}");
     window.REEL_PROJECT_TIMELINE_STATE = JSON.parse('{{ timeline_state_json|default:"null"|escapejs }}');
-    window.REEL_PROJECT_CLIPS = (window.REEL_PROJECT_TIMELINE_STATE && window.REEL_PROJECT_TIMELINE_STATE.clips) ? window.REEL_PROJECT_TIMELINE_STATE.clips : JSON.parse('{{ project.clips_json|default:"[]"|escapejs }}');
+    window.REEL_PROJECT_CLIPS = (function() {
+        var state = window.REEL_PROJECT_TIMELINE_STATE;
+        if (state) {
+            if (Array.isArray(state.clips) && state.clips.length > 0) return state.clips;
+            if (Array.isArray(state.video_clips) && state.video_clips.length > 0) return state.video_clips;
+            if (Array.isArray(state.tracks)) {
+                var v = state.tracks.find(function(t) { return t.type === 'video'; });
+                if (v && Array.isArray(v.clips) && v.clips.length > 0) return v.clips;
+            }
+        }
+        try {
+            return JSON.parse('{{ project.clips_json|default:"[]"|escapejs }}');
+        } catch(e) {
+            return [];
+        }
+    })();
+    window.REEL_PROJECT_DURATION = Number("{{ project.duration_seconds|default:0.0 }}");
     window.REEL_PROJECT_PROXY_STATUS = "{{ project.proxy_status }}";
     window.REEL_PROJECT_PROXY_URL = "{{ project.proxy_url|default:'' }}";
     window.REEL_PROJECT_OPERATIONS = [
@@ -646,75 +824,87 @@
         {% endfor %}
     ];
 
-    // Client-side high performance SVG waveform visualizer (CapCut style centered waveform)
     window.generateWaveformSvg = function(width, height, seed, clipStartRatio, clipEndRatio) {
-        var barWidth = 2.5;
-        var barGap = 1.5;
-        var totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
         var centerY = height / 2;
-        var maxBarHeight = height - 8;
-        var paths = [];
-
         var peaks = window.audioPeaksCache;
-        var startR = (clipStartRatio !== undefined) ? clipStartRatio : 0.0;
-        var endR = (clipEndRatio !== undefined) ? clipEndRatio : 1.0;
-
-        if (peaks && peaks.length > 0) {
-            var len = peaks.length;
-            for (var i = 0; i < totalBars; i++) {
-                var x = i * (barWidth + barGap);
-                var ratio = startR + (i / totalBars) * (endR - startR);
-                var idx = Math.min(len - 1, Math.max(0, Math.floor(ratio * len)));
-                var amp = Math.max(0.04, peaks[idx] || 0.04);
-                var barH = Math.max(2, amp * maxBarHeight);
-                var topY = centerY - (barH / 2);
-                paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.9"/>`);
-            }
-        } else {
-            var s = (seed || 12345) % 2147483647;
-            function rnd() {
-                s = (s * 16807) % 2147483647;
-                return (s - 1) / 2147483646;
-            }
-
-            for (var i = 0; i < totalBars; i++) {
-                var x = i * (barWidth + barGap);
-                var t = startR + (i / totalBars) * (endR - startR);
-                var wave = Math.abs(Math.sin(t * 40.0) * Math.cos(t * 15.0) + Math.sin(t * 80.0) * 0.3);
-                var noise = 0.2 + 0.8 * rnd();
-                var amp = Math.max(0.05, Math.min(0.95, (0.3 + 0.7 * wave) * noise));
-                var barH = Math.max(2, amp * maxBarHeight);
-                var topY = centerY - (barH / 2);
-                paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.85"/>`);
-            }
+        if (!peaks || peaks.length === 0) {
+            return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%;"><line x1="0" y1="${centerY}" x2="${width}" y2="${centerY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/></svg>`;
         }
-
-        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: 100%;"><line x1="0" y1="${centerY}" x2="${width}" y2="${centerY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>${paths.join('')}</svg>`;
+        var barWidth = 2.0;
+        var barGap = 1.0;
+        var totalBars = Math.max(10, Math.floor(width / (barWidth + barGap)));
+        var maxBarHeight = height - 6;
+        var paths = [];
+        var len = peaks.length;
+        var startR = clipStartRatio != null ? clipStartRatio : 0.0;
+        var endR = clipEndRatio != null ? clipEndRatio : 1.0;
+        for (var i = 0; i < totalBars; i++) {
+            var x = i * (barWidth + barGap);
+            var ratio = startR + (i / totalBars) * (endR - startR);
+            var idx = Math.min(len - 1, Math.max(0, Math.floor(ratio * len)));
+            var amp = Math.max(0.04, peaks[idx] || 0.04);
+            var barH = Math.max(2, amp * maxBarHeight);
+            var topY = centerY - (barH / 2);
+            paths.push(`<rect x="${x.toFixed(1)}" y="${topY.toFixed(1)}" width="${barWidth}" height="${barH.toFixed(1)}" rx="1" fill="#34d399" opacity="0.9"/>`);
+        }
+        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%;"><line x1="0" y1="${centerY}" x2="${width}" y2="${centerY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>${paths.join('')}</svg>`;
     };
 
     function initProjectDetail() {
         var video = document.getElementById('main-video');
         var proxyUrl = "{{ project.proxy_url|default:'' }}";
         var proxyStatus = "{{ project.proxy_status }}";
-        var fallbackSrc = "{% if project.working_file and project.working_file.name %}{% url 'serve_media_ranges' path=project.working_file.name %}{% elif project.original_file and project.original_file.name %}{% url 'serve_media_ranges' path=project.original_file.name %}{% endif %}";
+        var prepOverlay = document.getElementById('preview-preparing-overlay');
 
-        if (proxyUrl && proxyStatus === 'completed' && video && !video._hlsAttached) {
-            video._hlsAttached = true;
-            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                var hls = new Hls();
-                hls.loadSource(proxyUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.ERROR, function (event, data) {
-                    if (data.fatal && fallbackSrc) {
-                        console.warn("[HLS Error] Fallback to direct MP4 source:", fallbackSrc);
-                        hls.destroy();
-                        video.src = fallbackSrc;
-                        video.load();
-                    }
-                });
-            } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = proxyUrl;
+        function applyProxySource(url) {
+            if (!video || !url) return;
+            if (url.endsWith('.m3u8')) {
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    var hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                }
+            } else {
+                if (!video.src || !video.src.includes(url)) {
+                    video.src = url;
+                    video.load();
+                }
             }
+            if (prepOverlay) prepOverlay.style.display = 'none';
+        }
+
+        if (video) {
+            video.addEventListener('loadeddata', function() {
+                if (prepOverlay) prepOverlay.style.display = 'none';
+            });
+            video.addEventListener('canplay', function() {
+                if (prepOverlay) prepOverlay.style.display = 'none';
+            });
+            // Failsafe: hide overlay after 1.5s if original file is loaded
+            setTimeout(function() {
+                if (video.readyState >= 1 && prepOverlay) {
+                    prepOverlay.style.display = 'none';
+                }
+            }, 1500);
+        }
+
+        if (proxyStatus === 'completed' && proxyUrl) {
+            applyProxySource(proxyUrl);
+        } else {
+            var proxyPollInterval = setInterval(async function() {
+                try {
+                    var resp = await fetch("{% url 'proxy_status' project.pk %}");
+                    if (resp.ok) {
+                        var pdata = await resp.json();
+                        if (pdata.status === 'completed' && pdata.url) {
+                            clearInterval(proxyPollInterval);
+                            applyProxySource(pdata.url);
+                        }
+                    }
+                } catch(e) {}
+            }, 1500);
         }
 
         if (typeof lucide !== 'undefined') {
@@ -754,16 +944,18 @@
             var timelineBlock = document.getElementById("visual-trim-container");
             if (timelineBlock && typeof window.duration !== 'undefined' && window.duration > 0) {
                 var basePxPerSecond = 15;
-                var zoomFactor = 1.0;
-                var totalWidth = Math.max(800, window.duration * basePxPerSecond * zoomFactor);
+                var zoomFactor = (typeof window.zoomFactor !== 'undefined') ? window.zoomFactor : 1.0;
+                var audioBlock = document.getElementById("audio-block");
+                var totalWidth = (audioBlock && audioBlock.clientWidth > 50) ? audioBlock.clientWidth : Math.max(800, window.duration * basePxPerSecond * zoomFactor);
                 var waveformContainer = document.getElementById("original-audio-waveform");
                 if (waveformContainer && typeof window.generateWaveformSvg === 'function') {
-                    waveformContainer.innerHTML = window.generateWaveformSvg(totalWidth, 44, 0);
+                    waveformContainer.innerHTML = window.generateWaveformSvg(totalWidth, 36, 0);
                 }
             } else {
                 setTimeout(tryAddOriginalWaveform, 100);
             }
         }
+        window.tryAddOriginalWaveform = tryAddOriginalWaveform;
         tryAddOriginalWaveform();
 
         // Volume sliders sync logic
@@ -829,11 +1021,116 @@
                 }
             });
         }
+
+        // Canva-style Auto-saving Editable Project Name
+        var nameInput = document.getElementById("project-name-input");
+        var nameEditBtn = document.getElementById("project-name-edit-btn");
+        var savingEl = document.getElementById("save-status-saving");
+        var savedEl = document.getElementById("save-status-saved");
+        var savedTimeout = null;
+
+        if (nameInput && !nameInput._init) {
+            nameInput._init = true;
+
+            var autoSizeInput = function() {
+                var valLen = (nameInput.value || nameInput.placeholder || "").length;
+                nameInput.style.width = Math.min(420, Math.max(130, (valLen + 2) * 9.5)) + "px";
+            };
+            autoSizeInput();
+            nameInput.addEventListener("input", autoSizeInput);
+
+            if (nameEditBtn) {
+                nameEditBtn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    nameInput.focus();
+                    nameInput.select();
+                });
+            }
+
+            nameInput.addEventListener("focus", function() {
+                nameInput.select();
+            });
+
+            nameInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    nameInput.blur();
+                } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    nameInput.value = nameInput.dataset.originalVal || "Untitled Project";
+                    autoSizeInput();
+                    nameInput.blur();
+                }
+            });
+
+            nameInput.addEventListener("blur", function() {
+                var currentVal = nameInput.value.trim();
+                if (!currentVal) {
+                    currentVal = "Untitled Project";
+                    nameInput.value = currentVal;
+                    autoSizeInput();
+                }
+
+                var originalVal = nameInput.dataset.originalVal || "";
+                if (currentVal === originalVal) {
+                    return;
+                }
+
+                var renameUrl = nameInput.dataset.renameUrl;
+                if (!renameUrl) return;
+
+                if (savingEl) savingEl.style.display = "inline-flex";
+                if (savedEl) savedEl.style.display = "none";
+                if (savedTimeout) clearTimeout(savedTimeout);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                var csrfToken = window.REEL_CSRF_TOKEN ||
+                    document.querySelector('input[name="csrfmiddlewaretoken"]')?.value ||
+                    "";
+
+                fetch(renameUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: JSON.stringify({ title: currentVal })
+                })
+                .then(function(res) {
+                    if (!res.ok) throw new Error("Rename failed");
+                    return res.json();
+                })
+                .then(function(data) {
+                    var savedTitle = data.title || currentVal;
+                    nameInput.dataset.originalVal = savedTitle;
+                    document.title = savedTitle + " — Video Editor";
+                    nameInput.title = "Click to rename project (" + savedTitle + ")";
+                    if (savingEl) savingEl.style.display = "none";
+                    if (savedEl) {
+                        savedEl.style.display = "inline-flex";
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                        savedTimeout = setTimeout(function() {
+                            savedEl.style.display = "none";
+                        }, 2500);
+                    }
+                })
+                .catch(function(err) {
+                    console.error("Error saving project name:", err);
+                    if (savingEl) savingEl.style.display = "none";
+                    nameInput.value = originalVal;
+                    autoSizeInput();
+                });
+            });
+        }
     }
 
-    document.addEventListener("DOMContentLoaded", initProjectDetail);
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initProjectDetail);
+    } else {
+        initProjectDetail();
+    }
     document.addEventListener("turbo:load", initProjectDetail);
 })();
 </script>
-<script src="{% static 'video_editing/js/app.js' %}" defer></script>
+<script src="{% static 'video_editing/js/app.js' %}?v=2.4" defer></script>
 {% endblock %}

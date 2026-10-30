@@ -1,7 +1,10 @@
+import os
+import logging
 from django.db import models
 from django.contrib.auth import get_user_model
 from common.models import SoftDeleteMixin
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 class UserProfile(SoftDeleteMixin, models.Model):
@@ -69,6 +72,35 @@ class UserProfile(SoftDeleteMixin, models.Model):
                 condition=models.Q(employee_id__isnull=False) & ~models.Q(employee_id=''),
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        """Auto-optimize uploaded profile picture to WebP (M1 Winner, 35% saving)"""
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'profile_picture' not in update_fields:
+            super().save(*args, **kwargs)
+            return
+
+        if self.profile_picture and hasattr(self.profile_picture, 'file'):
+            try:
+                from io import BytesIO
+                from django.core.files.base import ContentFile
+                from PIL import Image
+
+                name = getattr(self.profile_picture, 'name', '') or ''
+                if not name.lower().endswith('.webp'):
+                    self.profile_picture.seek(0)
+                    with Image.open(self.profile_picture) as img:
+                        img = img.convert('RGB')
+                        img.thumbnail((500, 500), Image.Resampling.LANCZOS)
+                        buffer = BytesIO()
+                        img.save(buffer, format='WEBP', quality=80, method=4)
+                        base_root = os.path.splitext(name)[0]
+                        new_name = f"{base_root}.webp" if base_root else "pfp.webp"
+                        self.profile_picture.save(new_name, ContentFile(buffer.getvalue()), save=False)
+            except Exception as e:
+                logger.warning(f"Profile picture WebP auto-conversion bypassed: {e}")
+
+        super().save(*args, **kwargs)
 
     # Backward-compatible Property Aliases for SSOT
     @property

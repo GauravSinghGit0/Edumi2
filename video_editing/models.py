@@ -94,8 +94,14 @@ class VideoProject(models.Model):
         """
         import json
         if self.timeline_state and isinstance(self.timeline_state, dict):
-            clips = self.timeline_state.get('clips', [])
-            return json.dumps(clips)
+            clips = self.timeline_state.get('clips') or self.timeline_state.get('video_clips')
+            if not clips and 'tracks' in self.timeline_state:
+                for t in self.timeline_state.get('tracks', []):
+                    if isinstance(t, dict) and t.get('type') == 'video':
+                        clips = t.get('clips', [])
+                        break
+            if clips:
+                return json.dumps(clips)
         return "[]"
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -135,8 +141,103 @@ class VideoProject(models.Model):
         return _format_display_duration(self.duration_seconds)
 
     @property
+    def exported_file(self):
+        """The rendered export artifact if available, otherwise None."""
+        return self.current_file if (self.current_file and self.current_file.name) else None
+
+    @property
+    def has_unexported_edits(self):
+        """
+        Returns True if:
+        1. An export is currently processing.
+        2. The project has never been exported, but has active timeline edits.
+        3. The project was exported previously, but newer edit operations
+           were logged after the last export.
+        """
+        if self.status == "processing":
+            return True
+
+        last_export = self.operations.filter(operation_type="timeline_export", active=True).order_by("-created_at").first()
+
+        if not self.exported_file or not last_export:
+            return self._has_timeline_edits()
+
+        # Check if newer edit operations occurred after the last export
+        return self.operations.filter(
+            created_at__gt=last_export.created_at,
+            active=True
+        ).exclude(operation_type="timeline_export").exists()
+
+    def _has_timeline_edits(self):
+        """
+        Returns True if timeline_state or operations indicate non-default edits.
+        """
+        state = self.timeline_state
+        if not state or not isinstance(state, dict):
+            return self.operations.exclude(operation_type__in=["upload", "timeline_export"]).filter(active=True).exists()
+
+        dur = float(self.duration_seconds or 0.0)
+
+        # Check trim
+        trim = state.get("trim") or {}
+        start = float(trim.get("start", 0.0) or 0.0)
+        end = float(trim.get("end", dur) or dur)
+        if start > 0.05 or (dur > 0 and end < dur - 0.05) or trim.get("fade_in") or trim.get("fade_out"):
+            return True
+
+        # Check speed
+        if abs(float(state.get("speed", 1.0) or 1.0) - 1.0) > 0.01:
+            return True
+
+        # Check audio
+        audio = state.get("audio") or {}
+        if abs(float(audio.get("volume", 1.0) or 1.0) - 1.0) > 0.01:
+            return True
+        if audio.get("muted") and self.has_audio:
+            return True
+
+        # Check text overlays
+        if state.get("text_overlays"):
+            return True
+
+        # Check background audios
+        if state.get("background_audios"):
+            return True
+
+        # Check effects
+        effects = state.get("effects") or {}
+        if effects.get("grayscale") or (effects.get("rotate", 0) not in (0, 360, -360, "0", None)) or effects.get("fade"):
+            return True
+
+        # Check resize
+        if state.get("resize"):
+            return True
+
+        # Check clips sequence
+        clips = state.get("clips") or []
+        if len(clips) > 1:
+            return True
+        elif len(clips) == 1:
+            c = clips[0]
+            c_dur = float(c.get("duration", dur) or dur)
+            c_cut_start = float(c.get("cut_start", 0.0) or 0.0)
+            c_cut_end = float(c.get("cut_end", c_dur) or c_dur)
+            if c_cut_start > 0.05 or (c_dur > 0 and c_cut_end < c_dur - 0.05):
+                return True
+            if abs(float(c.get("speed", 1.0) or 1.0) - 1.0) > 0.01:
+                return True
+            if c.get("muted") and self.has_audio:
+                return True
+            if abs(float(c.get("volume", 1.0) or 1.0) - 1.0) > 0.01:
+                return True
+            if c.get("filter"):
+                return True
+
+        return self.operations.exclude(operation_type__in=["upload", "timeline_export"]).filter(active=True).exists()
+
+    @property
     def working_file(self):
-        """The file that edit operations should act on."""
+        """The rendered export file if available, otherwise original uploaded file."""
         return self.current_file if self.current_file else self.original_file
 
     @property

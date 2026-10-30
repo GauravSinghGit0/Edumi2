@@ -63,6 +63,12 @@
                             <span style="font-size: 0.8125rem; font-weight: 600; color: var(--stream-text-muted);">Starts soon</span>
                             {% endif %}
                         {% elif meeting.status == 'ended' %}
+                            {% if is_teacher %}
+                            <a href="{% url 'engagement_report' meeting.meeting_code %}" class="btn-meeting-action btn-meeting-engagement" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;" title="View Student Emotion & Engagement Analytics">
+                                <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+                                Engagement
+                            </a>
+                            {% endif %}
                             <a href="{% url 'meeting_summary' meeting.meeting_code %}" class="btn-meeting-action btn-meeting-summary">
                                 <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
                                 Summary

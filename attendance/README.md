@@ -23,7 +23,7 @@ Separated from `meetings` to encapsulate heavy data processing (face encoding, L
 - **Zero Raw Photo Retention**: Raw student face photos are never written to disk. Only mathematically extracted 128-d biometric embeddings and quality scores are retained.
 - **Biometric Encryption**: Encrypted at rest using Fernet authenticated cryptography (`AES-128-CBC` with `HMAC-SHA256` integrity and SHA-256 verification checksums).
 - **Matching Semantics**: Uses Max Euclidean Distance thresholding (`distance <= threshold`, default 0.55 or per-classroom `AttendanceSettings.confidence_threshold`). Displayed confidence is mapped as `max(0, min(1, 1 - distance / 0.8))`.
-- **External/AI**: Integrates with OpenCV and `face_recognition` (dlib 128-d ResNet model).
+- **External/AI**: Integrates with OpenCV Model Zoo's Apache 2.0 **YuNet (Detection)** + **SFace (Recognition 128-D ONNX model)** and MiniFASNetV2 anti-spoofing.
 - **Celery**: Dispatches long-running engagement aggregation tasks to background workers.
 </details>
 

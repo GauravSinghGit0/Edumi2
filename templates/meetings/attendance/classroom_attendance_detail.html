@@ -228,9 +228,15 @@
                         </div>
                     </div>
                     
-                    <a href="{% url 'meeting_attendance' meeting.meeting_code %}" class="btn-view">
-                        View Attendance
-                    </a>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <a href="{% url 'engagement_report' meeting.meeting_code %}" class="btn-view" style="background: linear-gradient(135deg, #f59e0b, #d97706); display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+                            Engagement
+                        </a>
+                        <a href="{% url 'meeting_attendance' meeting.meeting_code %}" class="btn-view">
+                            View Attendance
+                        </a>
+                    </div>
                 </div>
             </div>
             {% endfor %}

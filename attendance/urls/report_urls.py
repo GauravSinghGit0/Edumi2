@@ -11,6 +11,6 @@ urlpatterns = [
     path('classroom/<int:classroom_id>/student/<int:student_id>/', student_report,              name='student_report'),
     path('classroom/<int:classroom_id>/export/excel/',           export_excel,                  name='export_excel'),
     path('api/check-schedule/<str:meeting_code>/',               check_schedule_api,            name='check_schedule_api'),
-    path('admin/face-photos/',                                   admin_face_photos,             name='admin_face_photos'),
-    path('engagement-report/<int:meeting_id>/',                  engagement_report_view,        name='engagement_report'),
+    path('engagement-report/<str:meeting_ident>/',                  engagement_report_view,        name='attendance_engagement_report'),
+    path('engagement-report/<int:meeting_id>/',                     engagement_report_view,        name='attendance_engagement_report_id'),
 ]

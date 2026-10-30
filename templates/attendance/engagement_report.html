@@ -3,10 +3,23 @@
 
 {% block content %}
 <div class="er-wrap">
+  <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+    <a href="javascript:history.back()" style="display: inline-flex; align-items: center; gap: 6px; color: #64748b; font-weight: 600; text-decoration: none; font-size: 14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back
+    </a>
+    {% if meeting.classroom %}
+    <a href="{% url 'classroom_detail' meeting.classroom.id %}" style="display: inline-flex; align-items: center; gap: 6px; color: #8b5cf6; font-weight: 600; text-decoration: none; font-size: 14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Return to Classroom
+    </a>
+    {% endif %}
+  </div>
+
   <div class="er-header">
     <div class="er-header-inner">
-      <h1>📊 Engagement Report</h1>
-      <p class="er-subtitle">{{ meeting.title }} &mdash; {{ meeting.scheduled_time|date:"M d, Y" }}</p>
+      <h1>📊 Engagement & Emotion Report</h1>
+      <p class="er-subtitle">{{ meeting.title }} &mdash; {{ meeting.scheduled_time|default:meeting.created_at|date:"M d, Y • g:i A" }} &mdash; Code: <strong>{{ meeting.meeting_code }}</strong></p>
     </div>
     {% if report %}
     <div style="display:flex; align-items:center; gap:16px;">

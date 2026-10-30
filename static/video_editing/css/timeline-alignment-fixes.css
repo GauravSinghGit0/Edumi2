@@ -1,0 +1,196 @@
+/**
+ * Timeline Alignment and UI Cleanup Fixes
+ * 
+ * ROOT CAUSE ANALYSIS:
+ * ====================
+ * The timeline misalignment was caused by horizontal padding on .timeline-scroll-area
+ * (12px left/right padding) which shifted the track content, but the ruler had no
+ * matching padding. This created a visual offset between ruler ticks and track content.
+ * 
+ * SOLUTION:
+ * =========
+ * Remove ALL horizontal padding from timeline-scroll-area and timeline-tracks-wrapper
+ * to establish a unified coordinate system where:
+ * - Ruler tick at X pixels = Track content at X pixels = Playhead at X pixels
+ * - All use the same basePxPerSecond * zoomFactor calculation
+ * - No offsets, margins, or transforms interfere with positioning
+ */
+
+/* =============================================================================
+   CRITICAL: Timeline Alignment Fixes - Highest Priority
+   ============================================================================= */
+
+/* Ensure timeline scroll area has NO horizontal padding */
+.timeline-scroll-area {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure timeline tracks wrapper has NO margins that shift content */
+.timeline-tracks-wrapper {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Ensure ruler header has same horizontal alignment as tracks */
+.trim-ruler-header {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure ruler itself has no padding */
+.trim-ruler {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Ensure track content cells don't add offset */
+.track-content-cell,
+.track-content-cell.trim-track,
+.track-content-cell.audio-track {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Playhead positioning - must use same coordinate system */
+.timeline-tracks-wrapper .trim-playhead {
+  /* No transform or margin adjustments */
+  margin-left: 0 !important;
+  transform: none !important;
+}
+
+/* =============================================================================
+   Right Sidebar - Media Library Improvements
+   ============================================================================= */
+
+/* Ensure sidebar has clean background */
+.ve-tool-panel {
+  background: var(--ve-bg) !important;
+}
+
+/* Make sidebar scrollable independently */
+.ve-media-grid {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 320px) !important;
+}
+
+/* Improve tab readability */
+.ve-tool-tab {
+  font-size: 13px !important;
+  color: var(--ve-text-muted) !important;
+}
+
+.ve-tool-tab:hover {
+  color: var(--ve-text) !important;
+}
+
+.ve-tool-tab--active {
+  color: var(--ve-primary) !important;
+}
+
+/* Category buttons - better contrast */
+.ve-category-btn {
+  color: var(--ve-text-muted) !important;
+}
+
+.ve-category-btn:hover {
+  color: var(--ve-text) !important;
+}
+
+.ve-category-btn.active {
+  color: #ffffff !important;
+}
+
+/* =============================================================================
+   Timeline Toolbar - Standardization
+   ============================================================================= */
+
+/* Consistent button heights and spacing */
+.tb-btn {
+  height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  gap: 6px !important;
+}
+
+.tb-btn i,
+.tb-btn [data-lucide] {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Speed control dropdown */
+.timeline-speed-control select,
+.tb-speed-select {
+  height: 32px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+}
+
+/* =============================================================================
+   Visual Polish
+   ============================================================================= */
+
+/* Smooth transitions */
+.timeline-scroll-area,
+.timeline-tracks-wrapper,
+.trim-ruler {
+  transition: none !important; /* Prevent animation during resize/zoom */
+}
+
+/* Ensure ruler ticks are crisp */
+.trim-tick,
+.trim-tick.major {
+  transform: translateZ(0); /* GPU acceleration */
+}
+
+/* Prevent sub-pixel rendering issues */
+.trim-ruler,
+.timeline-tracks-wrapper,
+.track-content-cell {
+  will-change: auto;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+/* =============================================================================
+   Responsive Adjustments
+   ============================================================================= */
+
+@media (max-width: 1024px) {
+  .tb-btn span {
+    display: none; /* Hide text on small screens, keep icons */
+  }
+  
+  .tb-btn {
+    min-width: 32px !important;
+    padding: 0 8px !important;
+  }
+}
+
+/* =============================================================================
+   Debugging Helpers (Remove after verification)
+   ============================================================================= */
+
+/* 
+ * Uncomment these to visualize alignment:
+ * 
+ * .trim-ruler {
+ *   background: rgba(255, 0, 0, 0.1) !important;
+ * }
+ * 
+ * .timeline-tracks-wrapper {
+ *   background: rgba(0, 255, 0, 0.1) !important;
+ * }
+ * 
+ * .track-content-cell {
+ *   outline: 1px dashed rgba(0, 0, 255, 0.3) !important;
+ * }
+ */
