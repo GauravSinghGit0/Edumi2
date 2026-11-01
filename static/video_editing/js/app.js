@@ -219,6 +219,7 @@
         volume: editorState.volume,
         muted: Boolean(editorState.userMuted),
       },
+      audio_deleted_by_user: Boolean(editorState.audio_deleted_by_user),
       resize: editorState.resize,
       effects: {
         grayscale: editorState.grayscale,
@@ -1349,6 +1350,7 @@
       }
       if (state.text_overlays) editorState.text_overlays = state.text_overlays;
       if (state.background_audios) editorState.background_audios = state.background_audios;
+      if (state.audio_deleted_by_user !== undefined) editorState.audio_deleted_by_user = state.audio_deleted_by_user;
       if (state.resize) editorState.resize = state.resize;
       if (state.effects) {
         if (state.effects.grayscale !== undefined) editorState.grayscale = state.effects.grayscale;
@@ -5089,14 +5091,25 @@
 
       if (globalSelection.track === "video") {
         const deletedClip = editorState.video_clips?.[globalSelection.index];
+        const deletedStart = deletedClip ? (deletedClip.start || 0) : 0;
+        const deletedDuration = deletedClip ? (deletedClip.duration || 0) : 0;
         editorState.video_clips?.splice(globalSelection.index, 1);
         
         if (deletedClip && editorState.background_audios && editorState.background_audios.length > 0) {
           const aIdx = editorState.background_audios.findIndex(
-            (a) => a.is_detached && Math.abs((a.start || 0) - (deletedClip.start || 0)) < 0.2
+            (a) => a.is_detached && Math.abs((a.start || 0) - deletedStart) < 0.2
           );
           if (aIdx !== -1) {
             editorState.background_audios.splice(aIdx, 1);
+          }
+          // Shift subsequent detached audio clips left by deletedDuration so video & audio remain 1:1 in sync
+          if (deletedDuration > 0) {
+            editorState.background_audios.forEach((a) => {
+              if (a.is_detached && (a.start || 0) >= deletedStart) {
+                a.start = Math.max(0, parseFloat(((a.start || 0) - deletedDuration).toFixed(2)));
+                a.end = Math.max(a.start, parseFloat(((a.end || 0) - deletedDuration).toFixed(2)));
+              }
+            });
           }
         }
         

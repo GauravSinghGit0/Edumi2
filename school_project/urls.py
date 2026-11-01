@@ -40,7 +40,7 @@ urlpatterns = [
     # Put the most specific route first: /cameras/<int:camera_id>/feed/
     path('cameras/<int:camera_id>/feed/', camera_feed_proxy, name='camera_feed_direct'),  # <-- New streamer view!
     path('cameras/', include('cameras.urls')),
-    path('mobile-cameras/', include('mobile_cameras.urls')),
+    path('mobile-cameras/', RedirectView.as_view(url='/cameras/', permanent=False)),  # Consolidated into cameras
     path('meetings/', include('meetings.urls')),
     path('attendance/', include('attendance.urls')),
     path('videos/', include('videos.urls')),  # <-- Video URLs

@@ -274,6 +274,54 @@ def project_detail(request, pk):
             pass
     timeline_state_json = json.dumps(state) if state else "null"
 
+    # Structured project config for client bootstrap
+    operations_list = list(project.operations.filter(active=True)[:20])
+    operations_data = [
+        {
+            "type": op.operation_type,
+            "title": op.get_operation_type_display(),
+            "description": op.description or "",
+            "trim_start": op.trim_start or 0.0,
+            "trim_end": op.trim_end or 0.0,
+        }
+        for op in operations_list
+    ]
+
+    clips_data = []
+    if isinstance(state, dict):
+        clips_data = state.get("clips") or state.get("video_clips") or []
+        if not clips_data and isinstance(state.get("tracks"), list):
+            v_track = next((t for t in state["tracks"] if t.get("type") == "video"), None)
+            if v_track:
+                clips_data = v_track.get("clips", [])
+    if not clips_data and project.clips_json:
+        try:
+            clips_data = json.loads(project.clips_json)
+        except Exception:
+            clips_data = []
+
+    project_config = {
+        "projectId": str(project.pk),
+        "statusUrl": reverse("project_status", args=[project.pk]),
+        "filmstripUrl": reverse("project_filmstrip", args=[project.pk]),
+        "waveformUrl": reverse("project_waveform", args=[project.pk]),
+        "saveTimelineUrl": reverse("save_timeline", args=[project.pk]),
+        "uploadAssetUrl": reverse("upload_asset", args=[project.pk]),
+        "chunkedUploadUrl": reverse("chunked_upload"),
+        "proxyStatusUrl": reverse("proxy_status", args=[project.pk]),
+        "status": project.status,
+        "hasAudio": project.has_audio,
+        "trimStart": project.trim_start or 0.0,
+        "trimEnd": project.trim_end,
+        "height": project.height or 720,
+        "duration": project.duration_seconds or 0.0,
+        "proxyStatus": project.proxy_status,
+        "proxyUrl": project.proxy_url or "",
+        "timelineState": state,
+        "clips": clips_data,
+        "operations": operations_data,
+    }
+
     context = {
         "project": project,
         "trim_form": TrimForm(),
@@ -285,9 +333,10 @@ def project_detail(request, pk):
         "resize_form": ResizeForm(),
         "fade_form": FadeForm(),
         "bg_audio_form": BackgroundAudioForm(),
-        "operations": project.operations.filter(active=True)[:20],
+        "operations": operations_list,
         "has_redo": project.operations.filter(active=False).exists(),
         "timeline_state_json": timeline_state_json,
+        "project_config": project_config,
     }
     return render(request, "video_editing/project_detail.html", context)
 

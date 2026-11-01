@@ -139,13 +139,14 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     video_outs = []
     audio_outs = []
     has_detached_audio = any(ac.get('is_detached') for ac in audio_clips)
+    audio_deleted_by_user = bool(timeline_json.get('audio_deleted_by_user'))
 
     # Process and slice video clips
     for i, clip in enumerate(clips):
         trim_start = clip.get('trimStart', clip.get('start', 0))
         trim_end = clip.get('trimEnd', clip.get('end', 10))
         in_idx = clip_input_index_map.get(i, 0)
-        has_in_audio = input_audio_map.get(in_idx, False)
+        has_in_audio = input_audio_map.get(in_idx, False) and not audio_deleted_by_user
         
         v_label = f"[v{i}]"
         a_label = f"[a{i}]"
@@ -415,7 +416,8 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         # Trim background audio, add delay offset
         start_ms = int(ac_start * 1000)
         delay_str = f",adelay={start_ms}|{start_ms}" if start_ms > 0 else ""
-        vol = float(ac.get('bg_volume', ac.get('volume', 0.5)))
+        default_vol = 1.0 if ac.get('is_detached') else 0.5
+        vol = float(ac.get('bg_volume', ac.get('volume', default_vol)))
         
         label_trim = f"[a_trimmed_{idx}]"
         filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start}:{ac_trim_end},asetpts=PTS-STARTPTS{delay_str},volume={vol},aformat=sample_rates=44100:channel_layouts=stereo{label_trim}")

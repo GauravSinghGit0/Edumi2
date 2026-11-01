@@ -149,7 +149,6 @@ INSTALLED_APPS = [
     'common',
     'accounts',
     'cameras',
-    'mobile_cameras',
     'meetings',
     'attendance',
     'videos',
@@ -734,9 +733,21 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS  = 10_000
 # FFMPEG / FFPROBE BINARY PATHS
 # ==============================================================================
 try:
-    from cameras.ffmpeg_helpers import get_ffmpeg_binary, get_ffprobe_binary
-    FFMPEG_BINARY = get_ffmpeg_binary()
-    FFPROBE_BINARY = get_ffprobe_binary()
+    import shutil
+    _user_profile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    _winget_ffmpeg = os.path.join(
+        _user_profile,
+        "AppData", "Local", "Microsoft", "WinGet", "Packages",
+        "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "ffmpeg-8.1.2-full_build", "bin", "ffmpeg.exe"
+    )
+    _winget_ffprobe = _winget_ffmpeg.replace("ffmpeg.exe", "ffprobe.exe")
+    FFMPEG_BINARY = env('FFMPEG_BINARY') or (
+        _winget_ffmpeg if os.path.exists(_winget_ffmpeg) else (shutil.which('ffmpeg') or 'ffmpeg')
+    )
+    FFPROBE_BINARY = env('FFPROBE_BINARY') or (
+        _winget_ffprobe if os.path.exists(_winget_ffprobe) else (shutil.which('ffprobe') or 'ffprobe')
+    )
 except Exception:
     FFMPEG_BINARY = env('FFMPEG_BINARY', 'ffmpeg')
     FFPROBE_BINARY = env('FFPROBE_BINARY', 'ffprobe')

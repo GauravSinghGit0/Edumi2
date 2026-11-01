@@ -119,3 +119,51 @@ def broadcast_live_status(camera, status):
             )
         transaction.on_commit(_send)
 
+
+
+
+def test_mobile_camera_paths(ip, port, username, password):
+    """Probe common MJPEG/HTTP paths to find the one that returns a live stream."""
+    import requests
+    from requests.auth import HTTPBasicAuth
+    common_paths = ['/video', '/mjpegfeed', '/videofeed', '/cam_1.mjpg',
+                    '/stream', '/video.mjpg', '/video.cgi', '/']
+    for path in common_paths:
+        if username and password:
+            url = f"http://{username}:{password}@{ip}:{port}{path}"
+            auth = HTTPBasicAuth(username, password)
+        else:
+            url = f"http://{ip}:{port}{path}"
+            auth = None
+        try:
+            resp = requests.get(url, timeout=3, stream=True, auth=auth)
+            if resp.status_code == 200:
+                ct = resp.headers.get('Content-Type', '')
+                if any(x in ct for x in ('image', 'video', 'multipart')):
+                    return path, url
+        except Exception:
+            continue
+    return None, None
+
+
+def parse_camera_url(url):
+    """Parse a full camera URL into its components dict."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    camera_type = 'other'
+    stream_path = parsed.path or '/'
+    if '/video' in stream_path:
+        camera_type = 'ip_webcam'
+    elif '/mjpegfeed' in stream_path:
+        camera_type = 'droidcam'
+    port = parsed.port
+    if not port:
+        port = 554 if parsed.scheme == 'rtsp' else 8080
+    return {
+        'ip_address': parsed.hostname or '',
+        'port': port,
+        'username': parsed.username or '',
+        'password': parsed.password or '',
+        'stream_path': stream_path,
+        'camera_type': camera_type,
+    }

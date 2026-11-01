@@ -119,15 +119,9 @@
                     <i data-lucide="map-pin" style="width: 14px; display: inline-block; vertical-align: middle;"></i>
                     {{ camera.ip_address }} • {{ camera.get_camera_type_display }}
                 </p>
-                {% if camera.is_mobile %}
-                    <a href="{% url 'mobile_cameras:view' camera.id %}" class="btn-control">
-                        View Mobile Feed
-                    </a>
-                {% else %}
-                    <a href="{% url 'teacher_control_room' camera.id %}" class="btn-control">
-                        Open Control Room
-                    </a>
-                {% endif %}
+                <a href="{% url 'teacher_control_room' camera.id %}" class="btn-control">
+                    Open Control Room
+                </a>
             </div>
         </div>
         {% empty %}

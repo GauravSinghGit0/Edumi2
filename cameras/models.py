@@ -12,6 +12,7 @@ class Camera(models.Model):
         ('rtsp', 'RTSP Camera'),
         ('ip_webcam', 'IP Webcam (Android)'),
         ('droidcam', 'DroidCam (iPhone)'),
+        ('other', 'Other Mobile / HTTP Camera'),
     )
     
     name = models.CharField(max_length=100)
@@ -48,8 +49,17 @@ class Camera(models.Model):
         elif self.camera_type == 'ip_webcam':
             return f"http://{self.ip_address}:{self.port}/video"
         elif self.camera_type == 'droidcam':
+            if path and path != '/':
+                return f"http://{self.ip_address}:{self.port}{path}"
             return f"http://{self.ip_address}:{self.port}/mjpegfeed"
+        elif self.camera_type == 'other':
+            return f"http://{self.ip_address}:{self.port}{path}" if self.ip_address else ""
         return f"http://{self.ip_address}:{self.port}{path}" if self.ip_address else ""
+
+    @property
+    def is_mobile(self):
+        """Check if camera is a mobile or HTTP stream rather than standard RTSP."""
+        return self.camera_type in ('ip_webcam', 'droidcam', 'other')
     
     def get_full_rtsp_url(self):
         """Alias for compatibility with camera service"""

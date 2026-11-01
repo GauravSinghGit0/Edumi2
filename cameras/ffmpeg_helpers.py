@@ -33,7 +33,7 @@ def get_ffmpeg_binary():
     # Django settings
     try:
         from django.conf import settings as _s
-        val = getattr(_s, "FFMPEG_BINARY", None)
+        val = getattr(_s, "FFMPEG_BINARY", None) if getattr(_s, "configured", False) else None
         if val and os.path.exists(val):
             return val
     except Exception:
@@ -55,7 +55,7 @@ def get_ffprobe_binary():
         return env
     try:
         from django.conf import settings as _s
-        val = getattr(_s, "FFPROBE_BINARY", None)
+        val = getattr(_s, "FFPROBE_BINARY", None) if getattr(_s, "configured", False) else None
         if val and os.path.exists(val):
             return val
     except Exception:

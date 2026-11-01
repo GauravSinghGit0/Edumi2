@@ -8,7 +8,6 @@ from django.db.models import Avg, Max, Min, Count
 from ..models import Camera, HeadCountLog, HeadCountSession, CameraPermission
 from .utils import is_admin, can_view_camera
 from ..head_count_service import head_count_manager
-from mobile_cameras.models import MobileCamera, MobileCameraPermission
 
 
 @login_required
@@ -19,17 +18,15 @@ def head_count_dashboard(request):
 
     # Get cameras based on user role
     if is_admin(request.user):
-        rtsp_cameras = Camera.objects.filter(is_active=True)
-        mobile_cameras = MobileCamera.objects.filter(is_active=True)
+        base_cameras = Camera.objects.filter(is_active=True)
     elif hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'teacher':
         camera_ids = CameraPermission.objects.filter(teacher=request.user).values_list('camera_id', flat=True)
-        rtsp_cameras = Camera.objects.filter(id__in=camera_ids, is_active=True)
-
-        mobile_camera_ids = MobileCameraPermission.objects.filter(teacher=request.user).values_list('mobile_camera_id', flat=True)
-        mobile_cameras = MobileCamera.objects.filter(id__in=mobile_camera_ids, is_active=True)
+        base_cameras = Camera.objects.filter(id__in=camera_ids, is_active=True)
     else:
-        rtsp_cameras = Camera.objects.none()
-        mobile_cameras = MobileCamera.objects.none()
+        base_cameras = Camera.objects.none()
+
+    rtsp_cameras = base_cameras.filter(camera_type='rtsp')
+    mobile_cameras = base_cameras.exclude(camera_type='rtsp')
 
     # PROXIED: Get active sessions from the dedicated camera service
     active_sessions = {}

@@ -422,24 +422,11 @@ def mobile_mic(request, camera_id):
 @login_required
 def teacher_camera_dashboard(request):
     """Dashboard for teachers to see assigned cameras (RTSP and Mobile)"""
-    from mobile_cameras.models import MobileCamera, MobileCameraPermission
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher':
         return redirect('student_dashboard' if hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'student' else 'home')
 
-    # Get RTSP cameras
     camera_ids = CameraPermission.objects.filter(teacher=request.user).values_list('camera_id', flat=True)
-    rtsp_cameras = list(Camera.objects.filter(id__in=camera_ids))
-    for cam in rtsp_cameras:
-        cam.is_mobile = False
-
-    # Get Mobile cameras
-    mobile_camera_ids = MobileCameraPermission.objects.filter(teacher=request.user).values_list('mobile_camera_id', flat=True)
-    mobile_cameras = list(MobileCamera.objects.filter(id__in=mobile_camera_ids))
-    for cam in mobile_cameras:
-        cam.is_mobile = True
-
-    # Combine lists
-    all_cameras = rtsp_cameras + mobile_cameras
+    all_cameras = list(Camera.objects.filter(id__in=camera_ids, is_active=True))
 
     return render(request, 'cameras/control_room/teacher_dashboard.html', {
         'cameras': all_cameras,
