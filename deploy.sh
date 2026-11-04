@@ -45,14 +45,16 @@ APP_USER="edumi"
 DB_NAME="edumi_db"
 DB_USER="edumi_admin"
 DB_PASS=""
+NODE_IP=""
 
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --domain)       DOMAIN="$2";  shift 2 ;;
-        --email)        EMAIL="$2";   shift 2 ;;
-        --db-host)      DB_HOST="$2"; shift 2 ;;
-        --db-pass)      DB_PASS="$2"; shift 2 ;;
+        --domain)       DOMAIN="$2";   shift 2 ;;
+        --email)        EMAIL="$2";    shift 2 ;;
+        --db-host)      DB_HOST="$2";  shift 2 ;;
+        --db-pass)      DB_PASS="$2";  shift 2 ;;
+        --node-ip)      NODE_IP="$2";  shift 2 ;;
         --letsencrypt)  USE_LETSENCRYPT=true; shift ;;
         *) warn "Unknown argument: $1"; shift ;;
     esac
@@ -249,7 +251,7 @@ else
     log "LiveKit Linux binary already present in ./livekit-bin/livekit-server"
 fi
 
-info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
+info "Configuring config/livekit.yaml for server IP (${NODE_IP:-$LAN_IP})..."
 mkdir -p "$APP_DIR/config"
 
 LK_KEY=$(grep '^LIVEKIT_API_KEY=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
@@ -277,7 +279,7 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: "${PUBLIC_IP:-$LAN_IP}"
+  node_ip: "${NODE_IP:-$LAN_IP}"
 
 keys:
   $LK_KEY: $LK_SECRET
