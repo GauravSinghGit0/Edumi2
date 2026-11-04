@@ -25,7 +25,7 @@ from daphne.server import Server
 application = get_asgi_application()
 
 if __name__ == '__main__':
-    port = int(os.environ.get('CAMERA_SERVICE_PORT', 8003))
+    port = int(os.environ.get('CAMERA_SERVICE_PORT', 8008))
     bind = "0.0.0.0"
     
     use_ssl = os.environ.get('CAMERA_SERVICE_SSL', 'false').lower() == 'true'

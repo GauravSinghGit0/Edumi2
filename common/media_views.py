@@ -13,6 +13,9 @@ from django.http import (
     StreamingHttpResponse, FileResponse
 )
 from django.contrib.auth.decorators import login_required
+import posixpath
+from django.contrib.staticfiles import finders
+from django.views import static as django_static_serve
 
 
 def file_iterator(file_path, offset=0, length=None, chunk_size=1048576):
@@ -223,4 +226,39 @@ def protected_media_serve(request, path):
     response['Accept-Ranges'] = 'bytes'
     response['Content-Length'] = str(file_size)
     return _apply_security_headers(response)
+
+
+def safe_static_serve(request, path, **kwargs):
+    """
+    Guaranteed static file serving gateway.
+    Prevents 404 errors by resolving requested assets across:
+      1. settings.STATIC_ROOT (collected production staticfiles)
+      2. django.contrib.staticfiles.finders (app directories and STATICFILES_DIRS)
+      3. settings.BASE_DIR / 'static' (local project static folder)
+    """
+    clean_path = posixpath.normpath(path).lstrip('/')
+
+    # 1. Check STATIC_ROOT
+    if getattr(settings, 'STATIC_ROOT', None):
+        candidate = os.path.join(str(settings.STATIC_ROOT), clean_path)
+        if os.path.isfile(candidate):
+            doc_root, rel = os.path.split(candidate)
+            return django_static_serve.serve(request, rel, document_root=doc_root, **kwargs)
+
+    # 2. Check Staticfiles Finders (resolves across all app static directories & STATICFILES_DIRS)
+    try:
+        found = finders.find(clean_path)
+        if found and os.path.isfile(found):
+            doc_root, rel = os.path.split(found)
+            return django_static_serve.serve(request, rel, document_root=doc_root, **kwargs)
+    except Exception:
+        pass
+
+    # 3. Check BASE_DIR / 'static'
+    local_static = os.path.join(str(settings.BASE_DIR), 'static', clean_path)
+    if os.path.isfile(local_static):
+        doc_root, rel = os.path.split(local_static)
+        return django_static_serve.serve(request, rel, document_root=doc_root, **kwargs)
+
+    raise Http404(f"Static file '{clean_path}' could not be found.")
 

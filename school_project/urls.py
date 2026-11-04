@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.db import connection
 from meetings.livekit_http_proxy import livekit_http_proxy
 from cameras.views_logic.streaming_views import camera_feed_proxy
-from common.media_views import protected_media_serve
+from common.media_views import protected_media_serve, safe_static_serve
 
 def health_check(request):
     """Health check endpoint for watchdog, load balancers and monitoring."""
@@ -60,6 +60,7 @@ handler500 = 'accounts.views.error_500'
 # is required to serve uploaded media files from MEDIA_ROOT regardless of DEBUG setting.
 urlpatterns += [
     re_path(r'^media/(?P<path>.*)$', protected_media_serve, name='protected_media'),
+    re_path(r'^static/(?P<path>.*)$', safe_static_serve, name='safe_static_serve'),
 ]
 
 

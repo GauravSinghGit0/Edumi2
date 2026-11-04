@@ -573,3 +573,72 @@
     align-items: center;
     gap: 12px;
 }
+
+
+/* ==============================================================
+   RESPONSIVE DESIGN & MOBILE OPTIMIZATIONS
+   ============================================================== */
+@media screen and (max-width: 1024px) {
+    .attendance-container {
+        padding: var(--space-sm, 12px) var(--space-md, 16px);
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .attendance-header-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-md, 16px);
+        padding: var(--space-md, 16px);
+    }
+
+    .attendance-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .attendance-header-actions .btn-action {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .attendance-table-container {
+        border-radius: var(--radius-md, 8px);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .attendance-table {
+        min-width: 600px;
+    }
+
+    .toggle-row {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .attendance-container {
+        padding: var(--space-xs, 8px);
+    }
+
+    .attendance-header-title {
+        font-size: 1.25rem;
+    }
+
+    .attendance-header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .attendance-header-actions .btn-action {
+        width: 100%;
+    }
+
+    .badge-pill {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+}

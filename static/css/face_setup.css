@@ -263,6 +263,7 @@
     position: relative;
     width: clamp(250px, 62vw, 290px);
     height: clamp(250px, 62vw, 290px);
+    aspect-ratio: 1 / 1;
     border-radius: 50%;
     overflow: hidden;
     background: #090d16;
@@ -544,7 +545,9 @@
     font-weight: 500;
     text-align: center;
     max-width: 96%;
-    white-space: nowrap;
+    white-space: normal;
+    text-wrap: balance;
+    line-height: 1.4;
     transition: all 0.25s ease;
 }
 

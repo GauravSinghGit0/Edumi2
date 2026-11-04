@@ -33,11 +33,21 @@
 <script>
 if (typeof faceapi === 'undefined') {
     var cdnScript = document.createElement('script');
-    cdnScript.src = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js";
+    cdnScript.src = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js";
     cdnScript.onload = function() {
         if (window.FaceSetupManager && window.FaceSetupManager.ensureFaceApiLoaded) {
             window.FaceSetupManager.ensureFaceApiLoaded();
         }
+    };
+    cdnScript.onerror = function() {
+        var altCdn = document.createElement('script');
+        altCdn.src = "https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/face-api.min.js";
+        altCdn.onload = function() {
+            if (window.FaceSetupManager && window.FaceSetupManager.ensureFaceApiLoaded) {
+                window.FaceSetupManager.ensureFaceApiLoaded();
+            }
+        };
+        document.head.appendChild(altCdn);
     };
     document.head.appendChild(cdnScript);
 }

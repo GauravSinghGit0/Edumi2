@@ -45,6 +45,7 @@
       if (forceSeek || Math.abs(video.currentTime - tTimeline) > 0.15) {
         try { video.currentTime = tTimeline; } catch (e) {}
       }
+      syncAudioPreviewToTimeline(tTimeline, forceSeek);
       return;
     }
     let targetClipIndex = 0;
@@ -73,6 +74,7 @@
         const onSeeked = () => {
           video.removeEventListener("seeked", onSeeked);
           isTransitioningClip = false;
+          syncAudioPreviewToTimeline(tTimeline, true);
           if (wasPlaying) video.play().catch(() => {});
         };
         video.addEventListener("seeked", onSeeked, { once: true });
@@ -86,10 +88,206 @@
         const onSeeked = () => {
           video.removeEventListener("seeked", onSeeked);
           isTransitioningClip = false;
+          syncAudioPreviewToTimeline(tTimeline, true);
         };
         video.addEventListener("seeked", onSeeked, { once: true });
         setTimeout(() => { isTransitioningClip = false; }, 250);
+      } else {
+        syncAudioPreviewToTimeline(tTimeline, forceSeek);
       }
+    }
+  }
+
+  function syncAudioPreviewToTimeline(tTimeline, isSeeking = false) {
+    const video = document.getElementById("main-video");
+    if (!video) return;
+
+    const audioClips = editorState.background_audios || [];
+    const hasAudioClips = audioClips.length > 0;
+    const isUserMuted = Boolean(editorState.userMuted || editorState.muted);
+    const masterVolume = Number.isFinite(editorState.volume) ? editorState.volume : 1.0;
+    const isVideoPaused = video.paused || video.ended;
+    const playbackSpeed = Number(editorState.speed || video.playbackRate || 1.0);
+
+    // If audio was deleted by user, video internal audio must be muted and previews removed
+    if (editorState.audio_deleted_by_user) {
+      if (!video.muted) video.muted = true;
+      let idx = 0;
+      while (document.getElementById(`preview-timeline-audio-${idx}`)) {
+        const el = document.getElementById(`preview-timeline-audio-${idx}`);
+        el.pause();
+        el.removeAttribute("src");
+        if (typeof el.load === "function") el.load();
+        el.remove();
+        idx++;
+      }
+      return;
+    }
+
+    if (!hasAudioClips) {
+      // No audio clips on timeline - play video internal audio adhering to user mute
+      const shouldMute = isUserMuted;
+      if (video.muted !== shouldMute) video.muted = shouldMute;
+      if (!shouldMute && Math.abs(video.volume - masterVolume) > 0.01) {
+        video.volume = Math.max(0, Math.min(1.0, masterVolume));
+      }
+      let idx = 0;
+      while (document.getElementById(`preview-timeline-audio-${idx}`)) {
+        const el = document.getElementById(`preview-timeline-audio-${idx}`);
+        el.pause();
+        el.removeAttribute("src");
+        if (typeof el.load === "function") el.load();
+        el.remove();
+        idx++;
+      }
+      return;
+    }
+
+    // Default linked mode: audio is attached to video and plays natively through video element
+    if (!editorState.audio_separated) {
+      const activeClip = audioClips.find(ac => {
+        const acStart = parseFloat(ac.start != null ? ac.start : 0);
+        const acEnd = parseFloat(ac.end != null ? ac.end : (acStart + (parseFloat(ac.duration) || 0)));
+        return (tTimeline >= acStart - 0.03 && tTimeline < acEnd - 0.03);
+      });
+
+      if (activeClip) {
+        const clipVol = parseFloat(activeClip.bg_volume !== undefined ? activeClip.bg_volume : (activeClip.volume !== undefined ? activeClip.volume : 1.0));
+        const effectiveVol = Math.max(0, Math.min(1.0, masterVolume * clipVol));
+        const shouldMute = isUserMuted;
+        if (video.muted !== shouldMute) video.muted = shouldMute;
+        if (!shouldMute && Math.abs(video.volume - effectiveVol) > 0.01) {
+          video.volume = effectiveVol;
+        }
+      } else {
+        // Playhead is in a gap where audio portion was deleted -> keep video element silent!
+        if (!video.muted) video.muted = true;
+      }
+
+      // Ensure surplus/detached preview audio elements are paused
+      let idx = 0;
+      while (document.getElementById(`preview-timeline-audio-${idx}`)) {
+        const el = document.getElementById(`preview-timeline-audio-${idx}`);
+        if (!el.paused) el.pause();
+        idx++;
+      }
+      return;
+    }
+
+    // Separated Mode: handle independent audio clips (which may be shifted, trimmed, or external)
+    const defaultVideoSrc = video.currentSrc || video.src || window.REEL_PROJECT_PROXY_URL || "";
+    const videoExpectedSourceTime = timelineToSourceTime(tTimeline);
+
+    let nativeVideoAudioHandled = false;
+
+    audioClips.forEach((ac, idx) => {
+      let audioEl = document.getElementById(`preview-timeline-audio-${idx}`);
+      const targetSrc = ac.url || (ac.is_detached ? defaultVideoSrc : "");
+      if (!targetSrc) return;
+
+      const acStart = parseFloat(ac.start != null ? ac.start : 0);
+      const acEnd = parseFloat(ac.end != null ? ac.end : (acStart + (parseFloat(ac.duration) || 0)));
+      const acTrimStart = parseFloat(ac.trimStart != null ? ac.trimStart : 0);
+      const isWithinBounds = (tTimeline >= acStart - 0.03 && tTimeline < acEnd - 0.03);
+
+      const clipVol = parseFloat(ac.bg_volume !== undefined ? ac.bg_volume : (ac.volume !== undefined ? ac.volume : 1.0));
+      const effectiveVol = Math.max(0, Math.min(1.0, masterVolume * clipVol));
+
+      if (isWithinBounds) {
+        const offsetInClip = Math.max(0, tTimeline - acStart);
+        const expectedSourceTime = acTrimStart + offsetInClip;
+
+        // Check if this audio clip is the original video audio AND aligned with video
+        const isDetachedOriginal = Boolean(ac.is_detached || (!ac.url && !ac.path) || (ac.name && (ac.name.includes("Audio Track") || ac.name.includes("Audio Stream"))));
+        const isAlignedWithVideo = isDetachedOriginal && !ac.user_dragged && Math.abs(expectedSourceTime - videoExpectedSourceTime) < 0.25;
+
+        if (isAlignedWithVideo && !nativeVideoAudioHandled) {
+          // Play natively through the video element for 100% sample-accurate, zero-latency lip sync!
+          nativeVideoAudioHandled = true;
+          const shouldMute = isUserMuted;
+          if (video.muted !== shouldMute) video.muted = shouldMute;
+          if (!shouldMute && Math.abs(video.volume - effectiveVol) > 0.01) {
+            video.volume = effectiveVol;
+          }
+          if (audioEl && !audioEl.paused) {
+            audioEl.pause();
+          }
+          return;
+        }
+
+        // If not aligned with video or is external audio, play through dedicated preview audio element
+        if (!audioEl) {
+          audioEl = document.createElement("audio");
+          audioEl.id = `preview-timeline-audio-${idx}`;
+          audioEl.preload = "auto";
+          audioEl.crossOrigin = "anonymous";
+          audioEl.src = targetSrc;
+          document.body.appendChild(audioEl);
+        } else if (audioEl.src !== targetSrc && targetSrc) {
+          audioEl.src = targetSrc;
+        }
+
+        if (Math.abs(audioEl.playbackRate - playbackSpeed) > 0.01) {
+          audioEl.playbackRate = playbackSpeed;
+        }
+
+        if (isUserMuted) {
+          if (!audioEl.muted) audioEl.muted = true;
+        } else {
+          if (audioEl.muted) audioEl.muted = false;
+          if (Math.abs(audioEl.volume - effectiveVol) > 0.01) {
+            audioEl.volume = effectiveVol;
+          }
+        }
+
+        if (isVideoPaused) {
+          if (!audioEl.paused) audioEl.pause();
+          if (isSeeking || Math.abs(audioEl.currentTime - expectedSourceTime) > 0.1) {
+            try { audioEl.currentTime = expectedSourceTime; } catch (e) {}
+          }
+        } else {
+          if (audioEl.paused) {
+            try { audioEl.currentTime = expectedSourceTime; } catch (e) {}
+            audioEl.play().catch(() => {});
+          } else {
+            const drift = audioEl.currentTime - expectedSourceTime;
+            if (isSeeking || Math.abs(drift) > 0.25) {
+              try { audioEl.currentTime = expectedSourceTime; } catch (e) {}
+              audioEl.playbackRate = playbackSpeed;
+            } else if (Math.abs(drift) > 0.04) {
+              // Smooth micro-adjustment to eliminate drift without seek stuttering
+              audioEl.playbackRate = playbackSpeed * (drift < 0 ? 1.05 : 0.95);
+            } else {
+              audioEl.playbackRate = playbackSpeed;
+            }
+          }
+        }
+      } else {
+        // Outside bounds of this clip
+        if (audioEl && !audioEl.paused) {
+          audioEl.pause();
+        }
+        if (audioEl && isSeeking) {
+          try { audioEl.currentTime = acTrimStart; } catch (e) {}
+        }
+      }
+    });
+
+    // If native video audio was not handled (e.g. gap, deleted portion, or all active audio is detached/shifted):
+    // Video element internal audio MUST be muted so cut/deleted portions remain completely silent!
+    if (!nativeVideoAudioHandled) {
+      if (!video.muted) video.muted = true;
+    }
+
+    // Clean up surplus audio preview elements
+    let surplusIdx = audioClips.length;
+    while (document.getElementById(`preview-timeline-audio-${surplusIdx}`)) {
+      const surplusEl = document.getElementById(`preview-timeline-audio-${surplusIdx}`);
+      surplusEl.pause();
+      surplusEl.removeAttribute("src");
+      if (typeof surplusEl.load === "function") surplusEl.load();
+      surplusEl.remove();
+      surplusIdx++;
     }
   }
 
@@ -170,17 +368,28 @@
     }
     
     // Audio track (when background audio exists)
-    if (editorState.background_audios && editorState.background_audios.length > 0) {
+    const cleanedAudioClips = (editorState.background_audios || []).map(audio => {
+      const aStart = parseFloat(audio.start != null ? audio.start : 0);
+      const aEnd = parseFloat(audio.end != null ? audio.end : (aStart + (parseFloat(audio.duration) || 0)));
+      const aDur = Math.max(0.01, parseFloat((aEnd - aStart).toFixed(2)));
+      const aTrimStart = parseFloat(audio.trimStart != null ? audio.trimStart : 0);
+      const rawTrimEnd = audio.trimEnd != null ? parseFloat(audio.trimEnd) : (aTrimStart + aDur);
+      const aTrimEnd = parseFloat((rawTrimEnd > aTrimStart ? rawTrimEnd : (aTrimStart + aDur)).toFixed(2));
+      return {
+        ...audio,
+        start: parseFloat(aStart.toFixed(2)),
+        end: parseFloat(aEnd.toFixed(2)),
+        trimStart: parseFloat(aTrimStart.toFixed(2)),
+        trimEnd: aTrimEnd,
+        duration: aDur
+      };
+    });
+
+    if (cleanedAudioClips.length > 0) {
       tracks.push({
         type: 'audio',
         name: 'Audio Track',
-        clips: editorState.background_audios.map(audio => ({
-          ...audio,
-          start: audio.start != null ? audio.start : 0,
-          end: audio.end != null ? audio.end : (audio.duration || 0),
-          trimStart: audio.trimStart != null ? audio.trimStart : 0,
-          trimEnd: audio.trimEnd != null ? audio.trimEnd : (audio.duration || 0)
-        }))
+        clips: cleanedAudioClips
       });
     }
     
@@ -211,7 +420,7 @@
       tracks: tracks,
       clips: editorState.video_clips,
       video_clips: editorState.video_clips,
-      background_audios: editorState.background_audios,
+      background_audios: cleanedAudioClips,
       text_overlays: editorState.text_overlays,
       trim: editorState.trim,
       speed: editorState.speed,
@@ -220,6 +429,7 @@
         muted: Boolean(editorState.userMuted),
       },
       audio_deleted_by_user: Boolean(editorState.audio_deleted_by_user),
+      audio_separated: Boolean(editorState.audio_separated),
       resize: editorState.resize,
       effects: {
         grayscale: editorState.grayscale,
@@ -302,6 +512,16 @@
         historyDrawer.classList.remove("open");
       }
       return;
+    }
+  });
+
+  // Close history drawer on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const historyDrawer = document.getElementById("history-drawer");
+      if (historyDrawer && historyDrawer.classList.contains("open")) {
+        historyDrawer.classList.remove("open");
+      }
     }
   });
 
@@ -786,10 +1006,15 @@
         emptyState.style.display = "block";
         const titleEl = emptyState.querySelector(".ve-empty-title");
         const descEl = emptyState.querySelector(".ve-empty-desc");
-        const catMap = { image: "images", video: "videos", audio: "audio tracks", folder: "folders" };
-        const label = catMap[category] || "files";
-        if (titleEl) titleEl.textContent = `No ${label} yet`;
-        if (descEl) descEl.textContent = `Click "Upload files" to add ${label}.`;
+        if (category === "audio") {
+          if (titleEl) titleEl.textContent = "No audio files uploaded yet";
+          if (descEl) descEl.textContent = "Click 'Upload files' to add background music or sound effects.";
+        } else {
+          const catMap = { image: "images", video: "videos", folder: "folders" };
+          const label = catMap[category] || "files";
+          if (titleEl) titleEl.textContent = `No ${label} yet`;
+          if (descEl) descEl.textContent = `Click "Upload files" to add ${label}.`;
+        }
       } else {
         emptyState.style.display = "none";
       }
@@ -1250,7 +1475,7 @@
     const handleLeft = document.getElementById("trim-handle-left");
     const handleRight = document.getElementById("trim-handle-right");
     const trimPlayhead = document.getElementById("trim-playhead");
-    const currentDisplay = document.getElementById("time-display-current");
+    const currentDisplay = document.getElementById("time-display-current") || document.getElementById("video-time-current");
     const totalDisplay = document.getElementById("time-display-total");
 
     // Player Controls elements
@@ -1425,17 +1650,44 @@
         if (!editorState.background_audios) {
           editorState.background_audios = [];
         }
+        const videoEl = document.getElementById("main-video");
+        const videoSrc = (videoEl ? (videoEl.currentSrc || videoEl.src) : "") || window.REEL_PROJECT_PROXY_URL || "";
         if (editorState.background_audios.length === 0) {
-          editorState.background_audios.push({
-            name: "Audio Track (A1)",
-            filename: "Audio Track (A1)",
-            start: 0,
-            end: curDur,
-            trimStart: 0,
-            trimEnd: curDur,
-            bg_volume: 1.0,
-            video_volume: 1.0,
-            is_detached: true
+          const vClips = editorState.video_clips || [];
+          if (vClips.length > 0) {
+            editorState.background_audios = vClips.map((vc, i) => ({
+              name: `Audio Track (A${i + 1})`,
+              filename: `Audio Track (A${i + 1})`,
+              start: vc.start,
+              end: vc.end,
+              trimStart: vc.trimStart != null ? vc.trimStart : 0,
+              trimEnd: vc.trimEnd != null ? vc.trimEnd : vc.duration,
+              duration: vc.duration,
+              bg_volume: 1.0,
+              video_volume: 1.0,
+              is_detached: true,
+              url: videoSrc
+            }));
+          } else {
+            editorState.background_audios.push({
+              name: "Audio Track (A1)",
+              filename: "Audio Track (A1)",
+              start: 0,
+              end: curDur,
+              trimStart: 0,
+              trimEnd: curDur,
+              duration: curDur,
+              bg_volume: 1.0,
+              video_volume: 1.0,
+              is_detached: true,
+              url: videoSrc
+            });
+          }
+        } else {
+          editorState.background_audios.forEach(ac => {
+            if (ac.is_detached && !ac.url && videoSrc) {
+              ac.url = videoSrc;
+            }
           });
         }
       }
@@ -1467,6 +1719,20 @@
       startSeconds = 0;
       endSeconds = duration || acc || 0;
       ensureOriginalAudioTrackClip();
+
+      // Keep linked detached original audio tracks synchronized with video clips
+      if (editorState.background_audios && editorState.video_clips) {
+        editorState.video_clips.forEach((vc, vIdx) => {
+          const matchingAudio = editorState.background_audios[vIdx];
+          if (matchingAudio && matchingAudio.is_detached && !matchingAudio.user_dragged) {
+            matchingAudio.start = vc.start;
+            matchingAudio.end = vc.end;
+            matchingAudio.trimStart = vc.trimStart;
+            matchingAudio.trimEnd = vc.trimEnd;
+            matchingAudio.duration = vc.duration;
+          }
+        });
+      }
     }
     recalculateVideoClipsTimeline();
 
@@ -2170,15 +2436,14 @@
           // Unified cursor styles for all track types
           el.style.cursor = "grab";
 
-          if (
-            globalSelection.track === trackType &&
-            globalSelection.index === index
-          ) {
+          const isDirectlySelected = (globalSelection.track === trackType && globalSelection.index === index);
+          const isLinkedVideoSelected = (!editorState.audio_separated && trackType === "audio" && globalSelection.track === "video" && globalSelection.index === index);
+          if (isDirectlySelected || isLinkedVideoSelected) {
             el.style.outline = "2px solid #8b5cf6";
             el.style.outlineOffset = "0px";
             el.style.boxShadow = "0 0 0 2px rgba(139,92,246,0.4), 0 4px 14px rgba(139,92,246,0.3)";
             if (trackType === "audio") {
-              el.style.background = "rgba(139, 92, 246, 0.05)";
+              el.style.background = "rgba(139, 92, 246, 0.08)";
             }
           }
 
@@ -2202,9 +2467,9 @@
             canvas.style.opacity = "0.95";
             const itemTrimStart = item.trimStart != null ? item.trimStart : (item.start || 0);
             const itemTrimEnd = item.trimEnd != null ? item.trimEnd : (item.end || duration);
-            const srcDur = duration || 1;
-            const startR = itemTrimStart / srcDur;
-            const endR = itemTrimEnd / srcDur;
+            const srcDur = parseFloat(window.REEL_PROJECT_DURATION) || duration || 1;
+            const startR = Math.max(0, Math.min(1, itemTrimStart / srcDur));
+            const endR = Math.max(0, Math.min(1, itemTrimEnd / srcDur));
             renderWaveformToCanvas(canvas, window.audioPeaksCache, widthPx, 36, startR, endR);
             el.appendChild(canvas);
           }
@@ -2246,21 +2511,39 @@
               0.5,
               (item.end || duration) - (item.start || 0),
             );
+            if (trackType === "audio") {
+              if (item.trimStart == null) item.trimStart = parseFloat((item.start || 0).toFixed(2));
+              if (item.trimEnd == null) item.trimEnd = parseFloat(((item.trimStart || 0) + itemDuration).toFixed(2));
+            }
             dragOffsetSeconds = getSecondsFromX(clientX) - (item.start || 0);
             el.style.cursor = "grabbing";
             const move = (moveEvent) => {
               const moveClientX = moveEvent.touches
                 ? moveEvent.touches[0].clientX
                 : moveEvent.clientX;
+              let rawStart = getSecondsFromX(moveClientX) - dragOffsetSeconds;
+              if (typeof snapTimeToPoints === "function") {
+                const snapped = snapTimeToPoints(rawStart);
+                rawStart = snapped.time;
+              }
               const newStart = Math.max(
                 0,
                 Math.min(
                   duration - itemDuration,
-                  getSecondsFromX(moveClientX) - dragOffsetSeconds,
+                  rawStart,
                 ),
               );
               item.start = parseFloat(newStart.toFixed(2));
               item.end = parseFloat((newStart + itemDuration).toFixed(2));
+              item.duration = itemDuration;
+              if (trackType === "audio") {
+                item.user_dragged = true;
+                if (!editorState.audio_separated) {
+                  editorState.audio_separated = true;
+                  if (typeof updateSeparateAudioUI === "function") updateSeparateAudioUI();
+                }
+              }
+              // Notice: trimStart and trimEnd DO NOT change during dragging!
               el.style.left = `${item.start * pxPerSecond}px`;
               el.style.width = `${Math.max(20, (item.end - item.start) * pxPerSecond)}px`;
               if (typeof renderTrim === "function") renderTrim();
@@ -2272,6 +2555,9 @@
               window.removeEventListener("touchmove", move);
               window.removeEventListener("touchend", stop);
               autoSaveTimeline();
+              if (typeof syncAudioPreviewToTimeline === "function") {
+                syncAudioPreviewToTimeline(timelineCurrentTime || 0, true);
+              }
             };
             window.addEventListener("mousemove", move);
             window.addEventListener("mouseup", stop);
@@ -2314,21 +2600,37 @@
             setupDrag(handleL, (clientX) => {
               let s = getSecondsFromX(clientX);
               if (s < 0) s = 0;
-              if (s > endSec - 1.0) s = endSec - 1.0;
+              if (s > (item.end || endSec) - 0.5) s = (item.end || endSec) - 0.5;
+              const delta = s - (item.start || 0);
               item.start = parseFloat(s.toFixed(2));
+              if (trackType === "audio") {
+                const curTrimStart = item.trimStart != null ? item.trimStart : (item.start || 0);
+                item.trimStart = parseFloat((curTrimStart + delta).toFixed(2));
+              }
               renderAllTimelineTracks();
               if (window.updateLocalState)
                 window.updateLocalState("Trim", `Trimmed ${trackType} item`);
+              if (typeof syncAudioPreviewToTimeline === "function") {
+                syncAudioPreviewToTimeline(timelineCurrentTime || 0, true);
+              }
             });
 
             setupDrag(handleR, (clientX) => {
               let e = getSecondsFromX(clientX);
               if (e > duration) e = duration;
-              if (e < startSec + 1.0) e = startSec + 1.0;
+              if (e < (item.start || startSec) + 0.5) e = (item.start || startSec) + 0.5;
+              const delta = (item.end || duration) - e;
               item.end = parseFloat(e.toFixed(2));
+              if (trackType === "audio") {
+                const curTrimEnd = item.trimEnd != null ? item.trimEnd : (item.end || duration);
+                item.trimEnd = parseFloat((curTrimEnd - delta).toFixed(2));
+              }
               renderAllTimelineTracks();
               if (window.updateLocalState)
                 window.updateLocalState("Trim", `Trimmed ${trackType} item`);
+              if (typeof syncAudioPreviewToTimeline === "function") {
+                syncAudioPreviewToTimeline(timelineCurrentTime || 0, true);
+              }
             });
           }
         });
@@ -2958,6 +3260,14 @@
               clip.start = parseFloat(s.toFixed(2));
               clip.trimStart = Math.max(0, parseFloat(((clip.trimStart || 0) + delta).toFixed(2)));
               clip.duration = parseFloat((curEnd - clip.start).toFixed(2));
+              if (editorState.background_audios && editorState.background_audios[index]) {
+                const aClip = editorState.background_audios[index];
+                if (aClip.is_detached && !aClip.user_dragged) {
+                  aClip.start = clip.start;
+                  aClip.trimStart = clip.trimStart;
+                  aClip.duration = clip.duration;
+                }
+              }
               startSeconds = clip.start;
               endSeconds = curEnd;
               block.style.left = `${clip.start * pxPerSecond}px`;
@@ -2995,6 +3305,14 @@
               clip.end = parseFloat(e.toFixed(2));
               clip.trimEnd = parseFloat(((clip.trimEnd || clip.duration) + delta).toFixed(2));
               clip.duration = parseFloat((clip.end - curStart).toFixed(2));
+              if (editorState.background_audios && editorState.background_audios[index]) {
+                const aClip = editorState.background_audios[index];
+                if (aClip.is_detached && !aClip.user_dragged) {
+                  aClip.end = clip.end;
+                  aClip.trimEnd = clip.trimEnd;
+                  aClip.duration = clip.duration;
+                }
+              }
               endSeconds = clip.end;
               startSeconds = curStart;
               block.style.width = `${Math.max(1, clip.duration * pxPerSecond)}px`;
@@ -3230,6 +3548,7 @@
       }
 
       timelineCurrentTime = timelineTime;
+      syncAudioPreviewToTimeline(timelineTime, false);
       const playheadPx = timelineTime * pxPerSecond;
       trimPlayhead.style.left = `${playheadPx}px`;
 
@@ -3290,6 +3609,7 @@
         _playheadRafId = null;
       }
       updatePlayheadSmooth();
+      syncAudioPreviewToTimeline(timelineCurrentTime || 0, true);
     }
 
     video.addEventListener("play", startSmoothPlayhead);
@@ -3600,6 +3920,7 @@
         editorState.muted = editorState.userMuted;
         video.muted = editorState.userMuted;
         syncVolumeUI();
+        syncAudioPreviewToTimeline(timelineCurrentTime || 0, false);
       });
     }
 
@@ -3610,6 +3931,7 @@
         editorState.muted = newMuted;
         video.muted = newMuted;
         syncVolumeUI();
+        syncAudioPreviewToTimeline(timelineCurrentTime || 0, false);
       });
     }
 
@@ -3701,12 +4023,49 @@
         if (video.ended || (maxDuration > 0 && curTimeline >= maxDuration - 0.1)) {
           video.currentTime = timelineToSourceTime(0);
         }
+        // Prime and play any preview audio elements synchronously inside user gesture
+        const previewAudios = document.querySelectorAll("audio[id^='preview-timeline-audio-']");
+        previewAudios.forEach(el => {
+          if (el.src && el.src !== window.location.href) {
+            try { el.play().catch(() => {}); } catch (e) {}
+          }
+        });
+
+        // Ensure video has a valid media source loaded before calling play()
+        const effectiveSrc = video.currentSrc || video.src;
+        if (!effectiveSrc || effectiveSrc === window.location.href) {
+          const fallbackSrc = window.REEL_PROJECT_PROXY_URL || window.REEL_PROJECT_WORKING_URL || baseVideoOriginalSrc;
+          if (fallbackSrc) {
+            video.src = fallbackSrc;
+            video.load();
+          } else {
+            return;
+          }
+        }
+
         const p = video.play();
         if (p && typeof p.catch === "function") {
-          p.catch((err) => console.warn("Playback prevented:", err));
+          p.catch((err) => {
+            if (err.name === "NotSupportedError") {
+              const fallback = window.REEL_PROJECT_PROXY_URL || baseVideoOriginalSrc;
+              if (fallback && (!video.src || !video.src.includes(fallback))) {
+                video.src = fallback;
+                video.load();
+                video.play().catch(() => {});
+                return;
+              }
+            }
+            if (err.name !== "AbortError" && err.name !== "NotSupportedError") {
+              console.warn("Playback prevented:", err);
+            }
+          });
         }
       } else {
         video.pause();
+        const previewAudios = document.querySelectorAll("audio[id^='preview-timeline-audio-']");
+        previewAudios.forEach(el => {
+          try { el.pause(); } catch (e) {}
+        });
       }
     };
 
@@ -4277,7 +4636,7 @@
 
         const pxPerSecond = basePxPerSecond * zoomFactor;
         trimPlayhead.style.left = `${time * pxPerSecond}px`;
-        currentDisplay.textContent = formatTime(time);
+        if (currentDisplay) currentDisplay.textContent = formatTime(time);
         const timeCurrentEl = document.getElementById("video-time-current");
         if (timeCurrentEl) {
           timeCurrentEl.textContent = formatTime(time);
@@ -4315,7 +4674,7 @@
 
         const pxPerSecond = basePxPerSecond * zoomFactor;
         trimPlayhead.style.left = `${time * pxPerSecond}px`;
-        currentDisplay.textContent = formatTime(time);
+        if (currentDisplay) currentDisplay.textContent = formatTime(time);
         const timeCurrentEl = document.getElementById("video-time-current");
         if (timeCurrentEl) {
           timeCurrentEl.textContent = formatTime(time);
@@ -4538,8 +4897,8 @@
 
         // Update styles directly to prevent recursive render glitches
         el.style.left = `${audioOverlay.start * pxPerSec}px`;
-        tooltipL.textContent = formatTime(audioOverlay.start);
-        tooltipR.textContent = formatTime(audioOverlay.end);
+        if (tooltipL) tooltipL.textContent = formatTime(audioOverlay.start);
+        if (tooltipR) tooltipR.textContent = formatTime(audioOverlay.end);
 
         // Update form inputs
         const bgForm = document.getElementById("bg-audio-form");
@@ -4564,7 +4923,7 @@
         // Update styles directly to prevent recursive render glitches
         el.style.left = `${audioOverlay.start * pxPerSec}px`;
         el.style.width = `${(audioOverlay.end - audioOverlay.start) * pxPerSec}px`;
-        tooltipL.textContent = formatTime(audioOverlay.start);
+        if (tooltipL) tooltipL.textContent = formatTime(audioOverlay.start);
 
         const bgForm = document.getElementById("bg-audio-form");
         if (bgForm) {
@@ -4585,7 +4944,7 @@
 
         // Update styles directly to prevent recursive render glitches
         el.style.width = `${(audioOverlay.end - audioOverlay.start) * pxPerSec}px`;
-        tooltipR.textContent = formatTime(audioOverlay.end);
+        if (tooltipR) tooltipR.textContent = formatTime(audioOverlay.end);
 
         const bgForm = document.getElementById("bg-audio-form");
         if (bgForm) {
@@ -4768,11 +5127,13 @@
             const aOrigTrimEnd = parseFloat(aItem.trimEnd || (aOrigTrimStart + (aOrigEnd - aItem.start)));
 
             aItem.end = curT;
+            aItem.duration = parseFloat((curT - aItem.start).toFixed(2));
             aItem.trimEnd = aOrigTrimStart + aRel;
 
             const newAItem = JSON.parse(JSON.stringify(aItem));
             newAItem.start = curT;
             newAItem.end = aOrigEnd;
+            newAItem.duration = parseFloat((aOrigEnd - curT).toFixed(2));
             newAItem.trimStart = aOrigTrimStart + aRel;
             newAItem.trimEnd = aOrigTrimEnd;
 
@@ -5108,6 +5469,7 @@
               if (a.is_detached && (a.start || 0) >= deletedStart) {
                 a.start = Math.max(0, parseFloat(((a.start || 0) - deletedDuration).toFixed(2)));
                 a.end = Math.max(a.start, parseFloat(((a.end || 0) - deletedDuration).toFixed(2)));
+                a.duration = Math.max(0.01, parseFloat((a.end - a.start).toFixed(2)));
               }
             });
           }
@@ -5131,6 +5493,13 @@
       }
 
       if (globalSelection.track === "audio") {
+        if (!editorState.audio_separated && editorState.video_clips && editorState.video_clips[globalSelection.index]) {
+          // CapCut / Canva Linked Mode: Deleting linked audio also deletes the linked video clip!
+          globalSelection.track = "video";
+          deleteSelectedTimelineItem();
+          return;
+        }
+        // CapCut Separated Mode: Delete ONLY audio clip, leaving an empty gap on audio track
         editorState.background_audios?.splice(globalSelection.index, 1);
         if (!editorState.background_audios || editorState.background_audios.length === 0) {
           editorState.audio_deleted_by_user = true;
@@ -5146,6 +5515,9 @@
           renderAudioOverlay();
         }
         updateVideoProgress();
+        if (typeof syncAudioPreviewToTimeline === "function") {
+          syncAudioPreviewToTimeline(timelineCurrentTime || 0, true);
+        }
         autoSaveTimeline();
 
         if (window.updateLocalState)
@@ -5180,7 +5552,62 @@
       splitBtn.addEventListener("click", splitSelectedTimelineItem);
     }
 
-    // Merge button click
+    
+    // --- CapCut / Canva Style: Separate Audio / Link Audio ---
+    const separateAudioBtn = document.getElementById("tb-separate-audio");
+    const separateAudioText = document.getElementById("separate-audio-text");
+    const separateAudioIcon = document.getElementById("separate-audio-icon");
+
+    function updateSeparateAudioUI() {
+      const isSeparated = Boolean(editorState.audio_separated);
+      if (separateAudioText) {
+        separateAudioText.textContent = isSeparated ? "Link Audio" : "Separate Audio";
+      }
+      if (separateAudioBtn) {
+        separateAudioBtn.title = isSeparated
+          ? "Link Audio to Video (Canva style - move and edit together)"
+          : "Separate Audio from Video (CapCut style - move and edit independently)";
+        separateAudioBtn.classList.toggle("tb-btn--active", isSeparated);
+      }
+      if (typeof lucide !== "undefined" && separateAudioIcon) {
+        separateAudioIcon.setAttribute("data-lucide", isSeparated ? "link-2" : "music-2");
+        lucide.createIcons();
+      }
+    }
+    window.updateSeparateAudioUI = updateSeparateAudioUI;
+
+    if (separateAudioBtn) {
+      separateAudioBtn.addEventListener("click", () => {
+        editorState.audio_separated = !editorState.audio_separated;
+        if (!editorState.audio_separated) {
+          // Re-link audio to video clips
+          recalculateVideoClipsTimeline();
+          if (typeof showVeToast === "function") {
+            showVeToast("Audio linked to video track (Canva style)");
+          }
+        } else {
+          // Mark audio clips as independent
+          if (editorState.background_audios) {
+            editorState.background_audios.forEach((a) => {
+              if (a.is_detached) a.user_dragged = true;
+            });
+          }
+          if (typeof showVeToast === "function") {
+            showVeToast("Audio separated from video (CapCut style)");
+          }
+        }
+        updateSeparateAudioUI();
+        _lastClipRenderKey = "";
+        renderClipBlocks();
+        renderAllTimelineTracks();
+        renderTrim();
+        autoSaveTimeline();
+        if (window.updateLocalState) {
+          window.updateLocalState("Audio", editorState.audio_separated ? "Separated audio from video" : "Linked audio to video");
+        }
+      });
+    }
+// Merge button click
     const mergeBtn = document.getElementById("tb-merge");
     if (mergeBtn) {
       mergeBtn.addEventListener("click", mergeSelectedTimelineItem);
@@ -5240,168 +5667,14 @@
       video.addEventListener("canplay", () => {
         initTrim();
       });
-    }
-    video.addEventListener("timeupdate", onTimeUpdate);
-
-    function onTimeUpdate() {
-      if (!duration) return;
-      const t = video.currentTime;
-      const timelineTime = sourceToTimelineTime(t);
-
-      // Multi-clip boundary transition check during timeupdate
-      const clips = editorState.video_clips || [];
-      if (!video.paused && clips.length > 1 && !isTransitioningClip) {
-        const activeClip = clips[activePlayingClipIndex] || clips[0];
-        const clipTrimEnd = parseFloat(activeClip.trimEnd !== undefined ? activeClip.trimEnd : ((activeClip.trimStart || 0) + (activeClip.duration || 0)));
-        if (t >= clipTrimEnd - 0.05) {
-          if (activePlayingClipIndex + 1 < clips.length) {
-            isTransitioningClip = true;
-            activePlayingClipIndex++;
-            const nextClip = clips[activePlayingClipIndex];
-            syncVideoElementToTimeline(nextClip.start, true);
-            video.play().catch(() => {});
-            return;
-          } else {
-            video.pause();
-            activePlayingClipIndex = 0;
-            syncVideoElementToTimeline(0, true);
-            return;
-          }
-        }
-      }
-
-      // Loop or pause only at timeline boundary
-      const safeDuration = duration || window.duration || 0;
-      if (!video.paused && safeDuration > 0 && timelineTime >= safeDuration - 0.05) {
-        video.pause();
-        video.currentTime = timelineToSourceTime(0);
-        return;
-      }
-
-      // If a specific video clip is selected for trimming, only loop if user explicitly selected it
-      if (!video.paused && globalSelection.track === "video" && selectedClipIndex !== -1 && endSeconds > startSeconds + 0.1) {
-        if (timelineTime >= endSeconds - 0.05) {
-          video.currentTime = timelineToSourceTime(startSeconds);
-          return;
-        }
-      }
-
-      // Text overlays visibility
-      const textContainer = document.getElementById("text-overlay-container");
-      if (textContainer) {
-        const textElements = textContainer.children;
-        editorState.text_overlays.forEach((overlay, i) => {
-          if (textElements[i]) {
-            if (timelineTime >= overlay.start && timelineTime <= overlay.end) {
-              textElements[i].style.display = "block";
-            } else {
-              textElements[i].style.display = "none";
-            }
-          }
-        });
-      }
-
-      // Background / Detached Audio Track sync
-      if (editorState.background_audios) {
-        if (editorState.userMuted || editorState.muted) {
-          if (!video.muted) video.muted = true;
-        } else {
-          // Check if there is an active detached audio clip at current timelineTime
-          let activeDetachedClip = null;
-          let anyDetachedClipsExist = false;
-
-          editorState.background_audios.forEach((bg) => {
-            const isDetached = bg.is_detached || (!bg.url && !bg.path);
-            if (isDetached) {
-              anyDetachedClipsExist = true;
-              const bgStart = parseFloat(bg.start !== undefined ? bg.start : 0);
-              const bgEnd = parseFloat(bg.end !== undefined ? bg.end : (bgStart + parseFloat(bg.duration || 0)));
-              if (timelineTime >= bgStart && timelineTime <= bgEnd) {
-                activeDetachedClip = bg;
-              }
-            }
-          });
-
-          // Always resolve mute state fresh every tick:
-          // If playhead is over an active audio segment -> unmute video and restore volume!
-          // If playhead is in a cut gap between segments -> mute video so cut audio doesn't play!
-          if (anyDetachedClipsExist) {
-            const shouldMute = !activeDetachedClip;
-            if (video.muted !== shouldMute) {
-              video.muted = shouldMute;
-            }
-            if (activeDetachedClip) {
-              const clipVol = activeDetachedClip.volume !== undefined ? activeDetachedClip.volume : (editorState.volume !== undefined ? editorState.volume : 1.0);
-              if (Number.isFinite(clipVol) && Math.abs(video.volume - clipVol) > 0.01) {
-                video.volume = Math.max(0, Math.min(1.0, clipVol));
-              }
-            }
-          } else {
-            // No detached audio segments at all — adhere strictly to user mute
-            const userMute = Boolean(editorState.userMuted || editorState.muted);
-            if (video.muted !== userMute) {
-              video.muted = userMute;
-            }
-          }
-
-          // External music clips sync (e.g. background music MP3s)
-          editorState.background_audios.forEach((bg, i) => {
-            if (bg.is_detached || (!bg.url && !bg.path)) {
-              return;
-            }
-            let audioEl = document.getElementById(`preview-bg-audio-${i}`);
-            const targetSrc = bg.url;
-            if (!targetSrc) return;
-
-            if (!audioEl) {
-              audioEl = document.createElement("audio");
-              audioEl.id = `preview-bg-audio-${i}`;
-              audioEl.src = targetSrc;
-              document.body.appendChild(audioEl);
-            } else if (audioEl.src !== targetSrc && targetSrc) {
-              audioEl.src = targetSrc;
-            }
-
-            audioEl.volume = bg.bg_volume ?? 1.0;
-            const bgStart = parseFloat(bg.start || 0);
-            const bgEnd = parseFloat(bg.end || duration);
-            const bgTrimStart = parseFloat(bg.trimStart || 0.0);
-
-            if (timelineTime >= bgStart && timelineTime <= bgEnd) {
-              const expectedTime = (timelineTime - bgStart) + bgTrimStart;
-              if (audioEl.paused && !video.paused) {
-                audioEl.currentTime = expectedTime;
-                audioEl.play().catch((e) => console.log("Audio play blocked", e));
-              } else {
-                if (Math.abs(audioEl.currentTime - expectedTime) > 0.3) {
-                  audioEl.currentTime = expectedTime;
-                }
-              }
-            } else {
-              if (!audioEl.paused) audioEl.pause();
-            }
-
-            if (video.paused && !audioEl.paused) {
-              audioEl.pause();
-            }
-          });
-        }
-
-        // Clean up surplus audio preview elements if audio clips were deleted
-        let surplusIdx = editorState.background_audios.length;
-        while (document.getElementById(`preview-bg-audio-${surplusIdx}`)) {
-          const surplusEl = document.getElementById(`preview-bg-audio-${surplusIdx}`);
-          surplusEl.pause();
-          surplusEl.removeAttribute("src");
-          if (typeof surplusEl.load === "function") surplusEl.load();
-          surplusEl.remove();
-          surplusIdx++;
-        }
-      }
+      video.addEventListener("loadeddata", () => {
+        initTrim();
+      });
+      video.addEventListener("canplaythrough", () => {
+        initTrim();
+      });
     }
 
-    video.addEventListener("play", () => onTimeUpdate());
-    video.addEventListener("pause", () => onTimeUpdate());
     if (video.readyState >= 1) {
       initTrim();
     }

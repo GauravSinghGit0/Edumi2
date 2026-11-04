@@ -122,7 +122,7 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     next_audio_input_idx = audio_inputs_start_idx
     for idx, ac in enumerate(audio_clips):
         audio_path = ac.get('temp_path') or ac.get('path')
-        if not audio_path and ac.get('is_detached'):
+        if not audio_path and (ac.get('is_detached') or 'Audio Track' in str(ac.get('name', '')) or 'Audio Stream' in str(ac.get('name', ''))):
             audio_path = project.original_file.path
         if audio_path:
             abs_audio_path = os.path.abspath(str(audio_path))
@@ -288,7 +288,7 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         filter_complex.append(f"{current_v}{','.join(vf_fade_parts)}{next_v}")
         current_v = next_v
 
-        if has_audio:
+        if has_audio and not has_detached_audio and current_a:
             af_fade_parts = []
             if fade_in_sec > 0.0:
                 af_fade_parts.append(f"afade=t=in:ss=0:d={fade_in_sec}")
@@ -360,23 +360,13 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         filter_complex.append(drawtext_filter)
         current_v = next_v
 
-    # Resolution scaling based on exportResolution
+    # Resolution scaling based on exportResolution (clips are already normalized to 1080p)
     resolution = timeline_json.get('exportResolution', '1080p')
-    scale_label = "[v_scaled]"
-    if resolution == '480p':
-        filter_complex.append(f"{current_v}scale=-2:480{scale_label}")
-        current_v = scale_label
-    elif resolution == '720p':
-        filter_complex.append(f"{current_v}scale=-2:720{scale_label}")
-        current_v = scale_label
-    elif resolution == '1440p':
-        filter_complex.append(f"{current_v}scale=-2:1440{scale_label}")
-        current_v = scale_label
-    elif resolution == '4k':
-        filter_complex.append(f"{current_v}scale=-2:2160{scale_label}")
-        current_v = scale_label
-    else: # default 1080p
-        filter_complex.append(f"{current_v}scale=-2:1080{scale_label}")
+    res_map = {'480p': 480, '720p': 720, '1440p': 1440, '4k': 2160}
+    target_height = res_map.get(resolution)
+    if target_height:
+        scale_label = "[v_scaled]"
+        filter_complex.append(f"{current_v}scale=-2:{target_height}{scale_label}")
         current_v = scale_label
 
     # Volume / Mute
@@ -384,7 +374,7 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
     vol_multiplier = float(audio_state.get("volume", 1.0))
     is_muted = audio_state.get("muted", False)
     
-    if has_audio:
+    if has_audio and not has_detached_audio and current_a:
         if is_muted:
             next_a = "[a_vol]"
             filter_complex.append(f"{current_a}volume=0{next_a}")
@@ -395,11 +385,10 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
             current_a = next_a
 
     # Mix background audio inputs
-    has_detached_audio = any(ac.get('is_detached') for ac in audio_clips)
     if has_detached_audio:
         audio_mix_labels = []
     else:
-        audio_mix_labels = [current_a] if has_audio else []
+        audio_mix_labels = [current_a] if (has_audio and current_a) else []
     
     # Process multiple audio inputs
     for idx, ac in enumerate(audio_clips):
@@ -410,8 +399,14 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         ac_end = float(ac.get('end', 10.0))
         ac_dur = max(0.01, ac_end - ac_start)
         
-        ac_trim_start = float(ac.get('trimStart', 0.0))
-        ac_trim_end = float(ac.get('trimEnd', ac_trim_start + ac_dur))
+        ac_trim_start = float(ac.get('trimStart', 0.0) if ac.get('trimStart') is not None else 0.0)
+        trim_end_raw = ac.get('trimEnd')
+        if trim_end_raw is not None and float(trim_end_raw) > ac_trim_start:
+            ac_trim_end = float(trim_end_raw)
+        else:
+            ac_trim_end = ac_trim_start + ac_dur
+        if abs((ac_trim_end - ac_trim_start) - ac_dur) > 0.02:
+            ac_trim_end = ac_trim_start + ac_dur
         
         # Trim background audio, add delay offset
         start_ms = int(ac_start * 1000)
@@ -420,18 +415,18 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
         vol = float(ac.get('bg_volume', ac.get('volume', default_vol)))
         
         label_trim = f"[a_trimmed_{idx}]"
-        filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start}:{ac_trim_end},asetpts=PTS-STARTPTS{delay_str},volume={vol},aformat=sample_rates=44100:channel_layouts=stereo{label_trim}")
+        filter_complex.append(f"[{input_idx}:a]atrim={ac_trim_start:.3f}:{ac_trim_end:.3f},asetpts=PTS-STARTPTS{delay_str},volume={vol},aformat=sample_rates=44100:channel_layouts=stereo{label_trim}")
         audio_mix_labels.append(label_trim)
 
     # Perform amix if multiple audio streams are active
     if len(audio_mix_labels) > 1:
         mix_inputs = "".join(audio_mix_labels)
         n_inputs = len(audio_mix_labels)
-        filter_complex.append(f"{mix_inputs}amix=inputs={n_inputs}:duration=longest:dropout_transition=0[a_mixed]")
+        filter_complex.append(f"{mix_inputs}amix=inputs={n_inputs}:duration=longest:dropout_transition=0:normalize=0[a_mixed]")
         mixed_audio_out = "[a_mixed]"
     elif len(audio_mix_labels) == 1:
         mixed_audio_out = audio_mix_labels[0]
-    elif has_audio:
+    elif has_audio and not has_detached_audio and current_a:
         mixed_audio_out = current_a
     else:
         filter_complex.append("anullsrc=r=44100:cl=stereo[a_silent]")

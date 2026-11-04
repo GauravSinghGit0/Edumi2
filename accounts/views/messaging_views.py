@@ -107,9 +107,11 @@ def get_user_contacts(user):
         }
 
 
-@login_required
-def inbox(request):
-    """View all conversations with optional user search."""
+def _build_inbox_sidebar_context(request):
+    """
+    Shared helper: builds the conversation list + search results + contacts
+    used by both inbox() and conversation_detail() sidebar.
+    """
     search_query = request.GET.get('q', '').strip()
     try:
         raw_conversations = request.user.conversations.all().prefetch_related(
@@ -163,15 +165,21 @@ def inbox(request):
             search_results = []
 
     contacts_data = get_user_contacts(request.user)
-
-    return render(request, 'accounts/messaging/inbox.html', {
+    return {
         'conversations': conversations,
         'search_query': search_query,
         'search_results': search_results,
         'joined_classrooms': contacts_data.get('joined_classrooms', []),
         'network_users': contacts_data.get('network_users', []),
         'other_users': contacts_data.get('other_users', []),
-    })
+    }
+
+
+@login_required
+def inbox(request):
+    """View all conversations with optional user search."""
+    sidebar_ctx = _build_inbox_sidebar_context(request)
+    return render(request, 'accounts/messaging/inbox.html', sidebar_ctx)
 
 
 @login_required
@@ -225,69 +233,14 @@ def conversation_detail(request, conversation_id):
         except Exception:
             msg.show_date_separator = False
 
-    # Fetch data for sidebar
-    search_query = request.GET.get('q', '').strip()
-    try:
-        raw_conversations = request.user.conversations.all().prefetch_related(
-            'participants', 'participants__userprofile', 'messages'
-        )
-    except Exception:
-        raw_conversations = []
-
-    conversations = []
-    for conv in raw_conversations:
-        try:
-            if not conv.classroom_id:
-                other = conv.get_other_user(request.user)
-                if not other:
-                    conv.delete()
-                    continue
-                conv.other_user = other
-            else:
-                try:
-                    if not conv.classroom:
-                        conv.delete()
-                        continue
-                except Exception:
-                    conv.delete()
-                    continue
-                conv.other_user = None
-
-            conv.display_title = conv.get_display_title(request.user)
-            conv.is_classroom = conv.is_classroom_chat()
-            conv.last_msg = conv.get_last_message()
-            conv.unread_count = conv.messages.filter(is_read=False).exclude(sender=request.user).count()
-            if conv.last_msg:
-                conv.formatted_time = format_conversation_timestamp(conv.last_msg.created_at)
-            conversations.append(conv)
-        except Exception:
-            continue
-
-    search_results = []
-    if search_query:
-        try:
-            search_results = User.objects.filter(
-                models.Q(username__icontains=search_query) |
-                models.Q(first_name__icontains=search_query) |
-                models.Q(last_name__icontains=search_query) |
-                models.Q(email__icontains=search_query) |
-                models.Q(userprofile__display_name__icontains=search_query)
-            ).exclude(id=request.user.id).select_related('userprofile').distinct()[:10]
-        except Exception:
-            search_results = []
-
-    contacts_data = get_user_contacts(request.user)
+    # Build sidebar context (re-uses the same helper as inbox())
+    sidebar_ctx = _build_inbox_sidebar_context(request)
 
     return render(request, 'accounts/messaging/inbox.html', {
         'conversation': conversation,
         'other_user': other_user,
         'messages': messages_list,
-        'conversations': conversations,
-        'search_query': search_query,
-        'search_results': search_results,
-        'joined_classrooms': contacts_data.get('joined_classrooms', []),
-        'network_users': contacts_data.get('network_users', []),
-        'other_users': contacts_data.get('other_users', []),
+        **sidebar_ctx,
     })
 
 

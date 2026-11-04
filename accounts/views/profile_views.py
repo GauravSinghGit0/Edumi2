@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.db import models
 
 from accounts.models import UserProfile
+from accounts.services import get_profile_completion
 from meetings.models import Meeting
 from cameras.models import Camera
 
@@ -95,17 +96,7 @@ def profile_view(request, username=None):
             messages.error(request, f'Error updating profile: {str(e)}')
 
     # Profile completion score
-    completion = 0
-    if profile:
-        if profile.display_name: completion += 10
-        if profile_user.first_name: completion += 10
-        if profile_user.last_name: completion += 10
-        if profile_user.email: completion += 10
-        if profile.bio: completion += 15
-        if profile.phone: completion += 10
-        if profile.date_of_birth: completion += 10
-        if profile.address: completion += 10
-        if profile.profile_picture or profile.avatar_url: completion += 15
+    completion = get_profile_completion(profile_user) if profile else 0
 
     completion_dash = int(completion * 2.89)
 

@@ -163,6 +163,7 @@ def convert_legacy_project_to_timeline(project):
             "name": f"Audio Stream — {orig_filename}",
             "filename": orig_filename,
             "path": project.original_file.path if project.original_file else "",
+            "url": project.working_file_url or (project.original_file.url if project.original_file else ""),
             "start": 0.0,
             "end": dur,
             "trimStart": 0.0,
@@ -436,68 +437,7 @@ def _apply_new_working_file(project, tmp_output_path, operation_type, descriptio
                 pass
 
 
-def _insert_clip_to_sequence(project, asset_title, asset_duration, timestamp):
-    state = project.timeline_state or {}
-    clips = state.get("clips", [])
-    
-    if not clips:
-        orig_filename = (project.title or "Clip") + ".mp4"
-        clips = [{"title": orig_filename, "duration": project.duration_seconds or 0.0}]
 
-    new_clips = []
-    current_time = 0.0
-    inserted = False
-    
-    for clip in clips:
-        clip_dur = float(clip.get("duration", 0.0))
-        clip_title = clip.get("title", "Clip")
-        
-        if inserted:
-            new_clips.append(clip)
-            continue
-            
-        if current_time <= timestamp < (current_time + clip_dur):
-            # Split point is within this clip!
-            split_offset = timestamp - current_time
-            if split_offset <= 0.05:
-                # Insert before this clip
-                new_clips.append({"title": asset_title, "duration": asset_duration})
-                new_clips.append(clip)
-            elif (clip_dur - split_offset) <= 0.05:
-                # Insert after this clip
-                new_clips.append(clip)
-                new_clips.append({"title": asset_title, "duration": asset_duration})
-            else:
-                # Split this clip!
-                new_clips.append({"title": clip_title, "duration": round(split_offset, 2)})
-                new_clips.append({"title": asset_title, "duration": asset_duration})
-                new_clips.append({"title": clip_title, "duration": round(clip_dur - split_offset, 2)})
-            inserted = True
-        else:
-            new_clips.append(clip)
-            current_time += clip_dur
-            
-    if not inserted:
-        # Append to the end
-        new_clips.append({"title": asset_title, "duration": asset_duration})
-        
-    acc = 0.0
-    normalized_clips = []
-    for c in new_clips:
-        dur = float(c.get("duration", 0.0))
-        normalized_clips.append({
-            "title": c.get("title", "Clip"),
-            "start": acc,
-            "end": acc + dur,
-            "trimStart": c.get("trimStart", 0.0),
-            "trimEnd": c.get("trimEnd", dur),
-            "duration": dur
-        })
-        acc += dur
-
-    state["clips"] = normalized_clips
-    project.timeline_state = state
-    project.save(update_fields=["timeline_state"])
 
 
 

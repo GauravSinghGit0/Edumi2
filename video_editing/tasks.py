@@ -108,6 +108,7 @@ def extract_metadata_and_proxies_task(project_id):
                     "name": f"Audio Stream — {orig_filename}",
                     "filename": orig_filename,
                     "path": project.original_file.path if project.original_file else "",
+                    "url": project.working_file_url or (project.original_file.url if project.original_file else ""),
                     "start": 0.0,
                     "end": dur,
                     "trimStart": 0.0,

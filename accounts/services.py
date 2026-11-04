@@ -210,24 +210,6 @@ def check_port_open(host, port, timeout=0.05):
     except Exception:
         return False
 
-def get_admin_stats():
-    """Get overall platform statistics for the admin panel with cached health checks."""
-    camera_service_online = cache.get('livekit_service_health')
-    if camera_service_online is None:
-        # Check actual LiveKit port 7880 or Daphne 8002
-        camera_service_online = check_port_open('127.0.0.1', 7880, timeout=0.05) or check_port_open('127.0.0.1', 8002, timeout=0.05)
-        cache.set('livekit_service_health', camera_service_online, 15)
-
-    return {
-        'total_users': User.objects.count(),
-        'total_students': UserProfile.objects.filter(user_type='student').count(),
-        'total_teachers': UserProfile.objects.filter(user_type='teacher').count(),
-        'total_meetings': Meeting.objects.filter(classroom__isnull=True).count(),
-        'live_meetings_count': Meeting.objects.filter(status='live', classroom__isnull=True).count(),
-        'total_cameras': Camera.objects.count(),
-        'camera_service_online': camera_service_online,
-    }
-
 
 def update_user_identity(target_user, actor, data, files=None):
     """

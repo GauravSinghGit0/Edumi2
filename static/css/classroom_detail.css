@@ -920,3 +920,129 @@ body.dark-mode .role-badge-student {
     border-color: #fca5a5;
 }
 
+
+
+/* ==============================================================
+   COMPREHENSIVE MULTI-DEVICE RESPONSIVENESS (TABLET & MOBILE)
+   ============================================================== */
+@media screen and (max-width: 1024px) {
+    .classroom-detail-container {
+        padding: var(--space-sm, 12px) var(--space-md, 16px);
+    }
+
+    .classroom-hero {
+        padding: 1.5rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .classroom-detail-container {
+        padding: 0.75rem;
+    }
+
+    .classroom-hero {
+        border-radius: var(--radius-lg, 12px);
+        padding: 1.25rem 1rem;
+    }
+
+    .hero-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .classroom-hero h1,
+    .hero-text h1 {
+        font-size: clamp(1.35rem, 5vw, 1.85rem);
+    }
+
+    .hero-badges {
+        gap: 0.5rem;
+    }
+
+    .badge-glass {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    /* Composer Toolbar wrapping */
+    .composer-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .composer-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .btn-post-update {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Meeting Actions */
+    .meeting-actions-row {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .btn-meeting-action {
+        flex: 1 1 auto;
+        justify-content: center;
+        text-align: center;
+    }
+
+    /* Stream Post Cards */
+    .stream-post-card {
+        padding: 1rem;
+        border-radius: 1rem;
+    }
+
+    .post-header {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .classroom-detail-container {
+        padding: 0.5rem;
+    }
+
+    .classroom-hero {
+        padding: 1rem 0.75rem;
+    }
+
+    .classroom-hero h1,
+    .hero-text h1 {
+        font-size: 1.25rem;
+    }
+
+    .tab-nav-stream {
+        gap: 0.25rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-nav-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .comment-input-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .btn-send-comment {
+        width: 100%;
+        justify-content: center;
+    }
+}

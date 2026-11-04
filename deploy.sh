@@ -7,9 +7,11 @@
 #    sudo bash deploy.sh
 #
 #  OPTIONAL OPTIONS:
-#    --domain    Your domain name (e.g. --domain edumi.ac.in)
-#    --email     Notification email for SSL (e.g. --email admin@edumi.ac.in)
-#    --db-host   Remote database host IP (Default: 127.0.0.1)
+#    --domain       Your domain name (e.g. --domain eclass.dei.ac.in)
+#    --email        Notification email for SSL (e.g. --email admin@edumi.ac.in)
+#    --db-host      Remote database host IP (Default: 127.0.0.1)
+#    --db-pass      Custom database password
+#    --letsencrypt  Request an official Let's Encrypt public SSL cert
 # ==============================================================================
 
 set -eo pipefail
@@ -56,7 +58,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve DB_PASS: Use CLI arg -> existing .env (POSTGRES_PASSWORD or DATABASE_URL) -> generate secure random
+# Resolve DB_PASS: Use CLI arg -> existing .env -> generate secure random
 if [ -z "$DB_PASS" ]; then
     DB_PASS=$(grep '^POSTGRES_PASSWORD=' "$APP_DIR/.env" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 fi
@@ -76,6 +78,12 @@ if [ -z "$LAN_IP" ]; then
     LAN_IP="127.0.0.1"
 fi
 
+# Detect Public IP if available (for cloud VPS deployments)
+PUBLIC_IP=$(curl -s --max-time 3 https://api.ipify.org 2>/dev/null || curl -s --max-time 3 https://icanhazip.com 2>/dev/null || echo "")
+if [ "$PUBLIC_IP" = "$LAN_IP" ]; then
+    PUBLIC_IP=""
+fi
+
 echo ""
 echo -e "${BOLD}${GREEN}"
 echo "  ███████╗██████╗ ██╗   ██╗███╗   ███╗██╗"
@@ -86,14 +94,17 @@ echo "  ███████╗██████╔╝╚██████╔
 echo "  ╚══════╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝"
 echo -e "${NC}"
 echo -e "  ${BOLD}EduMi2 Single-File Ubuntu Server Deployment Orchestrator${NC}"
-echo -e "  Directory : ${CYAN}${APP_DIR}${NC}"
-echo -e "  Domain    : ${CYAN}${DOMAIN}${NC} (HTTPS Only)"
-echo -e "  Server IP : ${CYAN}${LAN_IP}${NC}"
-echo -e "  DB Host   : ${CYAN}${DB_HOST}${NC}"
+echo -e "  Directory  : ${CYAN}${APP_DIR}${NC}"
+echo -e "  Domain     : ${CYAN}${DOMAIN}${NC} (HTTPS Enforced)"
+echo -e "  LAN IP     : ${CYAN}${LAN_IP}${NC}"
+if [ -n "$PUBLIC_IP" ]; then
+    echo -e "  Public IP  : ${CYAN}${PUBLIC_IP}${NC}"
+fi
+echo -e "  DB Host    : ${CYAN}${DB_HOST}${NC}"
 echo ""
 
 # ------------------------------------------------------------------------------
-step "STEP 1: Root Check & Ubuntu Pre-Flight Inspector & Local DNS"
+step "STEP 1: Root Check, Swap Allocation, & Ubuntu Packages"
 # ------------------------------------------------------------------------------
 IS_ROOT=false
 if [ "$(id -u)" -eq 0 ]; then IS_ROOT=true; fi
@@ -102,7 +113,7 @@ if [ "$IS_ROOT" = false ]; then
     warn "Running without root privileges. If package installation fails, re-run with: sudo bash deploy.sh"
 fi
 
-# Set up Local DNS entries in /etc/hosts for edumi.ac.in
+# Set up Local DNS entries in /etc/hosts for domain
 if [ "$IS_ROOT" = true ]; then
     if ! grep -q "$DOMAIN" /etc/hosts; then
         info "Configuring Local DNS in /etc/hosts for $DOMAIN..."
@@ -111,7 +122,7 @@ if [ "$IS_ROOT" = true ]; then
     fi
 fi
 
-# Apply UFW Firewall rules for LAN IP & HTTPS access
+# Apply UFW Firewall rules for LAN IP, LiveKit, & HTTPS access
 if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
     ufw allow 80/tcp 2>/dev/null || true
     ufw allow 443/tcp 2>/dev/null || true
@@ -123,10 +134,28 @@ if command -v ufw &>/dev/null && [ "$IS_ROOT" = true ]; then
     info "UFW firewall rules applied (Ports 80, 443, 8008, 7880, 7881, 7882/udp allowed)."
 fi
 
-info "Checking system requirements..."
+info "Checking system memory capacity..."
 TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
 TOTAL_RAM_GB=$(awk "BEGIN {print $TOTAL_RAM_KB / 1024 / 1024}")
 info "RAM Capacity: ${TOTAL_RAM_GB:0:4} GB"
+
+# Automatic Swap allocation (prevents OOM-killer crashes on 1GB/2GB VPS during static compile or OpenCV loading)
+if [ "$IS_ROOT" = true ]; then
+    TOTAL_SWAP_KB=$(grep SwapTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
+    if [ "$TOTAL_SWAP_KB" -lt 1000000 ]; then
+        info "Low swap detected ($(($TOTAL_SWAP_KB / 1024)) MB). Allocating 2GB swapfile to prevent Out-Of-Memory crashes..."
+        if [ ! -f /swapfile ]; then
+            fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null || true
+            chmod 600 /swapfile 2>/dev/null || true
+            mkswap /swapfile 2>/dev/null || true
+            swapon /swapfile 2>/dev/null || true
+            if ! grep -q '/swapfile' /etc/fstab 2>/dev/null; then
+                echo '/swapfile none swap sw 0 0' >> /etc/fstab
+            fi
+            log "2GB swapfile activated successfully."
+        fi
+    fi
+fi
 
 if [ "$IS_ROOT" = true ]; then
     info "Installing/updating required Ubuntu system packages..."
@@ -137,22 +166,10 @@ if [ "$IS_ROOT" = true ]; then
         python3 python3-venv python3-dev python3-pip \
         build-essential cmake g++ libpq-dev libffi-dev \
         ffmpeg postgresql postgresql-contrib redis-server nginx supervisor \
-        libopenblas-dev liblapack-dev libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev 2>/dev/null || true
+        libopenblas-dev liblapack-dev libgl1 libglx-mesa0 libglib2.0-0 libsm6 libxext6 libxrender-dev 2>/dev/null \
+        || apt-get install -y -qq libgl1-mesa-glx libglib2.0-0 2>/dev/null || true
     log "Ubuntu system packages installed."
-
-    if command -v ufw &>/dev/null; then
-        info "Configuring UFW firewall rules for HTTP, HTTPS, and LiveKit WebRTC..."
-        ufw allow 80/tcp >/dev/null 2>&1 || true
-        ufw allow 443/tcp >/dev/null 2>&1 || true
-        ufw allow 8008/tcp >/dev/null 2>&1 || true
-        ufw allow 7880/tcp >/dev/null 2>&1 || true
-        ufw allow 7881/tcp >/dev/null 2>&1 || true
-        ufw allow 7882/udp >/dev/null 2>&1 || true
-        ufw allow 50000:50200/udp >/dev/null 2>&1 || true
-        log "Firewall ports allowed (80, 443, 8008, 7880, 7881, 7882/udp, 50000-50200/udp)."
-    fi
 fi
-
 
 # ------------------------------------------------------------------------------
 step "STEP 2: PostgreSQL Database Provisioning"
@@ -167,7 +184,7 @@ if [ "$DB_HOST" == "127.0.0.1" ] || [ "$DB_HOST" == "localhost" ]; then
         sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASS';" 2>/dev/null || true
         sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
-        sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB SUPERUSER;" 2>/dev/null || true
+        sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB;" 2>/dev/null || true
         sudo -u postgres psql -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
         sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;" 2>/dev/null || true
@@ -182,7 +199,6 @@ else
     info "Using Remote PostgreSQL Database Host: $DB_HOST"
 fi
 
-
 # ------------------------------------------------------------------------------
 step "STEP 3: Redis Server Setup"
 # ------------------------------------------------------------------------------
@@ -192,7 +208,6 @@ if [ "$IS_ROOT" = true ]; then
     log "Redis service active."
 fi
 
-
 # ------------------------------------------------------------------------------
 step "STEP 4: LiveKit SFU Server Binary Setup"
 # ------------------------------------------------------------------------------
@@ -200,7 +215,6 @@ LIVEKIT_DIR="$APP_DIR/livekit-bin"
 mkdir -p "$LIVEKIT_DIR"
 
 if [ ! -f "$LIVEKIT_DIR/livekit-server" ]; then
-    # Remove Windows .exe if accidentally present (wrong platform binary)
     if [ -f "$LIVEKIT_DIR/livekit-server.exe" ]; then
         warn "Found Windows binary (livekit-server.exe) — removing it and downloading the correct Linux binary..."
         rm -f "$LIVEKIT_DIR/livekit-server.exe"
@@ -215,6 +229,11 @@ if [ ! -f "$LIVEKIT_DIR/livekit-server" ]; then
     LIVEKIT_DL_URL=$(curl -s https://api.github.com/repos/livekit/livekit/releases/latest \
         | grep "browser_download_url" | grep "$LK_ARCH_PATTERN" | head -1 \
         | cut -d '"' -f 4 || echo "")
+
+    if [ -z "$LIVEKIT_DL_URL" ]; then
+        info "GitHub API rate limit or network throttle; attempting direct release download..."
+        LIVEKIT_DL_URL="https://github.com/livekit/livekit/releases/download/v1.7.2/livekit_1.7.2_${LK_ARCH_PATTERN}"
+    fi
 
     if [ -n "$LIVEKIT_DL_URL" ]; then
         info "Downloading: $LIVEKIT_DL_URL"
@@ -233,7 +252,6 @@ fi
 info "Configuring config/livekit.yaml for server IP ($LAN_IP)..."
 mkdir -p "$APP_DIR/config"
 
-# Read existing LiveKit credentials from .env if present, otherwise default to devkey/devsecret
 LK_KEY=$(grep '^LIVEKIT_API_KEY=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 LK_SECRET=$(grep '^LIVEKIT_API_SECRET=' "$APP_DIR/.env" 2>/dev/null | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 
@@ -259,7 +277,7 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: "$LAN_IP"
+  node_ip: "${PUBLIC_IP:-$LAN_IP}"
 
 keys:
   $LK_KEY: $LK_SECRET
@@ -273,6 +291,36 @@ logging:
 EOF
 log "LiveKit configuration updated in ./config/livekit.yaml (Keys synced with .env: $LK_KEY)"
 
+# ------------------------------------------------------------------------------
+step "STEP 4.5: Facial Recognition ONNX Neural Models Verification"
+# ------------------------------------------------------------------------------
+MODELS_DIR="$APP_DIR/models"
+mkdir -p "$MODELS_DIR"
+
+YUNET_FILE="$MODELS_DIR/face_detection_yunet_2023mar.onnx"
+SFACE_FILE="$MODELS_DIR/face_recognition_sface_2021dec.onnx"
+
+if [ ! -f "$YUNET_FILE" ] || [ $(stat -c%s "$YUNET_FILE" 2>/dev/null || echo 0) -lt 50000 ]; then
+    info "Downloading YuNet face detection ONNX model from OpenCV Model Zoo..."
+    wget -q --show-progress -O "$YUNET_FILE" \
+        "https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" \
+        || curl -sSL -o "$YUNET_FILE" "https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" \
+        || true
+fi
+
+if [ ! -f "$SFACE_FILE" ] || [ $(stat -c%s "$SFACE_FILE" 2>/dev/null || echo 0) -lt 1000000 ]; then
+    info "Downloading SFace face recognition ONNX model (38MB) from OpenCV Model Zoo..."
+    wget -q --show-progress -O "$SFACE_FILE" \
+        "https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_recognition_sface/face_recognition_sface_2021dec.onnx" \
+        || curl -sSL -o "$SFACE_FILE" "https://raw.githubusercontent.com/opencv/opencv_zoo/master/models/face_recognition_sface/face_recognition_sface_2021dec.onnx" \
+        || true
+fi
+
+if [ -f "$YUNET_FILE" ] && [ -f "$SFACE_FILE" ]; then
+    log "YuNet & SFace ONNX neural models verified in ./models/"
+else
+    warn "YuNet / SFace models could not be fetched automatically; fallback Haar cascades will be used if needed."
+fi
 
 # ------------------------------------------------------------------------------
 step "STEP 5: Python Virtual Environment & Dependencies"
@@ -303,14 +351,12 @@ $VENV_PIP install --upgrade pip setuptools wheel -q
 $VENV_PIP install -r "$APP_DIR/requirements.txt" -q
 log "Python environment ready inside ./$VENV_DIR"
 
-
 # ------------------------------------------------------------------------------
 step "STEP 6: Environment File (.env) Setup (HTTPS Only)"
 # ------------------------------------------------------------------------------
 ENV_FILE="$APP_DIR/.env"
-info "Writing production .env file configured for HTTPS & local DNS ($DOMAIN)..."
+info "Writing production .env file configured for HTTPS & $DOMAIN..."
 
-# Preserve existing secrets if they exist
 EXISTING_SECRET=$(grep '^SECRET_KEY=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 EXISTING_FACE=$(grep '^FACE_ENCRYPTION_KEY=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | tr -d '"' | tr -d "'" || echo "")
 
@@ -339,7 +385,7 @@ EXISTING_EMAIL_HOST_PASSWORD=$(grep '^EMAIL_HOST_PASSWORD=' "$ENV_FILE" 2>/dev/n
 EXISTING_DEFAULT_FROM_EMAIL=$(grep '^DEFAULT_FROM_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
 [ -z "$EXISTING_DEFAULT_FROM_EMAIL" ] && EXISTING_DEFAULT_FROM_EMAIL="EduMi Support <YOUR_EMAIL@gmail.com>"
 
-# Preserve existing AI & RAG LLM configurations
+# Preserve existing AI configurations
 EXISTING_AI_LLM_URL=$(grep '^AI_LLM_URL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
 EXISTING_AI_LLM_BEARER_TOKEN=$(grep '^AI_LLM_BEARER_TOKEN=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
 EXISTING_AI_MODEL_NAME=$(grep '^AI_MODEL_NAME=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
@@ -349,7 +395,7 @@ EXISTING_OPENAI_API_KEY=$(grep '^OPENAI_API_KEY=' "$ENV_FILE" 2>/dev/null | tail
 EXISTING_OPENAI_MODEL=$(grep '^OPENAI_MODEL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d '=' -f 2-)
 
 # Collect any additional custom user environment variables
-CUSTOM_ENV_KEYS=$(grep -v '^\s*#' "$ENV_FILE" 2>/dev/null | grep -v '^\s*$' | grep '=' | grep -v '^\(SECRET_KEY\|DEBUG\|ALLOWED_HOSTS\|SERVER_IP\|LOG_LEVEL\|DATABASE_URL\|REDIS_URL\|LIVEKIT_\|SECURE_SSL_REDIRECT\|SESSION_COOKIE_SECURE\|CSRF_COOKIE_SECURE\|FACE_\|CSRF_TRUSTED_ORIGINS\|CAMERA_\|FFMPEG_\|FFPROBE_\|EMAIL_\|DEFAULT_FROM_EMAIL\|AI_\|OPENAI_\)' || echo "")
+CUSTOM_ENV_KEYS=$(grep -v '^\s*#' "$ENV_FILE" 2>/dev/null | grep -v '^\s*$' | grep '=' | grep -v '^\(SECRET_KEY\|DEBUG\|ALLOWED_HOSTS\|SERVER_IP\|LOG_LEVEL\|DATABASE_URL\|REDIS_URL\|LIVEKIT_\|SECURE_SSL_REDIRECT\|SESSION_COOKIE_SECURE\|CSRF_COOKIE_SECURE\|FACE_\|CSRF_TRUSTED_ORIGINS\|CAMERA_\|FFMPEG_\|FFPROBE_\|EMAIL_\|DEFAULT_FROM_EMAIL\|AI_\|OPENAI_\|COMPRESS_\)' || echo "")
 
 if [ -n "$EXISTING_SECRET" ]; then
     SECRET_KEY=$EXISTING_SECRET
@@ -365,10 +411,18 @@ fi
 
 DATABASE_URL_STR="postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
 
+# Assemble complete allowed hosts and trusted origins including both LAN and Public IPs
+ALLOWED_HOSTS_STR="$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP"
+CSRF_TRUSTED_STR="https://$DOMAIN,https://www.$DOMAIN,https://localhost,https://127.0.0.1,https://$LAN_IP"
+if [ -n "$PUBLIC_IP" ]; then
+    ALLOWED_HOSTS_STR="$ALLOWED_HOSTS_STR,$PUBLIC_IP"
+    CSRF_TRUSTED_STR="$CSRF_TRUSTED_STR,https://$PUBLIC_IP"
+fi
+
 cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
-ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN,localhost,127.0.0.1,$LAN_IP
+ALLOWED_HOSTS=$ALLOWED_HOSTS_STR
 SERVER_IP=$LAN_IP
 LOG_LEVEL=INFO
 
@@ -389,13 +443,16 @@ FACE_ENCRYPTION_KEY=$FACE_KEY
 FACE_MATCH_THRESHOLD=0.50
 FACE_PRESENCE_DURATION=30
 
-CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN,https://localhost,https://127.0.0.1,https://$LAN_IP
+CSRF_TRUSTED_ORIGINS=$CSRF_TRUSTED_STR
 
 CAMERA_SERVICE_PORT=8008
 CAMERA_SERVICE_URL=http://127.0.0.1:8008
 
 FFMPEG_BINARY=ffmpeg
 FFPROBE_BINARY=ffprobe
+
+COMPRESS_ENABLED=True
+COMPRESS_OFFLINE=True
 
 # SMTP Email Configuration
 EMAIL_BACKEND=$EXISTING_EMAIL_BACKEND
@@ -422,13 +479,15 @@ if [ -n "$CUSTOM_ENV_KEYS" ]; then
     echo "# Custom User Environment Variables (Preserved)" >> "$ENV_FILE"
     echo "$CUSTOM_ENV_KEYS" >> "$ENV_FILE"
 fi
-log ".env updated for HTTPS & $DOMAIN (All custom AI/User keys preserved)."
 
+# Restrict .env permissions so secrets/keys are only readable by owner
+chmod 600 "$ENV_FILE"
+log ".env updated and permissions locked down (chmod 600)."
 
 # ------------------------------------------------------------------------------
 step "STEP 7: Directories & SSL Certificate Setup"
 # ------------------------------------------------------------------------------
-mkdir -p staticfiles media certs logs config
+mkdir -p staticfiles database/media certs logs config models
 
 if [ "$USE_LETSENCRYPT" = true ] && [ "$IS_ROOT" = true ]; then
     info "Provisioning official Let's Encrypt public SSL certificate for $DOMAIN..."
@@ -438,28 +497,25 @@ elif [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
     cp -L "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" certs/edumi.crt
     cp -L "/etc/letsencrypt/live/$DOMAIN/privkey.pem" certs/edumi.key
 else
-    info "Generating SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
-    if [ -f "scripts/generate_ssl_cert.py" ]; then
-        $VENV_PYTHON scripts/generate_ssl_cert.py 2>/dev/null || true
+    info "Generating SAN SSL certificate for $DOMAIN, www.$DOMAIN, localhost, and $LAN_IP..."
+    SAN_EXT="subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP"
+    if [ -n "$PUBLIC_IP" ]; then
+        SAN_EXT="${SAN_EXT},IP:$PUBLIC_IP"
     fi
 
-    if [ ! -f "certs/edumi.crt" ] || [ ! -f "certs/edumi.key" ]; then
-        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-            -keyout certs/edumi.key -out certs/edumi.crt \
-            -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
-            -addext "subjectAltName=DNS:$DOMAIN,DNS:www.$DOMAIN,DNS:localhost,IP:127.0.0.1,IP:$LAN_IP" 2>/dev/null || true
-    fi
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout certs/edumi.key -out certs/edumi.crt \
+        -subj "/C=IN/ST=Academic/L=EduMi/O=EduMi/CN=$DOMAIN" \
+        -addext "$SAN_EXT" 2>/dev/null || true
 fi
-# Ensure home directory, certs, and logs have proper write/execute permissions
-mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/database/media" "$APP_DIR/certs" "$APP_DIR/config"
-chmod -R 777 "$APP_DIR/logs" 2>/dev/null || true
 
-if [ "$IS_ROOT" = true ]; then
-    chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
-    chmod -R 755 "$APP_DIR/certs" "$APP_DIR/staticfiles" "$APP_DIR/database/media" 2>/dev/null || true
-fi
-log "SSL Certificates generated in ./certs/"
-
+# Lock down SSL private keys & directory permissions
+mkdir -p "$APP_DIR/logs" "$APP_DIR/staticfiles" "$APP_DIR/database/media" "$APP_DIR/certs" "$APP_DIR/config" "$APP_DIR/models"
+chmod 700 "$APP_DIR/certs" 2>/dev/null || true
+chmod 600 "$APP_DIR/certs/edumi.key" 2>/dev/null || true
+chmod 644 "$APP_DIR/certs/edumi.crt" 2>/dev/null || true
+chmod 750 "$APP_DIR/logs" "$APP_DIR/database" 2>/dev/null || true
+log "SSL Certificates generated and secured (Key permissions 600)."
 
 # ------------------------------------------------------------------------------
 step "STEP 8: Django Database Migrations & Static Collection"
@@ -472,10 +528,20 @@ info "Collecting static files & compressing template assets..."
 $VENV_PYTHON manage.py collectstatic --noinput --clear
 $VENV_PYTHON manage.py compress --force || true
 $VENV_PYTHON manage.py collectstatic --noinput
-chmod -R 755 "$APP_DIR" "$APP_DIR/staticfiles" 2>/dev/null || true
-chmod 755 $(dirname "$APP_DIR") 2>/dev/null || true
-log "Static assets compressed and collected into ./staticfiles/"
 
+# Ensure parent directory traversal for Nginx www-data user without exposing private keys
+if [ "$IS_ROOT" = true ]; then
+    info "Setting directory traversal and read permissions for Nginx (www-data)..."
+    CUR_DIR="$APP_DIR"
+    while [ "$CUR_DIR" != "/" ] && [ "$CUR_DIR" != "." ]; do
+        chmod a+rx "$CUR_DIR" 2>/dev/null || true
+        CUR_DIR="$(dirname "$CUR_DIR")"
+    done
+    chmod -R a+rX "$APP_DIR/staticfiles" "$APP_DIR/database/media" "$APP_DIR/models" "$APP_DIR/static" 2>/dev/null || true
+    chmod 750 "$APP_DIR/database" "$APP_DIR/logs" 2>/dev/null || true
+    chown -R root:www-data "$APP_DIR/staticfiles" "$APP_DIR/database/media" "$APP_DIR/logs" 2>/dev/null || true
+fi
+log "Static assets compressed, collected, and permissions granted to Nginx."
 
 # ------------------------------------------------------------------------------
 step "STEP 9: Systemd Microservice Installation"
@@ -506,6 +572,8 @@ LimitNPROC=65535
 EnvironmentFile=${APP_DIR}/.env
 StandardOutput=journal
 StandardError=journal
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
@@ -524,8 +592,6 @@ EOF
 
     systemctl daemon-reload
 
-    # ---- Start order: LiveKit first (WebRTC depends on it), then Camera, ----
-    #      Celery, then the Django upstream instances.
     info "Starting LiveKit first and waiting for port 7880..."
     systemctl enable edumi-livekit 2>/dev/null || true
     systemctl restart edumi-livekit
@@ -561,41 +627,61 @@ EOF
     log "Systemd services started and enabled."
 fi
 
-
 # ------------------------------------------------------------------------------
 step "STEP 10: Nginx Reverse Proxy Setup"
 # ------------------------------------------------------------------------------
 if [ "$IS_ROOT" = true ]; then
     info "Configuring Nginx web server..."
-    # Ensure Nginx handles high worker connections
+    if systemctl is-active --quiet apache2 2>/dev/null; then
+        info "Apache2 detected running on port 80 — stopping and disabling Apache2..."
+        systemctl stop apache2 2>/dev/null || true
+        systemctl disable apache2 2>/dev/null || true
+    fi
     sed -i 's/worker_connections [0-9]*/worker_connections 4096/' /etc/nginx/nginx.conf 2>/dev/null || true
+
+    NGINX_SERVER_NAMES="${DOMAIN} www.${DOMAIN} ${LAN_IP}"
+    if [ -n "$PUBLIC_IP" ]; then
+        NGINX_SERVER_NAMES="${NGINX_SERVER_NAMES} ${PUBLIC_IP}"
+    fi
 
     cat > /etc/nginx/sites-available/edumi <<EOF
 upstream edumi_backend {
-    server 127.0.0.1:8002;
-    server 127.0.0.1:8003;
-    server 127.0.0.1:8004;
-    server 127.0.0.1:8005;
-    server 127.0.0.1:8006;
-    server 127.0.0.1:8007;
+    server 127.0.0.1:8002 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8003 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8004 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8005 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8006 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8007 max_fails=3 fail_timeout=10s;
 }
 
 server {
     listen 80;
-    server_name ${DOMAIN} www.${DOMAIN} ${LAN_IP} _;
+    server_name ${NGINX_SERVER_NAMES} _;
     return 301 https://\$host\$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN} www.${DOMAIN} ${LAN_IP} _;
+    server_name ${NGINX_SERVER_NAMES} _;
 
     ssl_certificate ${APP_DIR}/certs/edumi.crt;
     ssl_certificate_key ${APP_DIR}/certs/edumi.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
 
+    server_tokens off;
     client_max_body_size 500M;
+
+    # Security Headers
+    add_header Permissions-Policy "camera=(self), microphone=(self), display-capture=(self)" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     # Block all hidden files (.env, .git, .htaccess)
     location ~ /\. {
@@ -603,13 +689,13 @@ server {
         return 404;
     }
 
-    # ---------------------------------------------------------------------
-    # IMPORTANT: Use ^~ so these PREFIX locations beat the camera regex
-    # below.  Without ^~ the regex ~ ^/(cameras/...) would run first and
-    # prevent /livekit-proxy/* and /ws/* from ever matching.
-    # ---------------------------------------------------------------------
+    # Block source code, logs, database files, and scripts from web access
+    location ~* \.(env|py|pyc|sh|sql|sqlite3|log|yaml|yml|bak|swp)$ {
+        deny all;
+        return 404;
+    }
 
-    # 1) LiveKit SFU WebSocket + HTTP proxy (bypass Django for speed)
+    # 1) LiveKit SFU WebSocket + HTTP proxy
     location ^~ /livekit-proxy/ {
         proxy_pass http://127.0.0.1:7880/;
         proxy_http_version 1.1;
@@ -625,7 +711,7 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 
-    # 2) Django Channels WebSockets (meeting / attendance / chat)
+    # 2) Django Channels WebSockets (meetings, face tracking, attendance)
     location ^~ /ws/ {
         proxy_pass http://edumi_backend;
         proxy_http_version 1.1;
@@ -641,8 +727,7 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 
-    # 3) Camera MJPEG streams — regex is fine here now because it is
-    #    matched after the ^~ prefixes above.
+    # 3) Camera MJPEG streams
     location ~ ^/(cameras/[0-9]+/(feed|zoom|test)|mobile-cameras/[0-9]+/(feed|test)|head-count)/ {
         proxy_pass http://127.0.0.1:8008;
         proxy_set_header Host \$host;
@@ -651,11 +736,35 @@ server {
         proxy_read_timeout 3600s;
     }
 
+    # 4) Static Assets (with MIME types & Django fallback)
     location /static/ {
         alias ${APP_DIR}/staticfiles/;
         expires 30d;
         access_log off;
         include /etc/nginx/mime.types;
+        types {
+            text/css css;
+            application/javascript js;
+            application/wasm wasm;
+            application/octet-stream bin onnx;
+            application/json json;
+            image/svg+xml svg;
+            image/png png;
+            image/jpeg jpg jpeg;
+            font/woff2 woff2;
+            font/woff woff;
+            font/ttf ttf;
+        }
+        # Fallback to Django safe_static_serve if asset is missing or permissions denied
+        error_page 403 404 = @django_static_fallback;
+    }
+
+    location @django_static_fallback {
+        proxy_pass http://edumi_backend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     # Protected internal media location for X-Accel-Redirect from Django
@@ -688,7 +797,6 @@ EOF
     log "Nginx web server configured and running."
 fi
 
-
 # ------------------------------------------------------------------------------
 step "STEP 11: Deployment Complete & Status Summary"
 # ------------------------------------------------------------------------------
@@ -700,11 +808,14 @@ echo ""
 echo -e "  ${BOLD}Access Endpoints (Local DNS & HTTPS Enforced):${NC}"
 echo -e "  • Primary HTTPS Domain     : ${CYAN}https://${DOMAIN}${NC} (or ${CYAN}https://www.${DOMAIN}${NC})"
 echo -e "  • Fallback LAN IP (HTTPS)  : ${CYAN}https://${LAN_IP}${NC}"
+if [ -n "$PUBLIC_IP" ]; then
+    echo -e "  • Fallback Public IP (HTTPS): ${CYAN}https://${PUBLIC_IP}${NC}"
+fi
 echo -e "  • LiveKit SFU Signal       : ${CYAN}wss://${DOMAIN}/livekit-proxy${NC}"
 echo -e "  • Camera MJPEG Stream      : ${CYAN}https://${DOMAIN}/cameras/${NC}"
 echo ""
 echo -e "  ${BOLD}Management Commands:${NC}"
-echo -e "  • View Service Logs       : ${CYAN}journalctl -u edumi-auth -f${NC}"
-echo -e "  • Check Service Status    : ${CYAN}systemctl status edumi-auth edumi-camera edumi-celery${NC}"
-echo -e "  • Create Superuser        : ${CYAN}${VENV_PYTHON} manage.py createsuperuser${NC}"
+echo -e "  • View Service Logs        : ${CYAN}journalctl -u edumi-auth -f${NC}"
+echo -e "  • Check Service Status     : ${CYAN}systemctl status edumi-auth edumi-camera edumi-celery${NC}"
+echo -e "  • Create Superuser         : ${CYAN}${VENV_PYTHON} manage.py createsuperuser${NC}"
 echo ""

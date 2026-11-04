@@ -15,13 +15,9 @@ from accounts.admin_services import (
     get_classroom_360_data,
     get_meeting_360_data,
 )
+from accounts.views.admin_views import check_admin
 
 User = get_user_model()
-
-
-def check_admin(user):
-    """Enforce strict admin authorization."""
-    return user.is_authenticated and (user.is_superuser or (hasattr(user, 'userprofile') and user.userprofile.user_type == 'admin'))
 
 
 @login_required
@@ -177,7 +173,6 @@ def admin_all_meetings(request):
             Q(classroom__title__icontains=search_query)
         )
 
-    now = timezone.now()
     total_count = Meeting.objects.count()
     live_count = Meeting.objects.filter(status='live').count()
     scheduled_count = Meeting.objects.filter(status='scheduled', scheduled_time__gte=now).count()

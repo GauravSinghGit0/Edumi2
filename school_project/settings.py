@@ -491,7 +491,8 @@ try:
             'BACKEND': 'django.core.files.storage.FileSystemStorage',
         },
     }
-    WHITENOISE_ROOT         = BASE_DIR / 'staticfiles'
+    # WHITENOISE_ROOT is only for root-level files (e.g. robots.txt), NOT staticfiles directory
+    WHITENOISE_ROOT         = None
     WHITENOISE_AUTOREFRESH  = True
     WHITENOISE_USE_FINDERS  = True
     WHITENOISE_MANIFEST_STRICT = False

@@ -821,8 +821,62 @@ img, video, canvas, iframe, embed, object {
     }
 }
 
+/* --------------------------------------------------------------
+   GLOBAL RESPONSIVE UTILITIES & TABLE CONTAINER WRAPPERS
+   -------------------------------------------------------------- */
+.table-responsive,
+.data-table-wrapper,
+.admin-table-container,
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: var(--space-md, 1rem);
+    position: relative;
+}
+
+/* Touch targets & Mobile input fluidity */
+@media (pointer: coarse) {
+    button,
+    .btn,
+    .btn-action,
+    .topbar-icon-btn,
+    .mobile-menu-btn,
+    .nav-item,
+    .tab-btn,
+    input[type="button"],
+    input[type="submit"] {
+        min-height: 42px;
+    }
+}
+
+/* Fluid responsive media & images */
+img, video, iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Modal and dialog responsiveness */
+.modal,
+.modal-dialog,
+.admin-modal-content {
+    box-sizing: border-box;
+}
+
 /* Small Smartphone Screen Adjustments (max-width: 480px) */
 @media screen and (max-width: 480px) {
+    :root {
+        --container-padding: 0.75rem;
+    }
+
+    .container,
+    .content-area {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
     .kpi-grid,
     .stat-mini-grid,
     .admin-stats-grid,
@@ -843,6 +897,12 @@ img, video, canvas, iframe, embed, object {
     .role-badge {
         font-size: 0.65rem !important;
         padding: 0.25rem 0.5rem !important;
+    }
+
+    .modal-dialog {
+        width: calc(100vw - 1rem) !important;
+        max-width: 100% !important;
+        margin: 0.5rem auto !important;
     }
 }
 

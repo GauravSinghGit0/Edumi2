@@ -144,14 +144,23 @@
         // ── Profile Modal Logic ───────────────────────────────
         checkInfoModal: function() {
             var modal = document.getElementById('infoModal');
-            if (modal && !this.config.infoComplete) {
-                modal.classList.add('active');
+            if (modal) {
+                if (!this.config.infoComplete) {
+                    modal.style.display = 'flex';
+                    modal.classList.add('active');
+                } else {
+                    modal.style.display = 'none';
+                    modal.classList.remove('active');
+                }
             }
         },
 
         closeInfoModal: function() {
             var modal = document.getElementById('infoModal');
-            if (modal) modal.classList.remove('active');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
         },
 
         saveProfileInfo: async function() {
@@ -219,17 +228,45 @@
             // Ensure models are loaded
             self.ensureFaceApiLoaded();
 
-            try {
-                var constraints = {
-                    video: {
-                        facingMode: 'user',
-                        width: { ideal: 1280, min: 640 },
-                        height: { ideal: 720, min: 480 }
-                    },
-                    audio: false
-                };
+            // Secure Context verification
+            if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                var secErr = new Error("NOT_SECURE_CONTEXT");
+                secErr.name = "NotSecureContextError";
+                self.handleCameraError(secErr);
+                return;
+            }
 
-                self.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                var mediaErr = new Error(window.isSecureContext === false ? "NOT_SECURE_CONTEXT" : "NO_MEDIA_DEVICES");
+                mediaErr.name = window.isSecureContext === false ? "NotSecureContextError" : "NotFoundError";
+                self.handleCameraError(mediaErr);
+                return;
+            }
+
+            try {
+                var constraintsList = [
+                    { video: { facingMode: 'user', width: { ideal: 1280, min: 640 }, height: { ideal: 720, min: 480 } }, audio: false },
+                    { video: { facingMode: 'user' }, audio: false },
+                    { video: true, audio: false }
+                ];
+
+                var stream = null;
+                var lastErr = null;
+                for (var i = 0; i < constraintsList.length; i++) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(constraintsList[i]);
+                        if (stream) break;
+                    } catch(conErr) {
+                        lastErr = conErr;
+                        if (conErr.name === 'NotAllowedError' || conErr.name === 'PermissionDeniedError') {
+                            throw conErr; // User explicitly rejected, don't keep trying
+                        }
+                    }
+                }
+
+                if (!stream && lastErr) throw lastErr;
+                self.cameraStream = stream;
+
                 if (video) {
                     video.srcObject = self.cameraStream;
                     video.style.display = 'block';
@@ -316,15 +353,21 @@
             if (!errorBanner) return;
             errorBanner.style.display = 'flex';
 
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            if (err.name === 'NotSecureContextError' || err.message === 'NOT_SECURE_CONTEXT') {
+                if (errorTitle) errorTitle.textContent = "HTTPS Required for Camera";
+                if (errorMsg) errorMsg.textContent = "Modern browsers strictly block webcam access over unencrypted HTTP. Please connect securely using https://" + window.location.host;
+            } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 if (errorTitle) errorTitle.textContent = "Camera Permission Needed";
                 if (errorMsg) errorMsg.textContent = "Please allow camera access in your browser address bar and refresh the page.";
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                if (errorTitle) errorTitle.textContent = "Camera Already In Use";
+                if (errorMsg) errorMsg.textContent = "Another application or browser tab is currently using the camera. Please close it and retry.";
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                 if (errorTitle) errorTitle.textContent = "No Camera Detected";
                 if (errorMsg) errorMsg.textContent = "We could not find a connected webcam. Please connect a camera and try again.";
             } else {
                 if (errorTitle) errorTitle.textContent = "Camera Unavailable";
-                if (errorMsg) errorMsg.textContent = "Could not start camera. Please close other apps using the webcam and retry.";
+                if (errorMsg) errorMsg.textContent = "Could not start camera (" + (err.message || err.name || "unknown error") + "). Please verify permissions and retry.";
             }
             this.refreshIcons(errorBanner);
         },

@@ -47,6 +47,12 @@
         window.REEL_PROJECT_OPERATIONS = cfg.operations || [];
     }
 
+    // Immediately execute global state initialization synchronously on script evaluation
+    var syncCfg = getBootstrapConfig();
+    if (syncCfg) {
+        initReelGlobals(syncCfg);
+    }
+
     // 2. SVG Waveform Generator
     window.generateWaveformSvg = function (width, height, seed, clipStartRatio, clipEndRatio) {
         var centerY = height / 2;
@@ -232,139 +238,12 @@
         });
     }
 
-    // 5. History Drawer
-    function initHistoryDrawer() {
-        var showHistoryBtn = document.getElementById("btn-show-history");
-        var historyDrawer = document.getElementById("history-drawer");
-        var historyDrawerClose = document.getElementById("history-drawer-close");
-        var historyDrawerBackdrop = document.getElementById("history-drawer-backdrop");
-
-        if (showHistoryBtn && historyDrawer && !showHistoryBtn._init) {
-            showHistoryBtn._init = true;
-            showHistoryBtn.addEventListener("click", function (e) {
-                e.preventDefault();
-                historyDrawer.classList.add("open");
-            });
-        }
-        if (historyDrawerClose && historyDrawer && !historyDrawerClose._init) {
-            historyDrawerClose._init = true;
-            historyDrawerClose.addEventListener("click", function (e) {
-                e.preventDefault();
-                historyDrawer.classList.remove("open");
-            });
-        }
-        if (historyDrawerBackdrop && historyDrawer && !historyDrawerBackdrop._init) {
-            historyDrawerBackdrop._init = true;
-            historyDrawerBackdrop.addEventListener("click", function (e) {
-                e.preventDefault();
-                historyDrawer.classList.remove("open");
-            });
-        }
-
-        // Close on Escape key
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && historyDrawer && historyDrawer.classList.contains("open")) {
-                historyDrawer.classList.remove("open");
-            }
-        });
-    }
-
-    // 6. Audio Waveform Display Poller
-    function tryAddOriginalWaveform() {
-        var timelineBlock = document.getElementById("visual-trim-container");
-        if (timelineBlock && typeof window.duration !== "undefined" && window.duration > 0) {
-            var basePxPerSecond = 15;
-            var zoomFactor = typeof window.zoomFactor !== "undefined" ? window.zoomFactor : 1.0;
-            var audioBlock = document.getElementById("audio-block");
-            var totalWidth = (audioBlock && audioBlock.clientWidth > 50)
-                ? audioBlock.clientWidth
-                : Math.max(800, window.duration * basePxPerSecond * zoomFactor);
-            var waveformContainer = document.getElementById("original-audio-waveform");
-            if (waveformContainer && typeof window.generateWaveformSvg === "function") {
-                waveformContainer.innerHTML = window.generateWaveformSvg(totalWidth, 36, 0);
-            }
-        } else {
-            setTimeout(tryAddOriginalWaveform, 100);
-        }
-    }
-    window.tryAddOriginalWaveform = tryAddOriginalWaveform;
-
-    // 7. Volume Sliders Sync
-    function initVolumeSliders() {
-        var timelineVideoVol = document.getElementById("timeline-video-volume");
-        var timelineVideoVolVal = document.getElementById("timeline-video-volume-val");
-        var formVideoVol = document.getElementById("id_video_volume");
-
-        if (timelineVideoVol && formVideoVol && !timelineVideoVol._init) {
-            timelineVideoVol._init = true;
-            timelineVideoVol.value = formVideoVol.value;
-            if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(formVideoVol.value).toFixed(1);
-
-            timelineVideoVol.addEventListener("input", function (e) {
-                var val = e.target.value;
-                formVideoVol.value = val;
-                if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
-                var mainVid = document.getElementById("main-video");
-                if (mainVid) {
-                    mainVid.volume = Math.min(1.0, parseFloat(val));
-                    if (parseFloat(val) > 0) mainVid.muted = false;
-                }
-            });
-
-            formVideoVol.addEventListener("input", function (e) {
-                var val = e.target.value;
-                timelineVideoVol.value = val;
-                if (timelineVideoVolVal) timelineVideoVolVal.textContent = parseFloat(val).toFixed(1);
-                var mainVid = document.getElementById("main-video");
-                if (mainVid) {
-                    mainVid.volume = Math.min(1.0, parseFloat(val));
-                    if (parseFloat(val) > 0) mainVid.muted = false;
-                }
-            });
-        }
-
-        var timelineBgVol = document.getElementById("timeline-bg-volume");
-        var timelineBgVolVal = document.getElementById("timeline-bg-volume-val");
-        var formBgVol = document.getElementById("id_bg_volume");
-
-        if (timelineBgVol && formBgVol && !timelineBgVol._init) {
-            timelineBgVol._init = true;
-            timelineBgVol.value = formBgVol.value;
-            if (timelineBgVolVal) timelineBgVolVal.textContent = parseFloat(formBgVol.value).toFixed(1);
-
-            timelineBgVol.addEventListener("input", function (e) {
-                formBgVol.value = e.target.value;
-                if (timelineBgVolVal) timelineBgVolVal.textContent = parseFloat(e.target.value).toFixed(1);
-            });
-
-            formBgVol.addEventListener("input", function (e) {
-                timelineBgVol.value = e.target.value;
-                if (timelineBgVolVal) timelineBgVolVal.textContent = parseFloat(e.target.value).toFixed(1);
-            });
-        }
-
-        // Topbar Undo button forwarding
-        var undoBtn = document.getElementById("tb-undo");
-        if (undoBtn && !undoBtn._init) {
-            undoBtn._init = true;
-            undoBtn.addEventListener("click", function () {
-                var firstHistoryUndo = document.querySelector(".history-list li:first-child .history-revert-btn");
-                if (firstHistoryUndo) {
-                    firstHistoryUndo.click();
-                }
-            });
-        }
-    }
-
-    // 8. Main Initialization Controller
+    // 5. Main Initialization Controller
     function initProjectDetail() {
         var cfg = getBootstrapConfig();
         initReelGlobals(cfg);
         initProxySource(cfg);
         initProjectRename();
-        initHistoryDrawer();
-        initVolumeSliders();
-        tryAddOriginalWaveform();
 
         if (typeof lucide !== "undefined") {
             lucide.createIcons();
