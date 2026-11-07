@@ -388,17 +388,12 @@ def apply_fade(input_path, fade_in_seconds=1.0, fade_out_seconds=1.0):
 
 
 def generate_thumbnail(input_path, at_seconds=1.0):
-    """Grab a single frame as a JPEG thumbnail for preview purposes."""
-    out_path = _tmp_path(suffix=".jpg")
-    cmd = [
-        settings.FFMPEG_BINARY, "-y",
-        "-ss", str(at_seconds),
-        "-i", input_path,
-        "-frames:v", "1",
-        "-q:v", "3",
-        out_path,
-    ]
-    _run(cmd)
+    """Grab a single frame thumbnail using centralized EduMiCompressionService."""
+    from common.compression_service import EduMiCompressionService
+    out_path = _tmp_path(suffix=".webp")
+    success = EduMiCompressionService.generate_video_thumbnail_webp(input_path, out_path, time_sec=at_seconds)
+    if not success or not os.path.exists(out_path):
+        raise FFmpegError("Failed to extract thumbnail from video.")
     return out_path
 
 

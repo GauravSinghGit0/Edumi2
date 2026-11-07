@@ -117,7 +117,7 @@
                     <div class="spinner"></div>
                     <p style="margin: 0; font-size: 13px; font-weight: 600;">Preparing preview proxy…</p>
                 </div>
-                <video preload="auto" id="main-video" crossorigin="anonymous"
+                <video preload="auto" id="main-video"
                     {% if project.proxy_status == 'completed' and project.proxy_url %}
                     src="{{ project.proxy_url }}"
                     {% elif project.working_file %}

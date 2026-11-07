@@ -361,6 +361,42 @@
         }
     }
 
+    function sanitizeCamIpInput() {
+        var ipEl = document.getElementById('camIp');
+        var portEl = document.getElementById('camPort');
+        var pathEl = document.getElementById('camStreamPath');
+        if (!ipEl) return;
+        var val = ipEl.value.trim();
+        if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('rtsp://')) {
+            try {
+                var u = new URL(val);
+                ipEl.value = u.hostname;
+                if (u.port && portEl) portEl.value = u.port;
+                if (u.pathname && u.pathname !== '/' && pathEl) pathEl.value = u.pathname;
+            } catch(e) {}
+        } else if (val.indexOf(':') !== -1 && !val.startsWith('[')) {
+            var parts = val.split(':');
+            ipEl.value = parts[0].trim();
+            var portPart = parts[1].split('/')[0].trim();
+            if (portPart && portEl) portEl.value = portPart;
+            if (parts[1].indexOf('/') !== -1 && pathEl) {
+                pathEl.value = '/' + parts[1].split('/').slice(1).join('/');
+            }
+        }
+    }
+
+    function initCameraInputListeners() {
+        var ipEl = document.getElementById('camIp');
+        if (ipEl && !ipEl._sanitizedWired) {
+            ipEl._sanitizedWired = true;
+            ipEl.addEventListener('input', sanitizeCamIpInput);
+            ipEl.addEventListener('change', sanitizeCamIpInput);
+            ipEl.addEventListener('paste', function() {
+                setTimeout(sanitizeCamIpInput, 50);
+            });
+        }
+    }
+
     // Expose all modal and action handlers to window
     window.handleTypeChange = handleTypeChange;
     window.openAddModal = openAddModal;
@@ -369,8 +405,13 @@
     window.testCameraConnection = testCameraConnection;
     window.saveCamera = saveCamera;
 
-    // Run handleTypeChange on load and Turbo navigations
-    document.addEventListener('DOMContentLoaded', handleTypeChange);
-    document.addEventListener('turbo:load', handleTypeChange);
+    function onInit() {
+        handleTypeChange();
+        initCameraInputListeners();
+    }
+
+    // Run handleTypeChange and setup listeners on load and Turbo navigations
+    document.addEventListener('DOMContentLoaded', onInit);
+    document.addEventListener('turbo:load', onInit);
 })();
 </script>

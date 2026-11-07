@@ -132,44 +132,21 @@ def is_media_access_permitted(user, relative_path):
     return True
 
 
-def protected_media_serve(request, path):
+def serve_ranged_file(request, target_path, content_type='application/octet-stream', apply_security=True):
     """
-    Enterprise protected media server with:
-    - Path traversal defense
-    - Permission checks
-    - HTTP Range requests for video/audio seeking
-    - Nginx X-Accel-Redirect support for zero-copy reverse proxy streaming
-    - Strict Content-Security-Policy and attachment disposition for dangerous content (SVG/HTML)
+    Support HTTP Range requests with strict 1MB chunk bounds (prevents Daphne/ASGI memory bloat).
+    Handles both ranged (206) and non-ranged (200) streaming responses.
     """
-    media_root = os.path.abspath(str(settings.MEDIA_ROOT))
-    target_path = os.path.abspath(os.path.join(media_root, path))
-
-    # 1. Path traversal check
-    if not target_path.startswith(media_root + os.sep) and target_path != media_root:
-        raise Http404("Invalid file path")
-
-    # 2. Access control (checked before existence to prevent user/file enumeration)
-    if not is_media_access_permitted(request.user, path):
-        if not (request.user and request.user.is_authenticated):
-            from django.shortcuts import redirect
-            return redirect('login')
-        return HttpResponseForbidden("Access Denied: You do not have permission to view this resource.")
-
-    # 3. File existence check
-    if not os.path.isfile(target_path):
-        raise Http404("File not found")
-
     file_size = os.path.getsize(target_path)
-    content_type, _ = mimetypes.guess_type(target_path)
-    content_type = content_type or 'application/octet-stream'
+    MAX_SERVE_CHUNK = 1048576  # 1 MB
+    range_header = request.META.get('HTTP_RANGE', '').strip()
 
-    clean_path = path.replace('\\', '/').strip('/')
-
-    # Security: Mitigate Stored XSS for SVGs, HTML, and scriptable uploads
     ext = os.path.splitext(target_path)[1].lower().lstrip('.')
     is_scriptable = ext in ('svg', 'html', 'htm', 'xhtml', 'xml', 'js')
 
     def _apply_security_headers(resp):
+        if not apply_security:
+            return resp
         resp['X-Content-Type-Options'] = 'nosniff'
         resp['Access-Control-Allow-Origin'] = '*'
         resp['Access-Control-Allow-Headers'] = 'Range, Content-Type, Authorization'
@@ -179,16 +156,6 @@ def protected_media_serve(request, path):
             resp['Content-Disposition'] = f'attachment; filename="{os.path.basename(target_path)}"'
         return resp
 
-    # 4. Check for Nginx X-Accel-Redirect
-    if getattr(settings, 'USE_X_ACCEL_REDIRECT', False):
-        response = HttpResponse()
-        response['X-Accel-Redirect'] = f'/internal_media/{clean_path}'
-        response['Content-Type'] = content_type
-        return _apply_security_headers(response)
-
-    # Support HTTP Range requests with strict 1MB chunk bounds (prevents Daphne 3.6GB memory bloat)
-    MAX_SERVE_CHUNK = 1048576  # 1 MB
-    range_header = request.META.get('HTTP_RANGE', '').strip()
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
         if range_match:
@@ -226,6 +193,49 @@ def protected_media_serve(request, path):
     response['Accept-Ranges'] = 'bytes'
     response['Content-Length'] = str(file_size)
     return _apply_security_headers(response)
+
+
+def protected_media_serve(request, path):
+    """
+    Enterprise protected media server with:
+    - Path traversal defense
+    - Permission checks
+    - HTTP Range requests for video/audio seeking
+    - Nginx X-Accel-Redirect support for zero-copy reverse proxy streaming
+    - Strict Content-Security-Policy and attachment disposition for dangerous content (SVG/HTML)
+    """
+    media_root = os.path.abspath(str(settings.MEDIA_ROOT))
+    target_path = os.path.abspath(os.path.join(media_root, path))
+
+    # 1. Path traversal check
+    if not target_path.startswith(media_root + os.sep) and target_path != media_root:
+        raise Http404("Invalid file path")
+
+    # 2. Access control (checked before existence to prevent user/file enumeration)
+    if not is_media_access_permitted(request.user, path):
+        if not (request.user and request.user.is_authenticated):
+            from django.shortcuts import redirect
+            return redirect('login')
+        return HttpResponseForbidden("Access Denied: You do not have permission to view this resource.")
+
+    # 3. File existence check
+    if not os.path.isfile(target_path):
+        raise Http404("File not found")
+
+    file_size = os.path.getsize(target_path)
+    content_type, _ = mimetypes.guess_type(target_path)
+    content_type = content_type or 'application/octet-stream'
+
+    clean_path = path.replace('\\', '/').strip('/')
+
+    # 4. Check for Nginx X-Accel-Redirect
+    if getattr(settings, 'USE_X_ACCEL_REDIRECT', False):
+        response = HttpResponse()
+        response['X-Accel-Redirect'] = f'/internal_media/{clean_path}'
+        response['Content-Type'] = content_type
+        return response
+
+    return serve_ranged_file(request, target_path, content_type=content_type)
 
 
 def safe_static_serve(request, path, **kwargs):

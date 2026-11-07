@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from ..models import Camera, CameraPermission, CameraRecording
 from meetings.models import Meeting
-from .utils import is_admin
+from .utils import is_admin, is_ajax_request
 
 User = get_user_model()
 
@@ -33,7 +33,7 @@ def admin_content_manager(request):
 @login_required
 def delete_recording_admin(request, recording_id):
     """Admin deletes a recording"""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     if not is_admin(request.user):
         if is_ajax:
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
@@ -59,7 +59,7 @@ def delete_recording_admin(request, recording_id):
 @login_required
 def delete_meeting_admin(request, meeting_id):
     """Admin deletes a meeting"""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     if not is_admin(request.user):
         if is_ajax:
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)

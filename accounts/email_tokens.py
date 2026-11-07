@@ -258,6 +258,65 @@ The EduMi Team
     )
 
 
+def _send_email_thread(subject, text_content, from_email, recipient_list, html_content=None):
+    """Internal helper to dispatch single email on a background daemon thread."""
+    import threading
+
+    def _worker():
+        try:
+            send_mail(
+                subject=subject,
+                message=text_content.strip() if text_content else '',
+                from_email=from_email or settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                html_message=html_content,
+                fail_silently=False,
+            )
+            logger.info(f"Background email dispatched successfully to {recipient_list}")
+        except Exception as e:
+            logger.error(f"Threaded email dispatch failed for {recipient_list}: {e}")
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    return True
+
+
+def _send_bulk_emails_thread(email_messages_data):
+    """Internal helper to dispatch bulk emails on a background daemon thread."""
+    import threading
+
+    def _worker():
+        try:
+            from django.core.mail import get_connection, EmailMultiAlternatives
+            connection = get_connection()
+            connection.open()
+            msgs = []
+            for item in email_messages_data:
+                recip = item.get('recipient')
+                if not recip:
+                    continue
+                m = EmailMultiAlternatives(
+                    subject=item.get('subject', 'EduMi Notification'),
+                    body=item.get('text_content', '').strip(),
+                    from_email=item.get('from_email') or settings.DEFAULT_FROM_EMAIL,
+                    to=[recip],
+                    connection=connection,
+                )
+                if item.get('html_content'):
+                    m.attach_alternative(item['html_content'], "text/html")
+                msgs.append(m)
+            if msgs:
+                connection.send_messages(msgs)
+            connection.close()
+            logger.info(f"Background bulk email dispatched {len(msgs)} messages successfully.")
+        except Exception as e:
+            logger.error(f"Threaded bulk email dispatch failed: {e}")
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    return True
+
+
 def _dispatch_email_async(subject, text_content, from_email, recipient_list, html_content=None):
     """
     Dispatches email asynchronously via Celery worker, with instant non-blocking fallback to daemon thread.
@@ -265,23 +324,7 @@ def _dispatch_email_async(subject, text_content, from_email, recipient_list, htm
     """
     # If console or locmem backend is configured, dispatch directly via thread to ensure console visibility
     if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
-        import threading
-        def _send_console():
-            try:
-                send_mail(
-                    subject=subject,
-                    message=text_content.strip() if text_content else '',
-                    from_email=from_email or settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=recipient_list,
-                    html_message=html_content,
-                    fail_silently=False,
-                )
-            except Exception as e:
-                logger.error(f"Console email dispatch failed for {recipient_list}: {e}")
-
-        t = threading.Thread(target=_send_console, daemon=True)
-        t.start()
-        return True
+        return _send_email_thread(subject, text_content, from_email, recipient_list, html_content)
 
     try:
         from accounts.tasks import send_email_async_task
@@ -295,24 +338,7 @@ def _dispatch_email_async(subject, text_content, from_email, recipient_list, htm
         return True
     except Exception as exc:
         logger.debug(f"Could not enqueue email to Celery ({exc}). Dispatching via background daemon thread.")
-        import threading
-        def _send():
-            try:
-                send_mail(
-                    subject=subject,
-                    message=text_content.strip() if text_content else '',
-                    from_email=from_email or settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=recipient_list,
-                    html_message=html_content,
-                    fail_silently=False,
-                )
-                logger.info(f"Background email dispatched successfully to {recipient_list}")
-            except Exception as e:
-                logger.error(f"Threaded email dispatch failed for {recipient_list}: {e}")
-
-        t = threading.Thread(target=_send, daemon=True)
-        t.start()
-        return True
+        return _send_email_thread(subject, text_content, from_email, recipient_list, html_content)
 
 
 def _dispatch_bulk_emails_async(email_messages_data):
@@ -325,36 +351,7 @@ def _dispatch_bulk_emails_async(email_messages_data):
 
     # If console or locmem backend is configured, run in background thread directly
     if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
-        import threading
-        def _send_console():
-            try:
-                from django.core.mail import get_connection, EmailMultiAlternatives
-                connection = get_connection()
-                connection.open()
-                msgs = []
-                for item in email_messages_data:
-                    recip = item.get('recipient')
-                    if not recip:
-                        continue
-                    m = EmailMultiAlternatives(
-                        subject=item.get('subject', 'EduMi Notification'),
-                        body=item.get('text_content', '').strip(),
-                        from_email=item.get('from_email') or settings.DEFAULT_FROM_EMAIL,
-                        to=[recip],
-                        connection=connection,
-                    )
-                    if item.get('html_content'):
-                        m.attach_alternative(item['html_content'], "text/html")
-                    msgs.append(m)
-                if msgs:
-                    connection.send_messages(msgs)
-                connection.close()
-            except Exception as e:
-                logger.error(f"Console bulk email dispatch failed: {e}")
-
-        t = threading.Thread(target=_send_console, daemon=True)
-        t.start()
-        return True
+        return _send_bulk_emails_thread(email_messages_data)
 
     try:
         from accounts.tasks import send_bulk_emails_async_task
@@ -362,37 +359,7 @@ def _dispatch_bulk_emails_async(email_messages_data):
         return True
     except Exception as exc:
         logger.debug(f"Could not enqueue bulk emails to Celery ({exc}). Dispatching via background daemon thread.")
-        import threading
-        def _send():
-            try:
-                from django.core.mail import get_connection, EmailMultiAlternatives
-                connection = get_connection()
-                connection.open()
-                msgs = []
-                for item in email_messages_data:
-                    recip = item.get('recipient')
-                    if not recip:
-                        continue
-                    m = EmailMultiAlternatives(
-                        subject=item.get('subject', 'EduMi Notification'),
-                        body=item.get('text_content', '').strip(),
-                        from_email=item.get('from_email') or settings.DEFAULT_FROM_EMAIL,
-                        to=[recip],
-                        connection=connection,
-                    )
-                    if item.get('html_content'):
-                        m.attach_alternative(item['html_content'], "text/html")
-                    msgs.append(m)
-                if msgs:
-                    connection.send_messages(msgs)
-                connection.close()
-                logger.info(f"Background bulk email dispatched {len(msgs)} messages successfully.")
-            except Exception as e:
-                logger.error(f"Threaded bulk email dispatch failed: {e}")
-
-        t = threading.Thread(target=_send, daemon=True)
-        t.start()
-        return True
+        return _send_bulk_emails_thread(email_messages_data)
 
 
 # ==============================================================================

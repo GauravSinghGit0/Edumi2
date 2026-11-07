@@ -13,6 +13,7 @@ from django.db.models import Q, Count
 
 from meetings.models import Classroom
 from assignments.models import Quiz, Question, Choice, QuizSubmission, StudentAnswer
+from common.utils import is_admin, is_teacher as check_teacher, is_student as check_student, is_ajax_request
 
 
 @login_required
@@ -187,7 +188,7 @@ def delete_quiz(request, quiz_id):
         classroom_id = classroom.id
         quiz.delete()
         messages.success(request, f'Quiz "{title}" has been permanently deleted.')
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+        if is_ajax_request(request):
             return JsonResponse({'success': True, 'message': f'Quiz "{title}" deleted successfully.'})
         return redirect('classroom_quizzes', classroom_id=classroom_id)
     
@@ -229,7 +230,7 @@ def toggle_quiz_status(request, quiz_id):
             
         quiz.save()
         
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+        if is_ajax_request(request):
             return JsonResponse({'success': True, 'status': quiz.status, 'status_display': quiz.get_status_display()})
             
         next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
@@ -453,7 +454,7 @@ def edit_question(request, question_id):
 @login_required
 def delete_question(request, question_id):
     """Delete a question from a quiz"""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     question = get_object_or_404(Question, id=question_id)
     quiz = question.quiz
     

@@ -197,29 +197,7 @@ def detect_attack_signatures(request):
 
 
 
-def get_client_ip(request):
-    """
-    Extract accurate client IP address handling reverse proxies,
-    Cloudflare, Nginx, and direct connections.
-    """
-    if not request:
-        return '127.0.0.1'
-
-    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
-    if cf_ip:
-        return cf_ip.strip()
-
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded:
-        parts = [p.strip() for p in x_forwarded.split(',') if p.strip()]
-        if parts:
-            return parts[0]
-
-    x_real = request.META.get('HTTP_X_REAL_IP')
-    if x_real:
-        return x_real.strip()
-
-    return request.META.get('REMOTE_ADDR') or '127.0.0.1'
+from common.utils import get_client_ip
 
 
 def parse_user_agent(user_agent_str):

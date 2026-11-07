@@ -31,6 +31,7 @@ from meetings.tasks import generate_meeting_summary
 from accounts.notification_utils import notify_meeting_started, notify_meeting_cancelled
 from attendance.face_service import get_face_service
 from attendance.models import StudentFaceProfile, AttendanceRecord
+from common.utils import is_ajax_request
 
 
 def generate_meeting_code():
@@ -608,7 +609,7 @@ def get_participants(request, meeting_id):
 @require_http_methods(["POST"])
 def delete_meeting(request, meeting_id):
     """Teacher/admin permanently deletes a meeting."""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     meeting = get_object_or_404(Meeting, id=meeting_id)
     if meeting.teacher != request.user and not request.user.is_superuser:
         if is_ajax:
@@ -627,7 +628,7 @@ def delete_meeting(request, meeting_id):
 @require_http_methods(["POST"])
 def cancel_meeting(request, meeting_id):
     """Teacher/admin cancels a scheduled meeting and notifies participants."""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     meeting = get_object_or_404(Meeting, id=meeting_id)
     if meeting.teacher != request.user and not request.user.is_superuser:
         if is_ajax:

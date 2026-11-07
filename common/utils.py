@@ -40,6 +40,31 @@ def format_duration(seconds):
     return " ".join(parts)
 
 
+def get_client_ip(request):
+    """
+    Extract accurate client IP address handling reverse proxies,
+    Cloudflare, Nginx, and direct connections.
+    """
+    if not request:
+        return '127.0.0.1'
+
+    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
+    if cf_ip:
+        return cf_ip.strip()
+
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        parts = [p.strip() for p in x_forwarded.split(',') if p.strip()]
+        if parts:
+            return parts[0]
+
+    x_real = request.META.get('HTTP_X_REAL_IP')
+    if x_real:
+        return x_real.strip()
+
+    return request.META.get('REMOTE_ADDR') or '127.0.0.1'
+
+
 def get_user_type(user):
     """
     Get user type from UserProfile, returns None if no profile
@@ -51,6 +76,19 @@ def get_user_type(user):
         return user.userprofile.user_type
     
     return None
+
+
+def is_ajax_request(request):
+    """
+    Check if a request is an AJAX or JSON request.
+    Handles 'x-requested-with' header and 'Accept: application/json'.
+    """
+    if not request:
+        return False
+    return (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('accept', '')
+    )
 
 
 def is_teacher(user):

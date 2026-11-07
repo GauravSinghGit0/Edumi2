@@ -318,6 +318,8 @@ def project_detail(request, pk):
         "duration": project.duration_seconds or 0.0,
         "proxyStatus": project.proxy_status,
         "proxyUrl": project.proxy_url or "",
+        "workingFileUrl": project.working_file_url or "",
+        "originalUrl": project.original_file.url if project.original_file else "",
         "timelineState": state,
         "clips": clips_data,
         "operations": operations_data,
@@ -1595,25 +1597,35 @@ def proxy_status_view(request, pk):
 
         url = project.proxy_url
         status = project.proxy_status
-        if os.path.exists(proxy_mp4) and os.path.getsize(proxy_mp4) > 0:
+        if project.proxy_status == 'completed' and os.path.exists(proxy_mp4) and os.path.getsize(proxy_mp4) > 0:
             status = 'completed'
             url = f"{settings.MEDIA_URL}proxies/{project.owner_id}/{project.id}/proxy.mp4"
-            if project.proxy_status != 'completed' or project.proxy_url != url:
-                project.proxy_status = 'completed'
+            if project.proxy_url != url:
                 project.proxy_url = url
                 project.save(update_fields=['proxy_status', 'proxy_url'])
         elif os.path.exists(playlist) and os.path.getsize(playlist) > 0:
             status = 'completed'
             url = f"{settings.MEDIA_URL}proxies/{project.owner_id}/{project.id}/proxy.m3u8"
+            if project.proxy_status != 'completed' or project.proxy_url != url:
+                project.proxy_status = 'completed'
+                project.proxy_url = url
+                project.save(update_fields=['proxy_status', 'proxy_url'])
+        elif project.proxy_status == 'completed' and not os.path.exists(proxy_mp4):
+            status = 'pending'
+
+        original_url = project.original_file.url if project.original_file else ''
+        working_file_url = project.working_file_url or ''
 
         return JsonResponse({
             'status': status,
-            'url': url
+            'url': url or working_file_url or original_url,
+            'proxy_url': url,
+            'original_url': original_url,
+            'working_file_url': working_file_url
         })
     except VideoProject.DoesNotExist:
         return JsonResponse({'error': 'Not found'}, status=404)
 
-@login_required
 @login_required
 def project_filmstrip(request, pk):
     """

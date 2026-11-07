@@ -40,8 +40,8 @@ kombu
 livekit-api>=0.4.0
 MarkupSafe
 msgpack
-numpy
-opencv-python
+numpy>=1.26.0,<2.0.0
+opencv-python-headless>=4.8.0,<5.0.0
 openpyxl
 packaging
 phonenumbers

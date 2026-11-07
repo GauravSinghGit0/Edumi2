@@ -38,7 +38,7 @@
     const video = document.getElementById("main-video");
     if (!video) return;
     if (!baseVideoOriginalSrc) {
-      baseVideoOriginalSrc = video.currentSrc || video.src || "";
+      baseVideoOriginalSrc = video.currentSrc || video.src || window.REEL_PROJECT_WORKING_URL || window.REEL_PROJECT_ORIGINAL_URL || "";
     }
     const clips = editorState.video_clips || [];
     if (clips.length === 0) {
@@ -4033,8 +4033,8 @@
 
         // Ensure video has a valid media source loaded before calling play()
         const effectiveSrc = video.currentSrc || video.src;
-        if (!effectiveSrc || effectiveSrc === window.location.href) {
-          const fallbackSrc = window.REEL_PROJECT_PROXY_URL || window.REEL_PROJECT_WORKING_URL || baseVideoOriginalSrc;
+        if (!effectiveSrc || effectiveSrc === window.location.href || video.error) {
+          const fallbackSrc = window.REEL_PROJECT_PROXY_URL || window.REEL_PROJECT_WORKING_URL || window.REEL_PROJECT_ORIGINAL_URL || baseVideoOriginalSrc;
           if (fallbackSrc) {
             video.src = fallbackSrc;
             video.load();
@@ -4046,8 +4046,8 @@
         const p = video.play();
         if (p && typeof p.catch === "function") {
           p.catch((err) => {
-            if (err.name === "NotSupportedError") {
-              const fallback = window.REEL_PROJECT_PROXY_URL || baseVideoOriginalSrc;
+            if (err.name === "NotSupportedError" || video.error) {
+              const fallback = window.REEL_PROJECT_WORKING_URL || window.REEL_PROJECT_ORIGINAL_URL || window.REEL_PROJECT_PROXY_URL || baseVideoOriginalSrc;
               if (fallback && (!video.src || !video.src.includes(fallback))) {
                 video.src = fallback;
                 video.load();

@@ -14,6 +14,7 @@ import time
 import cv2
 import numpy as np
 import requests as req_lib
+from urllib.parse import urlparse
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, StreamingHttpResponse
@@ -26,6 +27,35 @@ from .utils import is_admin, can_view_camera, test_rtsp_paths
 
 logger = logging.getLogger("cameras")
 User = get_user_model()
+
+def _clean_camera_network_input(ip_raw, port_raw, default_port):
+    """
+    Sanitize user input: handle cases where user pastes http://192.168.1.15:8080/video
+    instead of just typing 192.168.1.15.
+    Returns (clean_ip, clean_port, extracted_path)
+    """
+    raw = (ip_raw or "").strip()
+    extracted_path = None
+    if raw.startswith("http://") or raw.startswith("https://") or raw.startswith("rtsp://"):
+        try:
+            parsed = urlparse(raw)
+            clean_ip = parsed.hostname or raw
+            port = parsed.port or (int(port_raw) if str(port_raw).isdigit() else default_port)
+            if parsed.path and parsed.path != "/":
+                extracted_path = parsed.path
+            return clean_ip, port, extracted_path
+        except Exception:
+            pass
+    if ":" in raw and not raw.startswith("["):
+        parts = raw.split(":")
+        clean_ip = parts[0].strip()
+        port_part = parts[1].split("/")[0].strip()
+        port = int(port_part) if port_part.isdigit() else default_port
+        if "/" in parts[1]:
+            extracted_path = "/" + "/".join(parts[1].split("/")[1:])
+        return clean_ip, port, extracted_path
+    port = int(port_raw) if str(port_raw).isdigit() else default_port
+    return raw, port, None
 
 # ---------------------------------------------------------------------------
 # Known URL paths per HTTP camera app, in priority order
@@ -62,13 +92,16 @@ def add_camera(request):
     if request.method == "POST":
         name        = request.POST.get("name", "").strip()
         cam_type    = request.POST.get("camera_type", "rtsp")
-        ip_address  = request.POST.get("ip_address", "").strip()
+        ip_raw      = request.POST.get("ip_address", "").strip()
         port_raw    = request.POST.get("port", "").strip()
         username    = request.POST.get("username", "").strip()
         password    = request.POST.get("password", "").strip()
         stream_path = request.POST.get("stream_path", "").strip() or None
 
-        port = int(port_raw) if port_raw.isdigit() else _DEFAULT_PORT.get(cam_type, 554)
+        default_port = _DEFAULT_PORT.get(cam_type, 554)
+        ip_address, port, extracted_path = _clean_camera_network_input(ip_raw, port_raw, default_port)
+        if extracted_path and not stream_path:
+            stream_path = extracted_path
 
         if cam_type == "rtsp" and not stream_path:
             try:
@@ -114,13 +147,22 @@ def edit_camera(request, camera_id):
                 port_raw    = request.POST.get("port", "").strip()
                 stream_path = request.POST.get("stream_path", "").strip() or None
 
-                camera.name       = request.POST.get("name", camera.name)
+                default_port = _DEFAULT_PORT.get(cam_type, 554)
+                clean_ip, clean_port, extracted_path = _clean_camera_network_input(
+                    request.POST.get("ip_address", camera.ip_address),
+                    port_raw,
+                    default_port
+                )
+
+                camera.name        = request.POST.get("name", camera.name)
                 camera.camera_type = cam_type
-                camera.ip_address = request.POST.get("ip_address", camera.ip_address).strip()
-                camera.username   = request.POST.get("username", "").strip()
-                camera.password   = request.POST.get("password", "").strip()
-                camera.port       = int(port_raw) if port_raw.isdigit() else _DEFAULT_PORT.get(cam_type, 554)
-                camera.is_active  = True
+                camera.ip_address  = clean_ip
+                camera.username    = request.POST.get("username", "").strip()
+                camera.password    = request.POST.get("password", "").strip()
+                camera.port        = clean_port
+                camera.is_active   = True
+                if extracted_path and not stream_path:
+                    stream_path = extracted_path
 
                 if cam_type == "rtsp":
                     if stream_path:
@@ -225,8 +267,8 @@ def _http_mjpeg_feed(camera):
     Directly proxy the phone's HTTP MJPEG or JPEG stream.
     Tries every known URL path in order; saves the working one for next time.
     """
-    ip   = camera.ip_address.strip()
-    port = camera.port or _DEFAULT_PORT.get(camera.camera_type, 8080)
+    default_port = _DEFAULT_PORT.get(camera.camera_type, 8080)
+    ip, port, _  = _clean_camera_network_input(camera.ip_address, camera.port, default_port)
 
     # Build candidate list — stored path gets tried first
     candidates = list(_HTTP_PATHS.get(camera.camera_type, []))
@@ -476,13 +518,14 @@ def probe_camera(request):
         return JsonResponse({"overall_status": "failed", "hint": "Permission denied."})
 
     cam_type = request.GET.get("type", "ip_webcam")
-    ip       = request.GET.get("ip", "").strip()
+    ip_raw   = request.GET.get("ip", "").strip()
     port_raw = request.GET.get("port", "").strip()
 
-    if not ip:
+    if not ip_raw:
         return JsonResponse({"overall_status": "failed", "hint": "No IP address provided."})
 
-    port = int(port_raw) if port_raw.isdigit() else _DEFAULT_PORT.get(cam_type, 8080)
+    default_port = _DEFAULT_PORT.get(cam_type, 8080)
+    ip, port, _  = _clean_camera_network_input(ip_raw, port_raw, default_port)
 
     if cam_type == "rtsp":
         return _probe_rtsp(ip, port)

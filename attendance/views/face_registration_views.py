@@ -18,15 +18,9 @@ from attendance.face_service import get_face_service
 from django.db import transaction
 from django.utils import timezone
 from accounts.identity import IdentityService
+from common.utils import get_client_ip as _get_client_ip
 
 logger = logging.getLogger('attendance')
-
-
-def _get_client_ip(request):
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded:
-        return x_forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
 
 
 def sync_profile_details(u_profile):

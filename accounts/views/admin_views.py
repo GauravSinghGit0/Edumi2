@@ -24,6 +24,7 @@ from accounts.admin_services import (
     get_user_360_data,
     get_teacher_360_data,
 )
+from common.utils import is_ajax_request
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -202,7 +203,7 @@ def delete_user(request, user_id):
     Safely deactivate/soft-delete a user account while preserving historical
     academic records (attendance, submissions, classroom materials, audit trails).
     """
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
 
     if not check_admin(request.user):
         if is_ajax:

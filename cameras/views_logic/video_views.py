@@ -13,7 +13,8 @@ from django.db.models import Q
 from django.core.files import File
 from django.conf import settings
 from ..models import Camera, CameraRecording, RecordingChunk
-from .utils import get_video_stream
+from common.media_views import serve_ranged_file
+from .utils import get_video_stream, is_ajax_request
 
 from common.validators import (
     check_uploaded_file,
@@ -49,43 +50,13 @@ def stream_video(request, recording_id):
     if not os.path.exists(file_path) or os.path.isdir(file_path):
         return HttpResponse("Video file not found", status=404)
 
-    size = os.path.getsize(file_path)
-    range_header = request.META.get('HTTP_RANGE', None)
-
     content_type = 'video/mp4'
     if file_path.endswith('.mkv'):
         content_type = 'video/x-matroska'
     elif file_path.endswith('.webm'):
         content_type = 'video/webm'
 
-    if range_header:
-        # Standard Range request parsing
-        match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if match:
-            start = int(match.group(1))
-            end = int(match.group(2)) if match.group(2) else size - 1
-
-            # Ensure boundaries
-            start = max(0, min(start, size - 1))
-            end = max(start, min(end, size - 1))
-
-            content_length = end - start + 1
-
-            response = StreamingHttpResponse(
-                get_video_stream(file_path, start, end),
-                status=206,
-                content_type=content_type
-            )
-            response['Content-Range'] = f'bytes {start}-{end}/{size}'
-            response['Accept-Ranges'] = 'bytes'
-            response['Content-Length'] = str(content_length)
-            return response
-
-    # Default to full file streaming if no range or invalid range
-    response = StreamingHttpResponse(get_video_stream(file_path, 0, size - 1), content_type=content_type)
-    response['Accept-Ranges'] = 'bytes'
-    response['Content-Length'] = str(size)
-    return response
+    return serve_ranged_file(request, file_path, content_type=content_type)
 
 
 @login_required
@@ -100,7 +71,7 @@ def upload_video(request):
         logger.info("POST request received!")
         logger.debug(f"POST keys: {request.POST.keys()}")
         logger.debug(f"FILES keys: {request.FILES.keys()}")
-        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+        is_ajax = is_ajax_request(request)
         
         try:
             title = request.POST.get('title')
@@ -692,7 +663,7 @@ def recording_playlist(request, recording_id):
 @require_http_methods(["POST"])
 def delete_recording(request, recording_id):
     """Allow teachers to delete their own recordings"""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     recording = get_object_or_404(CameraRecording, id=recording_id)
     
     if not (request.user.is_superuser or recording.teacher == request.user):

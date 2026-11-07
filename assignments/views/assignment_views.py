@@ -20,6 +20,7 @@ from common.validators import (
     MAX_SUBMISSION_SIZE,
 )
 from accounts.notification_utils import notify_new_assignment_posted
+from common.utils import is_ajax_request
 
 
 def get_default_due_date():
@@ -290,7 +291,7 @@ def delete_assignment(request, assignment_id):
         classroom_id = classroom.id
         assignment.delete()
         messages.success(request, f'Assignment "{title}" has been permanently deleted.')
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+        if is_ajax_request(request):
             return JsonResponse({'success': True, 'message': f'Assignment "{title}" deleted successfully.'})
         return redirect('classroom_assignments', classroom_id=classroom_id)
     
@@ -337,7 +338,7 @@ def toggle_assignment_status(request, assignment_id):
                 import logging
                 logging.getLogger(__name__).warning(f"Failed to dispatch assignment posted notifications: {e}")
         
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+        if is_ajax_request(request):
             return JsonResponse({'success': True, 'status': assignment.status, 'status_display': assignment.get_status_display()})
             
         next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
@@ -521,7 +522,7 @@ def evaluate_submission(request, submission_id):
 @login_required
 def delete_question_file(request, file_id):
     """Delete a question file from an assignment"""
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('accept', '')
+    is_ajax = is_ajax_request(request)
     file = get_object_or_404(AssignmentQuestionFile, id=file_id)
     assignment = file.assignment
     classroom = assignment.classroom

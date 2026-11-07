@@ -8,23 +8,13 @@ from channels.layers import get_channel_layer
 logger = logging.getLogger('cameras')
 
 
+from common.media_views import file_iterator
+
 def get_video_stream(file_path, start, end):
     """Generator to stream video in chunks with support for Range requests"""
-    chunk_size = 1024 * 1024  # 1MB chunks for responsiveness
+    return file_iterator(file_path, offset=start, length=(end - start + 1))
 
-    with open(file_path, 'rb') as f:
-        f.seek(start)
-        remaining = end - start + 1
-        while remaining > 0:
-            read_size = min(chunk_size, remaining)
-            data = f.read(read_size)
-            if not data:
-                break
-            yield data
-            remaining -= read_size
-
-
-from common.utils import is_admin
+from common.utils import is_admin, is_ajax_request
 
 
 def can_view_camera(user, camera):

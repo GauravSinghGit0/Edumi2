@@ -149,10 +149,15 @@ def extract_metadata_and_proxies_task(project_id):
             from django.conf import settings
             from cameras.ffmpeg_helpers import get_ffmpeg_binary
             import subprocess
+            import uuid
 
             proxy_dir = os.path.join(settings.MEDIA_ROOT, 'proxies', str(project.owner_id), str(project.id))
             os.makedirs(proxy_dir, exist_ok=True)
             proxy_mp4_path = os.path.join(proxy_dir, 'proxy.mp4')
+            proxy_tmp_path = os.path.join(proxy_dir, f'proxy_tmp_{uuid.uuid4().hex[:8]}.mp4')
+
+            project.proxy_status = "processing"
+            project.save(update_fields=["proxy_status"])
 
             ffmpeg_bin = get_ffmpeg_binary()
             creation_flags = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0) if os.name == "nt" else 0
@@ -167,7 +172,7 @@ def extract_metadata_and_proxies_task(project_id):
                 "-threads", "2",
                 *audio_args,
                 "-movflags", "+faststart",
-                proxy_mp4_path
+                proxy_tmp_path
             ]
             res = subprocess.run(
                 proxy_cmd,
@@ -176,15 +181,42 @@ def extract_metadata_and_proxies_task(project_id):
                 timeout=600,
                 creationflags=creation_flags
             )
-            if res.returncode == 0 and os.path.exists(proxy_mp4_path) and os.path.getsize(proxy_mp4_path) > 0:
-                project.proxy_url = f"{settings.MEDIA_URL}proxies/{project.owner_id}/{project.id}/proxy.mp4"
-                project.proxy_status = "completed"
-                project.save(update_fields=["proxy_url", "proxy_status"])
-                logger.info(f"360p MP4 proxy built successfully for project {project_id}")
+            if res.returncode == 0 and os.path.exists(proxy_tmp_path) and os.path.getsize(proxy_tmp_path) > 0:
+                # Rigorously verify that the encoded proxy is healthy and decodable (has valid moov atom)
+                try:
+                    meta_check = ffmpeg_utils.get_metadata(proxy_tmp_path)
+                    if meta_check and meta_check.get("duration", 0) > 0:
+                        if os.path.exists(proxy_mp4_path):
+                            try:
+                                os.remove(proxy_mp4_path)
+                            except OSError:
+                                pass
+                        os.replace(proxy_tmp_path, proxy_mp4_path)
+                        project.proxy_url = f"{settings.MEDIA_URL}proxies/{project.owner_id}/{project.id}/proxy.mp4"
+                        project.proxy_status = "completed"
+                        project.save(update_fields=["proxy_url", "proxy_status"])
+                        logger.info(f"360p MP4 proxy built and verified successfully for project {project_id}")
+                    else:
+                        raise ValueError("Proxy metadata check failed (invalid duration)")
+                except Exception as ve:
+                    logger.error(f"Proxy video validation failed for project {project_id}: {ve}")
+                    if os.path.exists(proxy_tmp_path):
+                        os.remove(proxy_tmp_path)
+                    project.proxy_status = "failed"
+                    project.save(update_fields=["proxy_status"])
             else:
+                if os.path.exists(proxy_tmp_path):
+                    os.remove(proxy_tmp_path)
                 logger.warning(f"360p MP4 proxy exited with code {res.returncode} for project {project_id}")
+                project.proxy_status = "failed"
+                project.save(update_fields=["proxy_status"])
         except Exception as pe:
             logger.error(f"360p MP4 proxy generation failed for project {project_id}: {pe}")
+            try:
+                project.proxy_status = "failed"
+                project.save(update_fields=["proxy_status"])
+            except Exception:
+                pass
 
         # If long-form video (> 1 hour), also dispatch HLS proxy for multi-bitrate streaming
         if (project.duration_seconds or 0.0) > 3600:

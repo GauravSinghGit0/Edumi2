@@ -8,16 +8,7 @@ from django.core.cache import cache
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.conf import settings
-
-
-def get_client_ip(request):
-    """Safely extract client IP address handling proxies and load balancers."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        ip = request.META.get('HTTP_CF_CONNECTING_IP') or request.META.get('REMOTE_ADDR') or '127.0.0.1'
-    return ip
+from common.utils import get_client_ip, is_ajax_request
 
 
 def is_rate_limited(request, action='default', limit=10, period=3600):
@@ -93,8 +84,7 @@ def ratelimit(action='default', limit=None, period=None, template_name=None):
                     msg = f"Too many attempts. You have exceeded the rate limit. Please try again in {minutes} minute(s)."
                     
                     is_ajax = (
-                        request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
-                        'application/json' in request.headers.get('Accept', '') or
+                        is_ajax_request(request) or
                         'application/json' in (request.content_type or '')
                     )
                     

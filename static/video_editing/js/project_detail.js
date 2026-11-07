@@ -44,6 +44,8 @@
         window.REEL_PROJECT_DURATION = Number(cfg.duration || 0);
         window.REEL_PROJECT_PROXY_STATUS = cfg.proxyStatus || "none";
         window.REEL_PROJECT_PROXY_URL = cfg.proxyUrl || "";
+        window.REEL_PROJECT_WORKING_URL = cfg.workingFileUrl || "";
+        window.REEL_PROJECT_ORIGINAL_URL = cfg.originalUrl || "";
         window.REEL_PROJECT_OPERATIONS = cfg.operations || [];
     }
 
@@ -80,13 +82,27 @@
         return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%;"><line x1="0" y1="' + centerY + '" x2="' + width + '" y2="' + centerY + '" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>' + paths.join('') + '</svg>';
     };
 
-    // 3. Proxy Video Source Handler (with HLS Support)
+    // 3. Proxy Video Source Handler (with HLS Support & Fallback Resilience)
     function initProxySource(cfg) {
         var video = document.getElementById("main-video");
         var prepOverlay = document.getElementById("preview-preparing-overlay");
         var proxyUrl = cfg ? cfg.proxyUrl : "";
         var proxyStatus = cfg ? cfg.proxyStatus : "none";
         var proxyStatusUrl = cfg ? cfg.proxyStatusUrl : "";
+        var originalUrl = cfg ? (cfg.workingFileUrl || cfg.originalUrl || "") : "";
+        var fallbackAttempted = false;
+
+        function fallbackToOriginal() {
+            if (fallbackAttempted) return;
+            fallbackAttempted = true;
+            var fallback = window.REEL_PROJECT_WORKING_URL || window.REEL_PROJECT_ORIGINAL_URL || originalUrl;
+            if (fallback && video && (!video.src || !video.src.includes(fallback))) {
+                console.info("Falling back to original/working video source:", fallback);
+                video.src = fallback;
+                video.load();
+            }
+            if (prepOverlay) prepOverlay.style.display = "none";
+        }
 
         function applyProxySource(url) {
             if (!video || !url) return;
@@ -108,6 +124,10 @@
         }
 
         if (video) {
+            video.addEventListener("error", function (e) {
+                console.warn("Proxy video load error encountered on:", video.src, video.error);
+                fallbackToOriginal();
+            });
             video.addEventListener("loadeddata", function () {
                 if (prepOverlay) prepOverlay.style.display = "none";
             });
@@ -129,9 +149,14 @@
                     var resp = await fetch(proxyStatusUrl);
                     if (resp.ok) {
                         var pdata = await resp.json();
-                        if (pdata.status === "completed" && pdata.url) {
+                        if (pdata.working_file_url) window.REEL_PROJECT_WORKING_URL = pdata.working_file_url;
+                        if (pdata.original_url) window.REEL_PROJECT_ORIGINAL_URL = pdata.original_url;
+                        if (pdata.status === "completed" && pdata.proxy_url) {
                             clearInterval(proxyPollInterval);
-                            applyProxySource(pdata.url);
+                            applyProxySource(pdata.proxy_url);
+                        } else if (pdata.status === "failed") {
+                            clearInterval(proxyPollInterval);
+                            fallbackToOriginal();
                         }
                     }
                 } catch (e) {}
