@@ -3,33 +3,84 @@
 
 {% block content %}
 <div class="auth-split-container">
-    <!-- Left Side - Brand & Info -->
+    <!-- Left Side - Platform Showcase & Trust Indicators -->
     <div class="auth-left-panel">
-        <div class="auth-logo">
-            <img src="{% static 'images/logo.svg' %}" alt="EduMi">
+        <div>
+            <!-- Brand Bar -->
+            <div class="auth-brand-bar">
+                <a href="{% url 'login' %}" class="auth-brand-logo">
+                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
+                </a>
+                <span class="auth-brand-pill">Email Verification</span>
+            </div>
+
+            <!-- Hero Intro -->
+            <div class="auth-showcase-hero">
+                <h2 class="auth-showcase-title">Verify Your Identity</h2>
+                <p class="auth-showcase-subtitle">We secure your educational workspace and academic records using instant multi-factor identity verification.</p>
+            </div>
+
+            <!-- Feature Cards -->
+            <div class="auth-feature-cards">
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">Immediate Code Dispatch</div>
+                        <div class="auth-feature-desc">Single-use 6-digit verification code transmitted straight to your academic inbox.</div>
+                    </div>
+                </div>
+
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-emerald">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">Role Activation</div>
+                        <div class="auth-feature-desc">Verification automatically assigns classroom privileges, video seats, and study tools.</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="auth-info">
-            <h2>Verify Your Email</h2>
-            <p style="color: #4b5563; text-align: center; font-size: 0.95rem; margin-top: 10px;">
-                Secure authentication and single sign-on across the EduMi ecosystem.
-            </p>
+
+        <!-- Trust Badges Footer -->
+        <div class="auth-trust-footer">
+            <div class="auth-trust-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>End-to-End Encrypted</span>
+            </div>
+            <div class="auth-trust-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>DPDP & FERPA Ready</span>
+            </div>
         </div>
     </div>
 
     <!-- Right Side - OTP & Verification Form -->
     <div class="auth-right-panel">
         <div class="auth-form-container">
-            <div class="auth-icon" style="background: #7c3aed;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width: 24px; height: 24px;">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
+            <!-- Mobile Brand Logo -->
+            <div class="auth-mobile-logo">
+                <a href="{% url 'login' %}">
+                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
+                </a>
             </div>
 
-            <h1>Check your inbox</h1>
-            <p class="auth-subtitle" style="margin-bottom: 0.5rem;">
-                We've sent a 6-digit verification code to
-            </p>
+            <div class="auth-header">
+                <h1>Check your inbox</h1>
+                <p class="auth-subtitle">We've sent a 6-digit verification code to</p>
+            </div>
             
             <div style="text-align: center; margin-bottom: 1.25rem;">
                 <div class="email-chip" id="emailChip">

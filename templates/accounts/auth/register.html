@@ -3,117 +3,95 @@
 
 {% block content %}
 <div class="auth-split-container">
-    <!-- Left Side - Brand & Info -->
+    <!-- Left Side - Platform Showcase & Trust Indicators -->
     <div class="auth-left-panel">
-        <!-- Logo -->
-        <div class="auth-logo">
-            <img src="{% static 'images/logo.svg' %}" alt="EduMi">
-        </div>
+        <div>
+            <!-- Brand Bar -->
+            <div class="auth-brand-bar">
+                <a href="{% url 'login' %}" class="auth-brand-logo">
+                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
+                </a>
+                <span class="auth-brand-pill">Academic Suite</span>
+            </div>
 
-        <!-- App Description -->
-        <div class="auth-info">
-            <h2>Complete Educational Platform</h2>
-            <div class="feature-list">
-                <div class="feature-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    <div>
-                        <h3>User Management</h3>
-                        <p>Manage students, teachers, and administrators with role-based access control</p>
+            <!-- Hero Intro -->
+            <div class="auth-showcase-hero">
+                <h2 class="auth-showcase-title">Next-Gen Virtual Campus</h2>
+                <p class="auth-showcase-subtitle">Unified WebRTC classrooms, smart campus camera streams, collaborative lecture tools, and automated session indexing.</p>
+            </div>
+
+            <!-- Feature Cards -->
+            <div class="auth-feature-cards">
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                            <polyline points="17 2 12 7 7 2"></polyline>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">Ultra Low-Latency Video</div>
+                        <div class="auth-feature-desc">Interactive WebRTC video lectures with real-time screen sharing and collaborative whiteboard.</div>
                     </div>
                 </div>
 
-                <div class="feature-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-                        <polyline points="17 2 12 7 7 2"></polyline>
-                    </svg>
-                    <div>
-                        <h3>Video Conferencing</h3>
-                        <p>High-quality WebRTC meetings with screen sharing and real-time collaboration</p>
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-purple">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">Smart Classroom IP Cameras</div>
+                        <div class="auth-feature-desc">Seamless RTSP/WebRTC hardware camera ingestion for hybrid classrooms and live observation.</div>
                     </div>
                 </div>
 
-                <div class="feature-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
-                        </path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                    </svg>
-                    <div>
-                        <h3>Smart Classroom Cameras</h3>
-                        <p>High-definition classroom IP camera and mobile feeds for live lecture broadcast and recording</p>
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-amber">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">Role-Based Access Control</div>
+                        <div class="auth-feature-desc">Granular administration for students, teachers, and campus directors with complete audit trails.</div>
                     </div>
                 </div>
 
-                <div class="feature-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="9" x2="15" y2="15"></line>
-                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                    </svg>
-                    <div>
-                        <h3>Real-time Updates</h3>
-                        <p>WebSocket-powered live updates for meetings, chat, and notifications</p>
+                <div class="auth-feature-card">
+                    <div class="auth-feature-icon icon-emerald">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                        </svg>
+                    </div>
+                    <div class="auth-feature-body">
+                        <div class="auth-feature-title">AI Video Studio & Archives</div>
+                        <div class="auth-feature-desc">Automated chaptering, lecture recordings, and instant retrieval for asynchronous study.</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="shapes-illustration">
-            <!-- Orange Semi-Circle -->
-            <div class="shape-semicircle">
-                <div class="shape-face">
-                    <div class="shape-eye left-eye">
-                        <div class="pupil"></div>
-                    </div>
-                    <div class="shape-eye right-eye">
-                        <div class="pupil"></div>
-                    </div>
-                    <div class="shape-mouth happy"></div>
-                </div>
+        <!-- Trust Badges Footer -->
+        <div class="auth-trust-footer">
+            <div class="auth-trust-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>End-to-End Encrypted</span>
             </div>
-
-            <!-- Purple Rectangle -->
-            <div class="shape-rect-purple">
-                <div class="shape-face">
-                    <div class="shape-eye left-eye">
-                        <div class="pupil"></div>
-                    </div>
-                    <div class="shape-eye right-eye">
-                        <div class="pupil"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dark Rectangle -->
-            <div class="shape-rect-dark">
-                <div class="shape-face">
-                    <div class="shape-eye left-eye">
-                        <div class="pupil"></div>
-                    </div>
-                    <div class="shape-eye right-eye">
-                        <div class="pupil"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Yellow Pill -->
-            <div class="shape-pill-yellow">
-                <div class="shape-face">
-                    <div class="shape-eye left-eye">
-                        <div class="pupil"></div>
-                    </div>
-                    <div class="shape-mouth line"></div>
-                </div>
+            <div class="auth-trust-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>DPDP & FERPA Ready</span>
             </div>
         </div>
     </div>
@@ -121,23 +99,24 @@
     <!-- Right Side - Register Form -->
     <div class="auth-right-panel">
         <div class="auth-form-container">
-            <div class="auth-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+            <!-- Mobile Brand Logo -->
+            <div class="auth-mobile-logo">
+                <a href="{% url 'login' %}">
+                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
+                </a>
             </div>
 
-            <h1>Create account</h1>
-            <p class="auth-subtitle">Join EduMi to get started</p>
+            <div class="auth-header">
+                <h1>Create account</h1>
+                <p class="auth-subtitle">Join EduMi to access virtual classrooms</p>
+            </div>
 
             {% if errors.non_field_errors %}
-            <div class="error-alert" style="margin-bottom: 1.25rem;">
+            <div class="error-alert">
                 {% for err in errors.non_field_errors %}{{ err }}<br>{% endfor %}
             </div>
             {% elif error %}
-            <div class="error-alert" style="margin-bottom: 1.25rem;">
+            <div class="error-alert">
                 {{ error }}
             </div>
             {% endif %}
@@ -180,7 +159,7 @@
                     <div class="field-error" id="error-email">
                         {% if errors.email %}{{ errors.email.0 }}{% endif %}
                     </div>
-                    <div class="field-hint">We'll send a 6-digit verification code here. <em>(Remember to check your Spam / Junk folder if needed).</em></div>
+                    <div class="field-hint">We'll send a 6-digit verification code here.</div>
                 </div>
 
                 <!-- Role Selection -->
@@ -205,7 +184,7 @@
                                autocomplete="new-password">
                         <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password1Input', this)" aria-label="Toggle password visibility">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
@@ -232,7 +211,7 @@
                             <span class="req-icon">✕</span> Letters and numbers
                         </div>
                         <div class="req-item" id="req-symbols-case">
-                            <span class="req-icon">✕</span> Mixed case or special symbols
+                            <span class="req-icon">✕</span> Mixed case or symbols
                         </div>
                         <div class="req-item" id="req-not-common">
                             <span class="req-icon">✕</span> Not a common password
@@ -253,7 +232,7 @@
                                autocomplete="new-password">
                         <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password2Input', this)" aria-label="Toggle password visibility">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
@@ -265,12 +244,12 @@
                 </div>
 
                 <!-- Email Delivery / Spam Notice -->
-                <div class="email-spam-notice" style="display: flex; align-items: flex-start; gap: 10px; background: rgba(124, 58, 237, 0.05); border: 1px solid rgba(124, 58, 237, 0.2); border-left: 3px solid #7c3aed; padding: 10px 14px; border-radius: 8px; margin: 1rem 0 0.5rem 0; font-size: 0.825rem; color: #4b5563; line-height: 1.45;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                <div class="email-spam-notice" style="display: flex; align-items: flex-start; gap: 10px; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); border-left: 3px solid #4f46e5; padding: 10px 12px; border-radius: 8px; margin: 1rem 0 0.5rem 0; font-size: 0.775rem; color: #4b5563; line-height: 1.45;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                         <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    <span><strong>Email Notice:</strong> Activation codes occasionally arrive in your <strong>Spam / Junk</strong> folder. Please check there if you don't see it in your inbox.</span>
+                    <span><strong>Email Notice:</strong> Activation codes occasionally arrive in your <strong>Spam / Junk</strong> folder. Please check there if not in inbox.</span>
                 </div>
 
                 <button type="submit" class="btn-login" id="submitBtn" style="margin-top: 0.75rem;">
@@ -394,63 +373,53 @@
         // Password strength meter & validators
         password1Input.addEventListener('focus', () => {
             strengthContainer.style.display = 'block';
-            requirementsList.style.display = 'block';
+            requirementsList.style.display = 'grid';
         });
 
         password1Input.addEventListener('input', function () {
-            const pwd = this.value;
-            if (!pwd) {
-                strengthFill.style.width = '0%';
-                strengthText.innerText = '';
-                return;
-            }
-
+            const val = password1Input.value;
             let score = 0;
 
-            // Rule 1: Length >= 8
-            const hasLen = pwd.length >= 8;
-            updateReqItem('req-length', hasLen);
-            if (hasLen) score += 1;
-            if (pwd.length >= 12) score += 1;
+            const isLengthValid = val.length >= 8;
+            const hasLetters = /[a-zA-Z]/.test(val);
+            const hasNumbers = /[0-9]/.test(val);
+            const isAlphaNumeric = hasLetters && hasNumbers;
+            const hasUpper = /[A-Z]/.test(val);
+            const hasLower = /[a-z]/.test(val);
+            const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+            const isComplex = (hasUpper && hasLower) || hasSpecial;
+            const isNotCommon = !COMMON_PASSWORDS.has(val.toLowerCase());
 
-            // Rule 2: Letters and Numbers
-            const hasLetters = /[a-zA-Z]/.test(pwd);
-            const hasNumbers = /[0-9]/.test(pwd);
-            const hasLettersAndNums = hasLetters && hasNumbers;
-            updateReqItem('req-letters-numbers', hasLettersAndNums);
-            if (hasLettersAndNums) score += 1;
+            updateReqItem('req-length', isLengthValid);
+            updateReqItem('req-letters-numbers', isAlphaNumeric);
+            updateReqItem('req-symbols-case', isComplex);
+            updateReqItem('req-not-common', isNotCommon && val.length > 0);
 
-            // Rule 3: Mixed case or symbols
-            const hasMixedCase = /[a-z]/.test(pwd) && /[A-Z]/.test(pwd);
-            const hasSymbols = /[^a-zA-Z0-9]/.test(pwd);
-            const hasSymbolsOrCase = hasMixedCase || hasSymbols;
-            updateReqItem('req-symbols-case', hasSymbolsOrCase);
-            if (hasSymbolsOrCase) score += 1;
+            if (isLengthValid) score += 25;
+            if (isAlphaNumeric) score += 25;
+            if (isComplex) score += 25;
+            if (isNotCommon && val.length >= 8) score += 25;
 
-            // Rule 4: Not Common
-            const isCommon = COMMON_PASSWORDS.has(pwd.toLowerCase()) || /^[0-9]+$/.test(pwd);
-            updateReqItem('req-not-common', !isCommon);
-            if (!isCommon && hasLen) score += 1;
+            strengthFill.style.width = score + '%';
 
-            // Evaluate Strength
-            if (score <= 2) {
-                strengthFill.style.width = '30%';
+            if (score <= 25) {
                 strengthFill.style.backgroundColor = '#ef4444';
                 strengthText.innerText = 'Weak';
                 strengthText.style.color = '#ef4444';
-            } else if (score <= 4) {
-                strengthFill.style.width = '65%';
+            } else if (score <= 50) {
                 strengthFill.style.backgroundColor = '#f59e0b';
-                strengthText.innerText = 'Medium';
+                strengthText.innerText = 'Fair';
                 strengthText.style.color = '#f59e0b';
+            } else if (score <= 75) {
+                strengthFill.style.backgroundColor = '#3b82f6';
+                strengthText.innerText = 'Good';
+                strengthText.style.color = '#3b82f6';
             } else {
-                strengthFill.style.width = '100%';
                 strengthFill.style.backgroundColor = '#10b981';
                 strengthText.innerText = 'Strong';
                 strengthText.style.color = '#10b981';
             }
 
-            // Check password match if password 2 is already filled
             if (password2Input.value) {
                 validatePasswordMatch();
             }
@@ -480,39 +449,6 @@
         }
 
         password2Input.addEventListener('input', validatePasswordMatch);
-
-        // Interactive Pupils follow cursor
-        const pupils = document.querySelectorAll('.pupil');
-        const eyes = document.querySelectorAll('.shape-eye');
-        const passwordInputs = document.querySelectorAll('input[type="password"]');
-        let isLookingAway = false;
-
-        document.addEventListener('mousemove', function (e) {
-            if (isLookingAway) return;
-
-            pupils.forEach(pupil => {
-                const eye = pupil.parentElement;
-                const rect = eye.getBoundingClientRect();
-                const x = rect.left + rect.width / 2;
-                const y = rect.top + rect.height / 2;
-                const angle = Math.atan2(e.clientY - y, e.clientX - x);
-                const distance = 2;
-                const pupilX = Math.cos(angle) * distance;
-                const pupilY = Math.sin(angle) * distance;
-                pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
-            });
-        });
-
-        passwordInputs.forEach(input => {
-            input.addEventListener('focus', () => {
-                isLookingAway = true;
-                eyes.forEach(eye => eye.classList.add('looking-away'));
-            });
-            input.addEventListener('blur', () => {
-                isLookingAway = false;
-                eyes.forEach(eye => eye.classList.remove('looking-away'));
-            });
-        });
     });
 </script>
 {% endblock %}

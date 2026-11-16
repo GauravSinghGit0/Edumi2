@@ -263,23 +263,26 @@ body.dark-mode .feature-item p {
 }
 
 body.dark-mode .auth-right-panel {
-    background: #1e293b !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+    background: #111827 !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
 }
 
 body.dark-mode .auth-split-container {
-    background: #0f172a !important;
+    background: #111827 !important;
+    border-color: #1f2937 !important;
 }
 
 body.dark-mode .form-field input,
 body.dark-mode .form-field select {
     color: #f1f5f9 !important;
-    border-bottom-color: #475569 !important;
+    border-color: #334155 !important;
+    background: #0f172a !important;
 }
 
 body.dark-mode .form-field input:focus,
 body.dark-mode .form-field select:focus {
-    border-bottom-color: #667eea !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
 }
 
 body.dark-mode .feature-slider-content {
