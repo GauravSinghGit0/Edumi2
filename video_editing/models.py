@@ -83,6 +83,10 @@ class VideoProject(models.Model):
     proxy_status = models.CharField(max_length=20, choices=PROXY_STATUS_CHOICES, default="none")
     proxy_url = models.CharField(max_length=500, blank=True, null=True)
     
+    current_export_id = models.CharField(max_length=64, blank=True, default="")
+    export_version = models.PositiveIntegerField(default=0)
+    timeline_version = models.PositiveIntegerField(default=1)
+    
     # JSON state of the timeline (clips, tracks, splits, overlays)
     timeline_state = models.JSONField(blank=True, null=True)
 

@@ -106,7 +106,11 @@ def compile_timeline_to_ffmpeg(project, timeline_json, output_path):
                 else:
                     new_idx = len(inputs)
                     inputs.append(abs_clip_path)
-                    cmd.extend(['-i', abs_clip_path])
+                    ext = os.path.splitext(abs_clip_path)[1].lstrip('.').lower()
+                    if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'):
+                        cmd.extend(['-loop', '1', '-i', abs_clip_path])
+                    else:
+                        cmd.extend(['-i', abs_clip_path])
                     clip_input_index_map[i] = new_idx
                     try:
                         m = get_metadata(abs_clip_path)

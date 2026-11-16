@@ -30,7 +30,7 @@ flowchart TD
     subgraph Browser ["Client-Side Browser Workbench"]
         UI["Canva-Style Editor UI\n(Templates, CSS, Lucide Icons)"]
         State["Reactive State Engine\n(app.js & project_detail.js)"]
-        Preview["HTML5 Video Player\n+ Fabric.js Canvas + Web Audio API"]
+        Preview["HTML5 Video Player\n+ Canvas Overlay + Web Audio API"]
         Timeline["Multi-Track Timeline\n(Video V1, Audio A1, Text T1, FX E1)"]
         
         UI --> State
@@ -98,6 +98,9 @@ erDiagram
         string title
         file original_file
         file current_file
+        string current_export_id
+        int export_version
+        int timeline_version
         float duration_seconds
         int width
         int height
@@ -149,6 +152,9 @@ The central entity representing a user's editing workspace.
 | `title` | `CharField(255)` | Editable project name. Defaults to the uploaded video file's base name. |
 | `original_file` | `FileField` | Immutable path to the pristine source upload (`media/videos/<user_id>/<uuid>.<ext>`). |
 | `current_file` | `FileField` | Pointer to the compiled/exported video file. `null` if project has not been exported. |
+| `current_export_id` | `CharField(64)` | Unique execution token for atomic export tracking and stale task reconciliation. |
+| `export_version` | `PositiveIntegerField` | Monotonically incrementing export version number (defaults to `1`). |
+| `timeline_version` | `PositiveIntegerField` | Optimistic concurrency control version tracking timeline edits (defaults to `1`). |
 | `duration_seconds` | `FloatField` | Source media duration extracted by `ffprobe`. |
 | `width` / `height` | `IntegerField` | Frame dimensions (e.g., 1920×1080). |
 | `has_audio` | `BooleanField` | True if the source file contains an audio stream. |
@@ -526,7 +532,7 @@ The user interface is modeled in `templates/video_editing/project_detail.html` a
 |        +-----------------------------------------------+        |  [Thumb 1]  [Thumb 2]           |
 |        |                                               |        |  Clip A     Clip B              |
 |        |            HTML5 <video> Preview              |        |  [Thumb 3]  [Thumb 4]           |
-|        |         + Fabric.js Overlay Canvas            |        |  Audio 1    Graphic 2           |
+|        |         + Canvas Stage Overlay                |        |  Audio 1    Graphic 2           |
 |        |         + Live Text Overlays Container        |        |                                 |
 |        |                                               |        |                                 |
 |        +-----------------------------------------------+        |                                 |
@@ -561,7 +567,7 @@ The user interface is modeled in `templates/video_editing/project_detail.html` a
 
 #### 2. Video Stage (`.ve-video-stage`)
 - **Main `<video>` Element**: Renders 360p proxy or full file with hardware-accelerated playback.
-- **Fabric.js Canvas Layer (`#fabric-stage-canvas`)**: Allows freehand annotations and bounding-box manipulations over video frames.
+- **Canvas Stage Overlay Layer (`#stage-canvas` / `.preview-text-overlay`)**: Renders real-time visual overlays, annotations, and text boxes directly synchronized with video playback.
 - **Live Text Overlay Box (`#text-overlay-container`)**: Renders real-time typography overlays with exact CSS font sizes, colors, and letterboxes.
 - **Custom Player Controls**:
   - Frame stepping (skip to start, step back 5s, forward 5s, skip to end).
@@ -569,35 +575,47 @@ The user interface is modeled in `templates/video_editing/project_detail.html` a
   - Interactive volume fader with mute toggle.
   - Video fullscreen toggle.
 
-#### 3. Right Tool Drawer (`.ve-tool-panel`)
-Tabbed container with 4 dedicated panels:
-- **Media Panel**:
-  - Filter category tabs: Images, Videos, Audio, Folders.
-  - Responsive thumbnail cards showing duration badges, file titles, and context menus (Insert, Rename, Download, Delete).
-  - Drag-and-drop file ingestion support.
-- **Text Panel**: Subtitle and title generator with position presets (`top`, `center`, `bottom`, `custom coordinates`), color picker, and start/end timecode synchronization.
-- **Audio Panel**: Background audio file uploader with waveform peak preview, track volume faders, and *"Set from playhead"* shortcut buttons.
-- **Effects Panel**: Real-time CSS and FFmpeg filter adjustments (Rotation 90°/180°/270°, Custom Resolution Scaler, Grayscale toggle, Fade-in/Fade-out controls).
+#### 3. Canva Dual-Rail Sidebar (`.ve-tool-panel`)
+Engineered with an industry-standard dual-rail architecture combining an outer flyout drawer (`.ve-canva-drawer`) and an icon navigation rail (`.ve-dock`):
+- **Navigation Dock (`.ve-dock`)**: Slim vertical icon rail housing buttons for **Uploads**, **Text**, and **Settings**, allowing users to seamlessly collapse or expand the panel while persisting active tab state in `localStorage`.
+- **Media / Uploads Panel (`data-panel="import"`)**:
+  - **Single Universal Upload Button**: Supports multi-file concurrent selection across videos, images, and audio.
+  - **Zero-Reload Dynamic Ingestion**: Ingests assets asynchronously without reloading the page or pausing video playback. Newly uploaded files immediately render into `#assets-grid-container` as interactive draggable cards.
+  - **Category Filter Chips**: Instant client-side filtering between **Videos**, **Audio**, and **Images**, with contextual empty states (`#empty-assets-state`).
+  - **Interactive Asset Cards (`.ve-grid-item.asset-card`)**: Feature 16:9 thumbnail previews, duration badges, quick-add buttons (`+`), and contextual options dropdowns (Add to Timeline, Rename, Download, Delete).
+- **Text Panel (`data-panel="text"`)**:
+  - **Floating Active Text Inspector (`#ve-text-editor-card`)**: Automatically displays when any text overlay is selected in the timeline or on the video canvas. Provides real-time synchronization between:
+    - Text content input (`#active-text-input`).
+    - Numeric font size stepper (`#active-text-size`) with dedicated decrement (`−`) and increment (`+`) triggers.
+    - Color picker (`#active-text-color`) and bold style toggle (`#btn-text-bold-toggle`).
+    - Direct overlay deletion trash can button (`#btn-delete-active-text`).
+  - **Quick-Insert Text Presets**: Canva-style cards for **Heading** (54pt bold), **Subheading** (32pt bold), and **Body text** (20pt normal), plus primary **"Add a text box"** button.
+- **Audio Panel (`data-panel="audio"`)**: Background audio file uploader with waveform peak preview, track volume faders, and *"Set from playhead"* shortcut buttons.
 
 #### 4. Multi-Track Timeline (`.visual-trim-container`)
 - **Vertical Resizer (`#timeline-resizer`)**: Allows dragging up/down to adjust timeline height, with double-click toggle to minimize/expand.
+- **Dynamic Track Manager (`DynamicTrackManager`)**:
+  - Automatically manages track lane visibility to prevent clutter.
+  - `#text-track-row` dynamically appears only when text overlays exist in the timeline state.
+  - `#audio-track-row` dynamically reveals only when background audio or detached audio clips exist.
+  - Empty tracks use completely transparent content cells (`.track-content-cell`), eliminating awkward pill container artifacts.
 - **Timeline Toolbar**:
-  - `Delete`: Removes selected clip.
-  - `Split (S)`: Divides the active clip at the exact playhead position into two independent clips.
-  - `Merge (M)`: Combines two adjacent split clips back into one continuous segment.
-  - `Duplicate (Ctrl+D)`: Clones the active item.
-  - `Add Clip`: Appends media from the asset library to the timeline end.
-  - `Speed Selector`: Dropdown for `0.5x`, `0.75x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`.
-  - `Zoom Controls`: Zoom Fit, Zoom In (`+`), Zoom Out (`-`).
+  - Centralized action controller (`updateToolbarActionButtons()`) dynamically enables/disables buttons based on active multi-track selection:
+    - `Delete`: Removes selected video clip, audio segment, or text overlay.
+    - `Split (S)`: Divides the active clip at the exact playhead position into two independent clips.
+    - `Merge (M)`: Combines two adjacent split clips back into one continuous segment.
+    - `Duplicate (Ctrl+D)`: Clones the active item.
+    - `+ Add Clip`: Quick-shortcut opening the video media upload library.
+    - `Speed Selector`: Dropdown for `0.5x`, `0.75x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`.
+    - `Zoom Controls`: Zoom Fit, Zoom In (`+`), Zoom Out (`-`).
 - **Pinned Ruler Header (`#trim-ruler-header`)**:
   - Dynamic time ticks calculated from zoom scale (`pxPerSecond`).
   - Sticks to the top of the timeline during vertical scrolling; syncs horizontally with track scrubbing.
 - **Track Stacks**:
   - **Video Track (V1)**: Filmstrip thumbnail ribbon, drag-handles for head/tail trimming, dimmed masks for cut regions.
-  - **Audio Track (A1)**: Detached native audio or background music with live SVG waveform visualization.
-  - **Text Track (T1)**: Color-coded text overlay duration blocks.
-  - **Effects Track (E1)**: Visual filter and speed modification badges.
-- **Interactive Playhead (`#trim-playhead`)**: Unified vertical line cutting through all tracks with a real-time timecode tooltip.
+  - **Audio Track (A1)**: Detached native audio or background music with sleek emerald waveform visualization (`#10b981`), refined 6px-8px resize handles, and linked-clip deletion protection.
+  - **Text Track (T1)**: Sleek teal typography blocks with subtle gradients, responsive drag-handles, and double-click sidebar inspector focus.
+- **Interactive Playhead (`#trim-playhead`)**: Unified vertical purple line (`#7c3aed`) cutting through all tracks with real-time millisecond timecode tooltip.
 - **Magnetic Snapping Guide (`#timeline-snap-guide`)**: Snaps clips and playhead to clip edges and split boundaries within a 10px snap radius.
 
 #### 5. History Slide-Out Drawer (`.ve-history-drawer`)
@@ -672,6 +690,59 @@ Edits made in the browser (moving clips, trimming boundaries, changing text) tri
 - Transmits the complete payload via `fetch(REEL_PROJECT_SAVE_TIMELINE_URL, { method: "POST", body: payload })`.
 - Handles CSRF token injection and updates the save indicator.
 
+### 7.4 Seamless Asynchronous Asset Ingestion & Unified Media Uploader (`UnifiedMediaUploader`)
+Importing extra videos, background music, sound effects, or slide images does not trigger a full page reload (`window.location.reload()` and native form submission have been eliminated via `e.preventDefault()`):
+
+#### 1. Reusable Class Architecture (`unified_uploader.js`)
+The `UnifiedMediaUploader` class provides a single, unified entry point for uploading any media type (video, audio, image):
+```javascript
+const uploader = new UnifiedMediaUploader({
+  uploadUrl: '/video-editing/media/upload/',
+  chunkedUrl: '/video-editing/chunked-upload/',
+  chunkSize: 5 * 1024 * 1024, // 5MB chunks
+  maxDirectSize: 10 * 1024 * 1024, // Direct upload threshold: <= 10MB
+  csrfToken: getCookie('csrftoken'),
+  onProgress: (percent, file) => updateUploadProgressBar(percent),
+  onSuccess: (data, file) => handleUploadSuccess(data),
+  onError: (error, file) => showNotification(error, 'error')
+});
+```
+
+#### 2. Client-Side Duration & Metadata Extraction
+Before uploading, the client detects the media duration in memory to eliminate server-side round trips:
+- **Video & Audio**: Creates an off-screen `URL.createObjectURL(file)` object and attaches a `loadedmetadata` event listener on a temporary `<video>` or `<audio>` element to retrieve the exact duration (seconds).
+- **Images**: Automatically assigns a default duration of 5.0 seconds for timeline placement.
+- Revokes object URLs promptly (`URL.revokeObjectURL`) to prevent browser memory leaks.
+
+#### 3. Intelligent Dual-Mode Upload Pipeline
+- **Standard Direct Upload ($\le 10$ MB)**: Transmits via `multipart/form-data` AJAX POST to `/video-editing/media/upload/` (or `/video_editing/project/<id>/upload-asset/`).
+- **Parallel Chunked Upload ($> 10$ MB)**: Automatically splits large files into 5MB chunks sent to `/video-editing/chunked-upload/` with sequential chunk index tracking and automated server-side assembly.
+
+#### 4. Client Factory (`createAndAppendAssetCard`)
+Dynamically constructs an accessible, draggable `.ve-grid-item.asset-card` DOM element complete with:
+- Responsive thumbnail preview (`<video>`, `<img>`, or audio soundwave icon).
+- Duration badge (`0:00` format) and filename label.
+- Quick-add button (`+`) for 1-click insertion at the current playhead.
+- Context menu options (Add to Timeline, Rename, Download, Delete).
+- **Instant Category Switching**: Automatically triggers active category filter tab changes (e.g., switches to "Images" after uploading a `.png`), dismisses loading spinners, and removes empty-state placeholders.
+- **Audio & Video Drag-and-Drop**: Emits structured JSON data payloads (`e.dataTransfer.setData("application/json", ...)`) so assets can be dragged directly from the sidebar onto timeline tracks at exact timestamps.
+
+### 7.5 Typography Engine & Direct Canvas Interaction
+Text overlays support both sidebar inspection and on-canvas direct manipulation:
+- **Two-Way Real-Time Synchronization**: Typing in the sidebar `#active-text-input` updates the stage preview element (`.preview-text-overlay`) and timeline text block label synchronously.
+- **Drag Hysteresis Threshold**: Mouse interactions differentiate between clicking/double-clicking and dragging using a 4px distance threshold (`Math.hypot(dx, dy) > 4`). This allows users to single-click to select and double-click to edit text inline (`contenteditable="true"`) without inadvertent repositioning.
+- **Always-Visible Selection State**: Selected text overlays remain rendered (`display: block`) on the video canvas even when the playhead is temporarily outside the clip duration, and selecting a text block automatically jumps the playhead to its start time.
+- **Numeric Font Stepper**: Sizing inputs (`#active-text-size`, steppers `−` / `+`) utilize dedicated high-specificity styling (`min-width: 32px`, `padding: 0 !important`) preventing font size values from being clipped.
+
+### 7.6 Centralized Multi-Track Action Toolbar Controller
+Toolbar action states (`Delete`, `Duplicate`, `Split`, `Merge`) are governed by a centralized reactive controller (`updateToolbarActionButtons()`):
+- **Dynamic Button Enabling**: Evaluates `globalSelection` across video, audio, and text tracks. Clicking any track item instantly enables the top toolbar `Delete` and `Duplicate` buttons.
+- **Safe Multi-Track Deletion**:
+  - Video clips: Triggers ripple alignment for subsequent detached audio clips to preserve sync.
+  - Linked Audio: Protects video continuity in linked mode or cleanly removes standalone background audio.
+  - Text Overlays: Removes the overlay from `editorState.text_overlays`, clears selection, hides the sidebar inspector card, and triggers an auto-save.
+- **Keyboard Shortcut Parity**: Pressing `Delete` or `Backspace` operates through the same validation pipeline as clicking `#tb-delete`.
+
 ---
 
 ## 8. Complete API Endpoints Reference
@@ -681,18 +752,18 @@ All video editing endpoints are registered under `/video_editing/` (defined in `
 | Method | Endpoint | View Function | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` / `POST` | `/` | `project_list` | Dashboard listing user projects; handles initial base video upload. |
-| `POST` | `/chunked-upload/` | `chunked_upload_view` | High-res chunked upload endpoint for multi-gigabyte files. |
+| `POST` | `/chunked-upload/` | `chunked_upload_view` | High-res chunked upload endpoint for multi-gigabyte files. Returns full asset metadata dictionary for asset uploads. |
 | `GET` | `/project/<id>/` | `project_detail` | Main editing studio workbench. |
 | `POST` | `/project/<id>/rename/` | `project_rename` | AJAX endpoint to update project title. |
-| `POST` | `/project/<id>/save-timeline/` | `save_timeline` | JSON timeline auto-save endpoint. |
-| `POST` | `/project/<id>/export/` | `export_project` | Dispatches background Celery rendering task. |
+| `POST` | `/project/<id>/save-timeline/` | `save_timeline` | JSON timeline auto-save endpoint; updates `timeline_state` and increments `timeline_version`. |
+| `POST` | `/project/<id>/export/` | `export_project` | Dispatches background Celery rendering task with unique `current_export_id`. |
 | `GET` | `/project/<id>/status/` | `project_status` | Polling endpoint for compilation status (`ready`, `processing`, `error`). |
 | `GET` | `/project/<id>/proxy-status/` | `proxy_status_view` | Polling endpoint for 360p proxy generation status. |
 | `GET` | `/project/<id>/waveform/` | `project_waveform` | Returns precomputed audio PCM waveform peaks array. |
 | `GET` | `/project/<id>/filmstrip/` | `project_filmstrip` | Returns video filmstrip thumbnail sprite metadata. |
 | `GET` | `/project/<id>/filmstrip/<filename>`| `project_filmstrip_frame`| Serves individual filmstrip thumbnail image. |
-| `POST` | `/project/<id>/upload-asset/` | `upload_asset` | Ingests extra image, video, or audio media into project library. |
-| `POST` | `/project/<id>/asset/<asset_id>/delete/`| `delete_asset` | Removes an imported asset. |
+| `POST` | `/project/<id>/upload-asset/` | `upload_asset` | Ingests extra image, video, or audio media; returns asset `id`, `url`, `duration`, `duration_seconds`, `delete_url`, and `rename_url`. |
+| `POST` | `/project/<id>/asset/<asset_id>/delete/`| `delete_asset` | Removes an imported asset from disk and database. |
 | `POST` | `/project/<id>/asset/<asset_id>/rename/`| `rename_asset` | Updates an asset display title. |
 | `POST` | `/project/<id>/publish/` | `publish_to_lecture` | Publishes exported edit directly into a classroom lecture recording. |
 | `GET` | `/project/<id>/download/` | `project_download` | Streams downloadable MP4 video file. |
@@ -700,18 +771,15 @@ All video editing endpoints are registered under `/video_editing/` (defined in `
 | `POST` | `/project/<id>/reset/` | `op_reset` | Discards all edits and reverts project to original state. |
 | `GET` | `/media-ranges/<path>` | `serve_media_ranges` | HTTP 206 Partial Content range server for smooth video scrubbing. |
 
-### 8.1 Discrete Edit Action Endpoints (Legacy & Direct Action APIs)
-| Method | Endpoint | View Function | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/project/<id>/trim/` | `op_trim` | Direct cut/trim operation on active working file. |
-| `POST` | `/project/<id>/text/` | `op_text` | Direct text overlay application. |
-| `POST` | `/project/<id>/background-audio/` | `op_bg_audio` | Mixes supplementary audio file. |
-| `POST` | `/project/<id>/rotate/` | `op_rotate` | Rotates video by specified degrees. |
-| `POST` | `/project/<id>/resize/` | `op_resize` | Scales video dimensions. |
-| `POST` | `/project/<id>/grayscale/` | `op_grayscale`| Applies grayscale desaturation filter. |
-| `POST` | `/project/<id>/fade/` | `op_fade` | Applies linear black fade-in and fade-out. |
-| `POST` | `/project/<id>/speed/` | `op_speed` | Adjusts playback speed and audio pitch. |
-| `POST` | `/project/<id>/split/` | `op_split` | Splits video into segments at specified timestamp. |
+### 8.1 Non-Destructive Timeline State vs. Direct Action Endpoints
+In alignment with modern non-destructive editing suites:
+- **Visual Filters & Adjustments**: Rotation, resizing, grayscale desaturation, and fades are managed directly in the client-side `timeline_state` JSON document and compiled in a single pass by `timeline_compiler.py` during export, rather than mutating intermediate files through legacy endpoints.
+- **Core Direct Actions**:
+  - `POST /project/<id>/trim/`: Direct cut/trim operation on active working file.
+  - `POST /project/<id>/text/`: Form fallback for text overlay generation.
+  - `POST /project/<id>/background-audio/`: Multi-part upload and background audio configuration.
+  - `POST /project/<id>/speed/`: Playback rate and pitch tempo adjustments.
+  - `POST /project/<id>/split/`: Timestamp-based clip division.
 
 ---
 
@@ -774,5 +842,5 @@ def dispatch_async(task_func, *args, **kwargs):
 
 ---
 
-*Document version: 2.6 • Maintained by Edumi Engineering Team • Last updated: November 2026*
+*Document version: 2.7 • Maintained by Edumi Engineering Team • Last updated: November 2026*
 

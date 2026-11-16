@@ -23,19 +23,29 @@
 ## 📑 Table of Contents
 
 1. [Executive Summary](#-executive-summary)
-2. [Key Value Propositions & Modules](#-key-value-propositions--modules)
-3. [Institute On-Premise Deployment & Data Sovereignty](#-institute-on-premise-deployment--data-sovereignty)
-4. [System Architecture](#-system-architecture)
-5. [Technology Stack](#-technology-stack)
-6. [Prerequisites & System Requirements](#-prerequisites--system-requirements)
-7. [Getting Started & Local Setup](#-getting-started--local-setup)
-8. [Configuration & Environment Variables](#-configuration--environment-variables)
-9. [Microservices & Port Matrix](#-microservices--port-matrix)
-10. [Diagnostic & Test Utilities](#-diagnostic--test-utilities)
-11. [Repository Structure](#-repository-structure)
-12. [User Roles & Permissions](#-user-roles--permissions)
-13. [Security, Privacy & Biometric Hardening](#-security-privacy--biometric-hardening)
-14. [License & Maintainers](#-license--maintainers)
+2. [Documentation & Viva Defense Manuals](#-documentation--viva-defense-manuals)
+3. [Key Value Propositions & Modules](#-key-value-propositions--modules)
+4. [Institute On-Premise Deployment & Data Sovereignty](#-institute-on-premise-deployment--data-sovereignty)
+5. [System Architecture](#-system-architecture)
+6. [Technology Stack](#-technology-stack)
+7. [Prerequisites & System Requirements](#-prerequisites--system-requirements)
+8. [Getting Started & Local Setup](#-getting-started--local-setup)
+9. [Configuration & Environment Variables](#-configuration--environment-variables)
+10. [Microservices & Port Matrix](#-microservices--port-matrix)
+11. [Diagnostic & Test Utilities](#-diagnostic--test-utilities)
+12. [Repository Structure](#-repository-structure)
+13. [User Roles & Permissions](#-user-roles--permissions)
+14. [Security, Privacy & Biometric Hardening](#-security-privacy--biometric-hardening)
+15. [License & Maintainers](#-license--maintainers)
+
+---
+
+## 📚 Documentation & Viva Defense Manuals
+
+- 🏛️ **[EduMi Full System Architecture & Engineering Blueprint](docs/SYSTEM_ARCHITECTURE.md)**: Exhaustive 5-tier architectural specification, component diagrams, microservice port matrix, sequence flows, and data dictionaries.
+- 📖 **[EduMi Master System Technical Manual & Viva Defense Guide (75+ Q&A)](docs/EDUMI_MASTER_SYSTEM_AND_VIVA_GUIDE.md)**: Comprehensive architectural guide covering all 10 modules, mathematical formulas, and 75+ categorized viva questions with model answers.
+- 🎬 **[Video Editing Module Technical Documentation](docs/VIDEO_EDITING_DOCUMENTATION.md)**: Complete specifications for the Canva/CapCut multi-track timeline, `UnifiedMediaUploader`, 360p ultrafast proxy, and FFmpeg filtergraph compiler.
+- 🎓 **[Academic Project Final Report](docs/FINAL_PROJECT_REPORT.md)**: Deep-dive academic thesis report for SIV864 / CSM 011 with empirical compression benchmarks and security audits.
 
 ---
 
@@ -60,7 +70,7 @@
 | **AI Biometric Attendance** | • Pre-join face verification using OpenCV **YuNet + SFace (128D)** neural vectors with Cosine/Euclidean matching.<br/>• Client-side positioning guidance powered by `face-api.js` and anti-spoofing via `MiniFASNetV2`.<br/>• Encrypted at rest via Fernet AES-256; raw biometric photos are never retained on disk. |
 | **Smart Classroom & Studio Cameras** | • Ingestion of classroom RTSP IP camera feeds (interactive boards, teacher podiums, smart labs).<br/>• Mobile IP camera integration (converts iOS/Android smartphones into wireless classroom studio cameras).<br/>• Real-time classroom occupancy & head-counting analytics.<br/>• High-efficiency H.265 CRF 28/32 lecture archival compression saving >50% disk storage. |
 | **Academic LMS & Quizzes** | • File-based homework submissions with magic-byte MIME security validation.<br/>• Automated WebP image thumbnailing for classroom resources and study materials.<br/>• Timed multiple-choice quizzes with automated instant scorecards and analytics. |
-| **Video Editing Studio** | • Browser-based non-destructive timeline video editor.<br/>• Sub-10 second 360p ultrafast proxy generation with 95ms seek latency for smooth scrubbing.<br/>• Multi-track audio overlay, volume balance, trim, split, rotate, resize, and custom text captions.<br/>• Web-optimized `-movflags +faststart` timeline compiler rendering via Celery workers. |
+| **Video Editing Studio** | • Browser-based non-destructive timeline video editor (Canva/CapCut-style multi-track timeline).<br/>• Modular `UnifiedMediaUploader` handling video, audio, and images with client-side duration extraction, chunked parallel uploads (>10MB), and standard upload (<=10MB) with zero page reloads.<br/>• Sub-10 second 360p ultrafast proxy generation with 95ms seek latency for smooth scrubbing.<br/>• Multi-track audio overlay (linked & separated modes), volume balance, SVG waveforms, trim, split, rotate, resize, and custom text captions.<br/>• Web-optimized `-movflags +faststart` timeline compiler rendering via Celery workers. |
 | **Multimedia Compression Engine** | • Centralized `EduMiCompressionService` delivering domain-adaptive compression across all assets.<br/>• 3-phase dynamic chunked parallel transcoder with keyframe GOP boundary splitting.<br/>• Dual export pipeline (H.264 web stream + H.265 cold storage archive). |
 | **Enterprise Authentication** | • 6-digit email OTP verification with signed cryptographic fallback tokens.<br/>• Automated in-memory WebP avatar compression on save (75-80% smaller avatars).<br/>• Sliding-window rate limiters to protect against brute-force attacks and credential stuffing.<br/>• Strict role-based access control (Admin, Teacher, Student). |
 | **Messaging & Notifications** | • 1-to-1 direct messaging and campus-wide real-time WebSocket announcements.<br/>• Persistent in-app notifications for classes, assignment deadlines, and grade releases. |

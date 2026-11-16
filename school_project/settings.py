@@ -699,7 +699,7 @@ LIVEKIT_API_SECRET       = env('LIVEKIT_API_SECRET', required=True)
 # ==============================================================================
 
 import hashlib as _hashlib
-CAMERA_SERVICE_URL     = env('CAMERA_SERVICE_URL', 'http://localhost:8003')
+CAMERA_SERVICE_URL     = env('CAMERA_SERVICE_URL', 'http://localhost:8008')
 CAMERA_SERVICE_SECRET  = env('CAMERA_SERVICE_SECRET', _hashlib.sha256((SECRET_KEY + '-camera-service-salt').encode()).hexdigest())
 HEAD_COUNT_INTERVAL    = int(env('HEAD_COUNT_INTERVAL', '30'))
 ATTENTION_THRESHOLD    = float(env('ATTENTION_THRESHOLD', '0.6'))

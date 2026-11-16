@@ -104,34 +104,398 @@
 }
 
 .ve-category-btn.active {
-  color: #ffffff !important;
+  color: var(--ve-primary, #8b5cf6) !important;
+  font-weight: 700 !important;
 }
 
 /* =============================================================================
-   Timeline Toolbar - Standardization
+   Timeline Toolbar - Compact & Refined Design
    ============================================================================= */
 
-/* Consistent button heights and spacing */
+/* Toolbar Container */
+.timeline-toolbar {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 4px 12px !important;
+  gap: 8px !important;
+}
+
+.toolbar-left,
+.toolbar-right {
+  gap: 4px !important;
+}
+
+/* Consistent compact button heights, padding and typography */
 .tb-btn {
-  height: 32px !important;
-  padding: 0 12px !important;
-  font-size: 12px !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
-  gap: 6px !important;
+  gap: 4px !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border, #e2e8f0) !important;
+  color: var(--ve-text, #1e293b) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.tb-btn:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.tb-btn:disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
 }
 
 .tb-btn i,
 .tb-btn [data-lucide] {
-  width: 14px !important;
-  height: 14px !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Icon-only buttons (Zoom Fit, Zoom Out, Zoom In, Fullscreen) */
+#tb-zoom-fit,
+#tb-zoom-out,
+#tb-zoom-in,
+#btn-fullscreen-timeline,
+#tb-bottom-fullscreen,
+.tb-btn:not(:has(span)) {
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* Speed control dropdown */
-.timeline-speed-control select,
+.timeline-speed-control {
+  gap: 4px !important;
+  margin-left: 2px !important;
+  padding-left: 6px !important;
+  border-left: 1px solid var(--ve-border, #e2e8f0) !important;
+}
+
+.timeline-speed-control span {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
 .tb-speed-select {
+  height: 26px !important;
+  padding: 0 16px 0 6px !important;
+  font-size: 11px !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border, #e2e8f0) !important;
+}
+
+/* Timeline Bottom Toolbar */
+.timeline-bottom-toolbar {
   height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 10px !important;
+}
+
+.tb-bottom-btn {
+  height: 24px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
   padding: 0 8px !important;
-  font-size: 12px !important;
+  border-radius: 4px !important;
+  gap: 4px !important;
+}
+
+.tb-bottom-btn i,
+.tb-bottom-btn [data-lucide] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.tb-bottom-badge {
+  font-size: 10.5px !important;
+  padding: 2px 7px !important;
+  height: 22px !important;
+  border-radius: 4px !important;
+}
+
+/* =============================================================================
+   Canva-Style Inline Track Add Buttons (Clip, Audio, Text)
+   ============================================================================= */
+
+.timeline-inline-add-btn {
+  position: absolute;
+  top: 4px;
+  height: calc(100% - 8px);
+  min-height: 24px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px dashed rgba(139, 92, 246, 0.45) !important;
+  border-radius: 4px !important;
+  color: var(--ve-primary, #7c3aed) !important;
+  font-family: inherit;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  z-index: 5;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease !important;
+  user-select: none;
+}
+
+.timeline-inline-add-btn:hover {
+  background: #ede9fe !important;
+  border-color: var(--ve-primary, #7c3aed) !important;
+  color: #6d28d9 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.15) !important;
+}
+
+.timeline-inline-add-btn:active {
+  transform: translateY(0);
+}
+
+.timeline-inline-add-btn i,
+.timeline-inline-add-btn svg,
+.timeline-inline-add-btn [data-lucide] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Audio-specific styling */
+.timeline-inline-add-audio-btn {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #059669 !important;
+}
+
+.timeline-inline-add-audio-btn:hover {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* Text-specific styling */
+.timeline-inline-add-text-btn {
+  border-color: rgba(13, 148, 136, 0.5) !important;
+  color: #0d9488 !important;
+}
+
+.timeline-inline-add-text-btn:hover {
+  background: #f0fdfa !important;
+  border-color: #14b8a6 !important;
+  color: #0f766e !important;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.15) !important;
+}
+
+/* =============================================================================
+   Canva Clean Rectangular Track Blocks & Stage Text (No Pill Shapes)
+   ============================================================================= */
+
+/* Eliminate pill shapes on all track blocks */
+.timeline-generic-block,
+.timeline-clip-block,
+.timeline-text-block,
+.timeline-audio-block,
+.timeline-effect-block,
+.audio-block,
+.timeline-inline-add-btn,
+.ve-category-btn {
+  border-radius: 4px !important;
+}
+
+/* Canva Clean Audio Block with Waveform, Header, and Handles */
+.timeline-audio-block,
+.audio-block {
+  position: absolute !important;
+  top: 2px !important;
+  bottom: 2px !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+  border: 1px solid rgba(16, 185, 129, 0.45) !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  cursor: grab !important;
+  box-sizing: border-box !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.timeline-audio-block:hover,
+.audio-block:hover {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: #10b981 !important;
+}
+
+.timeline-audio-block.selected,
+.timeline-item--selected.timeline-audio-block {
+  background: rgba(16, 185, 129, 0.28) !important;
+  border: 1.5px solid #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35) !important;
+  outline: none !important;
+}
+
+/* Audio Block Header Label Badge */
+.timeline-audio-block .audio-clip-header {
+  position: absolute;
+  top: 3px;
+  left: 8px;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #047857 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.ve-theme-dark .timeline-audio-block .audio-clip-header {
+  color: #34d399 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* Audio Resize/Trim Handles */
+.timeline-audio-block .audio-resize-handle {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 8px !important;
+  background: #10b981 !important;
+  cursor: ew-resize !important;
+  z-index: 10 !important;
+  opacity: 0.65 !important;
+  border-radius: 2px !important;
+  transition: width 0.15s ease, opacity 0.15s ease, background 0.15s ease !important;
+  display: block !important;
+}
+
+.timeline-audio-block:hover .audio-resize-handle,
+.timeline-audio-block.selected .audio-resize-handle,
+.timeline-item--selected .audio-resize-handle {
+  opacity: 1 !important;
+  width: 7px !important;
+  background: #059669 !important;
+  border-radius: 2px !important;
+}
+
+.timeline-audio-block .audio-resize-handle.handle-left {
+  left: 0 !important;
+}
+
+.timeline-audio-block .audio-resize-handle.handle-right {
+  right: 0 !important;
+}
+
+/* Text Track Block Canva Styling (Crisp Rectangle, subtle 4px radius) */
+.timeline-text-block {
+  top: 2px !important;
+  bottom: 2px !important;
+  border-radius: 4px !important;
+  background: #0d9488 !important;
+  border: 1px solid #14b8a6 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.timeline-text-block.selected,
+.timeline-item--selected.timeline-text-block {
+  border: 1.5px solid #2dd4bf !important;
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.4) !important;
+  outline: none !important;
+}
+
+.timeline-text-block .text-resize-handle {
+  border-radius: 2px !important;
+}
+
+/* Stage Text Overlay Container & Item Styling */
+#text-overlay-container {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+  z-index: 30 !important;
+  overflow: hidden !important;
+}
+
+.preview-text-overlay {
+  position: absolute !important;
+  pointer-events: auto !important;
+  cursor: move !important;
+  user-select: none !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  box-sizing: border-box !important;
+  white-space: pre-wrap !important;
+  text-align: center !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9) !important;
+  transition: outline 0.15s ease, box-shadow 0.15s ease !important;
+  line-height: 1.25 !important;
+  font-family: inherit !important;
+}
+
+.preview-text-overlay:hover {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.75) !important;
+  outline-offset: 3px !important;
+}
+
+.preview-text-overlay.selected,
+.preview-text-overlay.is-selected {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25) !important;
+}
+
+.preview-text-overlay[contenteditable="true"] {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 3px !important;
+  background: rgba(124, 58, 237, 0.2) !important;
+  cursor: text !important;
+  user-select: text !important;
+}
+
+/* Active Text Editor Card in Right Drawer */
+.ve-text-editor-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ve-theme-dark .ve-text-editor-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.ve-theme-dark #active-text-input {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+}
+
+.ve-theme-dark #active-text-size {
+  background: #0f172a !important;
+  color: #f8fafc !important;
 }
 
 /* =============================================================================
@@ -142,13 +506,15 @@
 .timeline-scroll-area,
 .timeline-tracks-wrapper,
 .trim-ruler {
-  transition: none !important; /* Prevent animation during resize/zoom */
+  transition: none !important;
+  /* Prevent animation during resize/zoom */
 }
 
 /* Ensure ruler ticks are crisp */
 .trim-tick,
 .trim-tick.major {
-  transform: translateZ(0); /* GPU acceleration */
+  transform: translateZ(0);
+  /* GPU acceleration */
 }
 
 /* Prevent sub-pixel rendering issues */
@@ -166,31 +532,12 @@
 
 @media (max-width: 1024px) {
   .tb-btn span {
-    display: none; /* Hide text on small screens, keep icons */
+    display: none;
+    /* Hide text on small screens, keep icons */
   }
-  
+
   .tb-btn {
     min-width: 32px !important;
     padding: 0 8px !important;
   }
 }
-
-/* =============================================================================
-   Debugging Helpers (Remove after verification)
-   ============================================================================= */
-
-/* 
- * Uncomment these to visualize alignment:
- * 
- * .trim-ruler {
- *   background: rgba(255, 0, 0, 0.1) !important;
- * }
- * 
- * .timeline-tracks-wrapper {
- *   background: rgba(0, 255, 0, 0.1) !important;
- * }
- * 
- * .track-content-cell {
- *   outline: 1px dashed rgba(0, 0, 255, 0.3) !important;
- * }
- */

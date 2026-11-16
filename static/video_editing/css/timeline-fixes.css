@@ -192,6 +192,13 @@
   box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.15);
 }
 
+/* Track row when dragged over */
+.timeline-track-row.drag-track-hover {
+  background: rgba(139, 92, 246, 0.08) !important;
+  outline: 2px dashed rgba(139, 92, 246, 0.6) !important;
+  outline-offset: -2px;
+}
+
 /* Drop zone indicator */
 .timeline-drop-indicator {
   position: absolute;
@@ -214,30 +221,55 @@
    SELECTION STATES
    ============================================================================= */
 
-/* Unified selection styling */
+/* Unified selection styling - Canva-grade elegant accents */
 .timeline-generic-block.selected,
 .timeline-clip-block.selected,
-.timeline-text-block.selected,
-.timeline-audio-block.selected,
 .timeline-effect-block.selected,
 .timeline-item--selected {
-  outline: 2px solid #ffa200 !important;
+  outline: 2px solid var(--ve-primary, #7c3aed) !important;
   outline-offset: 0px;
-  box-shadow: 
-    0 0 0 4px rgba(255, 162, 0, 0.2),
-    0 0 16px rgba(255, 162, 0, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25) !important;
   z-index: 10 !important;
 }
 
-/* Selected item handles */
+.timeline-audio-block.selected,
+.timeline-item--selected.timeline-audio-block {
+  outline: 2px solid #10b981 !important;
+  outline-offset: 0px;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+  z-index: 10 !important;
+}
+
+.timeline-text-block.selected,
+.timeline-item--selected.timeline-text-block {
+  outline: 2px solid #0d9488 !important;
+  outline-offset: 0px;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  z-index: 10 !important;
+}
+
+/* Selected item handles - sleek Canva bars, not bulky pills */
 .timeline-generic-block.selected .video-resize-handle,
-.timeline-generic-block.selected .audio-resize-handle,
-.timeline-generic-block.selected .text-resize-handle,
 .timeline-item--selected .video-resize-handle,
-.timeline-item--selected .audio-resize-handle,
+.timeline-generic-block.selected .clip-trim-handle,
+.timeline-item--selected .clip-trim-handle {
+  background: var(--ve-primary, #7c3aed) !important;
+  width: 8px !important;
+  border-radius: 2px !important;
+}
+
+.timeline-generic-block.selected .audio-resize-handle,
+.timeline-item--selected .audio-resize-handle {
+  background: #10b981 !important;
+  width: 7px !important;
+  border-radius: 2px !important;
+}
+
+.timeline-generic-block.selected .text-resize-handle,
 .timeline-item--selected .text-resize-handle {
-  background: #ffa200 !important;
-  width: 14px !important;
+  background: #0d9488 !important;
+  width: 7px !important;
+  border-radius: 2px !important;
 }
 
 /* =============================================================================
@@ -332,4 +364,32 @@
   justify-content: center;
   pointer-events: none;
   z-index: 1000;
+}
+
+/* Sidebar Active Text Size Input - High-specificity reset against global input styles */
+#active-text-size {
+  flex: 1 !important;
+  min-width: 32px !important;
+  width: 34px !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  line-height: 28px !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: textfield !important;
+}
+
+#active-text-size:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }

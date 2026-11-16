@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 MAX_VIDEO_SIZE = 500 * 1024 * 1024        # 500 MB
 MAX_ASSIGNMENT_SIZE = 100 * 1024 * 1024   # 100 MB for teacher question attachments
 MAX_SUBMISSION_SIZE = 50 * 1024 * 1024    # 50 MB for student submissions
-MAX_IMAGE_SIZE = 10 * 1024 * 1024         # 10 MB for thumbnails/photos
+MAX_IMAGE_SIZE = 50 * 1024 * 1024         # 50 MB for photos / high-res assets
 MAX_AUDIO_SIZE = 50 * 1024 * 1024         # 50 MB for audio files
 
 # Allowed extension sets

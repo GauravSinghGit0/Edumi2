@@ -13,7 +13,6 @@
 **Presentation & Defense:** November 25 – November 29, 2026  
 **Code Repositories:** `Edumi2` (Production Platform) & `EDUMI_FULL_COMPRESSION_PACKAGE` (Compression Research Lab)  
 **System Status:** Production Ready | 53 Unit/Regression Tests Passing (100% OK) | Full Audit Completed
-
 ---
 
 ## 📑 Master Table of Contents
@@ -107,6 +106,8 @@ In developing regions, rural students connect over 3G/4G cellular connections su
 ## 3. Global System Architecture & Infrastructure Topology
 
 EduMi employs a decoupled, asynchronous microservice architecture engineered for high concurrency, zero-downtime fault isolation, and sub-second media delivery.
+
+![System Architecture Overview](assets/system_architecture.png)
 
 ```
                   ┌────────────────────────────────────────────────────────┐
@@ -305,21 +306,24 @@ flowchart LR
 
 ### 4.5 In-Browser Non-Destructive Video Editing Studio (`video_editing/`)
 
-The `video_editing` app is an industry-grade, Canva-style non-destructive video editing and rendering suite running natively in the browser.
+The `video_editing` app is an industry-grade, Canva- and CapCut-style non-destructive video editing and rendering suite running natively in the browser.
 
 ```mermaid
 flowchart TD
-    subgraph "Client-Side Browser Studio (Fabric.js & Canvas)"
-        Upload[Upload Master Video] --> ProxyReq[Request Editing Proxy]
-        ProxyReq --> Canvas[Canvas Multi-Track Timeline<br/>V1/V2 Video, A1/A2 Audio, T1 Text, E1 Filters]
+    subgraph "Client-Side Browser Studio (HTML5 Video & Canvas Multi-Track)"
+        Upload["UnifiedMediaUploader<br/>(Video, Audio, Image - Zero Reload)"] --> CheckSize{"File Size > 10 MB?"}
+        CheckSize -->|Yes| Chunked["Parallel Chunked Upload<br/>(/video-editing/chunked-upload/)"]
+        CheckSize -->|No| StdUpload["Standard Multipart Upload<br/>(/video-editing/media/upload/)"]
+        Chunked & StdUpload --> ProxyReq[Request Editing Proxy]
+        ProxyReq --> Canvas["Multi-Track Timeline Lanes<br/>V1 Video, A1 Audio, T1 Text, FX Filters"]
         Canvas --> Operations[Perform Cuts, Trims, Speed, Audio Mix, Text]
         Operations --> StateJSON["timeline_state JSON Document<br/>(Non-Destructive — Source File Untouched)"]
     end
 
     subgraph "Background Worker Pipeline (video_editing/tasks.py)"
-        Upload --> CeleryProxy["Celery: generate_proxy_task<br/>H.264 360p Ultrafast (CRF 30, -g 15)"]
-        Upload --> CeleryWave["Celery: generate_waveform_task<br/>8 kHz Mono PCM Waveform Array"]
-        Upload --> CeleryFilm["Celery: generate_filmstrip_task<br/>Lightweight WebP Thumbnail Sprites"]
+        Chunked & StdUpload --> CeleryProxy["Celery: generate_proxy_task<br/>H.264 360p Ultrafast (CRF 30, -g 15)"]
+        Chunked & StdUpload --> CeleryWave["Celery: generate_waveform_task<br/>8 kHz Mono PCM Waveform Array"]
+        Chunked & StdUpload --> CeleryFilm["Celery: generate_filmstrip_task<br/>Lightweight WebP Thumbnail Sprites"]
         CeleryProxy --> ReturnProxy["Sub-10s Proxy (95ms Seek Latency)"]
         ReturnProxy --> Canvas
     end
@@ -334,6 +338,12 @@ flowchart TD
 
 #### Key Capabilities & Engineering Architecture:
 - **Non-Destructive JSON Timeline Model (`VideoProject.timeline_state`):** User operations (trimming, splitting, rotating, audio leveling, speed modification, color filters, text overlays) are stored as a structured JSON state. The original video file is never modified or destructively overwritten.
+- **Unified Media Uploader (`UnifiedMediaUploader`):** Industry-standard reusable client class (`unified_uploader.js`) handling all media types (video, audio, images) with zero page reloads (`e.preventDefault()`). Features:
+  - Client-side duration extraction via temporary in-memory `<video>` and `<audio>` objects (`loadedmetadata` listener), assigning default 5.0s to images.
+  - Dual-mode upload routing: files $\le 10$ MB use direct multipart AJAX POST, while files $> 10$ MB are sliced into parallel chunks sent to `/video-editing/chunked-upload/` with progress bar callbacks.
+  - Asynchronous DOM injection: dynamically renders `.ve-grid-item.asset-card` elements into `#assets-grid-container` with draggable JSON metadata.
+- **Multi-Track Timeline Lanes (`#timelineTracks`):** Modern CapCut/Canva layout featuring dedicated tracks for Video (`#videoTrack`), Audio (`#audioTrack`), and Text (`#textTrack`). Lanes dynamically toggle visibility (`display: flex`), preventing clutter when certain tracks are unused.
+- **Linked vs. Separated Audio Modes:** Allows instructors to either keep video and audio linked in lockstep or split the audio track into an independent audio lane for volume ducking, background music blending, or asynchronous trimming.
 - **Sub-10 Second 360p Ultrafast Proxy Generation:** Generates a lightweight editing proxy via `EduMiCompressionService.generate_editor_proxy()` using `scale=-2:360`, `libx264`, `preset=ultrafast`, `crf=30`, and a tight keyframe interval (`-g 15`). Yields a **95 ms seeking latency** on HTML5 video elements, eliminating scrubbing lag on budget teacher laptops.
 - **8 kHz Mono PCM Waveform Generation:** Extracts audio stream data into normalized peak arrays (`waveform.json`) for real-time visualization on audio tracks using `wavesurfer.js`.
 - **WebP Filmstrip Extraction:** Asynchronously extracts timeline preview sprites as WebP thumbnails every 5 seconds, enabling visual scrubbing previews across the timeline playhead.
@@ -779,7 +789,7 @@ EduMi registers **552 URL patterns**. The table below categorizes the core API a
 | **Engagement Reports** | `/attendance/engagement-report/<ident>/` | Post-session emotion distribution and attention index graphs. |
 | **Classroom Cameras** | `/cameras/`, `/cameras/stream/<id>/`, `/cameras/headcount/` | RTSP camera dashboard, low-latency MJPEG proxy, real-time headcount charts. |
 | **Mobile Cameras** | `/mobile-cameras/`, `/mobile-cameras/register/` | Smartphone camera pairing (IP Webcam/DroidCam), feed monitoring. |
-| **Video Editing Studio** | `/video-editing/`, `/video-editing/project/<id>/editor/` | Fabric.js editor canvas, multi-track timeline, asset uploader. |
+| **Video Editing Studio** | `/video-editing/`, `/video-editing/project/<id>/editor/` | HTML5 Video + Canvas multi-track timeline, UnifiedMediaUploader. |
 | **Editor Operations** | `/video-editing/project/<id>/trim/`, `/save-timeline/`, `/export/` | Non-destructive operations, JSON state persistence, Celery export dispatch. |
 | **Editor Waveforms** | `/video-editing/project/<id>/waveform/`, `/filmstrip/` | Real audio peak arrays (`waveform.json`) and WebP filmstrip frame serving. |
 | **LMS Assignments** | `/assignments/classroom/<id>/`, `/assignments/<id>/submit/` | Coursework creation, magic-byte submission upload, teacher grading rubrics. |
@@ -846,7 +856,7 @@ Edumi2/
 │   ├── services.py                 # nomic-embed-text vector retrieval & local LLM Q&A
 │   ├── models.py                   # RagSession, RagQueryLog, RagChatMessage
 │   └── views.py                    # 5 educational study modes (Ask, Explain, Quiz, etc.)
-├── static/ & templates/            # Frontend Assets (Fabric.js, wavesurfer.js, UI templates)
+├── static/ & templates/            # Frontend Assets (wavesurfer.js, Canvas & Timeline UI)
 ├── livekit-bin/                    # On-premise LiveKit SFU binaries (Windows/Linux)
 ├── database/                       # Local SQLite fallback & persistent media storage
 ├── logs/                           # Daily telemetry directories (logs/YYYY-MM-DD/)

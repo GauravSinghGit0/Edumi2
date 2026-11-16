@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 from . import ffmpeg_utils
 from .forms import (
     VideoUploadForm, TrimForm, VolumeForm, MergeForm,
-    TextOverlayForm, SpeedForm, RotateForm, ResizeForm, FadeForm,
+    TextOverlayForm, SpeedForm,
     BackgroundAudioForm,
 )
 from .models import VideoProject, EditOperation, ProjectAsset
@@ -332,9 +332,6 @@ def project_detail(request, pk):
         "merge_form": MergeForm(),
         "text_form": TextOverlayForm(),
         "speed_form": SpeedForm(),
-        "rotate_form": RotateForm(),
-        "resize_form": ResizeForm(),
-        "fade_form": FadeForm(),
         "bg_audio_form": BackgroundAudioForm(),
         "operations": operations_list,
         "has_redo": project.operations.filter(active=False).exists(),
@@ -539,6 +536,11 @@ def op_bg_audio(request, pk):
     if project is None:
         return HttpResponseForbidden()
     
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("Accept", "")
+    )
+    
     form = BackgroundAudioForm(request.POST, request.FILES)
     if form.is_valid():
         audio_file = form.cleaned_data["audio_file"]
@@ -596,141 +598,25 @@ def op_bg_audio(request, pk):
             parameters={'filename': audio_file.name}
         )
         
+        if is_ajax:
+            return JsonResponse({
+                "status": "success",
+                "success": True,
+                "asset": {
+                    "id": asset.id,
+                    "url": asset.file.url,
+                    "title": asset.display_title,
+                    "duration": asset.display_duration or "0:00",
+                    "duration_seconds": asset.duration_seconds or 0.0,
+                    "asset_type": "audio"
+                },
+                "timeline_state": state
+            })
         messages.success(request, "Background audio added to timeline. Export to render final video.")
     else:
+        if is_ajax:
+            return JsonResponse({"status": "error", "error": form.errors.as_text()}, status=400)
         messages.error(request, "Invalid background audio parameters.")
-    return redirect("project_detail", pk=pk)
-
-
-@login_required
-@require_POST
-def op_rotate(request, pk):
-    """Non-destructive rotation: Only updates timeline state"""
-    project = _get_owned_project(request, pk)
-    if project is None:
-        return HttpResponseForbidden()
-    
-    form = RotateForm(request.POST)
-    if form.is_valid():
-        deg = int(form.cleaned_data["degrees"])
-        
-        # Update timeline state only
-        state = project.timeline_state or {}
-        if 'effects' not in state:
-            state['effects'] = {}
-        
-        state['effects']['rotate'] = deg
-        
-        project.timeline_state = state
-        project.save(update_fields=['timeline_state'])
-        
-        EditOperation.objects.create(
-            project=project,
-            operation_type="rotate",
-            description=f"Rotated {deg}°",
-            parameters={'degrees': deg}
-        )
-        
-        messages.success(request, f"Rotation {deg}° added to timeline. Export to render final video.")
-    else:
-        messages.error(request, "Invalid rotation angle.")
-    return redirect("project_detail", pk=pk)
-
-
-@login_required
-@require_POST
-def op_resize(request, pk):
-    """Non-destructive resize: Only updates timeline state"""
-    project = _get_owned_project(request, pk)
-    if project is None:
-        return HttpResponseForbidden()
-    
-    form = ResizeForm(request.POST)
-    if form.is_valid():
-        w = form.cleaned_data["width"]
-        h = form.cleaned_data["height"]
-        
-        # Update timeline state only
-        state = project.timeline_state or {}
-        state['resize'] = {'width': w, 'height': h}
-        
-        project.timeline_state = state
-        project.save(update_fields=['timeline_state'])
-        
-        EditOperation.objects.create(
-            project=project,
-            operation_type="resize",
-            description=f"Resized to {w}x{h}",
-            parameters={'width': w, 'height': h}
-        )
-        
-        messages.success(request, f"Resize to {w}x{h} added to timeline. Export to render final video.")
-    else:
-        messages.error(request, "Invalid resolution parameters.")
-    return redirect("project_detail", pk=pk)
-
-
-@login_required
-@require_POST
-def op_grayscale(request, pk):
-    """Non-destructive grayscale: Only updates timeline state"""
-    project = _get_owned_project(request, pk)
-    if project is None:
-        return HttpResponseForbidden()
-    
-    # Update timeline state only
-    state = project.timeline_state or {}
-    if 'effects' not in state:
-        state['effects'] = {}
-    
-    state['effects']['grayscale'] = True
-    
-    project.timeline_state = state
-    project.save(update_fields=['timeline_state'])
-    
-    EditOperation.objects.create(
-        project=project,
-        operation_type="grayscale",
-        description="Applied grayscale filter"
-    )
-    
-    messages.success(request, "Grayscale filter added to timeline. Export to render final video.")
-    return redirect("project_detail", pk=pk)
-
-
-@login_required
-@require_POST
-def op_fade(request, pk):
-    """Non-destructive fade: Only updates timeline state"""
-    project = _get_owned_project(request, pk)
-    if project is None:
-        return HttpResponseForbidden()
-    
-    form = FadeForm(request.POST)
-    if form.is_valid():
-        fin = form.cleaned_data["fade_in_seconds"]
-        fout = form.cleaned_data["fade_out_seconds"]
-        
-        # Update timeline state only
-        state = project.timeline_state or {}
-        if 'effects' not in state:
-            state['effects'] = {}
-        
-        state['effects']['fade'] = {'in': fin, 'out': fout}
-        
-        project.timeline_state = state
-        project.save(update_fields=['timeline_state'])
-        
-        EditOperation.objects.create(
-            project=project,
-            operation_type="fade",
-            description=f"Applied fade in ({fin}s) & fade out ({fout}s)",
-            parameters={'fade_in': fin, 'fade_out': fout}
-        )
-        
-        messages.success(request, "Fade effects added to timeline. Export to render final video.")
-    else:
-        messages.error(request, "Invalid fade parameters.")
     return redirect("project_detail", pk=pk)
 
 
@@ -1062,16 +948,6 @@ def save_timeline(request, pk):
                     'clips': text_overlays
                 })
         
-        # Effects track
-        if 'effects' in data or 'active_effects' in data:
-            effect_clips = data.get('active_effects') or []
-            if effect_clips or data.get('effects'):
-                tracks.append({
-                    'type': 'effect',
-                    'name': 'Effects Track',
-                    'clips': effect_clips
-                })
-        
         data['tracks'] = tracks
     
     # Preserve essential properties for export
@@ -1172,11 +1048,20 @@ def export_project(request, pk):
 @login_required
 @require_POST
 def upload_audio_temp(request, pk):
+    """
+    Backward-compatible adapter for audio uploads.
+    Creates a persistent ProjectAsset and returns both legacy and modern response keys.
+    """
     project = _get_owned_project(request, pk)
     if project is None:
         return JsonResponse({"error": "forbidden"}, status=403)
         
-    audio_file = request.FILES.get("audio_file")
+    audio_file = (
+        request.FILES.get("audio_file") or
+        request.FILES.get("file") or
+        request.FILES.get("media_file") or
+        next(iter(request.FILES.values()), None)
+    )
     if not audio_file:
         return JsonResponse({"error": "no_file", "message": "No audio file provided."}, status=400)
 
@@ -1189,34 +1074,61 @@ def upload_audio_temp(request, pk):
     if not is_valid:
         return JsonResponse({"error": "invalid_file", "message": err_msg}, status=400)
         
-    tmp_dir = os.path.join(settings.MEDIA_ROOT, "tmp")
-    os.makedirs(tmp_dir, exist_ok=True)
     clean_name = sanitize_filename(audio_file.name)
-    audio_tmp_path = os.path.join(tmp_dir, f"audio_{uuid.uuid4().hex}_{clean_name}")
-    
-    with open(audio_tmp_path, "wb") as dest:
-        for chunk in audio_file.chunks():
-            dest.write(chunk)
+    asset = ProjectAsset.objects.create(
+        project=project,
+        file=audio_file,
+        title=clean_name,
+        filename=clean_name,
+        asset_type="audio"
+    )
+    try:
+        meta = ffmpeg_utils.get_metadata(asset.file.path)
+        asset.duration_seconds = meta.get("duration", 0.0)
+        asset.save(update_fields=["duration_seconds"])
+    except Exception:
+        pass
             
     return JsonResponse({
         "status": "success",
-        "temp_path": audio_tmp_path,
-        "filename": clean_name
+        "success": True,
+        "temp_path": asset.file.path,
+        "filename": clean_name,
+        "asset": {
+            "id": asset.id,
+            "url": asset.file.url,
+            "title": asset.display_title,
+            "duration": asset.display_duration or "0:00",
+            "duration_seconds": asset.duration_seconds or 0.0,
+            "asset_type": "audio",
+            "delete_url": reverse("delete_asset", args=[project.pk, asset.id]),
+            "rename_url": reverse("rename_asset", args=[project.pk, asset.id]),
+        }
     })
 
 
 @login_required
 @require_POST
 def upload_asset(request, pk):
+    """
+    Unified modular media asset upload endpoint for Edumi Video Editing.
+    Seamlessly handles video, audio, and image files through a single pipeline.
+    """
     project = _get_owned_project(request, pk)
     if project is None:
         return JsonResponse({"error": "Forbidden"}, status=403)
 
-    video_file = request.FILES.get("video_file")
-    if not video_file:
+    uploaded_file = (
+        request.FILES.get("file") or
+        request.FILES.get("media_file") or
+        request.FILES.get("video_file") or
+        request.FILES.get("audio_file") or
+        next(iter(request.FILES.values()), None)
+    )
+    if not uploaded_file:
         return JsonResponse({"error": "No file uploaded"}, status=400)
 
-    ext = get_file_extension(video_file.name)
+    ext = get_file_extension(uploaded_file.name)
     asset_type = "video"
     allowed_exts = ALLOWED_VIDEO_EXTENSIONS
     max_size = MAX_VIDEO_SIZE
@@ -1239,7 +1151,7 @@ def upload_asset(request, pk):
         }, status=400)
 
     is_valid, err_msg = check_uploaded_file(
-        video_file,
+        uploaded_file,
         allowed_extensions=allowed_exts,
         max_size=max_size,
         file_category=asset_type
@@ -1247,7 +1159,7 @@ def upload_asset(request, pk):
     if not is_valid:
         return JsonResponse({"error": err_msg}, status=400)
 
-    clean_name = sanitize_filename(video_file.name)
+    clean_name = sanitize_filename(uploaded_file.name)
     
     # Check if frontend provided client-extracted duration
     client_duration = 0.0
@@ -1257,9 +1169,12 @@ def upload_asset(request, pk):
     except (ValueError, TypeError):
         client_duration = 0.0
 
+    if asset_type == "image" and client_duration <= 0:
+        client_duration = 5.0
+
     asset = ProjectAsset.objects.create(
         project=project,
-        file=video_file,
+        file=uploaded_file,
         title=clean_name,
         filename=clean_name,
         asset_type=asset_type,
@@ -1278,12 +1193,16 @@ def upload_asset(request, pk):
 
     return JsonResponse({
         "success": True,
+        "status": "success",
         "asset": {
             "id": asset.id,
             "url": asset.file.url,
             "title": asset.display_title,
             "duration": asset.display_duration or "0:00",
-            "asset_type": asset.asset_type
+            "duration_seconds": asset.duration_seconds or (5.0 if asset.asset_type == "image" else 0.0),
+            "asset_type": asset.asset_type,
+            "delete_url": reverse("delete_asset", args=[project.pk, asset.id]),
+            "rename_url": reverse("rename_asset", args=[project.pk, asset.id]),
         }
     })
 
@@ -1497,6 +1416,8 @@ def chunked_upload_view(request):
                             asset_type = "audio"
                         elif ext in ALLOWED_IMAGE_EXTENSIONS:
                             asset_type = "image"
+                            if client_duration <= 0:
+                                client_duration = 5.0
                             
                         asset = ProjectAsset.objects.create(
                             project=proj,
@@ -1530,7 +1451,11 @@ def chunked_upload_view(request):
                                 'id': asset.id,
                                 'url': asset.file.url,
                                 'title': asset.display_title,
-                                'duration': asset.display_duration or "0:00"
+                                'duration': asset.display_duration or "0:00",
+                                'duration_seconds': asset.duration_seconds or (5.0 if asset.asset_type == "image" else 0.0),
+                                'asset_type': asset.asset_type,
+                                'delete_url': reverse("delete_asset", args=[proj.pk, asset.id]),
+                                'rename_url': reverse("rename_asset", args=[proj.pk, asset.id]),
                             }
                         })
                     except Exception as e:

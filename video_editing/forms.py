@@ -87,20 +87,6 @@ class SpeedForm(forms.Form):
     )
 
 
-class RotateForm(forms.Form):
-    degrees = forms.ChoiceField(choices=[("90", "90°"), ("180", "180°"), ("270", "270°")])
-
-
-class ResizeForm(forms.Form):
-    width = forms.IntegerField(min_value=16, max_value=7680)
-    height = forms.IntegerField(min_value=16, max_value=4320)
-
-
-class FadeForm(forms.Form):
-    fade_in_seconds = forms.FloatField(min_value=0, max_value=30, initial=1.0)
-    fade_out_seconds = forms.FloatField(min_value=0, max_value=30, initial=1.0)
-
-
 class BackgroundAudioForm(forms.Form):
     audio_file = forms.FileField(
         label="Audio File (MP3/WAV/AAC)",
