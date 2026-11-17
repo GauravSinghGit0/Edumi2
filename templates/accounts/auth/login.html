@@ -1,200 +1,103 @@
-{% extends 'layouts/base.html' %}
+{% extends 'accounts/auth/base_auth.html' %}
 {% load static %}
 
-{% block content %}
-<div class="auth-split-container">
-    <!-- Left Side - Platform Showcase & Trust Indicators -->
-    <div class="auth-left-panel">
-        <div>
-            <!-- Brand Bar -->
-            <div class="auth-brand-bar">
-                <a href="{% url 'login' %}" class="auth-brand-logo">
-                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
-                </a>
-                <span class="auth-brand-pill">Academic Suite</span>
-            </div>
+{% block auth_form %}
+<div class="auth-header">
+    <h1>Welcome back</h1>
+    <p class="auth-subtitle">Sign in to access your classes and dashboard</p>
+</div>
 
-            <!-- Hero Intro -->
-            <div class="auth-showcase-hero">
-                <h2 class="auth-showcase-title">Next-Gen Virtual Campus</h2>
-                <p class="auth-showcase-subtitle">Unified WebRTC classrooms, smart campus camera streams, collaborative lecture tools, and automated session indexing.</p>
-            </div>
+<form method="post" class="auth-form" data-turbo="false" id="loginForm">
+    {% csrf_token %}
+    {% if next %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
 
-            <!-- Feature Cards -->
-            <div class="auth-feature-cards">
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
-                            <polyline points="17 2 12 7 7 2"></polyline>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">Ultra Low-Latency Video</div>
-                        <div class="auth-feature-desc">Interactive WebRTC video lectures with real-time screen sharing and collaborative whiteboard.</div>
-                    </div>
-                </div>
-
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-purple">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">Smart Classroom IP Cameras</div>
-                        <div class="auth-feature-desc">Seamless RTSP/WebRTC hardware camera ingestion for hybrid classrooms and live observation.</div>
-                    </div>
-                </div>
-
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-amber">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">Role-Based Access Control</div>
-                        <div class="auth-feature-desc">Granular administration for students, teachers, and campus directors with complete audit trails.</div>
-                    </div>
-                </div>
-
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-emerald">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polygon points="10 8 16 12 10 16 10 8"></polygon>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">AI Video Studio & Archives</div>
-                        <div class="auth-feature-desc">Automated chaptering, lecture recordings, and instant retrieval for asynchronous study.</div>
-                    </div>
-                </div>
-            </div>
+    <div class="form-field">
+        <label for="usernameInput">Username, Email or Student/Staff ID</label>
+        <div class="input-icon-wrapper">
+            <span class="input-leading-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </span>
+            <input type="text" id="usernameInput" name="username" required
+                   placeholder="Enter your username or email"
+                   autocomplete="username" value="{{ entered_username|default:'' }}" autofocus>
         </div>
+    </div>
 
-        <!-- Trust Badges Footer -->
-        <div class="auth-trust-footer">
-            <div class="auth-trust-item">
+    <div class="form-field">
+        <label for="passwordInput">Password</label>
+        <div class="input-icon-wrapper password-field">
+            <span class="input-leading-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
-                <span>End-to-End Encrypted</span>
-            </div>
-            <div class="auth-trust-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </span>
+            <input type="password" name="password" required placeholder="Enter your password"
+                   id="passwordInput" autocomplete="current-password">
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('passwordInput', this)"
+                    aria-label="Toggle password visibility">
+                <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-                <span>DPDP & FERPA Ready</span>
-            </div>
+                <svg class="eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+            </button>
         </div>
     </div>
 
-    <!-- Right Side - Modern Sign-in Form -->
-    <div class="auth-right-panel">
-        <div class="auth-form-container">
-            <!-- Mobile Brand Logo -->
-            <div class="auth-mobile-logo">
-                <a href="{% url 'login' %}">
-                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
-                </a>
-            </div>
-
-            <div class="auth-header">
-                <h1>Welcome back</h1>
-                <p class="auth-subtitle">Sign in to access your classes and dashboard</p>
-            </div>
-
-            <form method="post" class="auth-form" data-turbo="false" id="loginForm">
-                {% csrf_token %}
-                {% if next %}
-                <input type="hidden" name="next" value="{{ next }}">
-                {% endif %}
-
-                <div class="form-field">
-                    <label for="usernameInput">Username, Email or Student/Staff ID</label>
-                    <input type="text" id="usernameInput" name="username" required
-                           placeholder="Enter your username or email"
-                           autocomplete="username" value="{{ entered_username|default:'' }}" autofocus>
-                </div>
-
-                <div class="form-field">
-                    <label for="passwordInput">Password</label>
-                    <div class="password-field">
-                        <input type="password" name="password" required placeholder="Enter your password"
-                               id="passwordInput" autocomplete="current-password">
-                        <button type="button" class="toggle-password" onclick="togglePassword()"
-                                aria-label="Toggle password visibility">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="form-options">
-                    <label class="checkbox-label" for="rememberInput">
-                        <input type="checkbox" id="rememberInput" name="remember">
-                        <span>Remember for 30 days</span>
-                    </label>
-                    <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>
-                </div>
-
-                {% if unverified_error %}
-                <div class="error-alert"
-                     style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 0.85rem; border-radius: 8px; margin-bottom: 1.15rem;">
-                    <div style="font-weight: 700; margin-bottom: 4px;">Email Verification Required</div>
-                    <div>{{ error }}</div>
-                    <div style="margin-top: 6px; font-size: 0.775rem; background: rgba(217, 119, 6, 0.1); border-left: 3px solid #d97706; padding: 6px 10px; border-radius: 4px; color: #78350f;">
-                        💡 <strong>Tip:</strong> If you haven't received the email, please check your <strong>Spam / Junk</strong> folder.
-                    </div>
-                    <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
-                        <button type="button" id="loginResendBtn"
-                                onclick="resendLoginVerification('{{ unverified_email }}')"
-                                style="background: #d97706; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.775rem; font-weight: 600; cursor: pointer;">
-                            Resend verification email
-                        </button>
-                        <a href="{% url 'verify_email' %}"
-                           style="font-size: 0.775rem; color: #b45309; text-decoration: underline;">
-                            Enter code
-                        </a>
-                    </div>
-                    <div id="loginResendStatus" style="font-size: 0.75rem; margin-top: 6px; display: none;"></div>
-                </div>
-                {% elif error %}
-                <div class="error-alert">{{ error }}</div>
-                {% endif %}
-
-                <button type="submit" class="btn-login" id="loginSubmitBtn">Log in</button>
-            </form>
-
-            <p class="signup-link">
-                Don't have an account? <a href="{% url 'register' %}">Sign up</a>
-            </p>
-        </div>
+    <div class="form-options">
+        <label class="checkbox-label" for="rememberInput">
+            <input type="checkbox" id="rememberInput" name="remember">
+            <span>Remember for 30 days</span>
+        </label>
+        <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>
     </div>
-</div>
 
+    {% if unverified_error %}
+    <div class="error-alert"
+         style="background: #fffbeb; border-color: #fde68a; color: #92400e; padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 12px;">
+        <div style="font-weight: 700; margin-bottom: 3px;">Email Verification Required</div>
+        <div>{{ error }}</div>
+        <div style="margin-top: 5px; font-size: 11.5px; background: rgba(217, 119, 6, 0.1); border-left: 3px solid #d97706; padding: 5px 8px; border-radius: 4px; color: #78350f;">
+            💡 <strong>Tip:</strong> If you haven't received the email, please check your <strong>Spam / Junk</strong> folder.
+        </div>
+        <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px;">
+            <button type="button" id="loginResendBtn"
+                    onclick="resendLoginVerification('{{ unverified_email }}')"
+                    style="background: #d97706; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                Resend verification email
+            </button>
+            <a href="{% url 'verify_email' %}"
+               style="font-size: 11.5px; color: #b45309; text-decoration: underline;">
+                Enter code
+            </a>
+        </div>
+        <div id="loginResendStatus" style="font-size: 11.5px; margin-top: 4px; display: none;"></div>
+    </div>
+    {% elif error %}
+    <div class="error-alert">{{ error }}</div>
+    {% endif %}
+
+    <button type="submit" class="btn-login" id="loginSubmitBtn">Log in</button>
+</form>
+
+<p class="signup-link">
+    Don't have an account? <a href="{% url 'register' %}">Sign up</a>
+</p>
+{% endblock %}
+
+{% block auth_scripts %}
 <script>
-    // Toggle password visibility
-    function togglePassword() {
-        const input = document.getElementById('passwordInput');
-        if (!input) return;
-        if (input.type === 'password') {
-            input.type = 'text';
-        } else {
-            input.type = 'password';
-        }
-    }
-
     // Resend login verification email AJAX handler
     function resendLoginVerification(email) {
         const btn = document.getElementById('loginResendBtn');

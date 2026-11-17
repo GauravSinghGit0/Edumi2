@@ -1,0 +1,226 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="auth-split-container">
+    {% include 'accounts/auth/includes/auth_showcase_panel.html' %}
+
+    <!-- Right Side - Auth Form Panel -->
+    <div class="auth-right-panel">
+        <div class="auth-form-container {% block form_container_class %}{% endblock %}">
+            {% include 'accounts/auth/includes/auth_mobile_logo.html' %}
+
+            {% block auth_form %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+
+<div id="authScriptsSlot" style="display: none;">
+{% block auth_scripts %}
+{% endblock %}
+</div>
+
+<script>
+    // Universal password visibility toggle with SVG icon switching
+    function togglePasswordVisibility(inputId, btn) {
+        let input = null;
+        let button = btn;
+        if (typeof inputId === 'string') {
+            input = document.getElementById(inputId);
+        } else if (inputId instanceof HTMLElement) {
+            if (inputId.tagName === 'INPUT') {
+                input = inputId;
+            } else if (inputId.tagName === 'BUTTON') {
+                button = inputId;
+                input = button.closest('.input-icon-wrapper, .password-field')?.querySelector('input');
+            }
+        }
+        if (!button && window.event && window.event.currentTarget) {
+            button = window.event.currentTarget;
+        }
+        if (!button && input) {
+            button = input.closest('.input-icon-wrapper, .password-field')?.querySelector('.toggle-password');
+        }
+        if (!input) return;
+
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        if (button) {
+            button.classList.toggle('is-revealed', isPassword);
+            button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        }
+    }
+    window.togglePasswordVisibility = togglePasswordVisibility;
+    window.togglePassword = function(btn) { togglePasswordVisibility('passwordInput', btn); };
+    window.togglePassField = function(fieldId, btn) { togglePasswordVisibility(fieldId, btn); };
+
+    // Dynamic Single-Panel Transition (Right Side Only - Preserves Left Showcase entirely)
+    (function () {
+        let isTransitioning = false;
+        let activeAuthPath = window.location.pathname + window.location.search;
+
+        // Ensure initial history state is stamped
+        try {
+            window.history.replaceState({ authUrl: window.location.href }, document.title, window.location.href);
+        } catch(e) {}
+
+        function isAuthUrl(href) {
+            if (!href) return false;
+            try {
+                const targetUrl = new URL(href, window.location.origin);
+                if (targetUrl.origin !== window.location.origin) return false;
+                const p = targetUrl.pathname;
+                return p === '/' || 
+                       p.startsWith('/login') || 
+                       p.startsWith('/register') || 
+                       p.startsWith('/password-reset') || 
+                       p.startsWith('/forgot-password') || 
+                       p.startsWith('/verify-email');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function fetchAuthPage(url) {
+            const res = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (res.redirected) {
+                window.location.href = res.url;
+                return null;
+            }
+            if (!res.ok) throw new Error('Status: ' + res.status);
+            return await res.text();
+        }
+
+        async function transitionTo(url, push = true) {
+            if (isTransitioning) return;
+            const currentContainer = document.querySelector('.auth-form-container');
+            const rightPanel = document.querySelector('.auth-right-panel');
+            if (!currentContainer || !rightPanel) {
+                window.location.href = url;
+                return;
+            }
+
+            const targetUrl = new URL(url, window.location.origin);
+            const targetPath = targetUrl.pathname + targetUrl.search;
+
+            // Only skip if the DOM already matches this path
+            if (targetPath === activeAuthPath) {
+                return;
+            }
+
+            isTransitioning = true;
+
+            try {
+                const fetchPromise = fetchAuthPage(url);
+                currentContainer.classList.add('auth-form-exit');
+
+                const [html] = await Promise.all([
+                    fetchPromise,
+                    new Promise(r => setTimeout(r, 140))
+                ]);
+
+                if (!html) return;
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.querySelector('.auth-form-container');
+
+                if (!newContainer) {
+                    window.location.href = url;
+                    return;
+                }
+
+                if (doc.title) {
+                    document.title = doc.title;
+                }
+                if (push) {
+                    window.history.pushState({ authUrl: url }, doc.title || '', url);
+                }
+
+                activeAuthPath = targetPath;
+
+                newContainer.classList.add('auth-form-enter');
+                rightPanel.replaceChild(newContainer, currentContainer);
+
+                // Re-execute scripts from the newly loaded page
+                const scripts = doc.querySelectorAll('#authScriptsSlot script, .auth-right-panel script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    document.body.appendChild(newScript);
+                    setTimeout(() => newScript.remove(), 1000);
+                });
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        newContainer.classList.remove('auth-form-enter');
+                        newContainer.classList.add('auth-form-enter-active');
+                        setTimeout(() => {
+                            newContainer.classList.remove('auth-form-enter-active');
+                            isTransitioning = false;
+                        }, 260);
+                    });
+                });
+
+            } catch (e) {
+                console.warn('Right-panel transition error, falling back to full navigation:', e);
+                window.location.href = url;
+                isTransitioning = false;
+            }
+        }
+
+        // Intercept clicks on auth navigation links
+        document.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                return;
+            }
+            const anchor = e.target.closest('a');
+            if (anchor && isAuthUrl(anchor.href)) {
+                if (anchor.target && anchor.target !== '_self') return;
+                if (anchor.hasAttribute('download')) return;
+                e.preventDefault();
+                transitionTo(anchor.href, true);
+            }
+        });
+
+        // Browser Back / Forward gesture & button support
+        window.addEventListener('popstate', function () {
+            if (isAuthUrl(window.location.href)) {
+                transitionTo(window.location.href, false);
+            } else {
+                window.location.reload();
+            }
+        });
+
+        // Handle bfcache restorations (swipe gestures on trackpad / mobile)
+        window.addEventListener('pageshow', function () {
+            isTransitioning = false;
+            activeAuthPath = window.location.pathname + window.location.search;
+            const container = document.querySelector('.auth-form-container');
+            if (container) {
+                container.classList.remove('auth-form-exit', 'auth-form-enter');
+            }
+        });
+
+        // Prefetch on hover/focus/touch for near 0ms network latency
+        document.addEventListener('pointerenter', function (e) {
+            const anchor = e.target.closest?.('a');
+            if (anchor && isAuthUrl(anchor.href)) {
+                fetchAuthPage(anchor.href).catch(() => {});
+            }
+        }, { capture: true, passive: true });
+
+        document.addEventListener('touchstart', function (e) {
+            const anchor = e.target.closest?.('a');
+            if (anchor && isAuthUrl(anchor.href)) {
+                fetchAuthPage(anchor.href).catch(() => {});
+            }
+        }, { capture: true, passive: true });
+
+    })();
+</script>
+{% endblock %}

@@ -1,180 +1,104 @@
-{% extends 'layouts/base.html' %}
+{% extends 'accounts/auth/base_auth.html' %}
 {% load static %}
 
-{% block content %}
-<div class="auth-split-container">
-    <!-- Left Side - Platform Showcase & Trust Indicators -->
-    <div class="auth-left-panel">
-        <div>
-            <!-- Brand Bar -->
-            <div class="auth-brand-bar">
-                <a href="{% url 'login' %}" class="auth-brand-logo">
-                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
-                </a>
-                <span class="auth-brand-pill">Email Verification</span>
-            </div>
+{% block auth_form %}
+<div class="auth-header">
+    <h1>Check your inbox</h1>
+    <p class="auth-subtitle">We've sent a 6-digit verification code to</p>
+</div>
 
-            <!-- Hero Intro -->
-            <div class="auth-showcase-hero">
-                <h2 class="auth-showcase-title">Verify Your Identity</h2>
-                <p class="auth-showcase-subtitle">We secure your educational workspace and academic records using instant multi-factor identity verification.</p>
-            </div>
-
-            <!-- Feature Cards -->
-            <div class="auth-feature-cards">
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">Immediate Code Dispatch</div>
-                        <div class="auth-feature-desc">Single-use 6-digit verification code transmitted straight to your academic inbox.</div>
-                    </div>
-                </div>
-
-                <div class="auth-feature-card">
-                    <div class="auth-feature-icon icon-emerald">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                        </svg>
-                    </div>
-                    <div class="auth-feature-body">
-                        <div class="auth-feature-title">Role Activation</div>
-                        <div class="auth-feature-desc">Verification automatically assigns classroom privileges, video seats, and study tools.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trust Badges Footer -->
-        <div class="auth-trust-footer">
-            <div class="auth-trust-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <span>End-to-End Encrypted</span>
-            </div>
-            <div class="auth-trust-item">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span>DPDP & FERPA Ready</span>
-            </div>
-        </div>
+<div style="text-align: center; margin-bottom: 1.25rem;">
+    <div class="email-chip" id="emailChip">
+        <span id="displayEmailText">{{ email|default:"your email address" }}</span>
+        <button type="button" class="change-email-btn" onclick="toggleChangeEmail()">Change</button>
     </div>
 
-    <!-- Right Side - OTP & Verification Form -->
-    <div class="auth-right-panel">
-        <div class="auth-form-container">
-            <!-- Mobile Brand Logo -->
-            <div class="auth-mobile-logo">
-                <a href="{% url 'login' %}">
-                    <img src="{% static 'images/logo.svg' %}" alt="EduMi Platform">
-                </a>
-            </div>
+    <div id="changeEmailContainer" style="display: none; margin-top: 10px;">
+        <input type="email" id="customEmailInput" name="custom_email" value="{{ email }}" placeholder="Enter correct email"
+               autocomplete="email" aria-label="Correct email address"
+               style="padding: 6px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.85rem; width: 240px;">
+        <button type="button" onclick="saveChangedEmail()"
+                style="background: #7c3aed; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-left: 4px;">
+            Update
+        </button>
+    </div>
+</div>
 
-            <div class="auth-header">
-                <h1>Check your inbox</h1>
-                <p class="auth-subtitle">We've sent a 6-digit verification code to</p>
-            </div>
-            
-            <div style="text-align: center; margin-bottom: 1.25rem;">
-                <div class="email-chip" id="emailChip">
-                    <span id="displayEmailText">{{ email|default:"your email address" }}</span>
-                    <button type="button" class="change-email-btn" onclick="toggleChangeEmail()">Change</button>
-                </div>
-
-                <div id="changeEmailContainer" style="display: none; margin-top: 10px;">
-                    <input type="email" id="customEmailInput" name="custom_email" value="{{ email }}" placeholder="Enter correct email"
-                           autocomplete="email" aria-label="Correct email address"
-                           style="padding: 6px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.85rem; width: 240px;">
-                    <button type="button" onclick="saveChangedEmail()"
-                            style="background: #7c3aed; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-left: 4px;">
-                        Update
-                    </button>
-                </div>
-            </div>
-
-            <!-- Spam Folder Callout Banner -->
-            <div style="display: flex; align-items: flex-start; gap: 12px; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 12px 14px; margin: 0 auto 1.25rem auto; text-align: left; font-size: 0.85rem; color: #5b21b6; line-height: 1.45; max-width: 420px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-                <div>
-                    <strong style="color: #4c1d95;">Can't find the email in your Inbox?</strong>
-                    <div style="color: #6d28d9; margin-top: 3px;">
-                        Please check your <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder. If found there, mark it as <em>"Not Spam"</em>.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dynamic Alert Box -->
-            <div id="statusAlert" class="otp-badge-alert {% if error %}error{% endif %}" style="{% if not error %}display: none;{% endif %}">
-                <span id="statusAlertIcon">
-                    {% if error %}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    {% endif %}
-                </span>
-                <span id="statusAlertText">
-                    {% if error %}
-                    {{ error }}
-                    {% endif %}
-                </span>
-            </div>
-
-            <!-- OTP Submission Form -->
-            <form method="post" action="{% url 'verify_email' %}" class="auth-form" id="otpForm" data-turbo="false">
-                {% csrf_token %}
-                <input type="hidden" name="email" id="emailHidden" value="{{ email }}">
-                <input type="hidden" name="otp_code" id="otpCodeHidden" value="">
-
-                <div class="otp-container">
-                    <label id="otpLabel" style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 10px;">
-                        Enter 6-digit verification code
-                    </label>
-
-                    <div class="otp-boxes-wrapper {% if error %}is-invalid{% endif %}" id="otpBoxesWrapper">
-                        <input type="text" id="otp-digit-0" name="otp_digit_0" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" aria-label="Digit 1 of 6" autofocus>
-                        <input type="text" id="otp-digit-1" name="otp_digit_1" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="1" aria-label="Digit 2 of 6">
-                        <input type="text" id="otp-digit-2" name="otp_digit_2" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="2" aria-label="Digit 3 of 6">
-                        <input type="text" id="otp-digit-3" name="otp_digit_3" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="3" aria-label="Digit 4 of 6">
-                        <input type="text" id="otp-digit-4" name="otp_digit_4" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="4" aria-label="Digit 5 of 6">
-                        <input type="text" id="otp-digit-5" name="otp_digit_5" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="5" aria-label="Digit 6 of 6">
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-login" id="verifyBtn" style="margin-top: 1rem;">
-                    Verify & Activate Account
-                </button>
-            </form>
-
-            <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--gray-200); padding-top: 20px;">
-                <p style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 10px;">
-                    Didn't receive the email? Check your <strong>Spam / Junk</strong> folder or
-                </p>
-                <button type="button" id="resendBtn" class="btn-secondary" onclick="resendEmail()"
-                        style="background: transparent; border: 1px solid var(--gray-300); padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--gray-800); transition: all 0.2s;">
-                    Resend verification email
-                </button>
-                <div id="resendStatus" style="font-size: 0.85rem; margin-top: 10px; display: none; font-weight: 500;"></div>
-            </div>
-
-            <p class="signup-link" style="margin-top: 24px;">
-                Back to <a href="{% url 'login' %}">Log in</a>
-            </p>
+<!-- Spam Folder Callout Banner -->
+<div class="email-spam-notice" style="margin: 0 auto 0.85rem auto; max-width: 380px;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
+    </svg>
+    <div>
+        <strong style="color: #4338ca;">Can't find the email in your Inbox?</strong>
+        <div style="margin-top: 2px;">
+            Please check your <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder. If found there, mark it as <em>"Not Spam"</em>.
         </div>
     </div>
 </div>
 
+<!-- Dynamic Alert Box -->
+<div id="statusAlert" class="otp-badge-alert {% if error %}error{% endif %}" style="{% if not error %}display: none;{% endif %}">
+    <span id="statusAlertIcon">
+        {% if error %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        {% endif %}
+    </span>
+    <span id="statusAlertText">
+        {% if error %}
+        {{ error }}
+        {% endif %}
+    </span>
+</div>
+
+<!-- OTP Submission Form -->
+<form method="post" action="{% url 'verify_email' %}" class="auth-form" id="otpForm" data-turbo="false">
+    {% csrf_token %}
+    <input type="hidden" name="email" id="emailHidden" value="{{ email }}">
+    <input type="hidden" name="otp_code" id="otpCodeHidden" value="">
+
+    <div class="otp-container">
+        <label id="otpLabel" style="font-size: 0.875rem; font-weight: 600; color: var(--gray-700); margin-bottom: 10px;">
+            Enter 6-digit verification code
+        </label>
+
+        <div class="otp-boxes-wrapper {% if error %}is-invalid{% endif %}" id="otpBoxesWrapper">
+            <input type="text" id="otp-digit-0" name="otp_digit_0" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" aria-label="Digit 1 of 6" autofocus>
+            <input type="text" id="otp-digit-1" name="otp_digit_1" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="1" aria-label="Digit 2 of 6">
+            <input type="text" id="otp-digit-2" name="otp_digit_2" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="2" aria-label="Digit 3 of 6">
+            <input type="text" id="otp-digit-3" name="otp_digit_3" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="3" aria-label="Digit 4 of 6">
+            <input type="text" id="otp-digit-4" name="otp_digit_4" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="4" aria-label="Digit 5 of 6">
+            <input type="text" id="otp-digit-5" name="otp_digit_5" class="otp-digit-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="5" aria-label="Digit 6 of 6">
+        </div>
+    </div>
+
+    <button type="submit" class="btn-login" id="verifyBtn">
+        Verify & Activate Account
+    </button>
+</form>
+
+<div style="margin-top: 14px; text-align: center; border-top: 1px solid var(--gray-200); padding-top: 12px;">
+    <p style="color: var(--gray-600); font-size: 12px; margin-bottom: 8px;">
+        Didn't receive the email? Check your <strong>Spam / Junk</strong> folder or
+    </p>
+    <button type="button" id="resendBtn" class="btn-secondary" onclick="resendEmail()"
+            style="background: transparent; border: 1px solid var(--gray-300); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--gray-800); transition: all 0.2s;">
+        Resend verification email
+    </button>
+    <div id="resendStatus" style="font-size: 0.85rem; margin-top: 10px; display: none; font-weight: 500;"></div>
+</div>
+
+<p class="signup-link" style="margin-top: 24px;">
+    Back to <a href="{% url 'login' %}">Log in</a>
+</p>
+{% endblock %}
+
+{% block auth_scripts %}
 <script>
 function getCookie(name) {
     let cookieValue = null;

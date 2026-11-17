@@ -1,0 +1,77 @@
+{% load static %}
+<!-- Left Side - Platform Showcase & 3D Visual -->
+<div class="auth-left-panel">
+    <!-- Ambient Backdrop Curve -->
+    <div class="auth-showcase-backdrop">
+        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="390" cy="280" r="230" fill="url(#ambientPurpleShared)" opacity="0.6"/>
+            <path d="M-40,160 Q 240,120 320,340 T 540,360 L 540,540 L -40,540 Z" fill="url(#ambientSoftWaveShared)" opacity="0.4"/>
+            <defs>
+                <radialGradient id="ambientPurpleShared" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(390 280) rotate(90) scale(230)">
+                    <stop stop-color="#c4b5fd" stop-opacity="0.5"/>
+                    <stop offset="1" stop-color="#ede9fe" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="ambientSoftWaveShared" x1="0" y1="120" x2="500" y2="500" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#e0e7ff" stop-opacity="0.8"/>
+                    <stop offset="1" stop-color="#f5f3ff" stop-opacity="0.1"/>
+                </linearGradient>
+            </defs>
+        </svg>
+    </div>
+
+    <div>
+        <!-- Brand Bar -->
+        <div class="auth-brand-bar">
+            <a href="{% url 'login' %}" class="auth-brand-logo">
+                <div class="auth-brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18C5 19.94 8.13 22 12 22C15.87 22 19 19.94 19 17.18V13.18L12 17L5 13.18Z"/>
+                    </svg>
+                </div>
+                <span class="auth-brand-name">EduMi</span>
+            </a>
+        </div>
+
+        <!-- Hero Intro -->
+        <div class="auth-showcase-hero">
+            <h2 class="auth-showcase-title">Where Smart Classrooms Meet AI</h2>
+            <p class="auth-showcase-subtitle">Intelligent attendance, real-time virtual classrooms, and seamless campus management.</p>
+        </div>
+    </div>
+
+    <!-- 3D Laptop Showcase Image -->
+    <div class="auth-showcase-visual">
+        <img src="{% static 'images/auth-showcase-laptop.png' %}" alt="EduMi Virtual Classroom Experience" loading="eager" draggable="false">
+    </div>
+
+    <!-- Bottom Feature Badges -->
+    <div class="auth-feature-pills">
+        <div class="auth-pill-item">
+            <span class="pill-icon pill-purple">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+            </span>
+            <span class="pill-label">Real-Time Learning</span>
+        </div>
+        <div class="auth-pill-divider"></div>
+        <div class="auth-pill-item">
+            <span class="pill-icon pill-green">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+            </span>
+            <span class="pill-label">Secure & Private</span>
+        </div>
+        <div class="auth-pill-divider"></div>
+        <div class="auth-pill-item">
+            <span class="pill-icon pill-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                </svg>
+            </span>
+            <span class="pill-label">On-Premise Ready</span>
+        </div>
+    </div>
+</div>

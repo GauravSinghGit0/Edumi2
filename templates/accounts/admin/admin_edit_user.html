@@ -55,7 +55,7 @@
                     <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">User Role Assignment</label>
                     <select name="user_type" class="filter-input" style="width: 100%;">
                         <option value="student" {% if profile.user_type == 'student' %}selected{% endif %}>Student</option>
-                        <option value="teacher" {% if profile.user_type == 'teacher' %}selected{% endif %}>Teacher / Instructor</option>
+                        <option value="teacher" {% if profile.user_type == 'teacher' %}selected{% endif %}>Instructor</option>
                         <option value="admin" {% if profile.user_type == 'admin' or target_user.is_superuser %}selected{% endif %}>Administrator</option>
                     </select>
                 </div>
