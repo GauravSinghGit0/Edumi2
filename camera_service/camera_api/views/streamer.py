@@ -21,8 +21,8 @@ if cv2.ocl.haveOpenCL():
 else:
     logger.warning("OpenCL Hardware Acceleration NOT available")
 
-RTSP_OPEN_TIMEOUT = 4000
-RTSP_READ_TIMEOUT = 4000
+RTSP_OPEN_TIMEOUT = 2500
+RTSP_READ_TIMEOUT = 2500
 RTSP_RECONNECT_DELAY = 2
 RTSP_MAX_RECONNECT = 10
 
@@ -33,18 +33,24 @@ class CameraStreamer:
     def __init__(self, camera_id, rtsp_url):
         self.camera_id = camera_id
         self.rtsp_url = rtsp_url
+        self.configured_url = rtsp_url
+        self.active_url = rtsp_url
         self.cap: Optional[cv2.VideoCapture] = None
-        self.frame: Optional[bytes] = None
         self.running: bool = False
         self.thread: Optional[threading.Thread] = None
         self.lock = threading.Lock()
         self.last_access = time.time()
-        self.last_frame: Optional[np.ndarray] = None
-        self.last_frame_time = 0
+        self.last_frame_time = time.time()
         self.connection_attempts = 0
         self.zoom_level = 1.0
         self.zoom_center_x = 0.5
         self.zoom_center_y = 0.5
+
+        # Pre-populate frame with placeholder immediately so get_frame() is never None
+        placeholder = self._generate_placeholder()
+        self.last_frame = placeholder.copy()
+        ret_j, jpeg = cv2.imencode('.jpg', placeholder, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        self.frame: Optional[bytes] = jpeg.tobytes() if ret_j else None
 
     def set_zoom(self, level, x=None, y=None):
         """Update digital zoom level (1.0–5.0) and optional center point."""
@@ -83,8 +89,7 @@ class CameraStreamer:
 
     def stop(self):
         self.running = False
-        if self.thread:
-            self.thread.join(timeout=2.0)
+        # Do not block thread join here to prevent freezing Daphne ASGI workers
 
     def _connect_camera(self):
         """Try connection using specified RTSP URL and common stream paths dynamically."""
@@ -134,7 +139,7 @@ class CameraStreamer:
                             ret, frame = cap.read()
                             if ret and frame is not None and frame.size > 0:
                                 self.connection_attempts = 0
-                                self.rtsp_url = current_url
+                                self.active_url = current_url
                                 logger.warning(f"SUCCESS: HTTP Camera connected on {current_url}")
                                 return cap
                             time.sleep(0.3)
@@ -161,7 +166,7 @@ class CameraStreamer:
                             ret, frame = cap.read()
                             if ret and frame is not None and frame.size > 0:
                                 self.connection_attempts = 0
-                                self.rtsp_url = current_url
+                                self.active_url = current_url
                                 logger.warning(f"SUCCESS: RTSP Camera connected on {current_url} ({transport})")
                                 return cap
                             time.sleep(0.2)
@@ -220,19 +225,6 @@ class CameraStreamer:
     
     def _update(self):
         """Background capture loop — reads frames, applies zoom, encodes JPEG."""
-        # Immediately show a placeholder so clients don't get black screen
-        placeholder = self._generate_placeholder()
-        self.last_frame_time = time.time()
-        if self.lock.acquire(blocking=False):
-            try:
-                self.last_frame = placeholder.copy()
-                med = cv2.resize(placeholder, (1280, 720), interpolation=cv2.INTER_LINEAR)
-                ret_j, jpeg = cv2.imencode('.jpg', med, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                if ret_j:
-                    self.frame = jpeg.tobytes()
-            finally:
-                self.lock.release()
-                
         while self.running:
             if time.time() - self.last_access > 300:  # 5 minutes idle timeout
                 break
@@ -241,39 +233,37 @@ class CameraStreamer:
                 self.connection_attempts += 1
                 self.cap = self._connect_camera()
                 if self.cap is None:
-                    # Update placeholder time
+                    # Update placeholder time so client sees timestamp ticking
                     placeholder = self._generate_placeholder()
                     self.last_frame_time = time.time()
-                    if self.lock.acquire(blocking=False):
-                        try:
-                            self.last_frame = placeholder.copy()
-                            med = cv2.resize(placeholder, (1280, 720), interpolation=cv2.INTER_LINEAR)
-                            ret_j, jpeg = cv2.imencode('.jpg', med, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                            if ret_j:
-                                self.frame = jpeg.tobytes()
-                        finally:
-                            self.lock.release()
+                    with self.lock:
+                        self.last_frame = placeholder.copy()
+                        med = cv2.resize(placeholder, (1280, 720), interpolation=cv2.INTER_LINEAR)
+                        ret_j, jpeg = cv2.imencode('.jpg', med, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        if ret_j:
+                            self.frame = jpeg.tobytes()
                     time.sleep(RTSP_RECONNECT_DELAY)
                     continue
             try:
                 ret, frame = self.cap.read()
-                if ret and frame is not None:
+                if ret and frame is not None and frame.size > 0:
                     self.connection_attempts = 0
                     self.last_frame_time = time.time()
                     frame = self._apply_zoom(frame)
-                    if self.lock.acquire(blocking=False):
-                        try:
-                            self.last_frame = frame.copy()
-                            med = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
-                            ret_j, jpeg = cv2.imencode('.jpg', med, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                            if ret_j:
-                                self.frame = jpeg.tobytes()
-                        finally:
-                            self.lock.release()
-                    time.sleep(0.001)
+                    with self.lock:
+                        self.last_frame = frame.copy()
+                        med = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
+                        ret_j, jpeg = cv2.imencode('.jpg', med, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        if ret_j:
+                            self.frame = jpeg.tobytes()
+                    # Sleep slightly to prevent 100% CPU lock while streaming at ~30 FPS
+                    time.sleep(0.01)
                 else:
                     if self.cap:
-                        self.cap.release()
+                        try:
+                            self.cap.release()
+                        except Exception:
+                            pass
                     self.cap = None
                     time.sleep(RTSP_RECONNECT_DELAY)
             except Exception as e:
@@ -285,8 +275,13 @@ class CameraStreamer:
                         pass
                 self.cap = None
                 time.sleep(RTSP_RECONNECT_DELAY)
+
         if self.cap:
-            self.cap.release()
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
 
     def get_frame(self):
         self.last_access = time.time()
@@ -294,28 +289,34 @@ class CameraStreamer:
             return self.frame
 
     def get_adaptive_frame(self, quality_level='med'):
-        """Return frame encoded at requested quality level (4k/high/med/low)."""
+        """Return frame encoded at requested quality level (4k/2k/high/med/low)."""
         self.last_access = time.time()
         with self.lock:
             if self.last_frame is None:
                 return self.frame
             frame = self.last_frame.copy()
+
         configs = {
             '4k':   {'res': (3840, 2160), 'quality': 90},
-            'high': {'res': (1920, 1080), 'quality': 95},
-            'med':  {'res': (1280, 720),  'quality': 85},
+            '2k':   {'res': (2560, 1440), 'quality': 90},
+            'high': {'res': (1920, 1080), 'quality': 90},
+            'auto': {'res': (1920, 1080), 'quality': 85},
+            'med':  {'res': (1280, 720),  'quality': 80},
             'low':  {'res': (640, 360),   'quality': 60},
         }
         cfg = configs.get(quality_level, configs['med'])
         try:
-            if cv2.ocl.useOpenCL():
-                try:
-                    resized = cv2.resize(cv2.UMat(frame), cfg['res'], interpolation=cv2.INTER_LINEAR).get()
-                except Exception:
-                    resized = cv2.resize(frame, cfg['res'], interpolation=cv2.INTER_LINEAR)
-            else:
-                resized = cv2.resize(frame, cfg['res'], interpolation=cv2.INTER_LINEAR)
-            ret, jpeg = cv2.imencode('.jpg', resized, [cv2.IMWRITE_JPEG_QUALITY, cfg['quality']])
+            h, w = frame.shape[:2]
+            target_w, target_h = cfg['res']
+            if w != target_w or h != target_h:
+                if cv2.ocl.useOpenCL():
+                    try:
+                        frame = cv2.resize(cv2.UMat(frame), (target_w, target_h), interpolation=cv2.INTER_LINEAR).get()
+                    except Exception:
+                        frame = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                else:
+                    frame = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+            ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, cfg['quality']])
             return jpeg.tobytes() if ret else self.frame
         except Exception:
             return self.frame
@@ -330,14 +331,16 @@ class CameraManager:
     def get_streamer(cls, camera_id, rtsp_url, force_restart=False):
         with cls._lock:
             existing = cls._streamers.get(camera_id)
-            # Restart if not exists, if forced, if not running, OR if URL changed
+            configured_url = getattr(existing, 'configured_url', getattr(existing, 'rtsp_url', None))
+
+            # Restart if not exists, if forced, if not running, OR if configured URL actually changed
             should_restart = (
                 existing is None or 
                 force_restart or 
                 not existing.running or 
-                existing.rtsp_url != rtsp_url
+                (configured_url and rtsp_url and configured_url != rtsp_url)
             )
-            
+
             if should_restart:
                 if existing:
                     existing.stop()

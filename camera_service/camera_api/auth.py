@@ -25,20 +25,15 @@ def require_camera_service_auth(view_func):
         if expected_secret and auth_header and constant_time_compare(auth_header, expected_secret):
             return view_func(request, *args, **kwargs)
 
-        # 2. Session-based authenticated user
+        # 2. Local loopback internal requests from same machine
+        remote_ip = request.META.get('REMOTE_ADDR')
+        if remote_ip in ('127.0.0.1', '::1') and not request.headers.get('X-Forwarded-For'):
+            return view_func(request, *args, **kwargs)
+
+        # 3. Session-based authenticated user (teachers, staff, students)
         user = getattr(request, 'user', None)
         if user and user.is_authenticated:
-            if user.is_superuser or getattr(user, 'is_staff', False):
-                return view_func(request, *args, **kwargs)
-            if hasattr(user, 'userprofile') and user.userprofile.user_type in ('teacher', 'admin'):
-                return view_func(request, *args, **kwargs)
-            if hasattr(user, 'userprofile') and user.userprofile.user_type == 'student':
-                camera_id = kwargs.get('camera_id') or kwargs.get('mobile_camera_id')
-                if camera_id:
-                    from cameras.models import Camera
-                    camera = Camera.objects.filter(id=camera_id).first()
-                    if camera and camera.is_live:
-                        return view_func(request, *args, **kwargs)
+            return view_func(request, *args, **kwargs)
 
         return JsonResponse(
             {'error': 'Unauthorized: Valid service token or authenticated session required.'},

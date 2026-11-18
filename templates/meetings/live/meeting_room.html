@@ -4102,50 +4102,154 @@
 
             const overlay = document.getElementById('monitoringOverlay');
             const container = document.getElementById('monitoringVideoContainer');
-            if (!overlay || !container) return;
 
             // 1. Setup Canvas and Image
             if (!ipCamCanvas) {
-                ipCamCanvas = document.getElementById('ipCamCanvas');
+                ipCamCanvas = document.getElementById('ipCamCanvas') || document.createElement('canvas');
+                ipCamCanvas.id = 'ipCamCanvas';
+                ipCamCanvas.width = 1920;
+                ipCamCanvas.height = 1080;
                 ipCamCtx = ipCamCanvas.getContext('2d');
             }
-            if (!ipCamImg) ipCamImg = document.getElementById('ipCamImg');
+            if (!ipCamImg) {
+                ipCamImg = document.getElementById('ipCamImg') || new Image();
+                ipCamImg.id = 'ipCamImg';
+                ipCamImg.crossOrigin = 'anonymous';
+            }
 
             ipCamImg.src = "";
-            const feedUrl = `/cameras/camera-feed/${id}/?q=high`;
+            const feedUrl = `/cameras/${id}/feed/?q=high&t=${Date.now()}`;
             ipCamImg.src = feedUrl;
+
+            // Teacher webcam video element for Picture-in-Picture
+            let teacherPipVideo = window._teacherPipVideo;
+            if (!teacherPipVideo) {
+                teacherPipVideo = document.createElement('video');
+                teacherPipVideo.autoplay = true;
+                teacherPipVideo.muted = true;
+                teacherPipVideo.playsInline = true;
+                window._teacherPipVideo = teacherPipVideo;
+            }
+
+            // Capture local webcam track if available
+            if (window.room && window.room.localParticipant) {
+                const lp = window.room.localParticipant;
+                const pubs = lp.videoTrackPublications || lp.tracks;
+                if (pubs) {
+                    pubs.forEach(pub => {
+                        const tr = pub.track || pub.videoTrack;
+                        if (tr && tr.mediaStreamTrack && tr !== ipCamTrackPub?.track) {
+                            if (!teacherPipVideo.srcObject || teacherPipVideo.srcObject.getVideoTracks()[0] !== tr.mediaStreamTrack) {
+                                teacherPipVideo.srcObject = new MediaStream([tr.mediaStreamTrack]);
+                            }
+                        }
+                    });
+                }
+            }
+
+            window._studioLayoutMode = window._studioLayoutMode || 'board'; // 'board' or 'pip'
 
             // 2. Start Animation loop
             const drawFrame = () => {
                 if (currentVideoSource !== 'ip') return;
 
+                const cw = ipCamCanvas.width;
+                const ch = ipCamCanvas.height;
+
                 if (ipCamImg.naturalWidth > 0) {
-                    const canvasAspect = ipCamCanvas.width / ipCamCanvas.height;
+                    const canvasAspect = cw / ch;
                     const imgAspect = ipCamImg.naturalWidth / ipCamImg.naturalHeight;
 
                     let drawWidth, drawHeight, offsetX, offsetY;
                     if (imgAspect > canvasAspect) {
-                        drawWidth = ipCamCanvas.width;
-                        drawHeight = ipCamCanvas.width / imgAspect;
+                        drawWidth = cw;
+                        drawHeight = cw / imgAspect;
                         offsetX = 0;
-                        offsetY = (ipCamCanvas.height - drawHeight) / 2;
+                        offsetY = (ch - drawHeight) / 2;
                     } else {
-                        drawHeight = ipCamCanvas.height;
-                        drawWidth = ipCamCanvas.height * imgAspect;
+                        drawHeight = ch;
+                        drawWidth = ch * imgAspect;
                         offsetY = 0;
-                        offsetX = (ipCamCanvas.width - drawWidth) / 2;
+                        offsetX = (cw - drawWidth) / 2;
                     }
 
-                    ipCamCtx.fillStyle = '#000';
-                    ipCamCtx.fillRect(0, 0, ipCamCanvas.width, ipCamCanvas.height);
+                    ipCamCtx.fillStyle = '#0a0f1d';
+                    ipCamCtx.fillRect(0, 0, cw, ch);
                     ipCamCtx.drawImage(ipCamImg, offsetX, offsetY, drawWidth, drawHeight);
-                } else {
-                    ipCamCtx.fillStyle = '#000000';
-                    ipCamCtx.fillRect(0, 0, ipCamCanvas.width, ipCamCanvas.height);
+
+                    // If Picture-in-Picture mode and teacher webcam video is active
+                    if (window._studioLayoutMode === 'pip' && teacherPipVideo && teacherPipVideo.readyState >= 2) {
+                        const pipW = 420;
+                        const pipH = 236;
+                        const pipX = cw - pipW - 36;
+                        const pipY = ch - pipH - 36;
+
+                        // Backdrop border & shadow
+                        ipCamCtx.save();
+                        ipCamCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                        ipCamCtx.shadowBlur = 24;
+                        ipCamCtx.fillStyle = '#1e293b';
+                        if (typeof ipCamCtx.roundRect === 'function') {
+                            ipCamCtx.beginPath();
+                            ipCamCtx.roundRect(pipX - 4, pipY - 4, pipW + 8, pipH + 8, 16);
+                            ipCamCtx.fill();
+                        } else {
+                            ipCamCtx.fillRect(pipX - 4, pipY - 4, pipW + 8, pipH + 8);
+                        }
+                        ipCamCtx.restore();
+
+                        // Clip rounded webcam video
+                        ipCamCtx.save();
+                        if (typeof ipCamCtx.roundRect === 'function') {
+                            ipCamCtx.beginPath();
+                            ipCamCtx.roundRect(pipX, pipY, pipW, pipH, 12);
+                            ipCamCtx.clip();
+                        }
+                        ipCamCtx.drawImage(teacherPipVideo, pipX, pipY, pipW, pipH);
+                        ipCamCtx.restore();
+
+                        // PiP Label
+                        ipCamCtx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                        if (typeof ipCamCtx.roundRect === 'function') {
+                            ipCamCtx.beginPath();
+                            ipCamCtx.roundRect(pipX + 12, pipY + 12, 120, 26, 6);
+                            ipCamCtx.fill();
+                        }
+                        ipCamCtx.fillStyle = '#38bdf8';
+                        ipCamCtx.font = 'bold 12px Inter, sans-serif';
+                        ipCamCtx.textAlign = 'left';
+                        ipCamCtx.fillText('TEACHER LIVE', pipX + 20, pipY + 29);
+                    }
+
+                    // Watermark badge: STUDIO • BOARD VIEW
+                    ipCamCtx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+                    if (typeof ipCamCtx.roundRect === 'function') {
+                        ipCamCtx.beginPath();
+                        ipCamCtx.roundRect(24, 24, 190, 32, 8);
+                        ipCamCtx.fill();
+                    }
+                    ipCamCtx.fillStyle = '#10b981';
+                    ipCamCtx.beginPath();
+                    ipCamCtx.arc(42, 40, 5, 0, Math.PI * 2);
+                    ipCamCtx.fill();
                     ipCamCtx.fillStyle = '#ffffff';
-                    ipCamCtx.font = 'bold 30px Inter, sans-serif';
+                    ipCamCtx.font = '600 13px Inter, sans-serif';
+                    ipCamCtx.textAlign = 'left';
+                    ipCamCtx.fillText(`${name} LIVE`, 56, 45);
+                } else {
+                    ipCamCtx.fillStyle = '#0b0f19';
+                    ipCamCtx.fillRect(0, 0, cw, ch);
+                    ipCamCtx.fillStyle = '#38bdf8';
+                    ipCamCtx.beginPath();
+                    ipCamCtx.arc(cw / 2, ch / 2 - 30, 24, 0, Math.PI * 2);
+                    ipCamCtx.fill();
+                    ipCamCtx.fillStyle = '#ffffff';
+                    ipCamCtx.font = 'bold 26px Inter, sans-serif';
                     ipCamCtx.textAlign = 'center';
-                    ipCamCtx.fillText(`Connecting to ${name}...`, ipCamCanvas.width / 2, ipCamCanvas.height / 2);
+                    ipCamCtx.fillText(`Connecting to ${name}...`, cw / 2, ch / 2 + 30);
+                    ipCamCtx.fillStyle = '#94a3b8';
+                    ipCamCtx.font = '14px Inter, sans-serif';
+                    ipCamCtx.fillText('Smart Classroom RTSP Live Feed', cw / 2, ch / 2 + 65);
                 }
                 ipCamAnimationId = requestAnimationFrame(drawFrame);
             };
@@ -4153,30 +4257,57 @@
             if (ipCamAnimationId) cancelAnimationFrame(ipCamAnimationId);
             ipCamAnimationId = requestAnimationFrame(drawFrame);
 
-            // 3. Show Overlay and Attach Video
-            overlay.style.display = 'block';
-            container.innerHTML = '';
+            const stream = ipCamCanvas.captureStream(20);
 
-            const video = document.createElement('video');
-            video.autoplay = true;
-            video.muted = true;
-            video.playsInline = true;
-            const stream = ipCamCanvas.captureStream(15);
-            video.srcObject = stream;
-            container.appendChild(video);
+            // 3. Attach directly to Teacher's main video box so teacher sees the board!
+            isCameraOn = true;
+            window.isCameraOn = true;
+            const myId = String(window.currentUserId || '');
+            const localBox = (myId ? document.getElementById(`participant-${myId}`) : null) || 
+                             document.querySelector('.video-box[data-local="true"]') || 
+                             document.querySelector('.video-box');
+            if (localBox) {
+                localBox.classList.remove('cam-off');
+                let vid = localBox.querySelector('video#localVideo') || localBox.querySelector('video');
+                if (!vid) {
+                    vid = document.createElement('video');
+                    vid.id = 'localVideo';
+                    vid.dataset.local = 'true';
+                    vid.autoplay = true;
+                    vid.muted = true;
+                    vid.playsInline = true;
+                    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+                    localBox.insertBefore(vid, localBox.querySelector('.video-nametag'));
+                }
+                vid.srcObject = stream;
+                vid.play().catch(e => console.debug('local video play:', e));
+            }
 
-            // --- PUBLISH TO LIVEKIT ---
-            if (window.room && window.room.localParticipant && isCameraOn) {
+            // 4. Update Studio Director Overlay
+            if (overlay && container) {
+                overlay.style.display = 'block';
+                container.innerHTML = `
+                    <div style="position:relative; width:100%; height:100%;">
+                        <video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video>
+                        <div style="position:absolute;bottom:6px;left:6px;right:6px;display:flex;gap:4px;justify-content:center;background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);padding:4px;border-radius:8px;">
+                            <button id="studioBtnBoard" onclick="window._studioLayoutMode='board'; showNotification('Studio: Board Full View', 'info');" style="background:#6366f1;color:#fff;border:none;padding:4px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">Board</button>
+                            <button id="studioBtnPip" onclick="window._studioLayoutMode='pip'; showNotification('Studio: Board + Face PiP', 'info');" style="background:#334155;color:#fff;border:none;padding:4px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">Board+Face</button>
+                            <button onclick="switchCameraSource('webcam');" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">Webcam</button>
+                        </div>
+                    </div>
+                `;
+                const previewVid = container.querySelector('video');
+                if (previewVid) previewVid.srcObject = stream;
+            }
+
+            // 5. Publish to LiveKit for students
+            if (window.room && window.room.localParticipant) {
                 try {
-                    // Clean up existing IP track if switching between IP cameras
                     if (ipCamTrackPub) {
                         await window.room.localParticipant.unpublishTrack(ipCamTrackPub.track);
                         if (ipCamTrackPub.track) ipCamTrackPub.track.stop();
                         ipCamTrackPub = null;
                     }
-
-                    // Unpublish existing webcam track
-                    await window.room.localParticipant.setCameraEnabled(false);
 
                     const videoTrack = stream.getVideoTracks()[0];
                     if (videoTrack) {
@@ -4185,14 +4316,14 @@
                             source: Track.Source.Camera,
                             simulcast: true,
                         });
-                        console.log('IP Camera track published to LiveKit');
+                        console.log('Classroom Studio track published to LiveKit');
                     }
                 } catch (err) {
-                    console.error('Failed to publish IP camera track:', err);
+                    console.error('Failed to publish Classroom Studio track:', err);
                 }
             }
 
-            showNotification(`${name} classroom feed active`, 'success');
+            showNotification(`${name} classroom studio feed active`, 'success');
         }
 
         async function stopIpCameraStream() {
@@ -4207,13 +4338,11 @@
                 ipCamAnimationId = null;
             }
 
-            // --- UNPUBLISH FROM LIVEKIT ---
             if (ipCamTrackPub && window.room && window.room.localParticipant) {
                 try {
                     await window.room.localParticipant.unpublishTrack(ipCamTrackPub.track);
                     if (ipCamTrackPub.track) ipCamTrackPub.track.stop();
                     ipCamTrackPub = null;
-                    console.log('IP Camera track unpublished');
                 } catch (err) {
                     console.warn('Error unpublishing IP camera track:', err);
                 }
@@ -4228,17 +4357,19 @@
             currentVideoSource = 'webcam';
             currentIpCamId = null;
 
-            // Restore webcam if global camera state is still ON
+            // Restore webcam
             if (isCameraOn && window.room && window.room.localParticipant) {
                 try {
                     await window.room.localParticipant.setCameraEnabled(true);
+                    renderLocalParticipant();
                 } catch (err) {
                     console.warn('Failed to restore webcam:', err);
                 }
             }
 
             document.querySelectorAll('.camera-option').forEach(opt => opt.classList.remove('active'));
-            document.getElementById('webcamOption').classList.add('active');
+            const webcamOpt = document.getElementById('webcamOption');
+            if (webcamOpt) webcamOpt.classList.add('active');
 
             showNotification('Classroom camera disconnected', 'info');
         }

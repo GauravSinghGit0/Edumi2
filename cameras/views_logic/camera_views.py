@@ -367,7 +367,7 @@ def _rtsp_feed(request, camera):
     from django.conf import settings
 
     quality     = request.GET.get("q", "med")
-    camera_svc  = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8003")
+    camera_svc  = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8008")
     feed_url    = f"{camera_svc}/cameras/{camera.id}/feed/?q={quality}"
 
     headers = {
@@ -473,7 +473,7 @@ def test_camera(request, camera_id):
     # RTSP — try camera service, then local OpenCV
     try:
         from django.conf import settings
-        svc = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8003")
+        svc = getattr(settings, "CAMERA_SERVICE_URL", "http://localhost:8008")
         headers = {"X-Camera-Service-Secret": getattr(settings, "CAMERA_SERVICE_SECRET", "")}
         r   = req_lib.get(f"{svc}/cameras/{camera_id}/test/", headers=headers, timeout=20, verify=False)
         if r.status_code == 200:

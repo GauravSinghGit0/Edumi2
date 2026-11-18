@@ -748,6 +748,12 @@
             
             const mainFeed = document.getElementById('mainFeed');
             const baseUrl = `/cameras/${window.cameraId}/feed/`;
+            mainFeed.onerror = function() {
+                console.warn('Live feed interrupted, retrying in 2 seconds...');
+                setTimeout(() => {
+                    if (mainFeed) mainFeed.src = `${baseUrl}?q=${qParam}&t=${Date.now()}`;
+                }, 2000);
+            };
             mainFeed.src = `${baseUrl}?q=${qParam}&t=${new Date().getTime()}`;
         };
 

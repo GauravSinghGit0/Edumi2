@@ -95,20 +95,19 @@ def test_camera(request, camera_id):
 # ── private helpers ───────────────────────────────────────────────────────────
 
 def _generate_frames(streamer, camera, full_url, quality, camera_id):
-    """Yield MJPEG boundary frames; handles stale stream detection."""
+    """Yield MJPEG boundary frames; dispatches initial frame immediately without blocking."""
     import time
-    throttles = {'4k': 0.033, 'high': 0.033, 'med': 0.05, 'low': 0.1}
-    delay = throttles.get(quality, 0.05)
+    throttles = {'4k': 0.033, '2k': 0.033, 'high': 0.033, 'auto': 0.033, 'med': 0.04, 'low': 0.06}
+    delay = throttles.get(quality, 0.04)
 
-    # Wait for streamer to have a frame (placeholder or real), but don't give up!
-    wait_count = 0
-    while streamer.get_frame() is None and wait_count < 300:
-        time.sleep(0.1)
-        wait_count += 1
-
-    # Even if no frame yet, keep trying instead of returning
     frame_count = 0
     try:
+        # Send immediate initial frame (<1ms) to dispatch HTTP 200 headers to client without blocking
+        initial_frame = streamer.get_adaptive_frame(quality) or streamer.get_frame()
+        if initial_frame:
+            frame_count += 1
+            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + initial_frame + b'\r\n'
+
         while True:
             frame = streamer.get_adaptive_frame(quality)
             if frame:
@@ -116,7 +115,7 @@ def _generate_frames(streamer, camera, full_url, quality, camera_id):
                 yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
                 time.sleep(delay)
             else:
-                time.sleep(0.1)  # Wait longer if no frame available
+                time.sleep(0.04)
     except GeneratorExit:
         logger.info(f"Client disconnected from camera {camera_id} after {frame_count} frames")
     except Exception as e:

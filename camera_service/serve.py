@@ -18,6 +18,7 @@ django.setup()
 from django.conf import settings
 # Direct this dedicated Daphne server to the camera API routes
 settings.ROOT_URLCONF = 'camera_api.urls'
+settings.SECURE_SSL_REDIRECT = False
 
 from django.core.asgi import get_asgi_application
 from daphne.server import Server
