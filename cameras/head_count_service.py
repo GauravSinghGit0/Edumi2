@@ -166,10 +166,10 @@ class HeadDetector:
         union = (w1*h1 + w2*h2 - inter)
         return inter / union if union > 0 else 0.0
 
-    def _calculate_inclusion(self, s, l):
-        """Check if box 's' is mostly inside box 'l'"""
-        sx, sy, sw, sh = s
-        lx, ly, lw, lh = l
+    def _calculate_inclusion(self, small_box, large_box):
+        """Check if box 'small_box' is mostly inside box 'large_box'"""
+        sx, sy, sw, sh = small_box
+        lx, ly, lw, lh = large_box
         xi1, yi1, xi2, yi2 = max(sx, lx), max(sy, ly), min(sx+sw, lx+lw), min(sy+sh, ly+lh)
         if xi2 <= xi1 or yi2 <= yi1: return 0.0
         inter_area = (xi2-xi1)*(yi2-yi1)

@@ -253,7 +253,7 @@ def generate_with_pyopenssl():
     san_entries = [
         f"DNS:{DOMAIN}",
         f"DNS:www.{DOMAIN}",
-        f"DNS:localhost",
+        "DNS:localhost",
         "IP:127.0.0.1",
         "IP:::1",
         f"IP:{local_ip}",
@@ -303,7 +303,6 @@ def generate_with_pyopenssl():
 
 def main():
     if USE_CRYPTOGRAPHY:
-        import ipaddress
         print("Using cryptography library...")
         generate_with_cryptography()
     else:

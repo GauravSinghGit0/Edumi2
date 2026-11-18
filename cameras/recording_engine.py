@@ -84,7 +84,7 @@ class RecordingEngine:
             
             if audio_source == 'camera':
                 # Use built-in camera audio, no external path needed
-                logger.info(f"Using IP Camera built-in audio for recording")
+                logger.info("Using IP Camera built-in audio for recording")
             elif audio_source == 'remote':
                 # Force mobile mic
                 mobile_audio_path = os.path.join(settings.MEDIA_ROOT, 'temp', f'audio_{camera.id}_{teacher.id}_mobile.webm')
@@ -468,7 +468,6 @@ class RecordingEngine:
                         logger.info(f"Sending termination signal to FFmpeg (PID: {self.process.pid})")
                         try:
                             if os.name == 'nt':
-                                import signal
                                 os.kill(self.process.pid, signal.CTRL_BREAK_EVENT)
                             else:
                                 self.process.terminate()

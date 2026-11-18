@@ -65,10 +65,8 @@ def head_count_dashboard(request):
 def start_head_count(request, camera_type, camera_id):
     """Start head counting session - proxies request to dedicated camera service"""
     # Check permissions first
-    if camera_type == 'rtsp':
+    if camera_type in ['rtsp', 'mobile']:
         camera = get_object_or_404(Camera, id=camera_id)
-    elif camera_type == 'mobile':
-        camera = get_object_or_404(MobileCamera, id=camera_id)
     else:
         return JsonResponse({'error': 'Invalid camera type'}, status=400)
 

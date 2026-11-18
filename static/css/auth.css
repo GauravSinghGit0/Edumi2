@@ -55,7 +55,10 @@ body:has(.auth-split-container) {
    LEFT PANEL - Product Showcase & 3D Laptop Showcase
    ───────────────────────────────────────────────────────────── */
 .auth-left-panel {
-    background: radial-gradient(circle at 70% 55%, rgba(224, 231, 255, 0.45) 0%, rgba(245, 243, 255, 0.5) 45%, #fafbfe 80%);
+    background: 
+        radial-gradient(ellipse 70% 60% at 70% 55%, rgba(196, 181, 253, 0.42) 0%, rgba(224, 231, 255, 0.28) 45%, transparent 75%),
+        radial-gradient(circle at 15% 85%, rgba(224, 231, 255, 0.35) 0%, transparent 55%),
+        linear-gradient(160deg, #fafbfe 0%, #f3f6fd 55%, #edf2fe 100%);
     border-right: 1px solid #f1f5f9;
     padding: 1.75rem 2rem 1.5rem;
     display: flex;
@@ -65,21 +68,21 @@ body:has(.auth-split-container) {
     overflow: hidden;
 }
 
-/* Ambient Swoop Backdrop Curve */
+/* Ambient Backdrop Curve (Full 100% Inset Coverage - Zero Edge Cutoffs) */
 .auth-showcase-backdrop {
     position: absolute;
-    top: 5%;
-    right: -15%;
-    width: 130%;
-    height: 90%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     z-index: 0;
+    overflow: hidden;
 }
 
 .auth-showcase-backdrop svg {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    display: block;
 }
 
 /* Brand Bar */
@@ -162,25 +165,29 @@ body:has(.auth-split-container) {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0.5rem 0 1rem;
+    margin: 0.25rem 0 0.85rem;
     flex: 1;
-    min-height: 240px;
+    min-height: 280px;
     user-select: none;
     -webkit-user-select: none;
 }
 
 .auth-showcase-visual img {
     width: 100%;
-    max-width: 420px;
-    max-height: 280px;
+    max-width: 475px;
+    max-height: 340px;
     object-fit: contain;
     display: block;
-    filter: drop-shadow(0 16px 26px rgba(30, 27, 75, 0.13));
+    filter: drop-shadow(0 18px 30px rgba(30, 27, 75, 0.15));
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
     -webkit-user-drag: none;
     outline: none;
+}
+
+body.dark-mode .auth-showcase-visual img {
+    filter: drop-shadow(0 22px 38px rgba(0, 0, 0, 0.55));
 }
 
 /* Bottom Feature Badges / Pills */
@@ -843,6 +850,29 @@ body.dark-mode .toggle-password.is-revealed {
     margin-top: 1px;
 }
 
+/* Bottom notice divider (Forgot password & Email verification screens) */
+.auth-bottom-notice {
+    margin-top: 14px;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+}
+
+.auth-bottom-notice p {
+    color: #64748b;
+    font-size: 11.5px;
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+body.dark-mode .auth-bottom-notice {
+    border-top-color: #334155;
+}
+
+body.dark-mode .auth-bottom-notice p {
+    color: #94a3b8;
+}
+
 /* ─────────────────────────────────────────────────────────────
    SEGMENTED OTP INPUTS (Google / Zoom Style)
    ───────────────────────────────────────────────────────────── */
@@ -987,8 +1017,16 @@ body.dark-mode .auth-split-container {
 }
 
 body.dark-mode .auth-left-panel {
-    background: linear-gradient(160deg, #111827 0%, #1e293b 60%, #0f172a 100%);
+    background: 
+        radial-gradient(ellipse 70% 60% at 70% 55%, rgba(99, 102, 241, 0.22) 0%, rgba(139, 92, 246, 0.12) 45%, transparent 75%),
+        radial-gradient(circle at 15% 85%, rgba(59, 130, 246, 0.1) 0%, transparent 55%),
+        linear-gradient(160deg, #111827 0%, #151e2e 55%, #0f172a 100%);
     border-right-color: #1f2937;
+}
+
+body.dark-mode .auth-showcase-backdrop {
+    opacity: 0.28;
+    mix-blend-mode: screen;
 }
 
 body.dark-mode .auth-showcase-title {

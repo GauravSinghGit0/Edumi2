@@ -728,19 +728,6 @@ body.dark-mode .role-badge-student {
     gap: 0.75rem; 
 }
 
-.meeting-item { 
-    padding: 1.5rem; 
-    border-radius: 1rem; 
-    border: 1px solid var(--stream-border); 
-    background: var(--stream-hover-bg); 
-    margin-bottom: 1rem; 
-    border-left: 4px solid #cbd5e1;
-    transition: all 0.2s;
-}
-.meeting-item:hover { border-color: var(--stream-primary); transform: translateX(4px); }
-.meeting-item.live { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.04); }
-.meeting-item.ended { border-left-color: #94a3b8; opacity: 0.85; }
-
 /* ── Students & Roster Elements ── */
 .student-list { display: flex; flex-direction: column; gap: 0.75rem; }
 .student-item { 

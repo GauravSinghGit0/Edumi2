@@ -25,10 +25,10 @@ def generate_meeting_summary(meeting_id):
         participants = set([c.user.username for c in chats])
         
         summary_text = f"The meeting '{meeting.title}' was attended by {len(participants)} active participants. "
-        summary_text += f"The discussion covered various educational topics. "
+        summary_text += "The discussion covered various educational topics. "
         
         if questions:
-            summary_text += f"Key questions were raised regarding the lesson material."
+            summary_text += "Key questions were raised regarding the lesson material."
         
         # Key Points extraction
         key_points = [

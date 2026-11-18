@@ -21,14 +21,14 @@ def classroom_quizzes(request, classroom_id):
     """View quizzes for a classroom (both teacher and student)"""
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
-    is_admin = bool(request.user.is_superuser or getattr(request.user, 'is_staff', False) or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin'))
-    is_teacher = is_admin or (
+    is_admin_user = is_admin(request.user)
+    is_teacher = is_admin_user or (
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'teacher' and 
         classroom.teacher == request.user
     )
     is_student = (
-        not is_admin and
+        not is_admin_user and
         hasattr(request.user, 'userprofile') and 
         request.user.userprofile.user_type == 'student' and
         classroom.memberships.filter(student=request.user, status='approved').exists()
@@ -540,12 +540,10 @@ def take_quiz(request, quiz_id):
             time_taken = int((timezone.now() - started_at).total_seconds())
 
             # Server-side time limit enforcement (with 120s network latency grace period)
-            is_overdue = False
             feedback_notes = []
             if quiz.time_limit:
                 max_allowed = (quiz.time_limit * 60) + 120
                 if time_taken > max_allowed:
-                    is_overdue = True
                     over_mins = (time_taken - (quiz.time_limit * 60)) // 60
                     feedback_notes.append(f"⚠️ Submission received {over_mins}m past the {quiz.time_limit}-minute time limit.")
 

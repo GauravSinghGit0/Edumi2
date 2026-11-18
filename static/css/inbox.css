@@ -1053,26 +1053,17 @@ body.dark-mode .chat-date-separator span {
 }
 
 .composer-send-btn:disabled {
+  background: var(--msg-border) !important;
+  color: var(--msg-text-muted) !important;
   opacity: 0.4;
   cursor: not-allowed;
   box-shadow: none !important;
   transform: none !important;
 }
-  transform: scale(0.95);
-}
 
 .composer-send-btn svg {
   width: 16px;
   height: 16px;
-}
-
-.composer-send-btn:disabled {
-  background: var(--msg-border) !important;
-  color: var(--msg-text-muted) !important;
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none !important;
 }
 
 /* Emoji picker popup modal */

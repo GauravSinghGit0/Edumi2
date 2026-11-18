@@ -525,7 +525,6 @@ def delete_question_file(request, file_id):
     is_ajax = is_ajax_request(request)
     file = get_object_or_404(AssignmentQuestionFile, id=file_id)
     assignment = file.assignment
-    classroom = assignment.classroom
     
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'teacher' or assignment.created_by != request.user:
         messages.error(request, 'Only the assignment creator can delete files')

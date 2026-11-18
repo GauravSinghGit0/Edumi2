@@ -83,7 +83,7 @@ def test_rtsp_paths(ip, port, username, password):
                     return path, rtsp_url
             else:
                 cap.release()
-        except Exception as e:
+        except Exception:
             continue
 
     return None, None

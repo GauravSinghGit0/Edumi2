@@ -63,17 +63,6 @@
     letter-spacing: 0.5px;
 }
 
-.meet-timer {
-    color: #ffffff;
-    font-size: clamp(13px, 1.8vw, 15px);
-    background: rgba(255, 255, 255, 0.08);
-    padding: clamp(6px, 1vh, 10px) clamp(12px, 2vw, 18px);
-    border-radius: 8px;
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .recording-indicator {
     display: flex;
     align-items: center;

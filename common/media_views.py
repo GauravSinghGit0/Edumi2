@@ -222,7 +222,6 @@ def protected_media_serve(request, path):
     if not os.path.isfile(target_path):
         raise Http404("File not found")
 
-    file_size = os.path.getsize(target_path)
     content_type, _ = mimetypes.guess_type(target_path)
     content_type = content_type or 'application/octet-stream'
 

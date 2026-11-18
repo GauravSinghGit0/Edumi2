@@ -363,7 +363,6 @@ def generate_hls_proxy(project_id):
     Generates a 480p HLS proxy for a video project.
     """
     import os
-    import subprocess
     from django.conf import settings
     
     try:

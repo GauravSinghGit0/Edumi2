@@ -1,19 +1,20 @@
 {% load static %}
 <!-- Left Side - Platform Showcase & 3D Visual -->
 <div class="auth-left-panel">
-    <!-- Ambient Backdrop Curve -->
+    <!-- Ambient Backdrop Curve (Seamless Full-Coverage Flow) -->
     <div class="auth-showcase-backdrop">
-        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <circle cx="390" cy="280" r="230" fill="url(#ambientPurpleShared)" opacity="0.6"/>
-            <path d="M-40,160 Q 240,120 320,340 T 540,360 L 540,540 L -40,540 Z" fill="url(#ambientSoftWaveShared)" opacity="0.4"/>
+            <path d="M-60,140 Q 220,100 320,320 T 560,340 L 560,560 L -60,560 Z" fill="url(#ambientSoftWaveShared)"/>
             <defs>
                 <radialGradient id="ambientPurpleShared" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(390 280) rotate(90) scale(230)">
                     <stop stop-color="#c4b5fd" stop-opacity="0.5"/>
                     <stop offset="1" stop-color="#ede9fe" stop-opacity="0"/>
                 </radialGradient>
-                <linearGradient id="ambientSoftWaveShared" x1="0" y1="120" x2="500" y2="500" gradientUnits="userSpaceOnUse">
-                    <stop stop-color="#e0e7ff" stop-opacity="0.8"/>
-                    <stop offset="1" stop-color="#f5f3ff" stop-opacity="0.1"/>
+                <linearGradient id="ambientSoftWaveShared" x1="0" y1="120" x2="200" y2="500" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#e0e7ff" stop-opacity="0.45"/>
+                    <stop offset="70%" stop-color="#e0e7ff" stop-opacity="0.12"/>
+                    <stop offset="100%" stop-color="#ede9fe" stop-opacity="0"/>
                 </linearGradient>
             </defs>
         </svg>

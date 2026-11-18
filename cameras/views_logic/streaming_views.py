@@ -352,7 +352,6 @@ def camera_feed_proxy(request, camera_id):
     try:
         camera = get_object_or_404(Camera, id=camera_id)
         # Admins can always view; teachers need permission; others need is_live
-        from .utils import is_admin, can_view_camera
         if not can_view_camera(request.user, camera):
             return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
 
@@ -376,7 +375,6 @@ def camera_feed_proxy(request, camera_id):
 @login_required
 def clear_stream_cache(request, camera_id):
     """Admin endpoint to force-restart a stale camera streamer."""
-    from .utils import is_admin
     if not is_admin(request.user):
         return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
     try:

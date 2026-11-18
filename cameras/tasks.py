@@ -20,7 +20,7 @@ def process_recording_task(recording_id):
         max_retries = 10
         for i in range(max_retries):
             try:
-                with open(current_path, 'rb+') as f:
+                with open(current_path, 'rb+'):
                     break
             except IOError:
                 logger.info(f"File {current_path} is locked, waiting... ({i+1}/{max_retries})")
@@ -28,7 +28,6 @@ def process_recording_task(recording_id):
         
         # We no longer remux to MP4 as per user request (prevents corruption)
         # Browsers can play MKV if codecs are compatible (H264/H265 + AAC)
-        video_path = current_path
         
         # 2. Generate High-Efficiency WebP Thumbnail (M1 Winner)
         rec.generate_thumbnail(time_sec=1.0)

@@ -647,11 +647,6 @@
     font-weight: 600;
 }
 
-.btn-confirm-save {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
-}
-
 .btn-retake-photo {
     padding: 12px 24px;
     border-radius: 999px;
