@@ -747,17 +747,9 @@ server {
         access_log off;
         include /etc/nginx/mime.types;
         types {
-            text/css css;
-            application/javascript js;
             application/wasm wasm;
-            application/octet-stream bin onnx;
-            application/json json;
-            image/svg+xml svg;
-            image/png png;
-            image/jpeg jpg jpeg;
+            application/octet-stream onnx;
             font/woff2 woff2;
-            font/woff woff;
-            font/ttf ttf;
         }
         # Fallback to Django safe_static_serve if asset is missing or permissions denied
         error_page 403 404 = @django_static_fallback;
