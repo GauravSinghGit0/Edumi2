@@ -23,9 +23,9 @@ User = get_user_model()
 from camera_service.camera_api.views.streamer import CameraStreamer, CameraManager, camera_manager
 
 
-async def _generate_frames(streamer, camera, full_url, quality, camera_id):
+def _generate_frames(streamer, camera, full_url, quality, camera_id):
     """Yield MJPEG boundary frames; handles stale stream detection."""
-    import asyncio
+    import time
     throttles = {'4k': 0.033, 'high': 0.033, 'med': 0.05, 'low': 0.1}
     delay = throttles.get(quality, 0.05)
 
@@ -42,10 +42,12 @@ async def _generate_frames(streamer, camera, full_url, quality, camera_id):
 
             if frame:
                 yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
-                await asyncio.sleep(delay)
+                time.sleep(delay)
             else:
                 logger.warning(f"No frame to send for camera {camera_id}")
-                await asyncio.sleep(0.1)
+                time.sleep(0.1)
+    except GeneratorExit:
+        logger.info(f"Client disconnected from camera {camera_id} after {frame_count} frames")
     except Exception as e:
         logger.error(f"Streaming error camera {camera_id}: {e}", exc_info=True)
 
