@@ -3,9 +3,12 @@ camera_service/camera_api/views/rtsp_views.py
 Django views for RTSP camera streaming, zoom control, and diagnostics.
 """
 import os
+import time
+import asyncio
 import logging
 
 import cv2
+from asgiref.sync import sync_to_async
 from django.http import StreamingHttpResponse, JsonResponse
 
 from .streamer import camera_manager
@@ -23,20 +26,22 @@ def list_cameras(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-def camera_feed(request, camera_id):
-    """Stream adaptive-bitrate MJPEG feed from an RTSP camera."""
+async def camera_feed(request, camera_id):
+    """Stream adaptive-bitrate MJPEG feed from an RTSP camera via native ASGI async generator."""
     quality = request.GET.get('q', 'med')
     try:
         from cameras.models import Camera
-        camera = Camera.objects.get(id=camera_id)
+        camera = await sync_to_async(Camera.objects.get)(id=camera_id)
         full_url = camera.get_full_rtsp_url()
         streamer = camera_manager.get_streamer(camera.id, full_url)
 
         response = StreamingHttpResponse(
-            _generate_frames(streamer, camera, full_url, quality, camera_id),
+            _generate_frames_async(streamer, quality, camera_id),
             content_type='multipart/x-mixed-replace; boundary=frame',
         )
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
         response['X-Accel-Buffering'] = 'no'
         return response
     except Exception as e:
@@ -93,6 +98,30 @@ def test_camera(request, camera_id):
 
 
 # ── private helpers ───────────────────────────────────────────────────────────
+
+async def _generate_frames_async(streamer, quality, camera_id):
+    """Yield MJPEG multipart chunks asynchronously over ASGI without threadpool buffering."""
+    throttles = {'4k': 0.033, '2k': 0.033, 'high': 0.033, 'auto': 0.033, 'med': 0.04, 'low': 0.06}
+    delay = throttles.get(quality, 0.04)
+    frame_count = 0
+
+    try:
+        while True:
+            frame = streamer.get_adaptive_frame(quality) or streamer.get_frame()
+            if frame:
+                frame_count += 1
+                header = (
+                    b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n'
+                    b'Content-Length: ' + str(len(frame)).encode('ascii') + b'\r\n\r\n'
+                )
+                yield header + frame + b'\r\n'
+            await asyncio.sleep(delay)
+    except (asyncio.CancelledError, GeneratorExit):
+        logger.info(f"Client disconnected from camera {camera_id} after {frame_count} frames")
+    except Exception as e:
+        logger.error(f"Streaming error camera {camera_id}: {e}")
+
 
 def _generate_frames(streamer, camera, full_url, quality, camera_id):
     """Yield MJPEG boundary frames; dispatches initial frame immediately without blocking."""
