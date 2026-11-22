@@ -1,44 +1,77 @@
-# Python cache
-**/__pycache__/
+# ==============================================================================
+# EduMi — Docker Build Ignore Rules (.dockerignore)
+# Prevents local development clutter, secrets, and transient build files
+# from being copied into production container images.
+# ==============================================================================
+
+# 1. Python Bytecode & Cache
+__pycache__/
 *.py[cod]
 *$py.class
 *.pyo
+*.pyd
+*.so
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
 
-# Virtual environments
+# 2. Virtual Environments
 .venv/
 venv/
 ENV/
 env/
+venv*/
 
-# Local env files (secrets stay off the image)
+# 3. Local Environment Variables & Secrets (CRITICAL)
 .env
-.env.deploy
-.env.local
+.env.*
+!.env.example
 
-# Git
+# 4. Git Metadata
 .git/
 .gitignore
+.gitattributes
+.gitmodules
 
-# Local DB (Docker uses Postgres)
-db.sqlite3
+# 5. Local Databases & Persistence (Container uses PostgreSQL & volume mounts)
+database/
+*.sqlite3
+*.sqlite
+*.db
+postgres_data/
 
-# Collected static (rebuilt at container startup)
+# 6. Static Files & Media (Collected & mounted at runtime)
 staticfiles/
-
-# Media uploads (mounted as volume)
 media/
+uploads/
+recordings/
 
-# Logs
+# 7. Local Binaries, Executables & Certificates
+certs/
+livekit-bin/
+ffmpeg.exe
+ffprobe.exe
+ffmpeg-master-latest-win64-gpl/
+
+# 8. Logs & Diagnostic Dumps
 *.log
+logs/
+ws_debug.log
 
-# IDE
+# 9. IDE, Editor & OS Artifacts
 .vscode/
 .idea/
 *.swp
-
-# Node (if any)
-node_modules/
-
-# OS
+*.swo
+*~
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# 10. Scratch & Temporary Files
+scratch/
+archive/

@@ -2,7 +2,7 @@
    MODERN INDUSTRY-GRADE MEETING CARDS SYSTEM
    Inspired by Google Meet, Zoom & Teams SaaS Aesthetics
    ══════════════════════════════════════════════════════════════ */
-@import url('design-tokens.css');
+@import url('design_tokens.css');
 
 /* ── Meetings Grid ── */
 .meetings-list,

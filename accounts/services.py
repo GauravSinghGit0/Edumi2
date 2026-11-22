@@ -5,9 +5,7 @@ Contains business logic for profile management and dashboards.
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.utils import timezone
-from .models import UserProfile
 from meetings.models import Meeting
-from cameras.models import Camera
 import logging
 
 User = get_user_model()

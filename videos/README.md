@@ -9,7 +9,7 @@ The `videos` app handles the ingestion, storage, processing, thumbnail generatio
 <summary><b>2. Thumbnail & Compression Pipeline</b></summary>
 
 ### Modern WebP Thumbnailing
-In `videos/views_logic/utils.py`:
+In `videos/views/utils.py`:
 - `extract_thumbnail(video_path, output_path)` delegates to `EduMiCompressionService.generate_video_thumbnail_webp()`.
 - Captures video frames at 1.0s, resizes to 480x270, and encodes to `.webp` at `quality=80`.
 - Generates 15-25 KB thumbnails (vs 80-120 KB JPEG), decreasing lecture catalog payload weight by **~40%**.
@@ -38,8 +38,8 @@ Decoupled from live meetings to strictly handle the lifecycle of at-rest video f
 <summary><b>6. Key Files Breakdown</b></summary>
 
 - `models.py`: Defines the `Video` model which tracks file paths, processing status, and metadata.
-- `views_logic/core_views.py`: Handles the standard HTTP request/response cycle for viewing and managing videos.
-- `views_logic/streaming_views.py`: Contains the logic for HTTP range requests, allowing users to scrub through large videos without downloading the entire file.
-- `views_logic/utils.py`: Contains helper functions including `extract_thumbnail()` powered by `EduMiCompressionService`.
-- `views.py`: The routing hub that exposes the logic defined in `views_logic/`.
+- `views/core_views.py`: Handles the standard HTTP request/response cycle for viewing and managing videos.
+- `views/streaming_views.py`: Contains the logic for HTTP range requests, allowing users to scrub through large videos without downloading the entire file.
+- `views/utils.py`: Contains helper functions including `extract_thumbnail()` powered by `EduMiCompressionService`.
+- `views/__init__.py`: Package entrypoint exposing clean imports from `views/`.
 </details>

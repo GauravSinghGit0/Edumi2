@@ -1,0 +1,653 @@
+/**
+ * EduMi Video Editor — Canva-Style Media Library & Assets
+ */
+/* ==========================================================================
+   Canva-Style Media Library Sidebar
+   ========================================================================== */
+.ve-sidebar-upload-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  position: relative;
+}
+
+.ve-btn-upload-files {
+  flex: 1;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--ve-primary, #7c3aed);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.2);
+  user-select: none;
+}
+
+.ve-btn-upload-files:hover {
+  background: #6d28d9;
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.35);
+  transform: translateY(-1px);
+}
+
+.ve-btn-upload-files:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.2);
+}
+
+.ve-upload-more-wrapper {
+  position: relative;
+}
+
+.ve-btn-upload-more {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ve-bg-raised, #1e293b);
+  color: var(--ve-text, #e2e8f0);
+  border: 1px solid var(--ve-border, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.ve-btn-upload-more:hover {
+  background: var(--ve-primary, #8b5cf6);
+  color: #ffffff;
+  border-color: var(--ve-primary, #8b5cf6);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.ve-btn-upload-more:active {
+  transform: translateY(0);
+}
+
+/* Upload Dropdown Menu */
+.ve-upload-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  min-width: 175px;
+  z-index: 100;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  backdrop-filter: blur(12px);
+}
+
+.ve-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: var(--ve-text, #f8fafc);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ve-dropdown-item:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #ffffff;
+}
+
+.ve-dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+/* Category Navigation Pills (Canva Style) */
+.ve-sidebar-category-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  border-bottom: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: nowrap;
+}
+
+.ve-category-btn {
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ve-category-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.ve-category-btn.active {
+  background: #ede9fe;
+  color: #7c3aed;
+  font-weight: 600;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+.ve-category-indicator {
+  display: none !important;
+}
+
+/* Responsive Media Grid (Canva Style 16:9) */
+.ve-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  overflow-y: auto;
+  max-height: calc(100vh - 210px);
+  padding-right: 2px;
+  padding-bottom: 12px;
+  align-content: flex-start;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.ve-media-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.ve-media-grid::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+/* Grid Item Card */
+.ve-grid-item {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.ve-grid-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--ve-primary, #7c3aed);
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.15);
+}
+
+.ve-grid-item:active {
+  transform: scale(0.98);
+}
+
+.ve-grid-thumb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ve-grid-thumb img,
+.ve-grid-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ve-grid-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.ve-grid-item:hover .ve-grid-thumb-overlay {
+  opacity: 1;
+}
+
+.ve-thumb-play-icon {
+  width: 28px;
+  height: 28px;
+  color: #ffffff;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+.ve-grid-duration-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.ve-grid-type-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--ve-primary);
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1.5px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+.ve-grid-type-tag.audio {
+  background: #10b981;
+}
+
+/* Audio Thumbnail */
+.ve-audio-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+}
+
+.ve-mini-soundwaves {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+}
+
+.ve-mini-soundwaves span {
+  width: 3px;
+  background: #4ade80;
+  border-radius: 2px;
+}
+.ve-mini-soundwaves span:nth-child(1) { height: 6px; }
+.ve-mini-soundwaves span:nth-child(2) { height: 14px; }
+.ve-mini-soundwaves span:nth-child(3) { height: 10px; }
+.ve-mini-soundwaves span:nth-child(4) { height: 16px; }
+.ve-mini-soundwaves span:nth-child(5) { height: 8px; }
+
+/* Folder Thumbnail */
+.ve-folder-thumb {
+  background: linear-gradient(135deg, #2e1065 0%, #1e1b4b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer / Title on Card */
+.ve-grid-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 70%, transparent 100%);
+  padding: 12px 8px 6px 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ve-grid-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Card 3-dot Options Button */
+.ve-grid-menu-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  z-index: 10;
+}
+
+.ve-grid-item:hover .ve-grid-menu-btn {
+  opacity: 1;
+}
+
+.ve-grid-menu-btn:hover {
+  background: var(--ve-primary, #8b5cf6);
+  border-color: var(--ve-primary, #8b5cf6);
+}
+
+/* Card Context Menu */
+.ve-grid-context-menu {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  z-index: 30;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 125px;
+  backdrop-filter: blur(8px);
+}
+
+.ve-context-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.ve-context-action:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #ffffff;
+}
+
+/* Empty State */
+.ve-grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 36px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.4);
+  margin-top: 8px;
+}
+
+.ve-empty-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--ve-primary, #8b5cf6);
+  opacity: 0.6;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.ve-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ve-text, #f8fafc);
+  margin: 0 0 4px;
+}
+
+.ve-empty-desc {
+  font-size: 12px;
+  color: var(--ve-text-muted, #94a3b8);
+  margin: 0;
+}
+
+/* Card Hover Quick-Add (+) Button */
+.ve-card-quick-add {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ve-primary, #7c3aed);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.ve-grid-item:hover .ve-card-quick-add {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.ve-card-quick-add:hover {
+  background: #6d28d9;
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.ve-card-quick-add:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* ============================================================
+   CANVA TEXT STUDIO
+   ============================================================ */
+
+.ve-btn-add-textbox {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--ve-primary, #7c3aed);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin: 0;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.2);
+  transition: background 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.ve-btn-add-textbox:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.35);
+}
+
+.ve-btn-add-textbox:active {
+  transform: translateY(0);
+}
+
+.ve-btn-t-glyph {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ve-text-presets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.ve-presets-subhead {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ve-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.ve-text-preset-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ve-preset-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.ve-preset-card:hover {
+  background: #ffffff;
+  border-color: var(--ve-primary, #7c3aed);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+  transform: translateY(-1px);
+}
+
+.ve-preset-card:active {
+  transform: translateY(0);
+}
+
+.ve-preset-text-heading {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ve-preset-text-subheading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.25;
+}
+
+.ve-preset-text-body {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #475569;
+  line-height: 1.3;
+}
+
+.ve-preset-plus {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ve-primary, #7c3aed);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.ve-preset-card:hover .ve-preset-plus {
+  opacity: 1;
+}
+
+.ve-text-advanced-details {
+  margin-top: 4px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.ve-text-advanced-summary {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ve-text-muted, #64748b);
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+  transition: color 0.15s ease;
+}
+
+.ve-text-advanced-summary:hover {
+  color: var(--ve-primary, #7c3aed);
+}
+
+/* Clean sizing input without browser spin arrows */
+#active-text-size::-webkit-inner-spin-button,
+#active-text-size::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#active-text-size {
+  -moz-appearance: textfield;
+}
+
+
+

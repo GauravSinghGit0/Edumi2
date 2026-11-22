@@ -14,7 +14,7 @@ Provides a centralized registry and proxy engine for classroom and studio camera
 <summary><b>3. Storage & Multimedia Optimizations</b></summary>
 
 ### 1. High-Efficiency H.265 Lecture Archival
-- Handled by `recording_engine.py` and `EduMiCompressionService.compress_cctv_storage()` (aliased as `compress_lecture_storage()`).
+- Handled by `recording_engine.py` (with distributed Redis coordinator `recording_engine_v2.py`) and `EduMiCompressionService.compress_cctv_storage()` (aliased as `compress_lecture_storage()`).
 - Uses `libx265 -crf 28 -preset fast` (with automatic fallback to `libx264 -crf 26`) alongside 2.0s GOP keyframes.
 - **Impact**: Reduces raw 5.2 Mbps classroom camera streams to ~1.8 Mbps, achieving **>50% disk storage savings** while maintaining sharp board readability and occupancy accuracy.
 
@@ -37,7 +37,7 @@ Provides a centralized registry and proxy engine for classroom and studio camera
 
 <details>
 <summary><b>5. System Integrations</b></summary>
-- **Camera Service (`camera_service`)**: Passes RTSP URLs to the background Waitress service for OpenCV head-counting and live streaming.
+- **Streaming Service (`streaming_service`)**: Passes RTSP URLs to the background Waitress service for OpenCV head-counting and live streaming.
 - **LiveKit Meetings**: RTSP streams can be routed directly into LiveKit virtual classrooms as auxiliary teacher video sources.
 - **Common Compression Service**: Utilizes `common.compression_service.EduMiCompressionService` for all frame extraction and lecture transcoding.
 </details>
@@ -46,7 +46,8 @@ Provides a centralized registry and proxy engine for classroom and studio camera
 <summary><b>6. Key Files Breakdown</b></summary>
 
 - `models.py`: Defines `Camera`, `CameraPermission`, `CameraRecording` (with WebP thumbnail generation), and `RecordingChunk`.
-- `recording_engine.py`: Manages background FFmpeg threads ripping RTSP streams to optimized H.265/H.264 containers.
+- `recording_engine.py`: Core background FFmpeg engine capturing RTSP streams to optimized H.265/H.264 containers.
+- `recording_engine_v2.py`: Scalable Redis-backed coordinator wrapping recording engine for multi-worker environments.
 - `tasks.py`: Celery workers processing post-recording operations and generating WebP previews.
-- `views_logic/streaming_views.py`: Emits low-latency MJPEG feeds for browser viewing.
+- `views/streaming_views.py`: Emits low-latency MJPEG feeds for browser viewing.
 </details>

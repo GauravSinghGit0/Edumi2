@@ -1,3 +1,113 @@
-# Enforce LF for all shell scripts to prevent bash syntax errors on Linux servers
+# ==============================================================================
+# EduMi — Git Attributes & Line Ending Configuration
+# Prevents line-ending corruption between Windows and Linux/Ubuntu environments
+# ==============================================================================
+
+# Auto detect text files and perform LF normalization on commit
+* text=auto
+
+# Linux / Shell Scripts & Container Configurations (CRITICAL: Enforce LF)
 *.sh text eol=lf
 *.bash text eol=lf
+deploy.sh text eol=lf
+entrypoint.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+.dockerignore text eol=lf
+
+# Windows Shell Scripts & Batches (Enforce CRLF)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+start_app.bat text eol=crlf
+start_app.ps1 text eol=crlf
+
+# Python Source Code & Interfaces
+*.py text diff=python
+*.pyi text diff=python
+
+# Web & Frontend Assets
+*.html text
+*.css text
+*.scss text
+*.js text
+*.mjs text
+*.ts text
+*.json text
+*.xml text
+*.svg text
+
+# Documentation & Configs
+*.md text
+*.txt text
+*.rst text
+*.yml text
+*.yaml text
+*.toml text
+*.ini text
+*.cfg text
+*.conf text
+.gitignore text
+.gitattributes text
+.env.example text
+
+# ==============================================================================
+# Binary Files (Explicit binary prevents CRLF corruption & useless git diffs)
+# ==============================================================================
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+
+# Audio / Video Media & Streams
+*.mp4 binary
+*.webm binary
+*.mkv binary
+*.avi binary
+*.flv binary
+*.mp3 binary
+*.wav binary
+*.aac binary
+*.ogg binary
+
+# Documents & Archives
+*.pdf binary
+*.doc binary
+*.docx binary
+*.ppt binary
+*.pptx binary
+*.xls binary
+*.xlsx binary
+*.zip binary
+*.tar binary
+*.tar.gz binary
+*.gz binary
+*.bz2 binary
+*.7z binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# AI Models, Weights & Machine Learning Binaries
+*.onnx binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.h5 binary
+*.tflite binary
+
+# Native Binaries & Databases
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.sqlite3 binary
+*.sqlite binary
+*.db binary

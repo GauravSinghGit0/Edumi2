@@ -19,6 +19,10 @@ from collections import defaultdict
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
+from edumi_core.feature_flags import FeatureFlags
+from django.conf import settings
+import asyncio
+import uuid
 
 logger = logging.getLogger('attendance.face_tracking')
 
@@ -56,22 +60,91 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         # Accept early to establish WebSocket handshake
         await self.accept()
 
+        self._redis = None
+        if FeatureFlags.USE_ASYNC_FACE_TRACKING:
+            try:
+                import redis.asyncio as aioredis
+                self._redis = await aioredis.from_url(
+                    settings.REDIS_URL,
+                    encoding='utf-8',
+                    decode_responses=False
+                )
+            except Exception as e:
+                logger.warning(f"Async face tracking Redis connection failed, using local processing: {e}")
+                self._redis = None
+
         try:
             # Load all registered embeddings and match threshold for this meeting's classroom
             self._embeddings = await self._load_all_embeddings()
             self._match_threshold = await self._get_match_threshold()
             self._frame_count = defaultdict(int)   # per student_id frame counter
 
+            mode_str = ' (queue-based)' if self._redis else ''
             await self.send(json.dumps({
                 'type':    'connected',
-                'message': f'Face tracking active. {len(self._embeddings)} student(s) registered.',
+                'message': f'Face tracking active{mode_str}. {len(self._embeddings)} student(s) registered.',
                 'count':   len(self._embeddings),
             }))
         except Exception as e:
             logger.error(f"Error initializing FaceTrackingConsumer: {e}", exc_info=True)
 
     async def disconnect(self, close_code):
-        pass
+        if getattr(self, '_redis', None):
+            try:
+                await self._redis.close()
+            except Exception:
+                pass
+
+    async def push_frame_to_queue(self, student_id: str, frame_b64: str) -> str:
+        """Push frame to Redis stream for processing"""
+        frame_id = f"{self.meeting_code}:{student_id}:{uuid.uuid4().hex[:8]}"
+        frame_data = {
+            'frame_id': frame_id,
+            'frame_b64': frame_b64,
+            'student_id': student_id,
+            'meeting_code': self.meeting_code,
+            'timestamp': timezone.now().isoformat(),
+        }
+        await self._redis.xadd(
+            'edumi:face:frames',
+            {'data': json.dumps(frame_data)},
+            maxlen=1000
+        )
+        return frame_id
+
+    async def poll_results(self, frame_ids: list, timeout_ms: int = 500) -> dict:
+        """Poll Redis for frame processing results"""
+        results = {}
+        start_time = asyncio.get_event_loop().time()
+        check_interval = 0.05
+        pending = set(frame_ids)
+
+        while pending:
+            elapsed = (asyncio.get_event_loop().time() - start_time) * 1000
+            if elapsed > timeout_ms:
+                break
+
+            for frame_id in list(pending):
+                result_key = f"edumi:face:result:{frame_id}"
+                result_json = await self._redis.get(result_key)
+                if result_json:
+                    result = json.loads(result_json)
+                    student_id = frame_id.split(':')[1]
+                    results[student_id] = result
+                    pending.remove(frame_id)
+
+            if pending:
+                await asyncio.sleep(check_interval)
+
+        for frame_id in pending:
+            student_id = frame_id.split(':')[1]
+            results[student_id] = {
+                'face_visible': False,
+                'processing': True,
+                'message': 'Processing...'
+            }
+
+        return results
 
     async def receive(self, text_data):
         try:
@@ -116,31 +189,43 @@ class FaceTrackingConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'bulk_frame':
             # All student frames in one message: {student_id: frame_b64, ...}
             frames = data.get('frames', {})
-            results = {}
-            for sid, frame_b64 in frames.items():
-                if not frame_b64:
-                    continue
-                try:
-                    frame_bytes = base64.b64decode(frame_b64)
-                except Exception:
-                    continue
-                res = await database_sync_to_async(self._process_frame)(frame_bytes, sid)
-                results[sid] = res
-                if res.get('matched_user_id'):
-                    self._frame_count[res['matched_user_id']] += 1
-                    if self._frame_count[res['matched_user_id']] % SNAPSHOT_SAVE_INTERVAL == 0:
-                        await self._save_snapshot(
-                            res['matched_user_id'],
-                            res.get('emotion', 'unknown'),
-                            res.get('confidence', 0.0),
-                            res.get('face_visible', True),
-                        )
-                        # Also write to physical log
-                        await self._write_to_meeting_log(
-                            res['matched_user_id'],
-                            res.get('matched_name', 'Unknown'),
-                            res.get('emotion', 'unknown')
-                        )
+
+            if getattr(self, '_redis', None):
+                # High-concurrency Redis offload (Daphne non-blocking)
+                tasks = [
+                    self.push_frame_to_queue(sid, b64)
+                    for sid, b64 in frames.items() if b64
+                ]
+                frame_ids = await asyncio.gather(*tasks, return_exceptions=True)
+                valid_ids = [fid for fid in frame_ids if isinstance(fid, str)]
+                results = await self.poll_results(valid_ids, timeout_ms=500)
+            else:
+                # In-process execution fallback
+                results = {}
+                for sid, frame_b64 in frames.items():
+                    if not frame_b64:
+                        continue
+                    try:
+                        frame_bytes = base64.b64decode(frame_b64)
+                    except Exception:
+                        continue
+                    res = await database_sync_to_async(self._process_frame)(frame_bytes, sid)
+                    results[sid] = res
+                    if res.get('matched_user_id'):
+                        self._frame_count[res['matched_user_id']] += 1
+                        if self._frame_count[res['matched_user_id']] % SNAPSHOT_SAVE_INTERVAL == 0:
+                            await self._save_snapshot(
+                                res['matched_user_id'],
+                                res.get('emotion', 'unknown'),
+                                res.get('confidence', 0.0),
+                                res.get('face_visible', True),
+                            )
+                            # Also write to physical log
+                            await self._write_to_meeting_log(
+                                res['matched_user_id'],
+                                res.get('matched_name', 'Unknown'),
+                                res.get('emotion', 'unknown')
+                            )
 
             await self.send(json.dumps({
                 'type':    'bulk_tracking_result',

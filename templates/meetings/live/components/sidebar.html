@@ -1,0 +1,346 @@
+            <!-- People / Chat Sidebar (Google Meet Style) -->
+            <div class="meet-sidebar" id="meetSidebar" style="display:none;">
+                <!-- Draggable Sidebar Resizer Handle -->
+                <div class="sidebar-resizer" id="sidebarResizer" title="Drag left or right to resize sidebar width">
+                </div>
+                <div class="sidebar-header">
+                    <div class="sidebar-tabs" role="tablist">
+                        <button class="sidebar-tab active" onclick="switchSidebarTab('people')" id="peopleTabBtn"
+                            role="tab" aria-selected="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            <span>People</span>
+                        </button>
+                        <button class="sidebar-tab" onclick="switchSidebarTab('chat')" id="chatTabBtn" role="tab"
+                            aria-selected="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span>Chat</span>
+                            <span class="chat-tab-badge" id="chatBadge" style="display: none;">0</span>
+                        </button>
+                        <button class="sidebar-tab" onclick="switchSidebarTab('quiz')" id="quizTabBtn" role="tab"
+                            aria-selected="false" style="display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                            <span>Quiz</span>
+                            <span class="chat-tab-badge" id="quizTabBadge" style="display: none;">!</span>
+                        </button>
+                    </div>
+                    <button class="close-sidebar" onclick="toggleSidebar()" title="Close panel"
+                        aria-label="Close panel">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="sidebar-content">
+                    <div class="sidebar-panel active" id="peoplePanel" role="tabpanel">
+                        <div class="participants-count">In call (<span id="participantCount">1</span>)</div>
+                        <div class="participants-list" id="participantsList"></div>
+                        {% if is_host %}
+                        <div class="banned-section" id="bannedSection">
+                            <div class="banned-header">Banned Students</div>
+                            <div class="participants-list" id="bannedList"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="sidebar-panel" id="chatPanel" style="display:none;" role="tabpanel">
+                        <div class="chat-header-section">
+                            {% if is_host %}
+                            <div class="chat-host-control-card" id="chatHostControlBar">
+                                <div class="chat-perm-text">
+                                    <div class="chat-perm-title">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M2 12h20" />
+                                            <path
+                                                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                        </svg>
+                                        <span>Let everyone send messages</span>
+                                    </div>
+                                    <span class="chat-perm-sub">When off, only you can send messages</span>
+                                </div>
+                                <button type="button" class="chat-switch-btn active" id="chatPermSwitch" role="switch"
+                                    aria-checked="true" aria-label="Let everyone send messages"
+                                    onclick="toggleChatPermission()">
+                                    <span class="chat-switch-thumb"></span>
+                                </button>
+                            </div>
+                            {% endif %}
+                            <div class="chat-status-banner" id="chatStatusBanner" style="display: none;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                                <span id="chatStatusBannerText">Chat is limited to the host</span>
+                            </div>
+                            <div class="chat-info-pill">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                                <span>Messages are visible to everyone in the call</span>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="chat-empty-state" id="chatEmptyState">
+                                <div class="chat-empty-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                </div>
+                                <div class="chat-empty-title">No messages yet</div>
+                                <div class="chat-empty-subtitle">Send a message to start the conversation with everyone.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-composer-box">
+                            <div class="chat-input-wrapper">
+                                <textarea id="chatInput" rows="1" placeholder="Send a message..." autocomplete="off"
+                                    onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendChatMessage(); }"></textarea>
+                                <button onclick="sendChatMessage()" id="chatSendBtn" class="chat-send-btn"
+                                    title="Send message (Enter)" aria-label="Send message" disabled>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if is_host %}
+                    <!-- Live Meeting Teacher Quiz Monitoring Dashboard Side Panel -->
+                    <div class="sidebar-panel quiz-side-panel" id="teacherQuizMonitorPanel" role="tabpanel">
+                        <div class="quiz-panel-header"
+                            style="background: #000000; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding: 12px 14px 6px 14px;">
+                            <div class="quiz-panel-title-box"
+                                style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <h3 id="teacherMonitorTitle"
+                                    style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        style="color: #94a3b8;">
+                                        <path d="M18 20V10" />
+                                        <path d="M12 20V4" />
+                                        <path d="M6 20v-6" />
+                                    </svg>
+                                    <span>Live Quiz Dashboard</span>
+                                </h3>
+                                <span id="teacherMonitorSubCount"
+                                    style="background: #10b981; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">0
+                                    Submitted</span>
+                            </div>
+                        </div>
+
+                        <div class="quiz-panel-body"
+                            style="padding: 12px; display: flex; flex-direction: column; height: 100%; overflow: hidden; gap: 12px; flex: 1; background: #000000;">
+                            <!-- Active Quiz Banner + Timer + End Quiz Button Card -->
+                            <div class="quiz-active-card">
+                                <div
+                                    style="font-size: 11px; font-weight: 700; color: #818cf8; letter-spacing: 0.8px; text-transform: uppercase;">
+                                    ACTIVE QUIZ</div>
+                                <div id="teacherMonitorQuizName"
+                                    style="font-size: 18px; font-weight: 800; color: #ffffff; margin-top: 4px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                        <!-- Real-time Quiz Timer & End Quiz Button Side-by-Side Pill Bar -->
+                                <div class="quiz-timer-pill-bar">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8"
+                                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <polyline points="12 6 12 12 16 14" />
+                                        </svg>
+                                        <span style="color: #94a3b8; font-size: 12px; font-weight: 500;">Elapsed</span>
+                                        <span id="teacherQuizTimerText"
+                                            style="color: #38bdf8; font-size: 15px; font-weight: 800; font-family: inherit;">00:00</span>
+                                    </div>
+
+                                    <!-- Vibrant End Quiz Pill Button (Side-by-Side) -->
+                                    <button id="endQuizBtn" class="btn-end-quiz-pill" onclick="confirmAndEndQuiz()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5">
+                                            <rect x="4" y="4" width="16" height="16" rx="3" ry="3" />
+                                        </svg>
+                                        <span>End Quiz</span>
+                                    </button>
+                                </div>
+                            </div>                  </div>
+
+                            <!-- Cheating Alerts Container -->
+                            <div id="teacherMonitorAlertsBox" style="display: flex; flex-direction: column; gap: 6px;">
+                            </div>
+
+                            <!-- Horizontal Segmented Status Tab Bar -->
+                            <div class="quiz-status-tabs-container">
+                                <button type="button" class="quiz-status-tab active"
+                                    onclick="switchTeacherQuizTab('completed')" id="quizTabCompleted"
+                                    title="Completed / Done Students">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="m9 12 2 2 4-4" />
+                                    </svg>
+                                    <span id="badgeCatCompleted"
+                                        style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                                </button>
+                                <div class="quiz-status-divider"></div>
+                                <button type="button" class="quiz-status-tab"
+                                    onclick="switchTeacherQuizTab('in_progress')" id="quizTabInProgress"
+                                    title="In Progress Students">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                    <span id="badgeCatInProgress"
+                                        style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                                </button>
+                                <div class="quiz-status-divider"></div>
+                                <button type="button" class="quiz-status-tab"
+                                    onclick="switchTeacherQuizTab('not_started')" id="quizTabNotStarted"
+                                    title="Not Started Students">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                    </svg>
+                                    <span id="badgeCatNotStarted"
+                                        style="background: rgba(255,255,255,0.12); color: inherit; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                                </button>
+                                <div class="quiz-status-divider"></div>
+                                <button type="button" class="quiz-status-tab" onclick="switchTeacherQuizTab('flagged')"
+                                    id="quizTabFlagged" title="Flagged / Suspicious Activity">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z" />
+                                        <line x1="12" y1="9" x2="12" y2="13" />
+                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
+                                    <span id="badgeCatFlagged"
+                                        style="background: rgba(239,68,68,0.25); color: #f87171; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700;">0</span>
+                                </button>
+                            </div>
+
+                            <!-- Scrollable Active Tab Content Area -->
+                            <div id="teacherQuizTabContent"
+                                style="flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 6px; min-height: 100px;">
+                                <!-- Rendered list of students for active status tab -->
+                            </div>
+
+                            <!-- Hidden containers for backward compatibility -->
+                            <div id="teacherMonitorStudentsList" style="display: none;"></div>
+                            <span id="teacherMonitorTotalStudents" style="display: none;">0 Joined</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Live Meeting Student Quiz Side Panel -->
+                    <div class="sidebar-panel quiz-side-panel" id="meetingQuizSidePanel" role="tabpanel">
+                        <!-- Full Panel Anti-Cheating Warning Overlay Modal -->
+                        <div id="studentQuizWarningModal"
+                            style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+                            <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+                            <h3 id="quizWarningModalTitle"
+                                style="color: #ef4444; margin: 0 0 8px 0; font-size: 16px; font-weight: 700;">WARNING 1
+                                / 2</h3>
+                            <p id="quizWarningModalText"
+                                style="color: #cbd5e1; font-size: 12px; margin: 0 0 14px 0; line-height: 1.5;">You
+                                switched tabs or window apps! Switching windows during a live test is strictly
+                                monitored.<br><strong style="color: #f87171;">3rd violation will AUTO-SUBMIT your test
+                                    immediately!</strong></p>
+                            <button class="btn btn-primary-quiz" onclick="acknowledgeStudentQuizWarning()"
+                                style="padding: 8px 20px; font-weight: 600; background: #ef4444; border-color: #ef4444;">I
+                                Understand</button>
+                        </div>
+
+                        <div class="quiz-panel-header"
+                            style="padding: 12px 14px; background: #111111; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                            <div class="quiz-panel-title-box"
+                                style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <h3 id="liveQuizPanelTitle" class="quiz-copy-protected"
+                                    style="margin:0; font-size: 14px; font-weight: 700; color: #f8fafc;">Live Meeting
+                                    Quiz</h3>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span id="studentWarningCountBadge"
+                                        style="background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: 600;">⚠️
+                                        0/2</span>
+                                    <span id="liveQuizTimerBadge"
+                                        style="display: none; background: #3b82f6; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 12px;">00:00</span>
+                                </div>
+                            </div>
+                            <div class="quiz-progress-text" id="liveQuizProgressText"
+                                style="margin-top:4px; font-size: 11px; color: #94a3b8;">Question 1 of 1</div>
+                        </div>
+
+                        <div class="quiz-panel-body" id="liveQuizPanelBody"
+                            style="flex: 1; padding: 14px; overflow-y: auto;">
+                            <!-- Anti-Cheating In-Panel Warning Box -->
+                            <div id="studentQuizWarningBox"
+                                style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+                                <div style="display: flex; align-items: flex-start; gap: 8px;">
+
+                                    <div>
+                                        <div id="studentWarningBoxTitle"
+                                            style="font-size: 12px; font-weight: 700; color: #fca5a5;">WARNING (1/2):
+                                            Tab/Window Switch Detected!</div>
+                                        <div id="studentWarningBoxDesc"
+                                            style="font-size: 11px; color: #f87171; margin-top: 2px;">Switching tabs or
+                                            windows is strictly prohibited. 3rd violation auto-submits your test.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question-container">
+                                <div class="quiz-question-badge" id="liveQuizQuestionMarks">1 Mark</div>
+                                <h4 class="quiz-question-text quiz-copy-protected" id="liveQuizQuestionText">Question
+                                    text here...</h4>
+
+                                <!-- MCQ Choices Container -->
+                                <div id="liveQuizMcqContainer" class="quiz-options-list" style="display: none;"></div>
+
+                                <!-- Written Answer Container -->
+                                <div id="liveQuizWrittenContainer" style="display: none; margin-top: 12px;">
+                                    <label
+                                        style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">Your
+                                        Written Answer:</label>
+                                    <textarea id="liveQuizWrittenText" rows="5" class="quiz-textarea"
+                                        placeholder="Type your answer here..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="quiz-panel-footer"
+                            style="padding: 12px 14px; background: #111111; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between;">
+                            <div class="quiz-footer-left">
+                                <button id="liveQuizSkipBtn" class="btn btn-secondary-quiz"
+                                    onclick="skipQuizQuestion()">Skip</button>
+                            </div>
+                            <div class="quiz-footer-right" style="display: flex; gap: 8px;">
+                                <button id="liveQuizNextBtn" class="btn btn-primary-quiz"
+                                    onclick="nextQuizQuestion()">Next →</button>
+                                <button id="liveQuizSubmitBtn" class="btn btn-success-quiz"
+                                    onclick="submitQuizAnswers()" style="display: none;">Submit Quiz</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>

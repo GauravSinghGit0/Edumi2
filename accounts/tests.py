@@ -16,22 +16,21 @@ Covers:
 
 import json
 import datetime
-from django.test import TestCase, Client
+from django.test import TestCase, TransactionTestCase, Client
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db.models import ProtectedError
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 from io import StringIO
 
-from accounts.models import UserProfile, StudentPhoto
+from accounts.models import UserProfile
 from accounts.identity import IdentityService
 from common.utils import get_user_identity
 from meetings.models import Classroom, ClassroomMembership, Meeting
 from attendance.models import AttendanceRecord
-from assignments.models import Assignment, AssignmentSubmission, AssignmentSubmissionFile, Quiz, QuizSubmission
+from assignments.models import Assignment, AssignmentSubmission, AssignmentSubmissionFile
 
 User = get_user_model()
 
@@ -432,7 +431,7 @@ class DuplicateIdentityAuditCommandTests(TestCase):
         self.assertIn("All identity checks PASSED", output)
 
 
-class WebSocketAndCameraSecurityAuthorizationTests(TestCase):
+class WebSocketAndCameraSecurityAuthorizationTests(TransactionTestCase):
     """Tests confirming WebSocket and camera audio access control boundary enforcement."""
 
     def setUp(self):

@@ -317,13 +317,23 @@ def _send_bulk_emails_thread(email_messages_data):
     return True
 
 
+def _has_active_celery_workers():
+    """Fast check whether any Celery worker is currently alive and consuming tasks."""
+    try:
+        from edumi_core.celery import app
+        inspector = app.control.inspect(timeout=0.2)
+        return bool(inspector and inspector.ping())
+    except Exception:
+        return False
+
+
 def _dispatch_email_async(subject, text_content, from_email, recipient_list, html_content=None):
     """
-    Dispatches email asynchronously via Celery worker, with instant non-blocking fallback to daemon thread.
+    Dispatches email asynchronously via Celery worker if online, with instant non-blocking fallback to daemon thread.
     Ensures HTTP request threads return immediately without waiting on SMTP network latency.
     """
-    # If console or locmem backend is configured, dispatch directly via thread to ensure console visibility
-    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
+    # If console or locmem backend is configured, or no Celery worker is actively running, dispatch via thread
+    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')) or not _has_active_celery_workers():
         return _send_email_thread(subject, text_content, from_email, recipient_list, html_content)
 
     try:
@@ -349,8 +359,8 @@ def _dispatch_bulk_emails_async(email_messages_data):
     if not email_messages_data:
         return True
 
-    # If console or locmem backend is configured, run in background thread directly
-    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')):
+    # If console or locmem backend is configured, or no Celery worker is actively running, dispatch via thread
+    if getattr(settings, 'EMAIL_BACKEND', '').endswith(('console.EmailBackend', 'locmem.EmailBackend')) or not _has_active_celery_workers():
         return _send_bulk_emails_thread(email_messages_data)
 
     try:

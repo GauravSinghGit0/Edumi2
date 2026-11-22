@@ -46,6 +46,6 @@ urlpatterns = [
     path('materials/<int:material_id>/download/',                download_study_material,       name='download_study_material'),
     path('materials/<int:material_id>/detail-api/',              material_detail_api,           name='material_detail_api'),
     path('library/',                                             digital_library_view,          name='digital_library'),
-    path('library/rag/',                                         include('rag_workspace.urls')),
+    path('library/rag/',                                         include('rag_assistant.urls')),
 ]
 

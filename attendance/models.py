@@ -60,7 +60,7 @@ class ClassSchedule(models.Model):
     ]
 
     classroom = models.ForeignKey(
-        'meetings.Classroom', on_delete=models.CASCADE,
+        'academics.Classroom', on_delete=models.CASCADE,
         related_name='schedules'
     )
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
@@ -107,7 +107,7 @@ class AttendanceRecord(models.Model):
         related_name='face_attendance_records'
     )
     classroom = models.ForeignKey(
-        'meetings.Classroom', on_delete=models.CASCADE,
+        'academics.Classroom', on_delete=models.CASCADE,
         related_name='attendance_records'
     )
     date = models.DateField()
@@ -190,7 +190,7 @@ class FaceRecognitionLog(models.Model):
 # ─────────────────────────────────────────────────────────────
 class AttendanceSettings(models.Model):
     classroom = models.OneToOneField(
-        'meetings.Classroom', on_delete=models.CASCADE,
+        'academics.Classroom', on_delete=models.CASCADE,
         related_name='attendance_settings'
     )
     face_recognition_enabled = models.BooleanField(default=True)
@@ -235,7 +235,7 @@ class EngagementReport(models.Model):
         related_name='engagement_report'
     )
     classroom = models.ForeignKey(
-        'meetings.Classroom', on_delete=models.CASCADE,
+        'academics.Classroom', on_delete=models.CASCADE,
         related_name='engagement_reports', null=True, blank=True
     )
     teacher   = models.ForeignKey(

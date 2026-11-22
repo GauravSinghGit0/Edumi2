@@ -1,7 +1,7 @@
 /* Main CSS - Imports all component styles */
-@import url('design-tokens.css');
+@import url('design_tokens.css');
 @import url('base.css');
 @import url('auth.css');
 @import url('meetings.css');
 @import url('profile.css');
-@import url('classroom-card.css');
+@import url('classroom_card.css');

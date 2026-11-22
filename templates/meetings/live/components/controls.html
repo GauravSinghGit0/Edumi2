@@ -1,0 +1,175 @@
+        <!-- Controls -->
+        <div class="meet-controls" role="toolbar" aria-label="Meeting Controls">
+
+            <!-- Mic -->
+            <button class="control-button" id="micBtn" onclick="toggleMic()" title="Turn off microphone (Ctrl+D)"
+                data-tooltip="Turn off microphone (Ctrl+D)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+            </button>
+
+            <!-- Camera -->
+            <button class="control-button off" id="camBtn" onclick="toggleCamera()" title="Turn on camera (Ctrl+E)"
+                data-tooltip="Turn on camera (Ctrl+E)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                    <path
+                        d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
+                </svg>
+            </button>
+
+            <div class="control-separator"></div>
+
+            {% if is_host %}
+            <!-- Dedicated Recording Control Button for Teacher/Host -->
+            <button class="control-button" id="mainRecordBtn" onclick="toggleMeetingRecording()" title="Start Recording"
+                data-tooltip="Start Recording">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" width="20" height="20">
+                    <circle cx="12" cy="12" r="7" fill="#ef4444" stroke="#ef4444" />
+                </svg>
+            </button>
+            {% endif %}
+
+            <!-- More Options Container -->
+            <div class="more-options-container">
+                <!-- Popup menu — shown above the button -->
+                <div class="more-options-menu" id="moreOptionsMenu">
+
+                    <button class="menu-item" id="screenBtn" onclick="toggleScreenShare(); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                        <span>Share Screen <span
+                                style="font-size:11px; opacity:0.6; margin-left: auto; padding-left: 8px;">Ctrl+Alt+S</span></span>
+                    </button>
+
+                    {% if is_host %}
+                    <button class="menu-item" id="switchCamBtn" onclick="toggleCameraModal(); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                        </svg>
+                        <span>Switch Camera</span>
+                    </button>
+                    <button class="menu-item" id="recordToggleBtn"
+                        onclick="toggleMeetingRecording(); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="8" fill="#ef4444" stroke="#ef4444" />
+                        </svg>
+                        <span id="recordToggleBtnText">Start Recording (MKV)</span>
+                    </button>
+                    <button class="menu-item" id="startQuizBtn" onclick="openStartQuizModal(); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        <span>Start Meeting Quiz</span>
+                    </button>
+                    <button class="menu-item" id="toggleStudentCameraBtn"
+                        onclick="toggleStudentViewPermission('student_can_view_camera'); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v8" />
+                            <path d="M8 12h8" />
+                        </svg>
+                        <span id="studentCameraStatusText">{% if student_can_view_camera %}Block Student Cam View{% else
+                            %}Allow Student Cam View{% endif %}</span>
+                    </button>
+                    <button class="menu-item" id="toggleStudentScreenshareBtn"
+                        onclick="toggleStudentViewPermission('student_can_view_screenshare'); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v8" />
+                            <path d="M8 12h8" />
+                        </svg>
+                        <span id="studentScreenshareStatusText">{% if student_can_view_screenshare %}Block Student
+                            Screen View{% else %}Allow Student Screen View{% endif %}</span>
+                    </button>
+                    {% endif %}
+
+                    <div class="menu-separator"></div>
+
+                    <button class="menu-item" id="peopleBtn" onclick="openSidebar('people'); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span>Participants</span>
+                    </button>
+
+                    <button class="menu-item" id="chatBtn" onclick="openSidebar('chat'); toggleMoreOptions();">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span>Chat</span>
+                        <span class="notification-badge" id="chatBadge"
+                            style="display:none; position:relative; top:auto; right:auto; margin-left:auto;">0</span>
+                    </button>
+
+                </div>
+
+                <!-- The ⋮ trigger button -->
+                <button class="control-button" id="moreBtn" onclick="toggleMoreOptions()" title="More options"
+                    data-tooltip="More options">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                        <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+                    </svg>
+                    <span class="notification-badge" id="moreBadge" style="display:none;"></span>
+                </button>
+            </div>
+
+            <div class="control-separator"></div>
+
+            <!-- Leave Call -->
+            <button class="control-button danger" onclick="leaveMeeting()" title="Leave call" data-tooltip="Leave call">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.5">
+                    <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- Bottom-Right Google Meet Style Grid Pagination Widget -->
+    <div class="grid-pagination-controls" id="gridPaginationControls" style="display: none;">
+        <button class="page-nav-btn" id="prevPageBtn" onclick="changeGridPage(-1)" title="Previous page" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+            </svg>
+        </button>
+        <span class="page-indicator" id="pageIndicator">1 / 1</span>
+        <button class="page-nav-btn" id="nextPageBtn" onclick="changeGridPage(1)" title="Next page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+            </svg>
+        </button>
+    </div>

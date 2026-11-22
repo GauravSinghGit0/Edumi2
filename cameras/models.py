@@ -104,7 +104,7 @@ def get_thumbnail_upload_path(instance, filename):
 
 class CameraRecording(models.Model):
     camera = models.ForeignKey(Camera, on_delete=models.CASCADE, null=True, blank=True)
-    classroom = models.ForeignKey('meetings.Classroom', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordings')
+    classroom = models.ForeignKey('academics.Classroom', on_delete=models.SET_NULL, null=True, blank=True, related_name='recordings')
     teacher = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -128,7 +128,7 @@ class CameraRecording(models.Model):
     # Track unique students who watched the video
     viewed_by = models.ManyToManyField(User, blank=True, related_name='viewed_recordings')
     # Multi-classroom assignment (a recording can be shared to multiple classrooms)
-    classrooms = models.ManyToManyField('meetings.Classroom', blank=True, related_name='assigned_recordings')
+    classrooms = models.ManyToManyField('academics.Classroom', blank=True, related_name='assigned_recordings')
 
     def generate_chunked_thumbnail(self):
         """Generate a WebP thumbnail for a chunked recording from its first chunk in DB (M1 Winner)"""
@@ -282,7 +282,7 @@ class HeadCountLog(models.Model):
     
     # Classroom association (optional - for class-wise grouping)
     classroom = models.ForeignKey(
-        'meetings.Classroom', on_delete=models.SET_NULL, null=True, blank=True,
+        'academics.Classroom', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='head_count_logs'
     )
     
@@ -337,7 +337,7 @@ class HeadCountSession(models.Model):
     camera_id = models.IntegerField()
     camera_name = models.CharField(max_length=100)
     classroom = models.ForeignKey(
-        'meetings.Classroom', on_delete=models.SET_NULL, null=True, blank=True,
+        'academics.Classroom', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='head_count_sessions'
     )
     started_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='head_count_sessions')

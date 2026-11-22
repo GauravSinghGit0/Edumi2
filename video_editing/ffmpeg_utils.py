@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 class FFmpegError(Exception):
     """Raised when an ffmpeg/ffprobe command fails."""
-    pass
 
 
 def _run(cmd, timeout=300):

@@ -2,7 +2,7 @@
 from django.urls import path
 from attendance.views import (
     classroom_attendance_overview, daily_report, student_report,
-    export_excel, check_schedule_api, admin_face_photos, engagement_report_view,
+    export_excel, check_schedule_api, engagement_report_view,
 )
 
 urlpatterns = [

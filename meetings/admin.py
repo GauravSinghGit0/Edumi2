@@ -1,29 +1,5 @@
 from django.contrib import admin
-from .models import Meeting, MeetingParticipant, Classroom, ClassroomMembership, StudyMaterial, MaterialUnit
-
-
-class ClassroomMembershipInline(admin.TabularInline):
-    model = ClassroomMembership
-    extra = 0
-    raw_id_fields = ('student', 'approved_by')
-
-
-@admin.register(Classroom)
-class ClassroomAdmin(admin.ModelAdmin):
-    list_display = ('title', 'class_code', 'teacher', 'auto_approve', 'is_active', 'created_at')
-    list_filter = ('is_active', 'auto_approve', 'created_at')
-    search_fields = ('title', 'class_code', 'teacher__username', 'teacher__email')
-    raw_id_fields = ('teacher',)
-    inlines = (ClassroomMembershipInline,)
-
-
-@admin.register(ClassroomMembership)
-class ClassroomMembershipAdmin(admin.ModelAdmin):
-    list_display = ('student', 'classroom', 'status', 'requested_at', 'approved_by')
-    list_filter = ('status', 'requested_at')
-    search_fields = ('student__username', 'student__email', 'classroom__title', 'classroom__class_code')
-    raw_id_fields = ('student', 'classroom', 'approved_by')
-
+from .models import Meeting, MeetingParticipant, MeetingChat, MeetingSummary, KickedParticipant
 
 @admin.register(Meeting)
 class MeetingAdmin(admin.ModelAdmin):
@@ -40,17 +16,19 @@ class MeetingParticipantAdmin(admin.ModelAdmin):
     raw_id_fields = ('user', 'meeting')
 
 
-@admin.register(MaterialUnit)
-class MaterialUnitAdmin(admin.ModelAdmin):
-    list_display = ('title', 'classroom', 'order', 'created_at')
-    list_filter = ('classroom', 'created_at')
-    search_fields = ('title', 'classroom__title')
+@admin.register(MeetingChat)
+class MeetingChatAdmin(admin.ModelAdmin):
+    list_display = ['meeting', 'user', 'timestamp']
+    raw_id_fields = ('meeting', 'user')
 
 
-@admin.register(StudyMaterial)
-class StudyMaterialAdmin(admin.ModelAdmin):
-    list_display = ('title', 'classroom', 'material_type', 'file_size_bytes', 'uploaded_by', 'rag_indexed', 'is_published', 'created_at')
-    list_filter = ('material_type', 'rag_indexed', 'is_published', 'created_at')
-    search_fields = ('title', 'classroom__title', 'uploaded_by__username')
-    raw_id_fields = ('classroom', 'uploaded_by')
+@admin.register(MeetingSummary)
+class MeetingSummaryAdmin(admin.ModelAdmin):
+    list_display = ['meeting', 'generated_at']
+    raw_id_fields = ('meeting',)
 
+
+@admin.register(KickedParticipant)
+class KickedParticipantAdmin(admin.ModelAdmin):
+    list_display = ['meeting', 'user', 'kicked_at', 'banned_until']
+    raw_id_fields = ('meeting', 'user')

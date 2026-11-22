@@ -18,7 +18,7 @@
    - 4.2 [Identity, Authentication & RBAC Lifecycle (`accounts/`)](#42-identity-authentication--rbac-lifecycle-accounts)
    - 4.3 [Real-Time WebRTC Virtual Classrooms (`meetings/`)](#43-real-time-webrtc-virtual-classrooms-meetings)
    - 4.4 [AI Facial Biometrics & Engagement Telemetry (`attendance/`)](#44-ai-facial-biometrics--engagement-telemetry-attendance)
-   - 4.5 [Smart Classroom & Studio Camera Ingestion (`cameras/`, `camera_service/`, `mobile_cameras/`)](#45-smart-classroom--studio-camera-ingestion-cameras-camera_service-mobile_cameras)
+   - 4.5 [Smart Classroom & Studio Camera Ingestion (`cameras/`, `streaming_service/`, `mobile_cameras/`)](#45-smart-classroom--studio-camera-ingestion-cameras-streaming_service-mobile_cameras)
    - 4.6 [In-Browser Non-Destructive Video Editing Studio (`video_editing/`)](#46-in-browser-non-destructive-video-editing-studio-video_editing)
    - 4.7 [Video Lecture Library & Progressive Streaming (`videos/`)](#47-video-lecture-library--progressive-streaming-videos)
    - 4.8 [Academic LMS & Anti-Cheating Surveillance (`assignments/`)](#48-academic-lms--anti-cheating-surveillance-assignments)
@@ -243,7 +243,7 @@ Edumi2/
 ├── meetings/          # LiveKit WebRTC Virtual Classrooms, Host Controls, Chat
 ├── attendance/        # YuNet + SFace Biometric Attendance, Anti-Spoofing, Analytics
 ├── cameras/           # Campus RTSP Surveillance, Headless H.265 Recording Engine
-├── camera_service/    # Standalone Waitress WSGI OpenCV & Headcount Microservice
+├── streaming_service/    # Standalone Waitress WSGI OpenCV & Headcount Microservice
 ├── mobile_cameras/    # Smartphone IP Webcam & DroidCam Camera Pairing
 ├── video_editing/     # In-Browser Multi-Track Timeline Video Editor & FFmpeg NLE
 ├── videos/            # Progressive Streaming Video Lecture Catalog (HTTP 206)
@@ -401,7 +401,7 @@ flowchart TD
 
 ---
 
-### 4.5 Smart Classroom & Studio Camera Ingestion (`cameras/`, `camera_service/`, `mobile_cameras/`)
+### 4.5 Smart Classroom & Studio Camera Ingestion (`cameras/`, `streaming_service/`, `mobile_cameras/`)
 
 This ecosystem ingests physical campus RTSP cameras, teacher smartphone cameras, automated classroom recording, and real-time crowd headcount analytics.
 
@@ -428,7 +428,7 @@ flowchart LR
 ```
 
 #### Key Capabilities & Architecture:
-- **Dedicated Camera Gateway Microservice (`camera_service/`):** Heavy OpenCV video stream decoding and computer vision analytics are decoupled from Django's ASGI event loop into a dedicated Waitress WSGI microservice running on port **8008**. Communications are authenticated via an HMAC SHA-256 header token (`CAMERA_SERVICE_SECRET`).
+- **Dedicated Camera Gateway Microservice (`streaming_service/`):** Heavy OpenCV video stream decoding and computer vision analytics are decoupled from Django's ASGI event loop into a dedicated Waitress WSGI microservice running on port **8008**. Communications are authenticated via an HMAC SHA-256 header token (`CAMERA_SERVICE_SECRET`).
 - **Continuous Lecture Recording Engine (`cameras/recording_engine.py`):** Spawns background FFmpeg threads capturing RTSP feeds into partitioned `.mp4` chunks (`RecordingChunk`). Employs **H.265 (HEVC) CRF 28/32 fast** (`-tag:v hvc1`), reducing raw 5.2 Mbps streams to ~1.8 Mbps—a **>50% disk storage saving** that maintains pin-sharp chalkboard legibility.
 - **Automated WebP Thumbnail Extraction:** Replaces uncompressed JPEG frame dumps with `EduMiCompressionService.generate_video_thumbnail_webp()`, producing 480x270 WebP frames at `quality=80` (15–25 KB, 35% smaller than JPEG).
 - **Classroom Crowd Head Counting (`HeadCountSession`, `HeadCountLog`):** Performs continuous occupancy monitoring at configurable intervals (`HEAD_COUNT_INTERVAL = 30s`). Logs timestamped student counts, bounding box coordinates, and room density metrics.
@@ -894,7 +894,7 @@ The startup orchestrator executes the following sequence:
 2. **IP Auto-Resolution:** Resolves the primary network adapter IPv4 address (e.g., `192.168.1.100`), dynamically appending it to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`.
 3. **Daemon Dispatch:** Spawns background background daemons with dedicated standard output and error logging:
    - `livekit-server.exe` (WebRTC SFU on ports 7880, 7881, 7882)
-   - `waitress-serve --port=8008 camera_service.wsgi:application` (Camera Gateway Microservice)
+   - `waitress-serve --port=8008 streaming_service.wsgi:application` (Camera Gateway Microservice)
    - `celery -A school_project worker -l INFO -P threads` (Celery Task Worker Fleet)
 4. **Port Health Probes:** Verifies TCP socket readiness via `Test-TcpPort` before Daphne initializes.
 5. **Daphne Ingress:** Launches Daphne on port `8002`, outputting accessible LAN and localhost URLs.

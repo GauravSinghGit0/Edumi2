@@ -39,24 +39,25 @@ Unlike peer-to-peer mesh networks that require $O(N)$ upload streams per client,
 - **Starting Lectures:** Teachers click "Start Class" which generates an active `Meeting` instance.
 - **Joining:** Students click "Join". The app verifies their enrollment, generates a LiveKit JWT, and serves the `meeting_room.html` template.
 - **In-Meeting Features:** Students can raise hands (ordered via an $O(\log N)$ Redis priority queue), chat in real time, and answer instant synchronized quizzes.
-- **Study Materials:** Teachers upload lecture slides, PDFs, and notes, automatically indexed for RAG vector search in `rag_workspace`.
+- **Study Materials:** Teachers upload lecture slides, PDFs, and notes (managed by `course_materials`), automatically indexed for RAG vector search in `rag_assistant`.
 </details>
 
 <details>
 <summary><b>5. System Integrations</b></summary>
 
-- **LiveKit Server:** Communicates via REST APIs (`livekit_http_proxy.py`) to manage rooms, tokens, and kicks.
+- **LiveKit Server:** Communicates via REST APIs (`livekit_api_client.py`) and WebSocket proxying (`livekit_ws_proxy.py`) to manage rooms, tokens, and kicks.
 - **Accounts App:** Verifies roles and permissions before allowing meeting creation or joins.
 - **Attendance App:** Automatically logs participant join/leave events, duration, and connection health into `MeetingAttendanceLog`.
-- **RAG Workspace:** Uploaded classroom study materials are passed directly to `rag_workspace` for semantic chunking and embedding.
+- **RAG Assistant & Course Materials:** Uploaded classroom study materials are stored in `course_materials` and passed to `rag_assistant` for semantic chunking and embedding.
 - **Common App:** Consumes `EduMiCompressionService` for WebRTC simulcast profiles and `EncryptedTextField` for meeting chat.
 </details>
 
 <details>
 <summary><b>6. Key Files Breakdown</b></summary>
 
-- `models.py`: Defines `Classroom`, `ClassroomMembership`, `Meeting`, `MeetingParticipant`, `MeetingChat`, `MeetingAttendanceLog`, and `StudyMaterial`.
-- `livekit_proxy.py` / `livekit_http_proxy.py`: API wrappers for communicating securely with the LiveKit backend using signed JWTs.
+- `models.py`: Defines `Classroom`, `ClassroomMembership`, `Meeting`, `MeetingParticipant`, `MeetingChat`, and `MeetingAttendanceLog`.
+- `livekit_api_client.py`: Clean HTTP API client for LiveKit room management, dispatching participant commands, and token issuance.
+- `livekit_ws_proxy.py`: Secure WebSocket proxy establishing client-to-LiveKit signaling connections.
 - `views/meeting_controls.py`: Views for host actions (mute all, disable cameras, end meeting).
 - `consumers.py`: Handles WebSocket connections for in-meeting text chat and hand-raising priority queues.
 - `templates/meetings/live/meeting_room.html`: LiveKit WebRTC client interface with simulcast envelope configuration.

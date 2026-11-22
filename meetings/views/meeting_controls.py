@@ -128,12 +128,14 @@ def meeting_global_control(request, meeting_id):
         control_type = data.get('type')
         value = data.get('value')
 
-        if control_type in ['student_can_view_camera', 'student_can_view_screenshare', 'global_mute', 'global_camera_off', 'global_screenshare_off', 'allow_chat']:
+        if control_type in ['student_can_view_camera', 'student_can_view_screenshare', 'global_mute', 'global_camera_off', 'global_screenshare_off', 'allow_chat', 'allow_screen_share']:
             setattr(meeting, control_type, value)
             meeting.save()
 
         if control_type == 'allow_chat':
             msg = 'Host has enabled chat for everyone' if value else 'Host has limited chat to host only'
+        elif control_type == 'allow_screen_share':
+            msg = 'Host has enabled screen sharing for participants' if value else 'Host has disabled participant screen sharing'
         elif 'student_can_view' in control_type:
             msg = f'Teacher has {"allowed" if value else "blocked"} student {control_type.replace("student_can_view_", "").replace("_", " ")}'
         else:

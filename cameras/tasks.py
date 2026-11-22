@@ -1,10 +1,6 @@
-import os
-import subprocess
 import logging
 from celery import shared_task
-from django.conf import settings
 from .models import CameraRecording
-from .ffmpeg_helpers import get_ffmpeg_binary
 
 logger = logging.getLogger('cameras')
 

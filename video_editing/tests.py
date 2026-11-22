@@ -125,7 +125,7 @@ class ExportThreadingTests(TestCase):
 
         payload = b'{"clips": []}'
 
-        with patch("school_project.celery.app.control.inspect") as mock_inspect, \
+        with patch("edumi_core.celery.app.control.inspect") as mock_inspect, \
              patch("video_editing.tasks.export_video_task") as mock_task, \
              patch.object(threading.Thread, "__init__", capturing_init), \
              patch.object(threading.Thread, "start", lambda s: None):
@@ -156,7 +156,7 @@ class ExportThreadingTests(TestCase):
 
         payload = b'{"clips": []}'
 
-        with patch("school_project.celery.app.control.inspect", side_effect=Exception("celery down")), \
+        with patch("edumi_core.celery.app.control.inspect", side_effect=Exception("celery down")), \
              patch("video_editing.tasks.export_video_task") as mock_task, \
              patch.object(threading.Thread, "__init__", capturing_init), \
              patch.object(threading.Thread, "start", lambda s: None):

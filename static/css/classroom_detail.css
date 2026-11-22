@@ -1,5 +1,5 @@
 /* static/css/classroom_detail.css - Styling for Classroom Hub, Stream, and Timeline */
-@import url('design-tokens.css');
+@import url('design_tokens.css');
 
 :root {
     --stream-primary: var(--color-primary);

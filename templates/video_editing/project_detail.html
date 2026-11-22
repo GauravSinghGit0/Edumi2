@@ -743,6 +743,14 @@
     {% block ve_extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     {{ project_config|json_script:"reel-project-data" }}
-    <script src="{% static 'video_editing/js/project_detail.js' %}?v=3.1"></script>
-    <script src="{% static 'video_editing/js/app.js' %}?v=3.1"></script>
+    <script src="{% static 'js/video_editing/project_detail.js' %}?v=3.1"></script>
+    <!-- Modular Video Editor Architecture -->
+    <script src="{% static 'js/video_editing/modules/editor_state.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/media_uploader.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/clips_manager.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/timeline_engine.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/text_overlay.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/audio_engine.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/modules/player_controller.js' %}?v=3.2"></script>
+    <script src="{% static 'js/video_editing/app.js' %}?v=3.2"></script>
     {% endblock %}

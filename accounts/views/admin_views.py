@@ -9,7 +9,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
-from django.db.models import Q
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
@@ -17,7 +16,7 @@ from django.contrib.auth.hashers import make_password
 from django.views.decorators.http import require_POST
 
 from meetings.models import Meeting, Classroom, ClassroomMembership
-from cameras.models import Camera, CameraPermission, CameraRecording
+from cameras.models import Camera
 from accounts.admin_services import (
     get_admin_dashboard_stats,
     get_admin_users_list,
@@ -57,7 +56,7 @@ def admin_panel(request):
     return render(request, 'accounts/admin/admin_panel.html', {
         **stats,
         'all_cameras': all_cameras,
-        'camera_service_online': livekit_online,
+        'streaming_service_online': livekit_online,
     })
 
 

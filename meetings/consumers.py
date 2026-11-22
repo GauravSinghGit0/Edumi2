@@ -287,18 +287,19 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             elif message_type == 'chat':
                 if 'message' in data:
                     chat_meta = await self.save_chat_message(data['message'])
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            'type': 'chat_message',
-                            'message': data['message'],
-                            'username': self.user.username,
-                            'display_name': chat_meta.get('display_name', self.user.username),
-                            'pfp_url': chat_meta.get('pfp_url', ''),
-                            'user_id': self.user.id,
-                            'timestamp': data.get('timestamp', timezone.now().isoformat())
-                        }
-                    )
+                    if chat_meta:
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'chat_message',
+                                'message': data['message'],
+                                'username': self.user.username,
+                                'display_name': chat_meta.get('display_name', self.user.username),
+                                'pfp_url': chat_meta.get('pfp_url', ''),
+                                'user_id': self.user.id,
+                                'timestamp': data.get('timestamp', timezone.now().isoformat())
+                            }
+                        )
             
             elif message_type == 'screen_share_started':
                 await self.channel_layer.group_send(
@@ -727,6 +728,11 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         from common.utils import get_user_display_name, get_user_avatar_url
         try:
             meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+            is_host = (meeting.teacher == self.user) or self.user.is_superuser
+            if not is_host and not meeting.allow_chat:
+                logger.warning(f"Rejected chat message from {self.user.username}: chat disabled in meeting {self.meeting_code}")
+                return None
+
             MeetingChat.objects.create(
                 meeting=meeting,
                 user=self.user,

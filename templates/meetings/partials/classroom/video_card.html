@@ -33,7 +33,7 @@
             <img src="{{ rec.thumbnail.url }}" alt="{{ rec.title }}" class="w-100 h-100 object-fit-cover">
             {% else %}
             {% load static %}
-            <img src="{% static 'images/video-placeholder.svg' %}" alt="{{ rec.title }}" class="w-100 h-100 object-fit-cover opacity-75">
+            <img src="{% static 'images/video_placeholder.svg' %}" alt="{{ rec.title }}" class="w-100 h-100 object-fit-cover opacity-75">
             {% endif %}
             
             <!-- Full-cover overlay with center play button -->

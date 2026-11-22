@@ -1,0 +1,570 @@
+/**
+ * EduMi Video Editor — Theme & Base Variables
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* =============================================================
+   EduMi Video Editor — editor.css
+   Uses global CSS variables from base.css for full theme support.
+   All ve- prefixed classes are self-contained and work in both
+   light and dark modes without overriding body/html styles.
+   ============================================================= */
+
+/* ---- Theme Bridge: Map ve- vars to global vars & full light/dark mode support ---- */
+:root {
+  /* Primary Accent & Status */
+  --ve-primary: #8b5cf6;
+  --ve-primary-dark: #7c3aed;
+  --ve-primary-light: #818cf8;
+  --ve-danger: #ef4444;
+  --ve-success: #10b981;
+  --ve-warning: #f59e0b;
+
+  /* Backgrounds — Light Mode */
+  --ve-bg: #ffffff;
+  --ve-bg-secondary: #f8fafc;
+  --ve-bg-raised: #f1f5f9;
+  --ve-bg-hover: #e2e8f0;
+  --ve-stage-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --ve-toolbar-bg: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
+  --ve-track-bg: #ffffff;
+  --ve-track-label-bg: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  --ve-ruler-bg: #ffffff;
+  --ve-resizer-bg: #e2e8f0;
+  --ve-resizer-pill: #94a3b8;
+  --ve-clip-bg: #0f172a;
+
+  /* Text — Light Mode */
+  --ve-text: #000000;
+  --ve-text-secondary: #222222;
+  --ve-text-muted: #64748b;
+
+  /* Borders — Light Mode */
+  --ve-border: #e2e8f0;
+  --ve-border-strong: #cbd5e1;
+
+  /* Playhead & Accent elements */
+  --ve-playhead-color: #3b82f6;
+
+  /* Glassmorphism & Shadows */
+  --ve-glass-bg: rgba(255, 255, 255, 0.92);
+  --ve-glass-border: rgba(226, 232, 240, 0.8);
+  --ve-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ve-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --ve-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  /* Radius */
+  --ve-radius-sm: 6px;
+  --ve-radius: 8px;
+  --ve-radius-lg: 12px;
+}
+
+body.dark-mode {
+  /* Backgrounds — Dark Mode (Matching Edumi Slate Navy Theme) */
+  --ve-bg: #111111;
+  --ve-bg-secondary: #000000;
+  --ve-bg-raised: #222222;
+  --ve-bg-hover: #475569;
+  --ve-stage-bg: linear-gradient(180deg, #000000 0%, #111111 100%);
+  --ve-toolbar-bg: linear-gradient(90deg, #111111 0%, #000000 100%);
+  --ve-track-bg: #000000;
+  --ve-track-label-bg: linear-gradient(135deg, #111111 0%, #000000 100%);
+  --ve-ruler-bg: linear-gradient(180deg, #111111 0%, #000000 100%);
+  --ve-resizer-bg: #000000;
+  --ve-resizer-pill: #64748b;
+  --ve-clip-bg: #111111;
+
+  /* Text — Dark Mode */
+  --ve-text: #f8fafc;
+  --ve-text-secondary: #cbd5e1;
+  --ve-text-muted: #94a3b8;
+
+  /* Borders — Dark Mode */
+  --ve-border: #222222;
+  --ve-border-strong: #475569;
+
+  /* Playhead & Accent elements */
+  --ve-playhead-color: #8b5cf6;
+
+  /* Glassmorphism & Shadows */
+  --ve-glass-bg: rgba(15, 23, 42, 0.92);
+  --ve-glass-border: rgba(51, 65, 85, 0.6);
+  --ve-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ve-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --ve-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   PROJECT LIST PAGE  (ve-page, ve-card, etc.)
+   ============================================================ */
+
+.ve-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+.ve-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ve-page-title {
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 700;
+  color: var(--ve-text);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.ve-page-sub {
+  font-size: 14px;
+  color: var(--ve-text-muted);
+  margin: 0;
+}
+
+/* ---- Project Grid ---- */
+.ve-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.ve-card {
+  display: block;
+  background: var(--ve-bg);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: var(--ve-shadow-sm);
+}
+
+.ve-project-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--ve-primary);
+  box-shadow: var(--ve-shadow-lg);
+}
+
+.ve-card-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--ve-bg-secondary);
+  overflow: hidden;
+}
+
+.ve-card-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ve-card-body {
+  padding: 14px 16px;
+}
+
+.ve-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ve-text);
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ve-card-meta {
+  font-size: 12px;
+  color: var(--ve-text-muted);
+  margin: 0;
+}
+
+.ve-card-meta--small {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* ---- Status Pills ---- */
+.ve-status-pill {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.ve-status-ready {
+  background: rgba(16, 185, 129, 0.85);
+  color: #064e3b;
+}
+
+.ve-status-processing {
+  background: rgba(245, 158, 11, 0.85);
+  color: #451a03;
+}
+
+.ve-status-error {
+  background: rgba(239, 68, 68, 0.85);
+  color: #450a0a;
+}
+
+/* ---- Empty State ---- */
+.ve-empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  border: 2px dashed var(--ve-border);
+  border-radius: var(--ve-radius-lg);
+  background: var(--ve-bg);
+  margin-top: 24px;
+}
+
+.ve-empty-icon {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ve-empty-state h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ve-text);
+  margin: 0 0 10px;
+}
+
+.ve-empty-state p {
+  font-size: 14px;
+  color: var(--ve-text-muted);
+  margin: 0 0 24px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- Upload Modal ---- */
+.ve-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ve-modal-backdrop.ve-modal-open {
+  display: flex;
+}
+
+.ve-modal {
+  background: var(--ve-bg);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius-lg);
+  padding: 28px 32px 32px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--ve-shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.ve-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ve-modal-head h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ve-text);
+  margin: 0;
+}
+
+.ve-modal-close {
+  background: none;
+  border: none;
+  color: var(--ve-text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--ve-radius-sm);
+  transition:
+    color 0.15s,
+    background 0.15s;
+  line-height: 1;
+}
+
+.ve-modal-close:hover {
+  color: var(--ve-text);
+  background: var(--ve-bg-secondary);
+}
+
+.ve-modal-sub {
+  font-size: 13px;
+  color: var(--ve-text-muted);
+  margin: 0 0 20px;
+}
+
+/* ---- Forms ---- */
+.ve-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ve-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ve-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ve-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ve-label-optional {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--ve-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ve-field input[type="text"],
+.ve-field input[type="number"],
+.ve-field select,
+.ve-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius);
+  background: var(--ve-bg);
+  color: var(--ve-text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ve-field input:focus,
+.ve-field select:focus,
+.ve-field textarea:focus {
+  outline: none;
+  border-color: var(--ve-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+.ve-field-error {
+  font-size: 12px;
+  color: var(--ve-danger);
+  margin: 0;
+}
+
+.ve-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ve-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius);
+  background: var(--ve-bg);
+  color: var(--ve-text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.ve-input-row input:focus {
+  outline: none;
+  border-color: var(--ve-primary);
+}
+
+/* ---- Dropzone ---- */
+.ve-dropzone {
+  position: relative;
+  border: 2px dashed var(--ve-border);
+  border-radius: var(--ve-radius-lg);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  background: var(--ve-bg-secondary);
+}
+
+.ve-dropzone:hover,
+.ve-dropzone.ve-dropzone-active {
+  border-color: var(--ve-primary);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.ve-dropzone-hint {
+  color: var(--ve-text-muted);
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.ve-dropzone-filename {
+  font-size: 13px;
+  color: var(--ve-primary);
+  margin: 0;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.ve-upload-note {
+  font-size: 12px;
+  color: var(--ve-text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* ============================================================
+   BUTTONS  (globally reusable ve-btn variants)
+   ============================================================ */
+
+.ve-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--ve-radius);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.ve-btn:active {
+  transform: scale(0.97);
+}
+
+.ve-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ve-btn-primary {
+  background: var(--ve-primary);
+  color: #ffffff;
+  border-color: var(--ve-primary);
+}
+
+.ve-btn-primary:hover {
+  background: var(--ve-primary-dark);
+  border-color: var(--ve-primary-dark);
+  color: #ffffff;
+}
+
+.ve-btn-secondary {
+  background: var(--ve-bg-secondary);
+  color: var(--ve-text);
+  border-color: var(--ve-border);
+}
+
+.ve-btn-secondary:hover {
+  border-color: var(--ve-primary);
+  color: var(--ve-primary);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.ve-btn-ghost {
+  background: transparent;
+  color: var(--ve-text-muted);
+  border-color: var(--ve-border);
+}
+
+.ve-btn-ghost:hover {
+  color: var(--ve-text);
+  border-color: var(--ve-border-strong);
+  background: var(--ve-bg-secondary);
+}
+
+.ve-btn-danger {
+  background: var(--ve-danger);
+  color: #ffffff;
+}
+
+.ve-btn-danger:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.ve-btn-icon {
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ve-radius);
+}
+
+.ve-btn-full {
+  width: 100%;
+}
+
+/* ---- Toolbar buttons ---- */
+.ve-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--ve-radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--ve-text-secondary);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ve-tb-btn:hover {
+  background: var(--ve-bg-secondary);
+  color: var(--ve-text);
+  border-color: var(--ve-border);
+}
+
+.ve-tb-danger {
+  color: var(--ve-danger) !important;
+}
+
+.ve-tb-danger:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+

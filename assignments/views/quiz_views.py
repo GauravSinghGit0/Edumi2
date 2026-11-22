@@ -8,12 +8,11 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils import timezone
 from django.contrib import messages
-from django.db import models
 from django.db.models import Q, Count
 
 from meetings.models import Classroom
 from assignments.models import Quiz, Question, Choice, QuizSubmission, StudentAnswer
-from common.utils import is_admin, is_teacher as check_teacher, is_student as check_student, is_ajax_request
+from common.utils import is_admin, is_ajax_request
 
 
 @login_required

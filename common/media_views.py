@@ -6,13 +6,11 @@ while supporting high-throughput HTTP Range requests for video/audio streaming.
 import os
 import re
 import mimetypes
-from pathlib import Path
 from django.conf import settings
 from django.http import (
     HttpResponse, HttpResponseForbidden, Http404,
-    StreamingHttpResponse, FileResponse
+    StreamingHttpResponse
 )
-from django.contrib.auth.decorators import login_required
 import posixpath
 from django.contrib.staticfiles import finders
 from django.views import static as django_static_serve

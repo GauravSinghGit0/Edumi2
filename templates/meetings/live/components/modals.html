@@ -1,0 +1,133 @@
+    <!-- Kick Confirmation Modal -->
+    <div id="kickConfirmModal" class="kick-modal-overlay" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="kickModalTitle">
+        <div class="kick-modal-card">
+            <div class="kick-modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <line x1="18" y1="8" x2="23" y2="13" />
+                    <line x1="23" y1="8" x2="18" y2="13" />
+                </svg>
+            </div>
+            <h4 class="kick-modal-title" id="kickModalTitle">Remove from meeting?</h4>
+            <p class="kick-modal-desc" id="kickModalDesc">Are you sure you want to remove this student? They will not be
+                able to rejoin for 1 hour.</p>
+            <div class="kick-modal-actions">
+                <button type="button" class="kick-modal-btn cancel" onclick="closeKickModal()"
+                    aria-label="Cancel removal">Cancel</button>
+                <button type="button" class="kick-modal-btn confirm" id="confirmKickBtn" onclick="executeKickUser()"
+                    aria-label="Confirm remove student">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    {% if is_host %}
+    <!-- Time Limit Expired Modal (Teacher Only) -->
+    <div id="timeLimitModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="timeLimitModalTitle">
+        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 1.5rem;">
+            <div
+                style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+            </div>
+            <h3 id="timeLimitModalTitle"
+                style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main, #111111);">
+                Scheduled Time Expired</h3>
+            <p
+                style="font-size: 0.9375rem; color: var(--color-text-muted, #64748b); margin-bottom: 1.5rem; line-height: 1.5;">
+                The scheduled meeting time has ended. Do you want to continue the meeting?
+            </p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                <button type="button" class="kick-modal-btn cancel" onclick="handleTimeLimitChoice('end')"
+                    style="flex: 1; padding: 0.625rem 1rem; border-radius: 8px; font-weight: 600; background: #f1f5f9; color: #475569; border: none; cursor: pointer;">End
+                    Meeting</button>
+                <button type="button" class="kick-modal-btn confirm" onclick="handleTimeLimitChoice('continue')"
+                    style="flex: 1; padding: 0.625rem 1rem; border-radius: 8px; font-weight: 600; background: #8b5cf6; color: white; border: none; cursor: pointer;">Continue
+                    Meeting</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if is_host %}
+    <!-- Camera Selection Modal -->
+    <div id="cameraModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Switch Camera Source</h3>
+                <button class="close-modal" onclick="toggleCameraModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="camera-option active" id="webcamOption" onclick="switchCameraSource('webcam')">
+                    <div class="camera-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 7l-7 5 7 5V7z" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                        </svg></div>
+                    <div class="camera-info">
+                        <div class="camera-name">Default Webcam</div>
+                        <div class="camera-type">Built-in or USB Camera</div>
+                    </div>
+                    <div class="camera-check">✓</div>
+                </div>
+
+                {% for cam in teacher_cameras %}
+                <div class="camera-option" id="ipOption-{{ cam.id }}"
+                    onclick="switchCameraSource('ip', '{{ cam.id }}', '{{ cam.name }}')">
+                    <div class="camera-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg></div>
+                    <div class="camera-info">
+                        <div class="camera-name">{{ cam.name }}</div>
+                        <div class="camera-type">{{ cam.get_camera_type_display }}</div>
+                    </div>
+                    <div class="camera-check">✓</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden elements for IP camera streaming -->
+    <canvas id="ipCamCanvas" style="visibility:hidden; position:absolute; left:-9999px;" width="1280"
+        height="720"></canvas>
+    <img id="ipCamImg" style="visibility:hidden; position:absolute; left:-9999px;">
+
+    <!-- Classroom Studio Overlay (Teacher ONLY) -->
+    <div id="monitoringOverlay">
+        <div class="monitoring-label">Classroom Studio Feed</div>
+        <button class="monitoring-close" onclick="stopIpCameraStream()">✕</button>
+        <div id="monitoringVideoContainer"></div>
+    </div>
+    <!-- Real-Time Host Quiz Anti-Cheating Alert Container -->
+    <div id="quizAlertContainer"
+        style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;">
+    </div>
+
+    <!-- Live Meeting Quiz Selection Modal (Teacher ONLY) -->
+    <div id="meetingQuizSelectModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card" style="max-width: 550px; width: 90%;">
+            <div class="modal-header">
+                <h3>Start Classroom Quiz in Meeting</h3>
+                <button class="close-modal" onclick="closeStartQuizModal()">✕</button>
+            </div>
+            <div class="modal-body" id="quizSelectListContainer"
+                style="max-height: 380px; overflow-y: auto; padding-right: 5px;">
+                <p style="color:#94a3b8; font-size:14px; text-align:center; padding: 20px 0;">Loading available
+                    quizzes...</p>
+            </div>
+            <div class="modal-footer" style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeStartQuizModal()"
+                    style="padding: 8px 16px; background: #222222; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}

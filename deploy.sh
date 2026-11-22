@@ -583,14 +583,14 @@ EOF
     }
 
     CREATE_SERVICE "edumi-livekit" "${LIVEKIT_DIR}/livekit-server --config ${APP_DIR}/config/livekit.yaml"
-    CREATE_SERVICE "edumi-camera"  "${VENV_PYTHON} camera_service/serve.py"
-    CREATE_SERVICE "edumi-celery"  "${VENV_CELERY} -A school_project worker -l info -P threads"
-    CREATE_SERVICE "edumi-auth"    "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8002 school_project.asgi:application"
-    CREATE_SERVICE "edumi-admin"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8003 school_project.asgi:application"
-    CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8004 school_project.asgi:application"
-    CREATE_SERVICE "edumi-msg"     "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8005 school_project.asgi:application"
-    CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8006 school_project.asgi:application"
-    CREATE_SERVICE "edumi-video"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8007 school_project.asgi:application"
+    CREATE_SERVICE "edumi-camera"  "${VENV_PYTHON} streaming_service/serve.py"
+    CREATE_SERVICE "edumi-celery"  "${VENV_CELERY} -A edumi_core worker -l info -P threads"
+    CREATE_SERVICE "edumi-auth"    "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8002 edumi_core.asgi:application"
+    CREATE_SERVICE "edumi-admin"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8003 edumi_core.asgi:application"
+    CREATE_SERVICE "edumi-meeting" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8004 edumi_core.asgi:application"
+    CREATE_SERVICE "edumi-msg"     "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8005 edumi_core.asgi:application"
+    CREATE_SERVICE "edumi-profile" "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8006 edumi_core.asgi:application"
+    CREATE_SERVICE "edumi-video"   "${VENV_DAPHNE} -v 1 -b 127.0.0.1 -p 8007 edumi_core.asgi:application"
 
     systemctl daemon-reload
 

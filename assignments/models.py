@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from meetings.models import Classroom
 from common.validators import (
     validate_assignment_file,
     validate_assignment_submission_file,
@@ -29,7 +28,7 @@ class Assignment(models.Model):
         ('archived', 'Archived'),
     ]
 
-    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name='assignments')
+    classroom = models.ForeignKey('academics.Classroom', on_delete=models.CASCADE, related_name='assignments')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     instructions = models.TextField(blank=True)
@@ -159,7 +158,7 @@ class Quiz(models.Model):
         ("archived", "Archived"),
     ]
 
-    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="quizzes")
+    classroom = models.ForeignKey('academics.Classroom', on_delete=models.CASCADE, related_name="quizzes")
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     total_marks = models.IntegerField(default=100)

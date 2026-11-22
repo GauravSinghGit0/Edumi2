@@ -1,0 +1,102 @@
+/**
+ * EduMi Video Editor — Controls, Toolbars & History Drawer
+ */
+/* ── 16. HISTORY DRAWER ─────────────────────────────────────── */
+.ve-history-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0.3s step-end;
+}
+
+.ve-history-drawer.open {
+  visibility: visible;
+  pointer-events: auto;
+  transition: visibility 0s step-start;
+}
+
+.ve-history-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ve-history-drawer.open .ve-history-drawer-backdrop {
+  opacity: 1;
+}
+
+.ve-history-drawer-content {
+  position: relative;
+  top: 0;
+  height: 100%;
+  width: 420px;
+  max-width: 90vw;
+  background: var(--ve-bg);
+  border-left: 1px solid var(--ve-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ve-history-drawer.open .ve-history-drawer-content {
+  transform: translateX(0);
+}
+
+.ve-history-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ve-border);
+}
+
+.ve-history-drawer-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ve-text);
+}
+
+.ve-history-drawer-close {
+  background: var(--ve-bg-sub);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-r-sm);
+  cursor: pointer;
+  color: var(--ve-muted);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ve-history-drawer-close:hover {
+  background: var(--ve-hover);
+  color: var(--ve-text);
+  border-color: var(--ve-primary);
+}
+
+.ve-history-drawer-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ve-history-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+

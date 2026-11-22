@@ -407,8 +407,8 @@ def start_classroom_meeting(request, classroom_id):
     if request.method == 'POST':
         title = request.POST.get('title', classroom.title).strip()
         duration_minutes = int(request.POST.get('duration_minutes', 60))
-        allow_screen_share = request.POST.get('allow_screen_share', 'on') == 'on'
-        allow_chat = request.POST.get('allow_chat', 'on') == 'on'
+        allow_screen_share = request.POST.get('allow_screen_share') == 'on'
+        allow_chat = request.POST.get('allow_chat') == 'on'
         record_meeting = request.POST.get('record_meeting') == 'on'
 
         if not title:

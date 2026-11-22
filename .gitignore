@@ -1,113 +1,121 @@
-# ================================================
-# DATABASE FILES - Never commit these!
-# ================================================
-/database/
-*.sqlite3
-*.sqlite
+# ==============================================================================
+# EduMi — Production & Development Git Ignore Rules (.gitignore)
+# ==============================================================================
 
-# ================================================
-# ENVIRONMENT FILES
-# ================================================
+# 1. Environment & Secret Credentials (CRITICAL: NEVER commit secrets!)
 .env
 .env.local
 .env.*.local
+.env.prod
+.env.dev
+.env.production
+.env.staging
 !.env.example
 
-# ================================================
-# PYTHON CACHE FILES
-# ================================================
+# 2. Database Files & Persistence
+/database/
+*.sqlite3
+*.sqlite
+*.db
+db.sqlite3
+postgres_data/
+/postgres_data/
+
+# 3. Python Cache & Compiled Bytecode
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 *.so
 *.pyd
+*.pyo
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# ================================================
-# DJANGO SPECIFIC
-# ================================================
+# 4. Django Runtime, Logs & Compiled Static Assets
 *.log
 logs/
-*.pot
-local_settings.py
+/logs/
 staticfiles/
-certs/
+/staticfiles/
+local_settings.py
+celerybeat-schedule*
+celerybeat.pid
+
+# 5. Media, User Uploads & Generated Video Recordings
 media/
-debug_test.py
-test_all_pages.py
-# ================================================
-# ARCHIVE & DEVELOPER ARTIFACTS
-# ================================================
-archive/
-/archive/
+/media/
+uploads/
+/uploads/
+recordings/
+/recordings/
+ws_debug.log
 
+# 6. Certificates & Security Keys (Keep private keys off git)
+certs/
+/certs/
+*.pem
+*.key
+*.crt
+*.csr
+*.pfx
+*.p12
 
-# ================================================
-# VIRTUAL ENVIRONMENT
-# ================================================
+# 7. Virtual Environments
 venv/
-venv311/
-venv113/
-venv_linux/
+venv*/
 env/
 ENV/
 .venv/
+.env_*/
 
-# ================================================
-# CLEANUP — empty/dead directories
-# ================================================
-video_editing_new/
-editing/
-
-# ================================================
-# FFMPEG LOCAL BINARIES
-# ================================================
-ffmpeg-master-latest-win64-gpl/
-ffmpeg.exe
-ffprobe.exe
-
-
-# ================================================
-# IDE & EDITOR FILES
-# ================================================
+# 8. IDE, Editor & OS Artifacts
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
-# ================================================
-# BUILD & DISTRIBUTION
-# ================================================
-*.egg-info/
-dist/
-build/
-*.egg
-
-# ================================================
-# TESTING & COVERAGE
-# ================================================
+# 9. Testing & Code Coverage
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 .tox/
-# LOAD TESTING ONLY - REMOVE AFTER TEST
+.nox/
+.hypothesis/
 load_testing/credentials.json
 load_testing/.env.loadtest
 load_testing/reports/
-# LOAD TESTING ONLY - REMOVE AFTER TEST
-testing com/
+debug_test.py
+test_all_pages.py
 
-
-# ================================================
-# OPERATING SYSTEM FILES
-# ================================================
-Thumbs.db
-.DS_Store
-
-# ================================================
-# LOCAL AND COMPILED BINARIES / LOGS
-# ================================================
+# 10. Local Executables & Pre-compiled Binaries
+ffmpeg.exe
+ffprobe.exe
+ffmpeg-master-latest-win64-gpl/
+livekit-bin/
 /livekit-bin/
-/ws_debug.log
+
+# 11. Temporary Scratch & Migration Archives
+scratch/
+/scratch/
+archive/
+/archive/

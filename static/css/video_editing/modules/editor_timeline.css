@@ -1,0 +1,4744 @@
+/**
+ * EduMi Video Editor — Multi-track Timeline & Ruler
+ */
+/* ============================================================
+   TIMELINE  — Professional Blender/Canva-style bottom panel
+   ============================================================ */
+
+/* Track row height — single source of truth */
+:root {
+  --tl-track-h: 52px;
+  --tl-ruler-h: 32px;
+  --tl-header-w: 160px;
+  --tl-toolbar-h: 42px;
+}
+
+.ve-timeline {
+  background: linear-gradient(180deg, #020617 0%, #020617 100%);
+  border-top: 1px solid rgba(30, 41, 59, 0.9);
+  display: flex;
+  flex-direction: column;
+  height: 260px;
+  min-height: 220px;
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 100%;
+  user-select: none;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- Toolbar ---- */
+.ve-timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #020617 0%, #020617 100%);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+  height: var(--tl-toolbar-h);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.ve-toolbar-left,
+.ve-toolbar-center,
+.ve-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ve-toolbar-center {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Timecode display in toolbar center */
+.ve-tl-timecode {
+  font-family: ui-monospace, "SF Mono", "Fira Mono", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--ve-text);
+  background: var(--ve-bg-raised);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius-sm);
+  padding: 3px 10px;
+  min-width: 88px;
+  text-align: center;
+}
+
+.ve-tb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--ve-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Accent button (Add Text) */
+.ve-tb-btn.ve-tb-accent {
+  color: var(--ve-primary);
+}
+
+.ve-tb-btn.ve-tb-accent:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: var(--ve-primary);
+}
+
+/* Toggle button (Snap) */
+.ve-tb-btn.ve-tb-toggle[data-active="true"] {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--ve-primary);
+  border-color: var(--ve-primary);
+}
+
+/* Zoom slider */
+.ve-zoom-slider-wrap {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.ve-zoom-slider-wrap input[type="range"] {
+  -webkit-appearance: none;
+  width: 80px;
+  height: 3px;
+  background: var(--ve-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.ve-zoom-slider-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ve-primary);
+  cursor: pointer;
+}
+
+/* ---- Timeline Body: headers + scroll ---- */
+.ve-timeline-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+/* ---- Track headers (left fixed panel) ---- */
+.ve-tl-headers {
+  width: var(--tl-header-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(51, 65, 85, 0.7);
+  background: linear-gradient(180deg, #020617 0%, #020617 100%);
+  z-index: 20;
+}
+
+.ve-tl-corner {
+  height: var(--tl-ruler-h);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #020617 0%, #020617 100%);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ve-tl-header {
+  height: var(--tl-track-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.ve-tl-header:last-child {
+  border-bottom: none;
+}
+
+.ve-tl-header-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ve-tl-header-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ve-tl-icon-video {
+  background: rgba(139, 92, 246, 0.15);
+  color: #818cf8;
+}
+
+.ve-tl-icon-audio {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.ve-tl-icon-text {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.ve-tl-header-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ve-text-secondary);
+  flex: 1;
+  white-space: nowrap;
+}
+
+.ve-tl-header-btns {
+  display: flex;
+  gap: 2px;
+}
+
+/* ---- Scrollable canvas ---- */
+.ve-tl-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
+  background: linear-gradient(180deg, #020617 0%, #020617 100%);
+  min-width: 0;
+}
+
+/* Themed scrollbar */
+.ve-tl-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.ve-tl-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.ve-tl-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 100%);
+  border-radius: 8px;
+}
+
+.ve-tl-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #5a67d8 0%, #7c3aed 100%);
+}
+
+/* ---- Ruler ---- */
+.ve-tl-ruler {
+  height: var(--tl-ruler-h);
+  position: relative;
+  background: linear-gradient(90deg, #020617 0%, #020617 100%);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  min-width: 100%;
+  cursor: crosshair;
+  flex-shrink: 0;
+}
+
+/* ---- Track rows ---- */
+.ve-tl-tracks {
+  position: relative;
+  min-width: 100%;
+  height: calc(var(--tl-track-h) * 3);
+}
+
+.ve-tl-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--tl-track-h);
+}
+
+.ve-tl-track-video {
+  top: 0;
+}
+
+.ve-tl-track-audio {
+  top: var(--tl-track-h);
+}
+
+.ve-tl-track-text {
+  top: calc(var(--tl-track-h) * 2);
+}
+
+.ve-tl-track-effect {
+  top: calc(var(--tl-track-h) * 3);
+}
+
+.ve-track-content {
+  position: absolute;
+  inset: 0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+/* Alternating row tints */
+.ve-tl-track-video .ve-track-content {
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.ve-tl-track-audio .ve-track-content {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.ve-tl-track-text .ve-track-content {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.ve-tl-track-effect .ve-track-content {
+  background: rgba(217, 70, 239, 0.06);
+}
+
+/* Track hover highlight */
+.ve-tl-track:hover .ve-track-content {
+  background: rgba(51, 65, 85, 0.15);
+}
+
+/* ---- Snap guide ---- */
+.ve-snap-guide {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: #facc15;
+  box-shadow: 0 0 6px #facc15;
+  z-index: 60;
+  display: none;
+  pointer-events: none;
+}
+
+.ve-snap-guide.visible {
+  display: block;
+}
+
+/* ---- Playhead ---- */
+.ve-playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  z-index: 50;
+  cursor: ew-resize;
+  pointer-events: auto;
+}
+
+.ve-playhead-head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ve-danger);
+  color: #fff;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px 3px 0 0;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1.4;
+}
+
+.ve-playhead-line {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 2px;
+  height: calc(100% - 20px);
+  background: var(--ve-danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* ---- Clips ---- */
+.ve-clip {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 22px;
+  /* left padding for handle space */
+  font-size: 11px;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  transition:
+    box-shadow 0.1s,
+    outline 0.1s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.ve-clip:active {
+  cursor: grabbing;
+}
+
+.ve-clip:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.ve-clip.ve-clip-selected {
+  outline: 2px solid #facc15;
+  outline-offset: 0;
+  box-shadow:
+    0 0 0 3px rgba(250, 204, 21, 0.25),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* Clip colours */
+.ve-clip-video {
+  background: linear-gradient(135deg, #4f5ee8 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.ve-clip-audio {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #fff;
+}
+
+.ve-clip-text {
+  background: linear-gradient(135deg, #b45309 0%, #f59e0b 100%);
+  color: #fff;
+}
+
+.ve-clip-effect {
+  background: linear-gradient(135deg, #a21caf 0%, #e879f9 100%);
+  color: #fff;
+}
+
+/* Stripe pattern on video clips */
+.ve-clip-video::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  pointer-events: none;
+}
+
+.ve-clip-label {
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+/* Clip resize handles */
+.ve-clip-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  z-index: 3;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ve-clip-handle::after {
+  content: "";
+  width: 3px;
+  height: 60%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ve-clip-handle:hover::after {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.ve-clip-handle-left {
+  left: 0;
+  border-radius: 5px 0 0 5px;
+}
+
+.ve-clip-handle-right {
+  right: 0;
+  border-radius: 0 5px 5px 0;
+}
+
+/* ---- track-btn reused from header ---- */
+.ve-track-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--ve-text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.ve-track-btn:hover {
+  background: var(--ve-bg-secondary);
+  color: var(--ve-text);
+}
+
+.ve-track-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Muted / hidden state */
+.ve-track-btn.ve-btn-muted {
+  color: var(--ve-danger) !important;
+}
+
+.ve-track-btn.ve-btn-hidden {
+  color: var(--ve-text-muted);
+  opacity: 0.4;
+}
+
+/* ============================================================
+   TEXT ADD MODAL
+   ============================================================ */
+
+.ve-text-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+.ve-text-modal-backdrop.open {
+  display: flex;
+}
+
+.ve-text-modal {
+  background: var(--ve-bg);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius-lg);
+  width: 420px;
+  max-width: 94vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ve-text-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ve-border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ve-text);
+}
+
+.ve-text-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ve-text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.ve-text-modal-close:hover {
+  background: var(--ve-bg-secondary);
+  color: var(--ve-text);
+}
+
+.ve-text-modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ve-text-modal-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ve-text-modal-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--ve-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* field-row used in the modal */
+.ve-field-row {
+  display: flex;
+  gap: 10px;
+}
+
+/* Inputs inside the modal */
+.ve-text-modal-body .ve-field input[type="text"],
+.ve-text-modal-body .ve-field input[type="number"],
+.ve-text-modal-body .ve-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius);
+  background: var(--ve-bg-secondary);
+  color: var(--ve-text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ve-text-modal-body .ve-field input:focus,
+.ve-text-modal-body .ve-field select:focus {
+  border-color: var(--ve-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+/* Text-clip list in the side panel */
+.ve-text-clip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--ve-bg-secondary);
+  border: 1px solid var(--ve-border);
+  border-radius: var(--ve-radius);
+  font-size: 12px;
+  color: var(--ve-text);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.ve-text-clip-item:hover {
+  border-color: var(--ve-primary);
+}
+
+.ve-text-clip-item.selected {
+  border-color: var(--ve-primary);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.ve-text-clip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+}
+
+.ve-text-clip-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ve-text-clip-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ve-text-clip-time {
+  font-size: 10px;
+  color: var(--ve-text-muted);
+}
+
+.ve-text-clip-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ve-text-muted);
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  transition: color 0.12s;
+  flex-shrink: 0;
+}
+
+.ve-text-clip-del:hover {
+  color: var(--ve-danger);
+}
+
+.ve-text-clip-del svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── 15. PORTED TIMELINE STYLES FROM SOURCE ────────────────── */
+/* ==========================================================================
+   Visual Trim Timeline under video stage
+   ========================================================================== */
+
+/* Custom Video Player Controls */
+/* Video Time Display */
+.video-time-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px 4px;
+  background: var(--ve-bg);
+  font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.video-time-display .time-current {
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.video-time-display .time-separator {
+  color: var(--text-dim);
+}
+
+.video-time-display .time-total {
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+/* Video Progress Bar */
+.video-progress-container {
+  background: var(--ve-bg);
+  padding: 8px 16px 4px;
+}
+
+.video-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #374151;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.video-progress-filled {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: #ffffff;
+  border-radius: 4px 0 0 4px;
+}
+
+.video-progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 4px 16px 12px;
+  background: var(--ve-bg);
+  border-top: 1px solid var(--border-soft);
+  position: relative;
+  user-select: none;
+}
+
+.ctrl-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.ctrl-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ctrl-btn.btn-play {
+  font-size: 20px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ctrl-btn.btn-play:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.ctrl-btn.right-ctrl {
+  position: absolute;
+  right: 16px;
+}
+
+.visual-trim-container {
+  background: var(--ve-bg-secondary);
+  border-top: 1px solid var(--ve-border);
+  padding: 2px 16px 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  user-select: none;
+  grid-column: 1 / -1;
+}
+
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 3px;
+  min-height: 28px;
+  border-bottom: 1px solid var(--ve-border);
+  gap: 8px;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ve-bg);
+  padding: 3px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ve-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.tb-btn {
+  background: var(--ve-bg);
+  border: 1px solid var(--ve-border);
+  color: var(--ve-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 10px;
+  height: 28px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  line-height: 1;
+}
+
+.tb-btn:hover:not(:disabled) {
+  color: var(--ve-text);
+  background: var(--ve-bg-raised);
+  border-color: var(--ve-border-strong);
+}
+
+.tb-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tb-btn.tb-btn-primary {
+  background: var(--ve-primary);
+  color: #ffffff;
+  border-color: var(--ve-primary);
+}
+
+.tb-btn.tb-btn-primary:hover:not(:disabled) {
+  background: var(--ve-primary-dark);
+  border-color: var(--ve-primary-dark);
+  color: #ffffff;
+}
+
+.timeline-speed-control input {
+  width: 52px;
+  height: 28px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+  background: var(--ve-bg);
+  color: var(--ve-text);
+  border: 1px solid var(--ve-border);
+  border-radius: 6px;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.timeline-speed-control input:focus {
+  border-color: var(--ve-primary);
+}
+
+.time-display {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--ve-text);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.time-divider {
+  color: var(--ve-text-muted);
+  font-size: 11px;
+}
+
+/* Timeline Ruler */
+
+
+
+
+/* Minor/medium tick overrides removed — handled by end-of-file Canva ruler styles */
+
+
+
+
+
+/* Trim Track */
+.trim-track {
+  position: relative;
+  height: 72px;
+  background: var(--ve-bg);
+  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid var(--ve-border);
+  box-shadow: none;
+}
+
+.trim-filename {
+  display: none;
+}
+
+
+.trim-dim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.16);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.trim-dim-left {
+  left: 0;
+  border-radius: 5px 0 0 5px;
+}
+
+.trim-dim-right {
+  right: 0;
+  border-radius: 0 5px 5px 0;
+}
+
+.trim-selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 1px solid var(--ve-border-strong);
+  border-radius: 0;
+  box-sizing: border-box;
+  z-index: 2;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: #7c3aed;
+  color: #ffffff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: ew-resize;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.trim-handle-left {
+  left: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.trim-handle-right {
+  right: 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.resize-arrow-icon {
+  display: none;
+}
+
+.trim-playhead {
+  position: absolute;
+  top: -20px;
+  bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.trim-playhead::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Magnetic Snap Guide Line */
+.timeline-snap-guide {
+  position: absolute;
+  top: -20px;
+  bottom: 0;
+  width: 2px;
+  background: #a855f7;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow:
+    0 0 10px #a855f7,
+    0 0 20px #a855f7;
+  transition: opacity 0.1s ease;
+}
+
+.timeline-snap-guide::after {
+  content: "SNAP";
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #a855f7;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+
+.timeline-clip-divider {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(100, 116, 139, 0.6);
+  pointer-events: none;
+}
+
+/* Real-time text overlay container and styling */
+.video-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+#text-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.preview-text-overlay {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.85);
+  white-space: pre-wrap;
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.preview-text-overlay.pos-top {
+  top: 30px;
+}
+
+.preview-text-overlay.pos-bottom {
+  bottom: 30px;
+}
+
+.preview-text-overlay.pos-center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Multi-track Timeline Styles */
+.timeline-scroll-area {
+  background: var(--ve-bg-secondary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+  /* CRITICAL FIX: Remove horizontal padding to align with ruler */
+  padding: 0 0 8px 0;
+  margin-top: 10px;
+}
+
+.timeline-tracks-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* CRITICAL FIX: Remove margin to align with ruler */
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.timeline-track-row {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  min-width: 100%;
+  position: relative;
+  border-radius: var(--ve-radius-sm);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.timeline-track-row--selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.35) !important;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.track-badge {
+  position: sticky;
+  left: 8px;
+  z-index: 12;
+  background: rgba(15, 16, 20, 0.85);
+  backdrop-filter: blur(4px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  float: left;
+  margin-top: 4px;
+}
+
+.track-content-cell {
+  position: relative;
+  flex: 1;
+  flex-shrink: 0;
+  height: 52px;
+  background: var(--ve-track-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  min-width: 600px;
+}
+
+/* Specific content overrides */
+.track-content-cell.trim-track {
+  height: 72px;
+  margin: 0;
+  border: 1px solid var(--ve-border);
+  overflow: hidden;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  border-radius: 0;
+  background-position:
+    0 1px,
+    0 46px;
+}
+
+.track-content-cell.audio-track {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  height: 36px;
+}
+
+.audio-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  font-size: 11px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 1px solid #10b981;
+  overflow: hidden;
+}
+
+.audio-block::before {
+  display: none !important;
+}
+
+/* Timeline Text block overlays */
+.timeline-text-block {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  background: linear-gradient(180deg, #1fa2a6 0%, #117a7e 100%);
+  border: 1px solid #2dd4bf;
+  border-radius: 8px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  overflow: visible;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+  user-select: none;
+  padding: 0 4px;
+}
+
+.timeline-text-block:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: #2dd4bf;
+}
+
+.timeline-text-block.selected {
+  background: linear-gradient(180deg, #149197 0%, #0d5c60 100%);
+  border: 2px solid #2dd4bf !important;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.5);
+}
+
+.text-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 5;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    width 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.text-resize-handle.handle-left {
+  left: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.text-resize-handle.handle-right {
+  right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Selected block handle overrides to look exactly like trim handles */
+.timeline-text-block.selected .text-resize-handle {
+  width: 14px;
+  background: #2dd4bf !important;
+  color: #000000 !important;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.timeline-text-block.selected .text-resize-handle.handle-left {
+  left: -1px;
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+}
+
+.timeline-text-block.selected .text-resize-handle.handle-right {
+  right: -1px;
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+.timeline-text-block .text-content {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  width: 100%;
+  text-align: left;
+  padding: 0 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Canva selection and playhead styling */
+.trim-selection {
+  border: 2px solid var(--ve-primary, #7c3aed) !important;
+}
+
+.trim-handle {
+  background: var(--ve-primary, #7c3aed) !important;
+  color: #ffffff !important;
+}
+
+/* Playhead extends up through the 36px ruler + border + small gap */
+.timeline-tracks-wrapper .trim-playhead {
+  position: absolute;
+  top: -46px;
+  bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  z-index: 9999 !important;
+  pointer-events: auto;
+  cursor: ew-resize;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  margin-left: 0;
+}
+
+.timeline-tracks-wrapper .trim-playhead::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  /* sits inside the ruler area */
+  left: -5px;
+  width: 12px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  cursor: grab;
+}
+
+.timeline-tracks-wrapper .trim-playhead:active::after {
+  cursor: grabbing;
+}
+
+.playhead-tooltip {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #16171c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  display: none;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.trim-playhead:hover .playhead-tooltip,
+.trim-playhead:active .playhead-tooltip,
+.trim-playhead.dragging .playhead-tooltip {
+  display: block;
+}
+
+.handle-tooltip {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffa200;
+  color: #16171c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  display: none;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.trim-handle:hover .handle-tooltip,
+.trim-handle:active .handle-tooltip,
+.trim-handle.dragging .handle-tooltip,
+.text-resize-handle:hover .handle-tooltip,
+.text-resize-handle:active .handle-tooltip,
+.text-resize-handle.dragging .handle-tooltip,
+.audio-resize-handle:hover .handle-tooltip,
+.audio-resize-handle:active .handle-tooltip,
+.audio-resize-handle.dragging .handle-tooltip,
+.timeline-text-block.selected .handle-tooltip,
+.timeline-audio-block.selected .handle-tooltip {
+  display: block;
+}
+
+/* Timeline Audio Block styling */
+.timeline-audio-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: transparent;
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: move;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-audio-block .audio-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 12px;
+  pointer-events: none;
+  text-align: left;
+}
+
+.audio-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #5d6cfc;
+  cursor: ew-resize;
+  z-index: 15;
+}
+
+.audio-resize-handle.handle-left {
+  left: 0;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+
+.audio-resize-handle.handle-right {
+  right: 0;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+
+/* Audio block selection styling — clean Canva emerald */
+.timeline-audio-block.selected {
+  border: 2px solid #10b981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+}
+
+.timeline-audio-block.selected .audio-resize-handle {
+  width: 7px;
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.timeline-audio-block.selected .audio-resize-handle.handle-left {
+  left: -1px;
+  border-radius: 2px 0 0 2px;
+}
+
+.timeline-audio-block.selected .audio-resize-handle.handle-right {
+  right: -1px;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ═══ Unified Timeline Selection — Canva Style ═══ */
+
+/* Video clip selected */
+.timeline-item--selected.timeline-clip-block {
+  border: 2px solid var(--ve-primary, #7c3aed) !important;
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.35) !important;
+  z-index: 20 !important;
+  overflow: visible !important;
+}
+
+/* Video clip trim/resize handles — visible only when clip is selected */
+.clip-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--ve-primary, #7c3aed);
+  user-select: none;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.clip-trim-handle.handle-left {
+  left: -1px;
+  border-radius: 4px 0 0 4px;
+}
+
+.clip-trim-handle.handle-right {
+  right: -1px;
+  border-radius: 0 4px 4px 0;
+}
+
+.timeline-item--selected .clip-trim-handle {
+  opacity: 1;
+}
+
+.clip-trim-handle .handle-tooltip {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ve-bg-raised);
+  color: #ffa200;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #ffa200;
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+
+.clip-trim-handle:hover .handle-tooltip {
+  display: block;
+}
+
+/* Universal item trim/resize handles for all tracks */
+.item-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #16171c;
+  background: #ffa200;
+  user-select: none;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.item-resize-handle.handle-left {
+  left: -1px;
+  border-radius: 4px 0 0 4px;
+}
+
+.item-resize-handle.handle-right {
+  right: -1px;
+  border-radius: 0 4px 4px 0;
+}
+
+.timeline-item--selected .item-resize-handle,
+.timeline-item--selected .clip-trim-handle,
+.timeline-item--selected .text-resize-handle,
+.timeline-item--selected .audio-resize-handle {
+  opacity: 1 !important;
+  display: flex !important;
+}
+
+.item-resize-handle .handle-tooltip {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ve-bg-raised);
+  color: #ffa200;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #ffa200;
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+
+.item-resize-handle:hover .handle-tooltip,
+.clip-trim-handle:hover .handle-tooltip,
+.text-resize-handle:hover .handle-tooltip,
+.audio-resize-handle:hover .handle-tooltip {
+  display: block !important;
+}
+
+/* Text block selected */
+.timeline-item--selected.timeline-text-block {
+  background: linear-gradient(180deg, #149197 0%, #0d5c60 100%);
+  border: 2px solid #0d9488 !important;
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.35) !important;
+  z-index: 20 !important;
+}
+
+.timeline-item--selected.timeline-text-block .text-resize-handle {
+  width: 7px;
+  background: #0d9488 !important;
+  color: #ffffff !important;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.timeline-item--selected.timeline-text-block .text-resize-handle.handle-left {
+  left: -1px;
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+}
+
+.timeline-item--selected.timeline-text-block .text-resize-handle.handle-right {
+  right: -1px;
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+.timeline-item--selected.timeline-text-block .handle-tooltip {
+  display: block;
+}
+
+/* Audio block selected (saved and temp) */
+.timeline-item--selected.timeline-audio-block,
+.timeline-item--selected.timeline-audio-block--saved,
+.timeline-item--selected.audio-block,
+.timeline-item--selected.temp-audio-block {
+  border: 2px solid #ffa200 !important;
+  box-shadow: 0 0 14px rgba(255, 162, 0, 0.5) !important;
+  z-index: 20 !important;
+  cursor: pointer;
+}
+
+/* Effect block — make interactive */
+.timeline-effect-block {
+  cursor: pointer;
+}
+
+.timeline-effect-block:hover {
+  outline: 1.5px solid rgba(255, 162, 0, 0.4);
+  outline-offset: -1.5px;
+}
+
+.timeline-item--selected.timeline-effect-block {
+  outline: 2px solid #ffa200 !important;
+  outline-offset: -2px;
+  box-shadow: 0 0 14px rgba(255, 162, 0, 0.5) !important;
+  z-index: 20 !important;
+}
+
+body:has(.editor-layout) .main {
+  max-width: 100%;
+  padding: 16px 20px 40px;
+}
+
+/* Volume Slider Styling in Timeline */
+input[type="range"].timeline-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.15s ease;
+}
+
+input[type="range"].timeline-volume-slider:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+input[type="range"].timeline-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffa200;
+  cursor: pointer;
+  border: none;
+  transition:
+    transform 0.1s ease,
+    background 0.1s ease;
+}
+
+input[type="range"].timeline-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #ffb703;
+}
+
+/* Visual split markers across timeline tracks */
+.timeline-tracks-wrapper .trim-split-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffa200;
+  border-left: 1.5px dashed #ffffff;
+  z-index: 18;
+  pointer-events: none;
+  margin-left: 0;
+}
+
+.timeline-tracks-wrapper .trim-split-marker::after {
+  content: "✂️";
+  position: absolute;
+  top: -12px;
+  left: -7px;
+  font-size: 11px;
+}
+
+/* Highlight style when deleting a selected middle range */
+.trim-selection.selected-delete {
+  border: 2px dashed var(--danger) !important;
+  background: rgba(229, 85, 90, 0.2) !important;
+  box-shadow: 0 0 12px rgba(229, 85, 90, 0.4);
+}
+
+.trim-selection.selected-delete .trim-handle {
+  background: var(--danger) !important;
+}
+
+.trim-selection.selected-delete .handle-tooltip {
+  background: var(--danger) !important;
+  color: #ffffff !important;
+}
+
+/* Subtabs navigation */
+.tool-subtabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 16px;
+  padding-bottom: 4px;
+}
+
+.subtab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8e929d;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 4px;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.subtab-btn:hover {
+  color: #fff;
+}
+
+.subtab-btn--active {
+  color: #fff;
+  border-bottom-color: var(--accent);
+}
+
+/* Assets management grid */
+.assets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.assets-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.assets-count .badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.asset-card {
+  background: var(--ve-bg);
+  border: 1px solid var(--ve-border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: grab;
+  transition:
+    border-color 0.15s,
+    transform 0.1s;
+  user-select: none;
+}
+
+.asset-card:hover {
+  border-color: var(--accent);
+}
+
+.asset-card:active {
+  cursor: grabbing;
+  transform: scale(0.97);
+}
+
+.asset-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: #000;
+  overflow: hidden;
+}
+
+.asset-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.asset-duration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.asset-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.asset-card:hover .asset-overlay {
+  opacity: 1;
+}
+
+.btn-insert-asset {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+
+.btn-insert-asset:hover {
+  transform: scale(1.1);
+}
+
+.asset-title {
+  font-size: 11px;
+  color: #fff;
+  padding: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: none;
+}
+
+.empty-assets {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 10px;
+  border: 1px dashed #2e313c;
+  border-radius: 6px;
+  text-align: center;
+}
+
+/* Welcome Dashboard Styles */
+.welcome-dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+  padding: 40px 20px;
+}
+
+.welcome-dashboard__content {
+  width: 100%;
+  max-width: 800px;
+}
+
+.upload-area {
+  background: var(--ve-bg);
+  border: 2px dashed var(--ve-border-strong);
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+  border-color: #5865f2;
+  background: var(--ve-bg-raised);
+}
+
+.upload-area__icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.upload-area__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e4e9;
+  margin-bottom: 12px;
+}
+
+.upload-area__sub {
+  font-size: 14px;
+  color: #8e929d;
+  margin-bottom: 24px;
+}
+
+.btn--large {
+  padding: 12px 28px;
+  font-size: 15px;
+}
+
+/* Professional Timeline Styles - DaVinci Style */
+.timeline-scroll-area {
+  background: var(--ve-bg-secondary) !important;
+  border-radius: 0px !important;
+  border: none !important;
+  border-top: 1px solid var(--ve-border) !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  /* CRITICAL FIX: Remove horizontal padding to align with ruler */
+  padding: 6px 0 18px 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Thin scrollbars (6px) */
+.timeline-scroll-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.timeline-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.timeline-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 3px;
+}
+.timeline-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.7);
+}
+.timeline-scroll-area::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Hide vertical scrollbar unless there are 4 or more tracks */
+.timeline-scroll-area:has(.timeline-track-row:nth-of-type(4)) {
+  overflow-y: auto !important;
+}
+
+.timeline-tracks-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.timeline-track-row {
+  display: flex !important;
+  gap: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+}
+
+/* Canva-style track layout and empty-state placeholders */
+.timeline-empty-track-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  margin: 3px 8px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  color: var(--ve-text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+  position: relative;
+  z-index: 2;
+}
+.timeline-empty-track-placeholder:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: #c4b5fd;
+  transform: translateY(-1px);
+}
+.timeline-track-row--text,
+.text-track-row,
+#text-track-content {
+  height: 36px !important;
+  min-height: 36px !important;
+}
+.timeline-track-row--effect,
+.effect-track-row,
+#effect-track-content {
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.track-label-cell {
+  min-width: 100px !important;
+  width: 100px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border-right: 1px solid var(--ve-border);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.02);
+}
+
+.track-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ve-text);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.track-icon {
+  font-size: 16px;
+}
+
+.volume-control-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.track-content-cell {
+  background: var(--ve-bg) !important;
+  border: none !important;
+  border-left: 1px solid var(--ve-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Video track height 56px */
+.timeline-track-row--video,
+.video-track-row,
+.trim-track,
+.track-content-cell.trim-track {
+  height: 56px !important;
+  min-height: 56px !important;
+}
+
+/* Audio track height 36px */
+.timeline-track-row--audio,
+.audio-track-row,
+.audio-track,
+.track-content-cell.audio-track {
+  height: 36px !important;
+  min-height: 36px !important;
+}
+
+.audio-track-row .track-label-cell {
+  padding: 2px 10px;
+}
+
+.trim-track {
+  background: var(--ve-bg-secondary) !important;
+}
+
+/* Timeline Clip Blocks - Canva / CapCut Modern */
+@keyframes ve-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.timeline-clip-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1e1b3a;
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.timeline-clip-block.selected,
+.timeline-item--selected.timeline-clip-block {
+  outline: 2px solid #7c3aed;
+  outline-offset: -2px;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Timeline Clip Divider */
+.timeline-clip-divider {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(100, 116, 139, 0.4);
+  z-index: 5;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* Timeline Clip Label & Audio Badges - Hidden per user request */
+.timeline-clip-label,
+.audio-icon-badge,
+.audio-name {
+  display: none !important;
+}
+
+/* Timeline Clip Thumb Filmstrip */
+.timeline-clip-thumb {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: #1e293b;
+}
+
+.timeline-clip-thumb.loading {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: ve-shimmer 1.8s infinite;
+}
+
+.timeline-clip-thumb img {
+  height: 100%;
+  flex: 1 1 auto;
+  object-fit: cover;
+  display: block;
+  border: none;
+  pointer-events: none;
+  background: #0f172a;
+}
+
+/* Floating Duration Badge (Small badge at bottom-left, hidden unless selected) */
+.trim-duration-badge {
+  display: none;
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.trim-selection.selected .trim-duration-badge,
+.trim-selection.selected-delete .trim-duration-badge {
+  display: inline-block;
+}
+
+/* Trim Handles (Hidden by default, visible only when clip is selected) */
+.trim-handle {
+  display: none;
+}
+
+.trim-selection.selected .trim-handle,
+.trim-selection.selected-delete .trim-handle {
+  display: flex;
+}
+
+/* Ensure trim track clips overflow */
+.trim-track {
+  overflow: hidden !important;
+}
+
+/* Audio Block - Professional */
+.audio-block {
+  background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
+}
+
+.audio-block #original-audio-waveform {
+  padding: 4px 0 !important;
+}
+
+/* Integrated Audio Waveform in Video Track */
+.integrated-audio-waveform-container {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 22px !important;
+  z-index: 2 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-top: 1px solid rgba(59, 130, 246, 0.6) !important;
+}
+
+.integrated-audio-waveform {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.volume-draggable-line {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: #ffffff !important;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: row-resize !important;
+  z-index: 10 !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8) !important;
+}
+
+
+/* Audio Track - Waveform */
+.audio-track {
+  position: relative;
+}
+
+.audio-block {
+  background: #0d2818 !important;
+  border: 1px solid #10b981 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+  z-index: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.audio-block::before {
+  display: none !important;
+}
+
+/* Text Track Blocks */
+.timeline-text-block {
+  top: 8px !important;
+  bottom: 8px !important;
+  background: linear-gradient(180deg, #1fa2a6 0%, #117a7e 100%) !important;
+  border: 1px solid #2dd4bf !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  box-shadow:
+    0 4px 12px rgba(20, 184, 166, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  justify-content: flex-start !important;
+  z-index: 1 !important;
+}
+
+.timeline-text-block:hover {
+  box-shadow:
+    0 6px 16px rgba(45, 212, 191, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  border-color: #5eead4 !important;
+}
+
+.timeline-text-block.selected {
+  background: linear-gradient(180deg, #2dd4bf 0%, #117a7e 100%) !important;
+  border: 2px solid #5eead4 !important;
+  box-shadow: 0 0 16px rgba(94, 234, 212, 0.6) !important;
+}
+
+/* Effect Track Blocks */
+.timeline-effect-block {
+  top: 8px !important;
+  bottom: 8px !important;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+  border: 1px solid #a78bfa !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 4px 12px rgba(139, 92, 246, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  padding: 0 12px !important;
+  z-index: 1 !important;
+  user-select: none !important;
+}
+
+.timeline-effect-block--empty {
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(109, 40, 217, 0.2) 100%
+  ) !important;
+  border: 1px dashed rgba(167, 139, 250, 0.5) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.timeline-effect-block:hover {
+  box-shadow:
+    0 6px 16px rgba(139, 92, 246, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border-color: #c4b5fd !important;
+}
+
+.timeline-effect-block.selected {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%) !important;
+  border: 2px solid #ddd6fe !important;
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.6) !important;
+}
+
+/* Image Track Blocks */
+.timeline-image-block {
+  position: absolute;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  border: 2px solid #67e8f9 !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 4px 12px rgba(6, 182, 212, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 8px !important;
+  z-index: 1 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timeline-image-block:hover {
+  box-shadow:
+    0 6px 16px rgba(6, 182, 212, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border-color: #a5f3fc !important;
+}
+
+.timeline-item--selected.timeline-image-block {
+  border: 2px solid #ffa200 !important;
+  box-shadow: 0 0 14px rgba(255, 162, 0, 0.5) !important;
+  z-index: 20 !important;
+}
+
+/* Sticker Track Blocks */
+.timeline-sticker-block {
+  position: absolute;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  border: 2px solid #fbbf24 !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 4px 12px rgba(245, 158, 11, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 8px !important;
+  z-index: 1 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timeline-sticker-block:hover {
+  box-shadow:
+    0 6px 16px rgba(245, 158, 11, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border-color: #fcd34d !important;
+}
+
+.timeline-item--selected.timeline-sticker-block {
+  border: 2px solid #ffa200 !important;
+  box-shadow: 0 0 14px rgba(255, 162, 0, 0.5) !important;
+  z-index: 20 !important;
+}
+
+/* Transition Track Blocks */
+.timeline-transition-block {
+  position: absolute;
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+  border: 2px solid #f9a8d4 !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 4px 12px rgba(236, 72, 153, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 8px !important;
+  z-index: 1 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timeline-transition-block:hover {
+  box-shadow:
+    0 6px 16px rgba(236, 72, 153, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border-color: #fbcfe8 !important;
+}
+
+.timeline-item--selected.timeline-transition-block {
+  border: 2px solid #ffa200 !important;
+  box-shadow: 0 0 14px rgba(255, 162, 0, 0.5) !important;
+  z-index: 20 !important;
+}
+
+/* Specialized Track Row Variants */
+.timeline-track-row--video {
+  border-left: 3px solid #3b82f6 !important;
+}
+
+.timeline-track-row--audio {
+  border-left: 3px solid #10b981 !important;
+}
+
+.timeline-track-row--text {
+  border-left: 3px solid #0d6b6e !important;
+}
+
+.timeline-track-row--effect {
+  border-left: 3px solid #8b5cf6 !important;
+}
+
+.timeline-track-row--image {
+  border-left: 3px solid #06b6d4 !important;
+}
+
+.timeline-track-row--sticker {
+  border-left: 3px solid #f59e0b !important;
+}
+
+.timeline-track-row--transition {
+  border-left: 3px solid #ec4899 !important;
+}
+
+/* Timeline Tracks Wrapper & Rows */
+.timeline-tracks-wrapper {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: fit-content !important;
+  min-width: 100% !important;
+  margin-left: 16px !important;
+}
+
+.timeline-track-row {
+  position: relative !important;
+  z-index: 1 !important;
+  margin-bottom: 6px !important;
+}
+
+/* Trim Ruler */
+
+
+
+
+
+
+
+
+/* Playhead */
+.trim-playhead {
+  background: var(--ve-danger) !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6) !important;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.trim-playhead::after {
+  background: var(--ve-danger) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+.playhead-tooltip {
+  background: var(--ve-text) !important;
+  color: var(--ve-bg) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Trim Handles */
+.trim-handle {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+.handle-tooltip {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Timeline Toolbar */
+.timeline-toolbar {
+  background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+  padding: 4px 12px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.tb-btn {
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border) !important;
+  color: var(--ve-text) !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  padding: 0 8px !important;
+  height: 26px !important;
+  border-radius: 5px !important;
+  transition: all 0.15s ease !important;
+}
+
+.tb-btn:hover {
+  background: var(--ve-border) !important;
+  border-color: var(--ve-border-strong) !important;
+  color: var(--ve-text) !important;
+}
+
+.tb-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.time-display {
+  color: var(--ve-text) !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  background: var(--ve-bg-raised) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--ve-border) !important;
+}
+
+.time-divider {
+  color: var(--ve-text-muted) !important;
+  font-size: 14px !important;
+}
+
+/* Timeline Speed Control */
+.timeline-speed-control {
+  background: var(--ve-bg-secondary) !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  border-left: 1px solid var(--ve-border) !important;
+}
+
+.timeline-speed-control input {
+  background: var(--ve-bg) !important;
+  border: 1px solid var(--ve-border) !important;
+  border-radius: 6px !important;
+  color: var(--ve-text) !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* Volume Slider Styling */
+input[type="range"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  height: 6px !important;
+  border-radius: 3px !important;
+  background: var(--ve-border) !important;
+}
+
+body input[type="range"] {
+  background: linear-gradient(90deg, #374151 0%, #4b5563 100%) !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #52b788 0%, #10b981 100%) !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4) !important;
+  border: 2px solid #ffffff !important;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.6) !important;
+}
+
+/* Trim Dim */
+.trim-dim {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.1) 100%
+  ) !important;
+}
+
+.trim-selection {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.trim-selection.selected-delete {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Trim Thumbnails */
+.trim-thumbnails {
+  opacity: 0.9 !important;
+}
+
+/* Visual Trim Container */
+.visual-trim-container {
+  background: var(--ve-bg-secondary) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  height: 240px;
+  min-height: 96px !important;
+  max-height: 70vh !important;
+  transition: height 0.15s ease;
+}
+
+.visual-trim-container.is-dragging {
+  transition: none !important;
+  user-select: none !important;
+}
+
+/* Middle scroll area: Flexes vertically between top toolbar and bottom toolbar */
+.timeline-scroll-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  width: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 6px 12px 18px 12px !important;
+  margin-top: 0 !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+}
+
+.timeline-scroll-area:has(.timeline-track-row:nth-of-type(4)) {
+  overflow-y: auto !important;
+}
+
+/* Styled thin 6px custom scrollbars for timeline scroll area */
+.timeline-scroll-area::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.timeline-scroll-area::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.timeline-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4) !important;
+  border-radius: 3px !important;
+}
+
+.timeline-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.8) !important;
+}
+
+/* Resizer Handle at Top of Timeline */
+.timeline-resizer {
+  height: 8px !important;
+  background: var(--ve-bg-raised) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+  cursor: ns-resize !important;
+  position: relative !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s ease !important;
+}
+
+.timeline-resizer:hover,
+.timeline-resizer.is-dragging {
+  background: rgba(139, 92, 246, 0.15) !important;
+}
+
+.resizer-pill {
+  width: 38px !important;
+  height: 4px !important;
+  background: var(--ve-border-strong) !important;
+  border-radius: 2px !important;
+  transition:
+    background 0.15s ease,
+    width 0.15s ease !important;
+}
+
+.timeline-resizer:hover .resizer-pill,
+.timeline-resizer.is-dragging .resizer-pill {
+  background: var(--ve-primary) !important;
+  width: 54px !important;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6) !important;
+}
+
+/* Collapsed Timeline State (Canva / CapCut compact toolbar mode) */
+.visual-trim-container.timeline-collapsed {
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  overflow: hidden !important;
+}
+
+.visual-trim-container.timeline-collapsed .timeline-resizer,
+.visual-trim-container.timeline-collapsed .trim-ruler-header,
+.visual-trim-container.timeline-collapsed .timeline-scroll-area,
+.visual-trim-container.timeline-collapsed .timeline-bottom-toolbar {
+  display: none !important;
+}
+
+/* Timeline Maximize / Fullscreen Mode */
+.visual-trim-container.fullscreen-mode {
+  height: 65vh !important;
+  max-height: 85vh !important;
+  min-height: 380px !important;
+  transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.visual-trim-container.fullscreen-mode .timeline-scroll-area {
+  max-height: calc(65vh - 120px) !important;
+}
+
+/* Fixed Timeline Bottom Toolbar — Always visible and fixed at bottom */
+.timeline-bottom-toolbar {
+  position: relative !important;
+  z-index: 1000 !important;
+  height: 42px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+  gap: 10px !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+.tb-bottom-section {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.tb-bottom-left {
+  min-width: 0 !important;
+}
+
+.tb-bottom-center {
+  justify-content: center !important;
+  flex: 1 !important;
+}
+
+.tb-bottom-right {
+  justify-content: flex-end !important;
+}
+
+.tb-bottom-divider {
+  width: 1px !important;
+  height: 18px !important;
+  background: var(--ve-border) !important;
+  margin: 0 2px !important;
+  flex-shrink: 0 !important;
+}
+
+.tb-bottom-btn {
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  color: var(--ve-text) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-btn:hover {
+  background: var(--ve-border) !important;
+  border-color: var(--ve-border-strong) !important;
+  color: var(--ve-text) !important;
+  transform: translateY(-1px) !important;
+}
+
+.tb-bottom-btn:active {
+  transform: translateY(0) !important;
+}
+
+.tb-bottom-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.tb-bottom-play {
+  background: linear-gradient(
+    135deg,
+    var(--ve-primary) 0%,
+    #8b5cf6 100%
+  ) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4) !important;
+  padding: 0 12px !important;
+}
+
+.tb-bottom-play:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #7c3aed 100%) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.6) !important;
+}
+
+.tb-bottom-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--ve-text) !important;
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-info {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  color: var(--ve-text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-info strong {
+  color: var(--ve-text) !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 11px !important;
+}
+
+.tb-bottom-timecode {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--ve-text) !important;
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  letter-spacing: 0.5px !important;
+}
+
+.tb-bottom-time-sep {
+  color: var(--ve-text-muted) !important;
+}
+
+.tb-bottom-zoom-label {
+  font-size: 11px !important;
+  color: var(--ve-text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-zoom-label strong {
+  color: var(--ve-text) !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+.tb-bottom-zoom-range {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 80px !important;
+  height: 4px !important;
+  background: var(--ve-border) !important;
+  border-radius: 2px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.tb-bottom-zoom-range::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background: var(--ve-primary) !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+  transition: transform 0.1s !important;
+}
+
+.tb-bottom-zoom-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2) !important;
+}
+
+/* ================================================================
+   CANVA-STYLE TIMELINE THEME (Redesigned UI/UX)
+   ================================================================ */
+
+/* Font Family and Base Workspace Styling */
+.visual-trim-container,
+.timeline-scroll-area,
+.timeline-tracks-wrapper,
+.timeline-track-row,
+.timeline-clip-label,
+.trim-tick-label,
+.trim-duration-badge {
+  font-family:
+    "Inter",
+    "SF Pro Display",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif !important;
+}
+
+/* Overall Container & Background */
+.visual-trim-container {
+  background: var(--ve-bg-secondary) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  height: 240px;
+}
+
+.timeline-scroll-area {
+  background: var(--ve-bg-secondary) !important;
+  /* CRITICAL FIX: Remove horizontal padding to align with ruler */
+  padding: 0 0 12px 0 !important;
+}
+
+/* Track Row Layout */
+.timeline-tracks-wrapper {
+  gap: 10px !important;
+  margin-left: 0 !important;
+  background: var(--ve-bg-secondary) !important;
+}
+
+.timeline-track-row {
+  display: flex;
+  background: transparent !important;
+  border: none !important;
+  margin-bottom: 0 !important;
+}
+
+.track-content-cell {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  border: 1px solid var(--ve-border);
+  box-shadow: none;
+  padding: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Track Heights: Video 56px, Audio 36px */
+.track-content-cell.trim-track,
+.trim-track,
+.timeline-track-row--video {
+  height: 56px;
+  background: var(--ve-bg-raised);
+}
+
+#text-track-content {
+  height: 36px;
+}
+
+.track-content-cell.audio-track,
+.audio-track,
+.timeline-track-row--audio {
+  height: 36px;
+  padding: 0;
+}
+
+/* Resize Handles - White Rounded Vertical Bars */
+.text-resize-handle,
+.clip-trim-handle,
+.audio-resize-handle,
+.trim-handle {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: ew-resize !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  overflow: visible !important;
+  opacity: 0 !important;
+  transition: opacity 150ms ease !important;
+}
+
+.timeline-item--selected .text-resize-handle,
+.timeline-item--selected .clip-trim-handle,
+.timeline-item--selected .audio-resize-handle,
+.trim-handle:hover,
+.trim-handle.dragging {
+  opacity: 1 !important;
+}
+
+.text-resize-handle::after,
+.clip-trim-handle::after,
+.audio-resize-handle::after,
+.trim-handle::after {
+  content: none !important;
+  display: none !important;
+}
+
+.text-resize-handle.handle-left,
+.clip-trim-handle.handle-left,
+.audio-resize-handle.handle-left,
+.trim-handle-left {
+  left: 2px !important;
+}
+
+.text-resize-handle.handle-right,
+.clip-trim-handle.handle-right,
+.audio-resize-handle.handle-right,
+.trim-handle-right {
+  right: 2px !important;
+}
+
+/* Audio Track Styling — Clean Canva Transparent Waveform (No Light Ground) */
+.audio-block,
+.timeline-audio-block,
+.timeline-audio-block--saved,
+.temp-audio-block {
+  background: transparent !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  backdrop-filter: none !important;
+}
+
+.timeline-audio-block.selected {
+  border: 2px solid #8b5cf6 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
+  background: rgba(139, 92, 246, 0.05) !important;
+}
+
+.timeline-audio-block .audio-name,
+.timeline-audio-block .audio-clip-label {
+  display: none !important;
+}
+
+/* Canva Video Clip Block Styling */
+.timeline-clip-block {
+  position: absolute !important;
+  top: 2px !important;
+  bottom: 2px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: #0f172a !important;
+  border: 2px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  z-index: 5 !important;
+  pointer-events: auto !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.timeline-clip-block:hover {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.timeline-clip-block.selected {
+  border: 2px solid #8b5cf6 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.45), 0 4px 16px rgba(139, 92, 246, 0.35) !important;
+  z-index: 8 !important;
+}
+
+.timeline-clip-blocks {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+  z-index: 5 !important;
+}
+
+/* Playhead Styling — Canva Purple Glowing Needle with Grab Cap */
+.timeline-tracks-wrapper .trim-playhead {
+  background: #8b5cf6 !important;
+  width: 2px !important;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.8) !important;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.timeline-tracks-wrapper .trim-playhead::after {
+  content: "" !important;
+  position: absolute !important;
+  top: -7px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 13px !important;
+  height: 13px !important;
+  background: #8b5cf6 !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  cursor: ew-resize !important;
+}
+
+/* Hide legacy full-track dimming overlays so clips remain vibrant like Canva */
+.trim-dim-left,
+.trim-dim-right {
+  display: none !important;
+}
+
+.trim-selection {
+  display: none !important;
+}
+
+
+/* ============================================================
+   DYNAMIC THEMED TIMELINE COMPONENTS
+   ============================================================ */
+
+/* Success Button Utility Class */
+.ve-btn-success {
+  background: var(--ve-success) !important;
+  border-color: var(--ve-success) !important;
+  color: #ffffff !important;
+}
+.ve-btn-success:hover {
+  background: #059669 !important;
+  border-color: #059669 !important;
+}
+
+/* Delete project button in list */
+.ve-btn-delete-project {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: var(--ve-danger) !important;
+  border-radius: 6px !important;
+  padding: 6px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s !important;
+}
+.ve-btn-delete-project:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Timeline Toolbar (Top) */
+.timeline-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: var(--ve-toolbar-bg) !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+  padding: 4px 12px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border-radius: 8px 8px 0 0 !important;
+  user-select: none !important;
+}
+
+.tb-btn {
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border) !important;
+  color: var(--ve-text) !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  padding: 0 8px !important;
+  height: 26px !important;
+  border-radius: 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.tb-btn:hover {
+  background: var(--ve-bg-hover) !important;
+  border-color: var(--ve-border-strong) !important;
+  color: var(--ve-text) !important;
+}
+
+.tb-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.time-display {
+  color: var(--ve-text) !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  background: var(--ve-bg-raised) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--ve-border) !important;
+}
+
+.time-divider {
+  color: var(--ve-text-muted) !important;
+  font-size: 14px !important;
+}
+
+.timeline-speed-control {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  border-left: 1px solid var(--ve-border, #e2e8f0) !important;
+}
+
+.speed-dropdown-wrapper {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.tb-speed-select {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  height: 28px !important;
+  padding: 2px 22px 2px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--ve-border, #cbd5e1) !important;
+  background-color: var(--ve-bg, #ffffff) !important;
+  color: var(--ve-text, #0f172a) !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.tb-speed-select:hover {
+  border-color: #3b82f6 !important;
+}
+
+.tb-speed-select:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.tb-speed-select option {
+  background-color: var(--ve-bg, #ffffff) !important;
+  color: var(--ve-text, #0f172a) !important;
+}
+
+[data-theme="dark"] .tb-speed-select,
+.dark .tb-speed-select {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .tb-speed-select option,
+.dark .tb-speed-select option {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.speed-dropdown-caret {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  pointer-events: none !important;
+  font-size: 10px !important;
+  color: var(--ve-text-muted, #64748b) !important;
+}
+
+/* Timeline Scroll & Track Layout */
+.visual-trim-container {
+  background: var(--ve-bg-secondary) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  height: 240px;
+  min-height: 124px !important;
+  max-height: 70vh !important;
+  transition: height 0.15s ease;
+}
+
+.timeline-scroll-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  width: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 6px 12px 18px 12px !important;
+  margin-top: 0 !important;
+  background: var(--ve-bg-secondary) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+}
+
+.timeline-scroll-area:has(.timeline-track-row:nth-of-type(4)) {
+  overflow-y: auto !important;
+}
+
+.timeline-scroll-area::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.timeline-tracks-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-left: 0 !important;
+  background: var(--ve-bg-secondary) !important;
+}
+
+.timeline-track-row {
+  display: flex !important;
+  gap: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+  margin: 0 !important;
+}
+
+.timeline-track-row--video {
+  height: 56px !important;
+}
+
+.timeline-track-row--audio {
+  height: 36px !important;
+}
+
+.track-label-cell {
+  min-width: 100px !important;
+  width: 100px !important;
+  background: var(--ve-track-label-bg) !important;
+  padding: 4px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  border-right: 1px solid var(--ve-border) !important;
+}
+
+.track-name {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: var(--ve-text) !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+}
+
+.track-content-cell {
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+.track-content-cell.trim-track,
+.trim-track {
+  height: 56px !important;
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  border-radius: 4px !important;
+}
+
+.track-content-cell.audio-track,
+.audio-track {
+  height: 36px !important;
+}
+
+.timeline-clip-blocks {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+  z-index: 5 !important;
+}
+
+.trim-playhead {
+  background: var(--ve-playhead-color) !important;
+  width: 2px !important;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.4) !important;
+  z-index: 9999 !important;
+}
+
+.trim-playhead::after {
+  content: "" !important;
+  position: absolute !important;
+  top: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--ve-playhead-color) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+.timeline-resizer {
+  height: 8px !important;
+  background: var(--ve-resizer-bg) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  border-bottom: 1px solid var(--ve-border) !important;
+  cursor: ns-resize !important;
+  position: relative !important;
+  z-index: 1050 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s ease !important;
+}
+
+.resizer-pill {
+  width: 38px !important;
+  height: 4px !important;
+  background: var(--ve-resizer-pill) !important;
+  border-radius: 2px !important;
+  transition: background 0.15s ease, width 0.15s ease !important;
+}
+
+.timeline-bottom-toolbar {
+  position: relative !important;
+  z-index: 1000 !important;
+  height: 42px !important;
+  background: var(--ve-toolbar-bg) !important;
+  border-top: 1px solid var(--ve-border) !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+  gap: 10px !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+
+.tb-bottom-divider {
+  width: 1px !important;
+  height: 18px !important;
+  background: var(--ve-border) !important;
+  margin: 0 2px !important;
+  flex-shrink: 0 !important;
+}
+
+.tb-bottom-btn {
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  color: var(--ve-text) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-btn:hover {
+  background: var(--ve-border) !important;
+  border-color: var(--ve-border-strong) !important;
+  color: var(--ve-text) !important;
+}
+
+.tb-bottom-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--ve-text) !important;
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-info {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  color: var(--ve-text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.tb-bottom-info strong {
+  color: var(--ve-text) !important;
+  font-size: 11px !important;
+}
+
+.tb-bottom-timecode {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--ve-text) !important;
+  background: var(--ve-bg-raised) !important;
+  border: 1px solid var(--ve-border) !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+}
+
+
+
+
+/* ---- Fixed Pinned Timeline Ruler Header — Canva Style ---- */
+.trim-ruler-header {
+  position: relative !important;
+  z-index: 100 !important;
+  width: 100% !important;
+  height: 36px !important;
+  background: var(--ve-ruler-bg) !important;
+  border-bottom: 1.5px solid var(--ve-border) !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  user-select: none !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+.trim-ruler {
+  position: relative !important;
+  height: 36px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  user-select: none !important;
+}
+
+/* Minor ticks — very subtle, bottom-anchored */
+.trim-tick {
+  position: absolute !important;
+  bottom: 0 !important;
+  width: 1px !important;
+  height: 5px !important;
+  background: var(--ve-border-strong) !important;
+  opacity: 0.5 !important;
+}
+
+/* Major ticks — taller, more visible, with slight accent */
+.trim-tick.major {
+  height: 14px !important;
+  width: 1px !important;
+  background: var(--ve-text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* Time labels — Canva uses small, clean, non-bold monospace above the major ticks */
+.trim-tick-label {
+  position: absolute !important;
+  bottom: 15px !important;
+  transform: translateX(-50%) !important;
+  color: var(--ve-text-muted) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace !important;
+  letter-spacing: 0.2px !important;
+  pointer-events: none !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Origin label "0s" — left-aligned so it doesn't get clipped */
+.trim-tick-label.first-tick-label {
+  transform: translateX(2px) !important;
+  font-weight: 700 !important;
+  color: var(--ve-text) !important;
+}
+
+/* ---- Layout Integration Overrides for sidebar_base.html ---- */
+.content-area:has(.ve-editor-page) {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.ve-editor-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height, 60px));
+  max-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ve-editor-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+
+
+/* ==========================================================================
+   CONSOLIDATED TIMELINE TRACK FIXES & ALIGNMENTS
+   ========================================================================== */
+
+/**
+ * Timeline Unified Track Fixes
+ * Add these styles to improve track consistency and visual feedback
+ * Include this file in project_detail.html template
+ */
+
+/* =============================================================================
+   UNIFIED TRACK STYLING
+   ============================================================================= */
+
+/* Unified cursor for all draggable items */
+.timeline-generic-block,
+.timeline-clip-block,
+.timeline-text-block,
+.timeline-audio-block,
+.timeline-effect-block {
+  cursor: grab !important;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timeline-generic-block:active,
+.timeline-clip-block:active,
+.timeline-text-block:active,
+.timeline-audio-block:active,
+.timeline-effect-block:active {
+  cursor: grabbing !important;
+  transform: scale(0.98);
+}
+
+/* Hover effects for all track items */
+.timeline-generic-block:hover,
+.timeline-clip-block:hover,
+.timeline-text-block:hover,
+.timeline-audio-block:hover,
+.timeline-effect-block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+/* =============================================================================
+   UNIFIED RESIZE HANDLE STYLING
+   ============================================================================= */
+
+.video-resize-handle,
+.audio-resize-handle,
+.text-resize-handle,
+.effect-resize-handle,
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize !important;
+  z-index: 6;
+  transition: width 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(255, 255, 255, 0.4);
+  user-select: none;
+}
+
+/* Audio tracks get green handles */
+.audio-resize-handle {
+  background: rgba(34, 197, 94, 0.75);
+}
+
+/* Hover effects - make handles more prominent */
+.video-resize-handle:hover,
+.audio-resize-handle:hover,
+.text-resize-handle:hover,
+.effect-resize-handle:hover {
+  width: 14px !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.video-resize-handle:hover,
+.text-resize-handle:hover,
+.effect-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.audio-resize-handle:hover {
+  background: rgba(34, 197, 94, 1);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+/* Handle positioning */
+.handle-left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.handle-right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Active state for handles */
+.video-resize-handle:active,
+.audio-resize-handle:active,
+.text-resize-handle:active,
+.effect-resize-handle:active {
+  width: 16px !important;
+  opacity: 1;
+}
+
+/* =============================================================================
+   TRACK ROW IMPROVEMENTS
+   ============================================================================= */
+
+.timeline-track-row {
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.timeline-track-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Better visual separation between tracks */
+.timeline-track-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =============================================================================
+   LOADING & ERROR STATES
+   ============================================================================= */
+
+/* Loading state for thumbnails */
+.timeline-clip-thumb.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-clip-thumb.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Placeholder styling */
+.thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-right: 1px dashed rgba(255, 255, 255, 0.12);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Error state for invalid clips */
+.timeline-clip-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  gap: 4px;
+}
+
+/* =============================================================================
+   DRAG AND DROP VISUAL FEEDBACK
+   ============================================================================= */
+
+/* Timeline container when drag is active */
+.visual-trim-container.drag-hover-active {
+  background: rgba(139, 92, 246, 0.06) !important;
+  border-color: var(--ve-primary) !important;
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* Track row when dragged over */
+.timeline-track-row.drag-track-hover {
+  background: rgba(139, 92, 246, 0.08) !important;
+  outline: 2px dashed rgba(139, 92, 246, 0.6) !important;
+  outline-offset: -2px;
+}
+
+/* Drop zone indicator */
+.timeline-drop-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ve-primary);
+  box-shadow: 0 0 10px var(--ve-primary);
+  pointer-events: none;
+  z-index: 100;
+  animation: dropIndicatorPulse 1s ease-in-out infinite;
+}
+
+@keyframes dropIndicatorPulse {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.7; transform: scaleY(0.95); }
+}
+
+/* =============================================================================
+   SELECTION STATES
+   ============================================================================= */
+
+/* Unified selection styling - Canva-grade elegant accents */
+.timeline-generic-block.selected,
+.timeline-clip-block.selected,
+.timeline-effect-block.selected,
+.timeline-item--selected {
+  outline: 2px solid var(--ve-primary, #7c3aed) !important;
+  outline-offset: 0px;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25) !important;
+  z-index: 10 !important;
+}
+
+.timeline-audio-block.selected,
+.timeline-item--selected.timeline-audio-block {
+  outline: 2px solid #10b981 !important;
+  outline-offset: 0px;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+  z-index: 10 !important;
+}
+
+.timeline-text-block.selected,
+.timeline-item--selected.timeline-text-block {
+  outline: 2px solid #0d9488 !important;
+  outline-offset: 0px;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  z-index: 10 !important;
+}
+
+/* Selected item handles - sleek Canva bars, not bulky pills */
+.timeline-generic-block.selected .video-resize-handle,
+.timeline-item--selected .video-resize-handle,
+.timeline-generic-block.selected .clip-trim-handle,
+.timeline-item--selected .clip-trim-handle {
+  background: var(--ve-primary, #7c3aed) !important;
+  width: 8px !important;
+  border-radius: 2px !important;
+}
+
+.timeline-generic-block.selected .audio-resize-handle,
+.timeline-item--selected .audio-resize-handle {
+  background: #10b981 !important;
+  width: 7px !important;
+  border-radius: 2px !important;
+}
+
+.timeline-generic-block.selected .text-resize-handle,
+.timeline-item--selected .text-resize-handle {
+  background: #0d9488 !important;
+  width: 7px !important;
+  border-radius: 2px !important;
+}
+
+/* =============================================================================
+   RESPONSIVE & ACCESSIBILITY
+   ============================================================================= */
+
+/* Touch-friendly larger hit areas on mobile */
+@media (max-width: 768px) {
+  .video-resize-handle,
+  .audio-resize-handle,
+  .text-resize-handle,
+  .effect-resize-handle {
+    width: 16px !important;
+  }
+  
+  .timeline-generic-block,
+  .timeline-clip-block,
+  .timeline-text-block,
+  .timeline-audio-block,
+  .timeline-effect-block {
+    min-height: 44px; /* iOS minimum touch target */
+  }
+}
+
+/* Focus states for keyboard navigation */
+.timeline-generic-block:focus,
+.timeline-clip-block:focus,
+.timeline-text-block:focus,
+.timeline-audio-block:focus,
+.timeline-effect-block:focus {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .timeline-generic-block,
+  .timeline-clip-block,
+  .timeline-text-block,
+  .timeline-audio-block,
+  .timeline-effect-block,
+  .video-resize-handle,
+  .audio-resize-handle,
+  .text-resize-handle,
+  .effect-resize-handle {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Use GPU acceleration for dragging */
+.timeline-generic-block.dragging,
+.timeline-clip-block.dragging {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Smooth scrolling for timeline */
+.timeline-scroll-area {
+  scroll-behavior: smooth;
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+.timeline-hidden {
+  display: none !important;
+}
+
+.timeline-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed !important;
+}
+
+.timeline-processing {
+  position: relative;
+}
+
+.timeline-processing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Sidebar Active Text Size Input - High-specificity reset against global input styles */
+#active-text-size {
+  flex: 1 !important;
+  min-width: 32px !important;
+  width: 34px !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  line-height: 28px !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: textfield !important;
+}
+
+#active-text-size:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+/**
+ * Timeline Alignment and UI Cleanup Fixes
+ * 
+ * ROOT CAUSE ANALYSIS:
+ * ====================
+ * The timeline misalignment was caused by horizontal padding on .timeline-scroll-area
+ * (12px left/right padding) which shifted the track content, but the ruler had no
+ * matching padding. This created a visual offset between ruler ticks and track content.
+ * 
+ * SOLUTION:
+ * =========
+ * Remove ALL horizontal padding from timeline-scroll-area and timeline-tracks-wrapper
+ * to establish a unified coordinate system where:
+ * - Ruler tick at X pixels = Track content at X pixels = Playhead at X pixels
+ * - All use the same basePxPerSecond * zoomFactor calculation
+ * - No offsets, margins, or transforms interfere with positioning
+ */
+
+/* =============================================================================
+   CRITICAL: Timeline Alignment Fixes - Highest Priority
+   ============================================================================= */
+
+/* Ensure timeline scroll area has NO horizontal padding */
+.timeline-scroll-area {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure timeline tracks wrapper has NO margins that shift content */
+.timeline-tracks-wrapper {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Ensure ruler header has same horizontal alignment as tracks */
+.trim-ruler-header {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure ruler itself has no padding */
+.trim-ruler {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Ensure track content cells don't add offset */
+.track-content-cell,
+.track-content-cell.trim-track,
+.track-content-cell.audio-track {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Playhead positioning - must use same coordinate system */
+.timeline-tracks-wrapper .trim-playhead {
+  /* No transform or margin adjustments */
+  margin-left: 0 !important;
+  transform: none !important;
+}
+
+/* =============================================================================
+   Right Sidebar - Media Library Improvements
+   ============================================================================= */
+
+/* Ensure sidebar has clean background */
+.ve-tool-panel {
+  background: var(--ve-bg) !important;
+}
+
+/* Make sidebar scrollable independently */
+.ve-media-grid {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 320px) !important;
+}
+
+/* Improve tab readability */
+.ve-tool-tab {
+  font-size: 13px !important;
+  color: var(--ve-text-muted) !important;
+}
+
+.ve-tool-tab:hover {
+  color: var(--ve-text) !important;
+}
+
+.ve-tool-tab--active {
+  color: var(--ve-primary) !important;
+}
+
+/* Category buttons - better contrast */
+.ve-category-btn {
+  color: var(--ve-text-muted) !important;
+}
+
+.ve-category-btn:hover {
+  color: var(--ve-text) !important;
+}
+
+.ve-category-btn.active {
+  color: var(--ve-primary, #8b5cf6) !important;
+  font-weight: 700 !important;
+}
+
+/* =============================================================================
+   Timeline Toolbar - Compact & Refined Design
+   ============================================================================= */
+
+/* Toolbar Container */
+.timeline-toolbar {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 4px 12px !important;
+  gap: 8px !important;
+}
+
+.toolbar-left,
+.toolbar-right {
+  gap: 4px !important;
+}
+
+/* Consistent compact button heights, padding and typography */
+.tb-btn {
+  height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  gap: 4px !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border, #e2e8f0) !important;
+  color: var(--ve-text, #1e293b) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.tb-btn:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.tb-btn:disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.tb-btn i,
+.tb-btn [data-lucide] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Icon-only buttons (Zoom Fit, Zoom Out, Zoom In, Fullscreen) */
+#tb-zoom-fit,
+#tb-zoom-out,
+#tb-zoom-in,
+#btn-fullscreen-timeline,
+#tb-bottom-fullscreen,
+.tb-btn:not(:has(span)) {
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Speed control dropdown */
+.timeline-speed-control {
+  gap: 4px !important;
+  margin-left: 2px !important;
+  padding-left: 6px !important;
+  border-left: 1px solid var(--ve-border, #e2e8f0) !important;
+}
+
+.timeline-speed-control span {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.tb-speed-select {
+  height: 26px !important;
+  padding: 0 16px 0 6px !important;
+  font-size: 11px !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--ve-border, #e2e8f0) !important;
+}
+
+/* Timeline Bottom Toolbar */
+.timeline-bottom-toolbar {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 10px !important;
+}
+
+.tb-bottom-btn {
+  height: 24px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 0 8px !important;
+  border-radius: 4px !important;
+  gap: 4px !important;
+}
+
+.tb-bottom-btn i,
+.tb-bottom-btn [data-lucide] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.tb-bottom-badge {
+  font-size: 10.5px !important;
+  padding: 2px 7px !important;
+  height: 22px !important;
+  border-radius: 4px !important;
+}
+
+/* =============================================================================
+   Canva-Style Inline Track Add Buttons (Clip, Audio, Text)
+   ============================================================================= */
+
+.timeline-inline-add-btn {
+  position: absolute;
+  top: 4px;
+  height: calc(100% - 8px);
+  min-height: 24px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px dashed rgba(139, 92, 246, 0.45) !important;
+  border-radius: 4px !important;
+  color: var(--ve-primary, #7c3aed) !important;
+  font-family: inherit;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  z-index: 5;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease !important;
+  user-select: none;
+}
+
+.timeline-inline-add-btn:hover {
+  background: #ede9fe !important;
+  border-color: var(--ve-primary, #7c3aed) !important;
+  color: #6d28d9 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.15) !important;
+}
+
+.timeline-inline-add-btn:active {
+  transform: translateY(0);
+}
+
+.timeline-inline-add-btn i,
+.timeline-inline-add-btn svg,
+.timeline-inline-add-btn [data-lucide] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Audio-specific styling */
+.timeline-inline-add-audio-btn {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #059669 !important;
+}
+
+.timeline-inline-add-audio-btn:hover {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* Text-specific styling */
+.timeline-inline-add-text-btn {
+  border-color: rgba(13, 148, 136, 0.5) !important;
+  color: #0d9488 !important;
+}
+
+.timeline-inline-add-text-btn:hover {
+  background: #f0fdfa !important;
+  border-color: #14b8a6 !important;
+  color: #0f766e !important;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.15) !important;
+}
+
+/* =============================================================================
+   Canva Clean Rectangular Track Blocks & Stage Text (No Pill Shapes)
+   ============================================================================= */
+
+/* Eliminate pill shapes on all track blocks */
+.timeline-generic-block,
+.timeline-clip-block,
+.timeline-text-block,
+.timeline-audio-block,
+.timeline-effect-block,
+.audio-block,
+.timeline-inline-add-btn,
+.ve-category-btn {
+  border-radius: 4px !important;
+}
+
+/* Canva Clean Audio Block with Waveform, Header, and Handles */
+.timeline-audio-block,
+.audio-block {
+  position: absolute !important;
+  top: 2px !important;
+  bottom: 2px !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+  border: 1px solid rgba(16, 185, 129, 0.45) !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  cursor: grab !important;
+  box-sizing: border-box !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.timeline-audio-block:hover,
+.audio-block:hover {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: #10b981 !important;
+}
+
+.timeline-audio-block.selected,
+.timeline-item--selected.timeline-audio-block {
+  background: rgba(16, 185, 129, 0.28) !important;
+  border: 1.5px solid #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35) !important;
+  outline: none !important;
+}
+
+/* Audio Block Header Label Badge */
+.timeline-audio-block .audio-clip-header {
+  position: absolute;
+  top: 3px;
+  left: 8px;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #047857 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.ve-theme-dark .timeline-audio-block .audio-clip-header {
+  color: #34d399 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+/* Audio Resize/Trim Handles */
+.timeline-audio-block .audio-resize-handle {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 8px !important;
+  background: #10b981 !important;
+  cursor: ew-resize !important;
+  z-index: 10 !important;
+  opacity: 0.65 !important;
+  border-radius: 2px !important;
+  transition: width 0.15s ease, opacity 0.15s ease, background 0.15s ease !important;
+  display: block !important;
+}
+
+.timeline-audio-block:hover .audio-resize-handle,
+.timeline-audio-block.selected .audio-resize-handle,
+.timeline-item--selected .audio-resize-handle {
+  opacity: 1 !important;
+  width: 7px !important;
+  background: #059669 !important;
+  border-radius: 2px !important;
+}
+
+.timeline-audio-block .audio-resize-handle.handle-left {
+  left: 0 !important;
+}
+
+.timeline-audio-block .audio-resize-handle.handle-right {
+  right: 0 !important;
+}
+
+/* Text Track Block Canva Styling (Crisp Rectangle, subtle 4px radius) */
+.timeline-text-block {
+  top: 2px !important;
+  bottom: 2px !important;
+  border-radius: 4px !important;
+  background: #0d9488 !important;
+  border: 1px solid #14b8a6 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.timeline-text-block.selected,
+.timeline-item--selected.timeline-text-block {
+  border: 1.5px solid #2dd4bf !important;
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.4) !important;
+  outline: none !important;
+}
+
+.timeline-text-block .text-resize-handle {
+  border-radius: 2px !important;
+}
+
+/* Stage Text Overlay Container & Item Styling */
+#text-overlay-container {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+  z-index: 30 !important;
+  overflow: hidden !important;
+}
+
+.preview-text-overlay {
+  position: absolute !important;
+  pointer-events: auto !important;
+  cursor: move !important;
+  user-select: none !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  box-sizing: border-box !important;
+  white-space: pre-wrap !important;
+  text-align: center !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9) !important;
+  transition: outline 0.15s ease, box-shadow 0.15s ease !important;
+  line-height: 1.25 !important;
+  font-family: inherit !important;
+}
+
+.preview-text-overlay:hover {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.75) !important;
+  outline-offset: 3px !important;
+}
+
+.preview-text-overlay.selected,
+.preview-text-overlay.is-selected {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25) !important;
+}
+
+.preview-text-overlay[contenteditable="true"] {
+  outline: 2px solid #7c3aed !important;
+  outline-offset: 3px !important;
+  background: rgba(124, 58, 237, 0.2) !important;
+  cursor: text !important;
+  user-select: text !important;
+}
+
+/* Active Text Editor Card in Right Drawer */
+.ve-text-editor-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ve-theme-dark .ve-text-editor-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.ve-theme-dark #active-text-input {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+}
+
+.ve-theme-dark #active-text-size {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* =============================================================================
+   Visual Polish
+   ============================================================================= */
+
+/* Smooth transitions */
+.timeline-scroll-area,
+.timeline-tracks-wrapper,
+.trim-ruler {
+  transition: none !important;
+  /* Prevent animation during resize/zoom */
+}
+
+/* Ensure ruler ticks are crisp */
+.trim-tick,
+.trim-tick.major {
+  transform: translateZ(0);
+  /* GPU acceleration */
+}
+
+/* Prevent sub-pixel rendering issues */
+.trim-ruler,
+.timeline-tracks-wrapper,
+.track-content-cell {
+  will-change: auto;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+/* =============================================================================
+   Responsive Adjustments
+   ============================================================================= */
+
+@media (max-width: 1024px) {
+  .tb-btn span {
+    display: none;
+    /* Hide text on small screens, keep icons */
+  }
+
+  .tb-btn {
+    min-width: 32px !important;
+    padding: 0 8px !important;
+  }
+}

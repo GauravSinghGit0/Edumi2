@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from django.db.models import Count, Q
 from .models import ClassroomMembership
 

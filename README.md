@@ -44,8 +44,7 @@
 
 - 🏛️ **[EduMi Full System Architecture & Engineering Blueprint](docs/SYSTEM_ARCHITECTURE.md)**: Exhaustive 5-tier architectural specification, component diagrams, microservice port matrix, sequence flows, and data dictionaries.
 - 📖 **[EduMi Master System Technical Manual & Viva Defense Guide (75+ Q&A)](docs/EDUMI_MASTER_SYSTEM_AND_VIVA_GUIDE.md)**: Comprehensive architectural guide covering all 10 modules, mathematical formulas, and 75+ categorized viva questions with model answers.
-- 🎬 **[Video Editing Module Technical Documentation](docs/VIDEO_EDITING_DOCUMENTATION.md)**: Complete specifications for the Canva/CapCut multi-track timeline, `UnifiedMediaUploader`, 360p ultrafast proxy, and FFmpeg filtergraph compiler.
-- 🎓 **[Academic Project Final Report](docs/FINAL_PROJECT_REPORT.md)**: Deep-dive academic thesis report for SIV864 / CSM 011 with empirical compression benchmarks and security audits.
+- 🎓 **[EduMi Full Software Engineering & System Implementation Report](docs/EDUMI_FULL_SOFTWARE_REPORT.md)**: Deep-dive academic software report with empirical compression benchmarks, database design, and end-to-end security audits.
 
 ---
 
@@ -251,9 +250,9 @@ Key parameters in `.env`:
 | `LIVEKIT_API_SECRET` | `edumi_livekit_sec_32chars_key_2026_prod` | LiveKit shared secret (min 32 characters) |
 | `FACE_ENCRYPTION_KEY` | *(Fernet Base64 Key)* | AES-256 key for encrypting 128D facial vectors |
 | `FACE_MATCH_THRESHOLD` | `0.50` | Maximum Euclidean distance for facial verification |
-| `CAMERA_SERVICE_PORT` | `8008` | Port for the camera streaming microservice |
-| `CAMERA_SERVICE_URL` | `http://127.0.0.1:8008` | Internal camera microservice address |
-| `CAMERA_SERVICE_SECRET` | *(Random 32-char string)* | Service-to-service authentication token |
+| `STREAMING_SERVICE_PORT` | `8008` | Port for the camera streaming microservice |
+| `STREAMING_SERVICE_URL` | `http://127.0.0.1:8008` | Internal streaming microservice address |
+| `STREAMING_SERVICE_SECRET` | *(Random 32-char string)* | Service-to-service authentication token |
 
 ---
 
@@ -262,10 +261,10 @@ Key parameters in `.env`:
 | Service | Port | Protocol | Purpose |
 |---|---|---|---|
 | **Daphne (Main ASGI)** | `8002` | HTTPS / WSS | Primary application UI, auth, API, and WebSockets |
-| **Camera Microservice** | `8008` | HTTP | Ingests RTSP feeds, executes head counting, emits streams |
+| **Streaming Microservice** | `8008` | HTTP / HTTPS | Ingests RTSP feeds, executes head counting, emits camera streams |
 | **LiveKit Signaling** | `7880` | HTTP / WS | WebRTC session creation and room coordination |
 | **LiveKit RTC Media** | `7881` / `7882` | TCP / UDP | WebRTC audio/video packet transport |
-| **LiveKit UDP Range** | `50000–60000` | UDP | High-concurrency peer media streams |
+| **LiveKit UDP Range** | `50000–50200` | UDP | High-concurrency peer media streams |
 | **Redis Server** | `6379` | TCP | Channel layers and Celery task broker |
 | **PostgreSQL** | `5432` | TCP | Relational enterprise database |
 
@@ -311,22 +310,23 @@ EduMi includes automated tools in `scripts/` to verify infrastructure health:
 
 ```
 Edumi2/
+├── academics/               # Institutional academic management, semesters, and departments
 ├── accounts/                # Authentication, profiles, OTPs, rate-limiting & direct messaging
 ├── assignments/             # Homework submissions, timed quizzes, and automatic grading
 ├── attendance/              # YuNet + SFace biometric recognition, attendance ledgers
 ├── cameras/                 # Smart classroom RTSP cameras, lecture recording engine, and occupancy counting
-├── camera_service/          # Dedicated streaming gateway for classroom camera feeds
-├── mobile_cameras/          # Mobile IP Webcam streaming (smartphones as classroom cameras)
+├── streaming_service/       # Dedicated Daphne streaming gateway for camera feeds & AI occupancy
 ├── meetings/                # LiveKit WebRTC virtual classrooms, room controls, live chat
-├── rag_workspace/           # Academic document search and AI knowledge-base
+├── course_materials/        # Academic digital library, study materials, and RAG chunk repository
+├── rag_assistant/           # Academic document search and AI study assistant (RAG engine)
 ├── video_editing/           # Non-destructive in-browser video editor & FFmpeg filtergraphs
 ├── videos/                  # On-demand lecture library with multi-bitrate HLS streaming
 ├── common/                  # Cross-app utilities, telemetry, audit logs, magic-byte checks
 ├── config/                  # Microservice configurations (livekit.yaml)
 ├── scripts/                 # SSL generation, firewall tools, SMTP verification scripts
-├── templates/               # Semantic HTML5 templates (responsive layouts, dark mode)
-├── static/                  # CSS stylesheets, JavaScript modules, ONNX/face-api vendor models
-├── school_project/          # Root Django settings, ASGI/WSGI entrypoints, and routing
+├── templates/               # Semantic HTML5 templates (responsive layouts, modular partials)
+├── static/                  # Standardized snake_case CSS stylesheets, JavaScript modules, vendor models
+├── edumi_core/              # Root Django settings, ASGI/WSGI entrypoints, and routing
 ├── deploy.sh                # Single-file master deployment script for Ubuntu Server
 ├── start_app.bat            # Double-click launcher wrapper for Windows
 ├── start_app.ps1            # Automated PowerShell microservice orchestrator

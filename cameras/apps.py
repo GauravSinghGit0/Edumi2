@@ -11,8 +11,8 @@ class CamerasConfig(AppConfig):
         import sys
         import os
         
-        # Don't run cleanup during migrations, management commands, or in camera service
-        if 'manage.py' in sys.argv or os.path.basename(sys.argv[0]) == 'manage.py' and 'camera_service' in os.getcwd():
+        # Don't run cleanup during migrations, management commands, or in streaming service
+        if 'manage.py' in sys.argv or (os.path.basename(sys.argv[0]) == 'manage.py' and 'streaming_service' in os.getcwd()):
             return
 
         def _deferred_cleanup():

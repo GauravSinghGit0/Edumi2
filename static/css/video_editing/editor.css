@@ -1,0 +1,10 @@
+/**
+ * EduMi Video Editor — Master Stylesheet
+ * Modular Architecture
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("modules/editor_theme.css");
+@import url("modules/editor_layout.css");
+@import url("modules/media_library.css");
+@import url("modules/editor_timeline.css");
+@import url("modules/editor_controls.css");

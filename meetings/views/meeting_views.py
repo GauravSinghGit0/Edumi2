@@ -52,6 +52,7 @@ def create_meeting(request):
         duration_minutes = int(request.POST.get('duration_minutes', 60))
         allow_screen_share = request.POST.get('allow_screen_share') == 'on'
         allow_chat = request.POST.get('allow_chat') == 'on'
+        record_meeting = request.POST.get('record_meeting') == 'on'
 
         if not title:
             messages.error(request, 'Meeting title cannot be empty.')
@@ -83,6 +84,7 @@ def create_meeting(request):
             meeting_type='temporary', meeting_code=generate_meeting_code(),
             scheduled_time=scheduled_time, duration_minutes=duration_minutes,
             allow_screen_share=allow_screen_share, allow_chat=allow_chat,
+            record_meeting=record_meeting,
         )
         return redirect('teacher_meetings')
 
@@ -279,6 +281,8 @@ def join_meeting(request, meeting_code):
         'student_can_view_camera': meeting.student_can_view_camera,
         'student_can_view_screenshare': meeting.student_can_view_screenshare,
         'allow_chat': meeting.allow_chat,
+        'allow_screen_share': meeting.allow_screen_share,
+        'record_meeting': meeting.record_meeting,
         'host_joined_at_ms': host_joined_at_ms,
         'user_directory_json': json.dumps(user_directory),
     }
@@ -400,6 +404,12 @@ def livekit_token(request, meeting_code):
     })
 
     is_host = meeting.teacher == request.user or request.user.is_superuser
+    can_publish_sources = ['camera', 'microphone']
+    if is_host or meeting.allow_screen_share:
+        can_publish_sources.extend(['screen_share', 'screen_share_audio'])
+
+    can_publish_data = is_host or meeting.allow_chat
+
     token = (
         AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
         .with_identity(str(request.user.id))
@@ -407,8 +417,9 @@ def livekit_token(request, meeting_code):
         .with_metadata(metadata_str)
         .with_grants(VideoGrants(
             room_join=True, room=meeting_code,
-            can_publish=True, can_subscribe=True, can_publish_data=True,
-            can_publish_sources=['camera', 'microphone', 'screen_share', 'screen_share_audio'],
+            can_publish=True, can_subscribe=True,
+            can_publish_data=can_publish_data,
+            can_publish_sources=can_publish_sources,
             room_admin=is_host,
         ))
         .to_jwt()

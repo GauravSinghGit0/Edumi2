@@ -308,7 +308,7 @@ class HeadCountManager:
     
     def _run_session(self, camera_key, session_data):
         """Background thread to process camera feed for a session"""
-        from .models import HeadCountLog, HeadCountSession
+        from .models import HeadCountSession
         
         session = session_data['session']
         camera_id = session.camera_id

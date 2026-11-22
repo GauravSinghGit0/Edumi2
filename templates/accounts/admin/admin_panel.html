@@ -4,7 +4,7 @@
 {% block page_title %}Admin Control Center | EduMi{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin-modern.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
         <div>
             <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                 <h1>Admin Control Center</h1>
-                {% if camera_service_online %}
+                {% if streaming_service_online %}
                     {% include "components/admin/status_pill.html" with status="active" label="LiveKit SFU Online" custom_style="cursor: help;" %}
                 {% else %}
                     {% include "components/admin/status_pill.html" with status="suspended" label="SFU Offline" custom_style="cursor: help;" %}

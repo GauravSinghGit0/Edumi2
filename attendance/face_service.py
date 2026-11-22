@@ -51,6 +51,24 @@ class FaceService:
         self._recognizer: Optional[cv2.FaceRecognizerSF] = None
         self._init_models()
 
+    def _cosine_similarity(self, vec1, vec2):
+        """Compute cosine similarity between two 1D vectors"""
+        v1 = np.asarray(vec1, dtype=np.float32)
+        v2 = np.asarray(vec2, dtype=np.float32)
+        dot = np.dot(v1, v2)
+        norm = (np.linalg.norm(v1) * np.linalg.norm(v2)) + 1e-8
+        return float(dot / norm)
+
+    def detect_faces(self, img_bgr: np.ndarray):
+        """Detect faces in BGR numpy image, returns numpy array of detected faces or []"""
+        if self._detector is None or img_bgr is None:
+            return []
+        h, w = img_bgr.shape[:2]
+        self._detector.setInputSize((w, h))
+        with self._model_lock:
+            _, faces = self._detector.detect(img_bgr)
+        return faces if faces is not None else []
+
     def _init_models(self):
         """Initialize YuNet and SFace ONNX models."""
         try:

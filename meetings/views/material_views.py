@@ -3,6 +3,8 @@ meetings/views/material_views.py
 Views for Study Materials, Digital Library, Unit organization, and RAG indexing.
 """
 import os
+import re
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, FileResponse, Http404
@@ -12,6 +14,8 @@ from django.db.models import Q, F
 from django.utils import timezone
 
 from meetings.models import Classroom, ClassroomMembership, MaterialUnit, StudyMaterial, MaterialChunk, MaterialBookmark
+
+logger = logging.getLogger(__name__)
 
 
 def check_classroom_access(classroom, user):
@@ -99,13 +103,86 @@ def extract_text_pages_from_material(material):
     return pages
 
 
+def semantic_sentence_chunking(page_text, target_size=500, overlap_sentences=1):
+    """
+    Sentence and Paragraph-aware semantic chunking (Adjustment 3 & 4).
+    Splits text on natural paragraph and sentence boundaries rather than raw character offsets.
+    Preserves parent_context for Parent-Document Retrieval.
+    """
+    if not page_text or not page_text.strip():
+        return []
+
+    raw_paragraphs = [p.strip() for p in re.split(r'\n\s*\n', page_text) if p.strip()]
+    if not raw_paragraphs:
+        raw_paragraphs = [page_text.strip()]
+
+    chunks = []
+    for para_idx, para in enumerate(raw_paragraphs):
+        parent_context = para
+        if len(parent_context) < 350 and len(raw_paragraphs) > 1:
+            prev_p = raw_paragraphs[para_idx - 1] if para_idx > 0 else ""
+            next_p = raw_paragraphs[para_idx + 1] if para_idx < len(raw_paragraphs) - 1 else ""
+            parent_context = f"{prev_p}\n\n{para}\n\n{next_p}".strip()
+
+        if len(para) <= 600:
+            chunks.append({
+                'text': para,
+                'parent_context': parent_context
+            })
+            continue
+
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', para) if s.strip()]
+        if len(sentences) <= 1:
+            words = para.split()
+            cur_words = []
+            for w in words:
+                cur_words.append(w)
+                if len(" ".join(cur_words)) >= target_size:
+                    c_txt = " ".join(cur_words)
+                    chunks.append({'text': c_txt, 'parent_context': parent_context})
+                    cur_words = cur_words[-20:]
+            if cur_words:
+                chunks.append({'text': " ".join(cur_words), 'parent_context': parent_context})
+            continue
+
+        cur_sentences = []
+        cur_len = 0
+
+        for sent in sentences:
+            s_len = len(sent)
+            if cur_len + s_len > target_size and cur_sentences:
+                c_txt = " ".join(cur_sentences)
+                chunks.append({
+                    'text': c_txt,
+                    'parent_context': parent_context
+                })
+                overlap = cur_sentences[-overlap_sentences:] if overlap_sentences > 0 else []
+                cur_sentences = list(overlap)
+                cur_len = sum(len(s) for s in cur_sentences)
+
+            cur_sentences.append(sent)
+            cur_len += s_len
+
+        if cur_sentences:
+            c_txt = " ".join(cur_sentences)
+            if chunks and len(c_txt) < 80:
+                chunks[-1]['text'] += " " + c_txt
+            else:
+                chunks.append({
+                    'text': c_txt,
+                    'parent_context': parent_context
+                })
+
+    return chunks
+
+
 def auto_chunk_and_index_rag(material):
     """
     RAG Pre-processor:
-    Extracts text from PDF/DOCX/TXT files, creates overlapping text chunks with page tracking,
+    Extracts text from PDF/DOCX/TXT files, creates sentence-aware text chunks with parent context,
     pre-computes vector embeddings upfront, and marks RAG readiness.
     """
-    from rag_workspace.services import get_nomic_embedding
+    from rag_assistant.services import get_nomic_embedding
 
     extracted_pages = extract_text_pages_from_material(material)
 
@@ -114,27 +191,15 @@ def auto_chunk_and_index_rag(material):
     chunk_counter = 0
 
     chunk_size = 500
-    chunk_overlap = 100
 
     for page_num, page_text in extracted_pages:
         full_text_list.append(f"--- Page {page_num} ---\n{page_text}")
 
-        # Sliding window chunking with overlap per page
-        p_len = len(page_text)
-        if p_len <= chunk_size:
-            p_chunks = [page_text]
-        else:
-            p_chunks = []
-            start = 0
-            while start < p_len:
-                end = start + chunk_size
-                p_chunks.append(page_text[start:end])
-                if end >= p_len:
-                    break
-                start += (chunk_size - chunk_overlap)
+        # Semantic Sentence/Paragraph Chunking with Parent Context Preservation
+        p_chunks = semantic_sentence_chunking(page_text, target_size=chunk_size, overlap_sentences=1)
 
-        for c_text in p_chunks:
-            c_text_clean = c_text.strip()
+        for c_info in p_chunks:
+            c_text_clean = c_info['text'].strip()
             if not c_text_clean:
                 continue
 
@@ -142,6 +207,7 @@ def auto_chunk_and_index_rag(material):
             chunk_records.append({
                 'chunk_index': chunk_counter,
                 'chunk_text': c_text_clean,
+                'parent_context': c_info.get('parent_context', c_text_clean),
                 'token_count': approx_tokens,
                 'page_number': page_num,
                 'embedding_id': f"emb_mat_{material.id}_chunk_{chunk_counter}",
@@ -180,6 +246,7 @@ def auto_chunk_and_index_rag(material):
                 'type': material.material_type,
                 'classroom_id': material.classroom_id,
                 'page_number': c_data['page_number'],
+                'parent_context': c_data.get('parent_context', c_data['chunk_text']),
             }
         )
         created_chunks.append(mc)

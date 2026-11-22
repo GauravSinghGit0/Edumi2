@@ -11,7 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.core.files.base import ContentFile
 
 from attendance.models import StudentFaceProfile
 from attendance.face_service import get_face_service

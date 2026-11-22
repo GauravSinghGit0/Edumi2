@@ -6,7 +6,7 @@ User = get_user_model()
 class Conversation(models.Model):
     """Represents a conversation between two users or a classroom group stream"""
     classroom = models.OneToOneField(
-        'meetings.Classroom',
+        'academics.Classroom',
         on_delete=models.CASCADE,
         null=True,
         blank=True,

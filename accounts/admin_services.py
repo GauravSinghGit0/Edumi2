@@ -4,8 +4,7 @@ Comprehensive real-database analytics and data aggregators for the Edumi Admin S
 Enforces 100% genuine data — no fake metrics, mocks, or placeholders.
 """
 import logging
-from django.db import models
-from django.db.models import Count, Q, Avg, F
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 

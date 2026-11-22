@@ -24,8 +24,8 @@ def identity_me_view(request):
         return JsonResponse({
             'success': False,
             'authenticated': False,
+            'error': 'Authentication required.',
             'identity': None,
-            'error': 'Authentication required.'
         }, status=401)
 
     identity = getattr(request, 'identity', None) or IdentityService.get_identity(request.user)

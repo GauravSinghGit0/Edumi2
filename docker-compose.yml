@@ -1,9 +1,13 @@
-# version removed (Compose V2) – not needed
+# ==============================================================================
+# EduMi — Production Docker Compose Orchestration (Compose V2)
+# Multi-container stack: PostgreSQL, Redis, LiveKit SFU, Daphne ASGI,
+# Streaming Microservice, Celery Worker, and Nginx Reverse Proxy.
+# ==============================================================================
 
 services:
-  # -------------------------------------------------
-  # PostgreSQL – persisted data on host volume
-  # -------------------------------------------------
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL Database — Relational persistence with automated healthcheck
+  # ----------------------------------------------------------------------------
   db:
     image: postgres:15-alpine
     container_name: edumi_db
@@ -13,26 +17,30 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-edumi_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edumi_user} -d ${POSTGRES_DB:-edumi_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - edumi_net
 
-  # -------------------------------------------------
-  # Redis – required for Channels & Celery
-  # -------------------------------------------------
+  # ----------------------------------------------------------------------------
+  # 2. Redis Cache & Broker — Channel Layers & Celery Task Queue
+  # ----------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: edumi_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - edumi_net
 
-  # -------------------------------------------------
-  # LiveKit – media/SFU server
-  # -------------------------------------------------
+  # ----------------------------------------------------------------------------
+  # 3. LiveKit WebRTC SFU — Low-latency audio/video packet router
+  # ----------------------------------------------------------------------------
   livekit:
     image: livekit/livekit-server:latest
     container_name: edumi_livekit
@@ -47,20 +55,26 @@ services:
     volumes:
       - ./config/livekit.yaml:/etc/livekit.yaml:ro
     command: ["--config", "/etc/livekit.yaml"]
+    networks:
+      - edumi_net
 
-  # -------------------------------------------------
-  # Django web containers – one per logical domain
-  # -------------------------------------------------
-  auth:
+  # ----------------------------------------------------------------------------
+  # 4. Primary Web Application — Daphne ASGI Server (HTTP & WebSockets)
+  # ----------------------------------------------------------------------------
+  web:
     build:
       context: .
       args:
         SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_auth
+        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-edumi_core.settings}
+    container_name: edumi_web
     restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8002", "school_project.asgi:application"]
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8002", "edumi_core.asgi:application"]
     env_file: .env
+    volumes:
+      - ./database/media:/app/database/media
+      - ./media:/app/media
+      - staticfiles_data:/app/staticfiles
     depends_on:
       db:
         condition: service_healthy
@@ -68,135 +82,62 @@ services:
         condition: service_started
     ports:
       - "8002:8002"
+    networks:
+      - edumi_net
 
-  admin:
+  # ----------------------------------------------------------------------------
+  # 5. Streaming Microservice — Dedicated RTSP ingestion & occupancy analytics
+  # ----------------------------------------------------------------------------
+  streaming_service:
     build:
       context: .
       args:
         SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_admin
+        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-edumi_core.settings}
+    container_name: edumi_streaming_service
     restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8003", "school_project.asgi:application"]
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  meeting:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_meeting
-    restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8004", "school_project.asgi:application"]
+    command: ["python", "streaming_service/serve.py"]
     env_file: .env
     volumes:
       - ./database/media:/app/database/media
+      - ./media:/app/media
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+    ports:
+      - "8008:8008"
+    networks:
+      - edumi_net
 
-  camera:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_camera
-    restart: unless-stopped
-    command: ["python", "camera_service/serve.py"]
-    env_file: .env
-    volumes:
-      - ./database/media:/app/database/media
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  msg:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_msg
-    restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8005", "school_project.asgi:application"]
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  profile:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_profile
-    restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8006", "school_project.asgi:application"]
-    env_file: .env
-    volumes:
-      - ./database/media:/app/database/media
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  video:
-    build:
-      context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
-    container_name: edumi_video
-    restart: unless-stopped
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8007", "school_project.asgi:application"]
-    env_file: .env
-    volumes:
-      - ./database/media:/app/database/media
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  # -------------------------------------------------
-  # Celery worker – single instance (scale as needed)
-  # -------------------------------------------------
+  # ----------------------------------------------------------------------------
+  # 6. Celery Background Worker — Asynchronous transcoding & summarization
+  # ----------------------------------------------------------------------------
   celery:
     build:
       context: .
       args:
         SECRET_KEY: ${SECRET_KEY}
-        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-school_project.settings}
+        DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-edumi_core.settings}
     container_name: edumi_celery
     restart: unless-stopped
-    command: ["celery", "-A", "school_project", "worker", "-l", "info", "-P", "threads"]
+    command: ["celery", "-A", "edumi_core", "worker", "-l", "info", "-P", "threads"]
     env_file: .env
     volumes:
       - ./database/media:/app/database/media
+      - ./media:/app/media
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - edumi_net
 
-  # -------------------------------------------------
-  # Optional Nginx reverse‑proxy for HTTPS termination
-  # -------------------------------------------------
+  # ----------------------------------------------------------------------------
+  # 7. Nginx Reverse Proxy — HTTPS termination & static/media file routing
+  # ----------------------------------------------------------------------------
   nginx:
     image: nginx:stable-alpine
     container_name: edumi_nginx
@@ -207,14 +148,20 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certs:/etc/nginx/certs:ro
-      - ./staticfiles:/app/staticfiles:ro
+      - staticfiles_data:/app/staticfiles:ro
       - ./database/media:/app/database/media:ro
+      - ./media:/app/media:ro
     depends_on:
-      - auth
-      - admin
-      - meeting
-      - camera
-      - msg
-      - profile
-      - video
+      - web
+      - streaming_service
+      - livekit
+    networks:
+      - edumi_net
 
+volumes:
+  postgres_data:
+  staticfiles_data:
+
+networks:
+  edumi_net:
+    driver: bridge

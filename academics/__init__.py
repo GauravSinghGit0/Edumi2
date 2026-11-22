@@ -1,0 +1,1 @@
+# academics app package

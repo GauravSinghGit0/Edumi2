@@ -3,7 +3,7 @@
    Modern, compact, responsive, accessible split-view layout.
    ============================================================================== */
 
-@import url('design-tokens.css');
+@import url('design_tokens.css');
 
 /* Hide global navbar on auth pages */
 body:has(.auth-split-container) nav,

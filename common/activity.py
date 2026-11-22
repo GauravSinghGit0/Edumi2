@@ -106,7 +106,9 @@ def get_timeline_feed(user=None, limit=30):
         })
 
     # 2. Integrate real milestone records from DB if activity log is sparse
-    from meetings.models import ClassroomMembership, Meeting, MeetingParticipant
+    from django.apps import apps
+    ClassroomMembership = apps.get_model('academics' if getattr(settings, 'FEATURE_USE_NEW_ACADEMICS_APP', False) else 'meetings', 'ClassroomMembership')
+    MeetingParticipant = apps.get_model('meetings', 'MeetingParticipant')
     from assignments.models import AssignmentSubmission, QuizSubmission
 
     # Classroom Enrollments

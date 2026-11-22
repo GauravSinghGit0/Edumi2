@@ -232,9 +232,9 @@ if ($LASTEXITCODE -eq 0) {
 
 
 # ------------------------------------------------------------------------------
-# STEP 3: Build Static Assets (collectstatic + django-compressor offline)
+# STEP 3: Build Static Assets (collectstatic + template compression)
 # ------------------------------------------------------------------------------
-Write-Host "[3/6] Building static assets & compressing CSS/JS..." -ForegroundColor Yellow
+Write-Host "[3/6] Building static assets & compiling CSS/JS..." -ForegroundColor Yellow
 
 & $VenvPython manage.py collectstatic --noinput
 if ($LASTEXITCODE -ne 0) {
@@ -243,6 +243,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "  -> Static files collected successfully." -ForegroundColor Green
 }
 
+Write-Host "  -> Checking offline template bundles (this may take a few seconds)..." -ForegroundColor Gray
 & $VenvPython manage.py compress --force
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  -> [WARN] compress exited with code $LASTEXITCODE (continuing)" -ForegroundColor Yellow
@@ -276,23 +277,23 @@ if (Test-Path $LkExePath) {
     Write-Host "     Download it from: https://github.com/livekit/livekit/releases" -ForegroundColor DarkYellow
 }
 
-if (Test-Path "camera_service\serve.py") {
-    $CamLog = Join-Path $LogsDir "camera_service.log"
+if (Test-Path "streaming_service\serve.py") {
+    $CamLog = Join-Path $LogsDir "streaming_service.log"
     $CamProc = Start-BackgroundProcess `
         -FilePath    $VenvPython `
-        -ArgumentList @("camera_service/serve.py") `
+        -ArgumentList @("streaming_service/serve.py") `
         -LogFile     $CamLog `
-        -ServiceName "Camera Microservice" `
+        -ServiceName "Streaming Microservice" `
         -VerifyPort  8008
     if ($CamProc) { [void]$BGProcesses.Add($CamProc) }
 } else {
-    Write-Host "  -> [SKIP] camera_service/serve.py not found" -ForegroundColor DarkYellow
+    Write-Host "  -> [SKIP] streaming_service/serve.py not found" -ForegroundColor DarkYellow
 }
 
 $CeleryLog = Join-Path $LogsDir "celery.log"
 $CeleryProc = Start-BackgroundProcess `
     -FilePath    $VenvPython `
-    -ArgumentList @("-m", "celery", "-A", "school_project", "worker", "-l", "info", "-P", "threads") `
+    -ArgumentList @("-m", "celery", "-A", "edumi_core", "worker", "-l", "info", "-P", "threads") `
     -LogFile     $CeleryLog `
     -ServiceName "Celery Task Worker" `
     -VerifyPort  0

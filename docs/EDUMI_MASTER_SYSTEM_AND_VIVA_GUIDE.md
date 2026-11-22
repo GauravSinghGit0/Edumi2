@@ -17,7 +17,7 @@
    - 4.1 [Accounts & Identity Access Management (`accounts/`)](#41-accounts--identity-access-management-accounts)
    - 4.2 [Virtual Classrooms & Real-Time WebRTC (`meetings/`)](#42-virtual-classrooms--real-time-webrtc-meetings)
    - 4.3 [AI Facial Biometric Attendance & Anti-Spoofing (`attendance/`)](#43-ai-facial-biometric-attendance--anti-spoofing-attendance)
-   - 4.4 [Smart Classroom & Studio Cameras (`cameras/`, `camera_service/`)](#44-smart-classroom--studio-cameras-cameras-camera_service)
+   - 4.4 [Smart Classroom & Studio Cameras (`cameras/`, `streaming_service/`)](#44-smart-classroom--studio-cameras-cameras-streaming_service)
    - 4.5 [In-Browser Non-Destructive Video Editing Studio (`video_editing/`)](#45-in-browser-non-destructive-video-editing-studio-video_editing)
    - 4.6 [Video Lecture Library & Progressive Streaming (`videos/`)](#46-video-lecture-library--progressive-streaming-videos)
    - 4.7 [Academic LMS, Timed Quizzes & Anti-Cheating Surveillance (`assignments/`)](#47-academic-lms-timed-quizzes--anti-cheating-surveillance-assignments)
@@ -202,7 +202,7 @@ graph LR
 
 ---
 
-### 4.4 Smart Classroom & Studio Cameras (`cameras/`, `camera_service/`)
+### 4.4 Smart Classroom & Studio Cameras (`cameras/`, `streaming_service/`)
 
 #### Responsibilities & Features
 - **Hardware RTSP Stream Ingestion:** Connects directly to smart classroom IP cameras, electronic podium lenses, and science lab microscopes over RTSP (`rtsp://user:pass@ip:554/h264`).
@@ -456,7 +456,7 @@ Redis serves three architectural roles:
 
 #### Q6: Why did you separate the Camera Microservice from the Django Monolith?
 **Model Answer:**  
-Classroom IP cameras stream continuous RTSP feeds that require persistent socket connections and computationally heavy OpenCV image decoding for head-counting analytics. Running continuous RTSP decoding directly inside Django web worker processes would saturate ASGI event loops and block user HTTP web traffic. Isolating camera ingestion in a dedicated Waitress/OpenCV microservice (`camera_service/`) ensures camera failures or spikes in video processing do not affect student web portal responsiveness.
+Classroom IP cameras stream continuous RTSP feeds that require persistent socket connections and computationally heavy OpenCV image decoding for head-counting analytics. Running continuous RTSP decoding directly inside Django web worker processes would saturate ASGI event loops and block user HTTP web traffic. Isolating camera ingestion in a dedicated Waitress/OpenCV microservice (`streaming_service/`) ensures camera failures or spikes in video processing do not affect student web portal responsiveness.
 
 #### Q7: What are the three user roles in EduMi, and how is authorization enforced?
 **Model Answer:**  
