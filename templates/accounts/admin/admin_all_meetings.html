@@ -1,7 +1,8 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
+{% load common_tags %}
 
-{% block page_title %}Live & Scheduled Meetings | EduMi Admin{% endblock %}
+{% block page_title %}Live Sessions & Attendance Roster | EduMi Admin{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
@@ -10,25 +11,66 @@
 {% block content %}
 <div class="admin-container">
     <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">Meetings & Attendance</span>
-    </div>
+    {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
+    <!-- Page Header -->
     <div class="admin-header">
         <div>
-            <h1>Live Meetings & Attendance</h1>
-            <p class="admin-subtitle">Monitor virtual video sessions, attendance rosters, and technical metrics</p>
+            <h1>Live Sessions</h1>
+            <p class="admin-subtitle">Monitor virtual video classrooms, attendance rosters, duration metrics, and session compliance</p>
         </div>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <a href="{% url 'admin_live_monitor' %}" class="btn-action btn-action-danger">
+                <span class="live-pulse-dot" style="margin-right: 0.35rem; background: #fff;"></span> Live Monitor
+                {% if live_count > 0 %}
+                <span style="background: rgba(255,255,255,0.25); color: #fff; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700;">{{ live_count }}</span>
+                {% endif %}
+            </a>
+            {% if admin_perms.manage_sessions %}
             <button type="button" onclick="openModal('scheduleMeetingModal')" class="btn-action btn-action-primary">
                 <i data-lucide="calendar-plus"></i> Schedule Session
             </button>
-            <a href="{% url 'admin_live_meetings' %}" class="btn-action btn-action-danger">
-                <i data-lucide="radio"></i> Live Monitor
-            </a>
+            {% endif %}
         </div>
+    </div>
+
+    <!-- Tabs Bar -->
+    <div class="user-dir-tabs" style="margin-bottom: 1.25rem;">
+        <a href="?tab=live{% if search_query %}&q={{ search_query }}{% endif %}" class="user-dir-tab {% if active_tab == 'live' %}active{% endif %}">
+            <span class="live-pulse-dot" style="margin-right: 0.35rem;"></span> Live now
+            <span class="user-tab-badge">{{ live_count }}</span>
+        </a>
+        <a href="?tab=upcoming{% if search_query %}&q={{ search_query }}{% endif %}" class="user-dir-tab {% if active_tab == 'upcoming' %}active{% endif %}">
+            <i data-lucide="calendar-clock" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> Upcoming
+            <span class="user-tab-badge">{{ scheduled_count }}</span>
+        </a>
+        <a href="?tab=past{% if search_query %}&q={{ search_query }}{% endif %}" class="user-dir-tab {% if active_tab == 'past' %}active{% endif %}">
+            <i data-lucide="history" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> Past Sessions
+            <span class="user-tab-badge">{{ ended_count }}</span>
+        </a>
+        <a href="?tab=all{% if search_query %}&q={{ search_query }}{% endif %}" class="user-dir-tab {% if active_tab == 'all' or not active_tab %}active{% endif %}">
+            All Sessions
+            <span class="user-tab-badge">{{ total_count }}</span>
+        </a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="admin-card" style="padding: 0.85rem 1.25rem; margin-bottom: 1.25rem;">
+        <form method="GET" action="" style="display: flex; gap: 0.75rem; align-items: center;">
+            <input type="hidden" name="tab" value="{{ active_tab }}">
+            <div style="position: relative; flex: 1;">
+                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search by session title, meeting code, teacher, or course..." class="filter-input" style="padding-left: 2.25rem; width: 100%;">
+            </div>
+            <button type="submit" class="btn-action btn-action-primary" style="height: 38px;">
+                <i data-lucide="search"></i> Search
+            </button>
+            {% if search_query %}
+            <a href="?tab={{ active_tab }}" class="btn-action btn-action-secondary" style="height: 38px;">
+                <i data-lucide="x"></i> Clear
+            </a>
+            {% endif %}
+        </form>
     </div>
 
     {% if meetings %}
@@ -37,11 +79,14 @@
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Meeting Title</th>
-                        <th>Host Teacher</th>
-                        <th>Classroom</th>
+                        <th>Session Title & Code</th>
+                        <th>Host Instructor</th>
+                        <th>Course / Classroom</th>
                         <th>Status</th>
-                        <th>Scheduled Time</th>
+                        <th>Scheduled / Started</th>
+                        <th style="text-align: center;">Duration</th>
+                        <th style="text-align: center;">Participants</th>
+                        <th style="text-align: center;">Attendance %</th>
                         <th style="text-align: right;">Action</th>
                     </tr>
                 </thead>
@@ -49,99 +94,114 @@
                     {% for m in meetings %}
                     <tr>
                         <td>
-                            <strong style="font-size: 0.95rem;">
-                                <a href="{% url 'admin_meeting_detail' m.id %}"
-                                    style="color: inherit; text-decoration: none;">{{ m.title }}</a>
-                            </strong>
-                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">Code: {{ m.meeting_code }}
+                            <div>
+                                <a href="{% url 'admin_meeting_detail' m.id %}" style="font-weight: 700; color: inherit; text-decoration: none; font-size: 0.95rem;">
+                                    {{ m.title }}
+                                </a>
+                                <div style="font-size: 0.75rem; color: var(--color-text-muted); font-family: monospace;">
+                                    Code: <strong>{{ m.meeting_code }}</strong>
+                                </div>
                             </div>
                         </td>
                         <td>
-                            <a href="{% url 'admin_teacher_detail' m.teacher.id %}"
-                                style="color: inherit; text-decoration: underline; font-size: 0.9rem;">
-                                {{ m.teacher.get_full_name|default:m.teacher.username }}
+                            <a href="{% url 'admin_teacher_detail' m.teacher.id %}" style="color: inherit; text-decoration: underline; font-size: 0.88rem;">
+                                Prof. {{ m.teacher.get_full_name|default:m.teacher.username }}
                             </a>
-                        </td>
-                        <td>
-                            {% if m.classroom %}
-                            <a href="{% url 'admin_classroom_detail' m.classroom.id %}"
-                                style="color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 0.85rem;">
-                                {{ m.classroom.title }}
-                            </a>
-                            {% else %}
-                            <span style="color: var(--color-text-muted); font-size: 0.85rem;">Standalone Session</span>
+                            {% if m.teacher.userprofile.department %}
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ m.teacher.userprofile.department }}</div>
                             {% endif %}
                         </td>
                         <td>
-                            {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
+                            {% if m.classroom %}
+                            <a href="{% url 'admin_classroom_detail' m.classroom.id %}" style="color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 0.85rem;">
+                                {{ m.classroom.title }}
+                            </a>
+                            {% else %}
+                            <span style="color: var(--color-text-muted); font-size: 0.85rem; font-style: italic;">Standalone Session</span>
+                            {% endif %}
                         </td>
-                        <td style="font-size: 0.85rem; color: var(--color-text-secondary);">
+                        <td>
+                            {% if m.status == 'live' %}
+                            <span class="status-pill status-pill-active" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                <span class="live-pulse-dot" style="margin-right: 0.25rem;"></span> LIVE NOW
+                            </span>
+                            {% else %}
+                            {% include "components/admin/status_pill.html" with status=m.status label=m.get_status_display %}
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.85rem; color: var(--color-text-secondary); white-space: nowrap;">
                             {{ m.scheduled_time|date:"M d, Y H:i" }}
                         </td>
+                        <td style="text-align: center; font-size: 0.85rem; font-weight: 600;">
+                            {{ m.duration_formatted }}
+                        </td>
+                        <td style="text-align: center; font-size: 0.95rem; font-weight: 700;">
+                            {{ m.attendees_count }}
+                        </td>
+                        <td style="text-align: center; font-size: 0.95rem; font-weight: 700; color: {% if m.attendance_pct != '—' and m.attendance_pct != '0%' %}#10b981{% else %}var(--color-text-muted){% endif %};">
+                            {{ m.attendance_pct }}
+                        </td>
                         <td style="text-align: right;">
-                            <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-primary">
-                                Attendance Detail &rarr;
-                            </a>
+                            <div style="display: inline-flex; gap: 0.4rem;">
+                                {% if m.status == 'live' %}
+                                <a href="{% url 'admin_live_monitor' %}" class="btn-action-sm btn-action-danger" title="Open Live Monitor">
+                                    <i data-lucide="radio"></i> Monitor
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-primary" title="View Attendance Roster">
+                                    Attendance &rarr;
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
     </div>
     {% else %}
     <div class="admin-card">
-        <div class="empty-state">
-            <div class="empty-icon"><i data-lucide="video-off"></i></div>
-            <h3>No Sessions Found</h3>
-            <p>No live or past video meetings recorded in the system.</p>
-        </div>
+        {% include "components/admin/empty_state.html" with icon="video-off" title="No Sessions Found" description="No live or recorded video meetings match the selected tab and filters." cta_text="Schedule Session" cta_icon="calendar-plus" cta_modal="scheduleMeetingModal" %}
     </div>
     {% endif %}
 </div>
 
 <!-- =========================================================
-     MODAL DRAWER: SCHEDULE MEETING
+     MODAL: SCHEDULE MEETING
      ========================================================= -->
 <div id="scheduleMeetingModal" class="admin-modal-overlay">
     <div class="admin-modal-card">
         <div class="admin-modal-header">
             <h3><i data-lucide="calendar-plus"></i> Schedule Virtual Live Session</h3>
-            <button type="button" class="admin-modal-close"
-                onclick="closeModal('scheduleMeetingModal')">&times;</button>
+            <button type="button" class="admin-modal-close" onclick="closeModal('scheduleMeetingModal')">&times;</button>
         </div>
-        <form method="POST" action="{% url 'admin_schedule_meeting' %}">
+        <form method="POST" action="{% url 'admin_schedule_meeting' %}" data-loading data-loading-message="Scheduling session...">
             {% csrf_token %}
             <div class="admin-modal-body">
                 <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Session
-                        Title *</label>
-                    <input type="text" name="title" class="filter-input" style="width: 100%;" required
-                        placeholder="e.g. Weekly CS101 Live Lecture">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Session Title *</label>
+                    <input type="text" name="title" class="filter-input" style="width: 100%;" required placeholder="e.g. Weekly CS101 Live Lecture">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign
-                            Classroom</label>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign Course</label>
                         <select name="classroom_id" class="filter-input" style="width: 100%;">
-                            <option value="">-- Standalone Session --</option>
-                            {% for m in meetings %}
-                            {% if m.classroom %}
-                            <option value="{{ m.classroom.id }}">{{ m.classroom.title }}</option>
-                            {% endif %}
+                            <option value="">-- Standalone Session (No Course) --</option>
+                            {% for c in classrooms %}
+                            <option value="{{ c.id }}">{{ c.title }} ({{ c.class_code }})</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Host
-                            Instructor *</label>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Host Instructor *</label>
                         <select name="teacher_id" class="filter-input" style="width: 100%;" required>
                             <option value="">-- Select Host Teacher --</option>
-                            {% for m in meetings %}
-                            <option value="{{ m.teacher.id }}">Prof. {{ m.teacher.get_full_name|default:m.teacher.username }}</option>
+                            {% for t in teachers %}
+                            <option value="{{ t.id }}">Prof. {{ t.get_full_name|default:t.username }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -149,25 +209,18 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Scheduled
-                            Date & Time</label>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Scheduled Date & Time</label>
                         <input type="datetime-local" name="scheduled_time" class="filter-input" style="width: 100%;">
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Duration
-                            (Minutes)</label>
-                        <input type="number" name="duration_minutes" class="filter-input" style="width: 100%;"
-                            value="60" min="15" max="300">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Duration (Minutes)</label>
+                        <input type="number" name="duration_minutes" class="filter-input" style="width: 100%;" value="60" min="15" max="300">
                     </div>
                 </div>
             </div>
             <div class="admin-modal-footer">
-                <button type="button" class="btn-action btn-action-secondary"
-                    onclick="closeModal('scheduleMeetingModal')">Cancel</button>
-                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Schedule
-                    Session</button>
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('scheduleMeetingModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Schedule Session</button>
             </div>
         </form>
     </div>
@@ -180,5 +233,13 @@
     function closeModal(id) {
         document.getElementById(id).classList.remove('active');
     }
+
+    // Auto-open modal if URL contains action parameters
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'schedule' || window.location.hash === '#scheduleMeeting') {
+            openModal('scheduleMeetingModal');
+        }
+    });
 </script>
 {% endblock %}

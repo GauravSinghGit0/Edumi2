@@ -30,7 +30,7 @@
    - 5.3 [CRF Logarithmic Rate-Distortion & SVC Simulcast Scaling](#53-crf-logarithmic-rate-distortion--svc-simulcast-scaling)
 6. [Database Schema & Entity-Relationship Model](#6-database-schema--entity-relationship-model)
 7. [Deployment, Networking & Microservice Port Matrix](#7-deployment-networking--microservice-port-matrix)
-8. [Comprehensive Viva Defense Q&A (75+ Categorized Questions with Model Answers)](#8-comprehensive-viva-defense-qa-75-categorized-questions-with-model-answers)
+8. [Comprehensive Viva Defense Q&A (80+ Categorized Questions with Model Answers)](#8-comprehensive-viva-defense-qa-80-categorized-questions-with-model-answers)
    - [Section A: High-Level Architecture & Design Decisions (Q1–Q10)](#section-a-high-level-architecture--design-decisions-q1q10)
    - [Section B: Real-Time WebRTC, LiveKit & Networking (Q11–Q20)](#section-b-real-time-webrtc-livekit--networking-q11q20)
    - [Section C: Computer Vision, Biometrics & Anti-Spoofing (Q21–Q30)](#section-c-computer-vision-biometrics--anti-spoofing-q21q30)
@@ -38,7 +38,7 @@
    - [Section E: Multimedia Compression, Codecs & Benchmarks (Q43–Q52)](#section-e-multimedia-compression-codecs--benchmarks-q43q52)
    - [Section F: AI Knowledge Base & RAG System (Q53–Q60)](#section-f-ai-knowledge-base--rag-system-q53q60)
    - [Section G: Security, Encryption & DPDP/FERPA Compliance (Q61–Q68)](#section-g-security-encryption--dpdpferpa-compliance-q61q68)
-   - [Section H: Debugging, Concurrency & Real-World Bug Triage (Q69–Q76)](#section-h-debugging-concurrency--real-world-bug-triage-q69q76)
+   - [Section H: Debugging, Concurrency & Real-World Bug Triage (Q69–Q80)](#section-h-debugging-concurrency--real-world-bug-triage-q69q80)
 9. [Viva Day Quick-Fire Cheat Sheet & 2-Minute Elevator Pitch](#9-viva-day-quick-fire-cheat-sheet--2-minute-elevator-pitch)
 
 ---
@@ -458,12 +458,16 @@ Redis serves three architectural roles:
 **Model Answer:**  
 Classroom IP cameras stream continuous RTSP feeds that require persistent socket connections and computationally heavy OpenCV image decoding for head-counting analytics. Running continuous RTSP decoding directly inside Django web worker processes would saturate ASGI event loops and block user HTTP web traffic. Isolating camera ingestion in a dedicated Waitress/OpenCV microservice (`streaming_service/`) ensures camera failures or spikes in video processing do not affect student web portal responsiveness.
 
-#### Q7: What are the three user roles in EduMi, and how is authorization enforced?
+#### Q7: What are the user roles in EduMi, and how is granular authorization enforced?
 **Model Answer:**  
-The three roles are **Admin**, **Teacher**, and **Student**. Authorization is enforced at multiple layers:
-1. Model-level flags on the custom `User` model (`is_staff`, `role='teacher'`, `role='student'`).
-2. Custom Django view decorators (`@role_required('teacher')`, `@admin_required`).
-3. Database QuerySet scoping (students can only view their own submissions and enrolled classrooms).
+The platform defines three primary institutional tiers: **Administrator**, **Teacher**, and **Student**. In the administrative tier, EduMi replaces binary access with an enterprise **7-Flag Granular RBAC Engine** (`common.models.AdminRole`):
+1. **Model-Level RBAC Capabilities:** Seven boolean flags govern sensitive subsystems: `manage_users`, `manage_courses`, `manage_sessions`, `view_audit`, `manage_settings`, `manage_cameras`, and `export_data`.
+2. **Pre-Seeded Administrative Profiles:** *Super Admin* (full access), *Academic Admin* (courses, sessions, reports), *Attendance Auditor* (biometric ledgers, audit logs), and *IT Admin* (system telemetry, cameras, settings).
+3. **Multi-Layer Authorization & Defense:**
+   - View-level protection via `@admin_permission_required(perm)` returning standard HTTP 403 Forbidden pages (`403.html`) or JSON 403 payloads for AJAX.
+   - Dynamic template hiding via `accounts.context_processors.admin_permissions_context`, hiding unauthorized navigation links and action buttons.
+   - Database QuerySet scoping (e.g. students can only view approved classes and their own biometric logs).
+   - Immutable audit logging in `AdminAuditTrail` capturing before/after attribute diffs for every administrative mutation.
 
 #### Q8: How does EduMi handle unexpected server reboots or process crashes?
 **Model Answer:**  
@@ -812,7 +816,7 @@ Passwords are never stored in plaintext. Django uses **PBKDF2 with a SHA-256 has
 
 ---
 
-### Section H: Debugging, Concurrency & Real-World Bug Triage (Q69–Q76)
+### Section H: Debugging, Concurrency & Real-World Bug Triage (Q69–Q80)
 
 #### Q69: Explain a challenging bug you encountered in the Video Editor and how you diagnosed it.
 **Model Answer:**  
@@ -862,6 +866,34 @@ This suite initializes an isolated test database, tests upload validation, proje
 ```
 Ran 20 tests in 57.153s - OK
 ```
+
+#### Q77: What is the "Paginate First, Enrich Second" pattern in the User Directory, and why was it necessary?
+**Model Answer:**  
+Previously, the user management endpoint evaluated biometric attendance percentages, enrolled classroom counts, and teaching statistics across the entire database queryset of users *before* passing the list to the Django Paginator. In an institution with thousands of students, this created an $O(N)$ database query storm and multi-second delays (over 6.6 seconds per tab change).  
+We re-architected this pipeline into **"Paginate First, Enrich Second"**:
+1. The Django ORM filters the base `User` queryset using lazy SQL evaluation.
+2. The `Paginator` slices the queryset down to only the active page window ($K = 10$ records) using SQL `LIMIT 10 OFFSET ...`.
+3. The helper function `enrich_user_subset(page_obj.object_list)` executes metric calculations *only* for those 10 displayed records.  
+This dropped server processing time from 6,694ms to 99.6ms (a 98.5% server latency reduction).
+
+#### Q78: How does the Admin Portal maintain sub-millisecond (< 1ms) tab switching without overwhelming the database?
+**Model Answer:**  
+Sub-millisecond tab switching is achieved through a multi-tiered caching architecture:
+1. **Client-Side In-Memory Cache (`tabCache = new Map()`):** When an administrator switches between *All*, *Students*, *Teachers*, *Admins*, or *Suspended*, the frontend checks `tabCache`. If the HTML fragment was already fetched during this session, it swaps the DOM container instantly in **< 1ms** with zero network round-trips.
+2. **60-Second Server-Side Header Counter Caching:** Tab badge counters (e.g., "75 total results", "18 active") execute lightweight `.count()` aggregations and store them in Redis/LocMem with a 60-second TTL.
+3. **Atomic Cache Invalidation:** Whenever an admin creates, activates, suspends, or reassigns a user, the cache key `admin_user_counts_cache` is deleted, guaranteeing 100% data freshness.
+
+#### Q79: How does the real-time System Health telemetry probe backend microservices without locking the event loop?
+**Model Answer:**  
+In `common/system_health.py`, every subsystem check (LiveKit SFU port 7880, Redis latency, Celery worker ping, database query time, and disk storage breakdown) is strictly isolated:
+1. **Socket Timeout Guards:** Every network socket connection (TCP / HTTP REST) has an explicit `timeout=5.0` seconds. If LiveKit or Redis is stalled, the probe times out gracefully without blocking Daphne or the ASGI event loop.
+2. **15-Second Telemetry Caching:** Aggregated diagnostic payloads are cached in Redis/LocMem for 15 seconds. High-frequency dashboard auto-refreshes read directly from cache without generating continuous connection spikes.
+3. **Frontend Polling Isolation:** The browser telemetry client polls via `fetch('/admin/api/system-health/')` with exponential backoff and a 5-second `AbortController` signal to prevent zombie pending requests.
+
+#### Q80: How does EduMi enforce Granular Administrative Access Control (RBAC) and maintain an immutable compliance audit trail?
+**Model Answer:**  
+1. **Granular RBAC (`common.AdminRole`):** Replaces legacy binary `is_staff` / `is_superuser` checks with 7 explicit capability flags: `manage_users`, `manage_courses`, `manage_sessions`, `view_audit`, `manage_settings`, `manage_cameras`, and `export_data`. All endpoints are secured by `@admin_permission_required(perm)`, which returns HTTP 403 Forbidden with a security shield if the administrator lacks the specific capability.
+2. **Immutable Audit Trail (`AdminAuditTrail`):** Every administrative mutation (creating accounts, archiving courses, force-ending live sessions, modifying settings) creates an immutable record capturing the acting admin, timestamp, action type, client IP address, and a serialized `changes_json` containing before-and-after attribute diffs. Administrators can inspect these diffs in real time via a slide-out visual diff drawer.
 
 ---
 

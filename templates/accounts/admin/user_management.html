@@ -1,7 +1,7 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}User Directory & Management | EduMi Admin{% endblock %}
+{% block page_title %}User Directory & Faculty Management | EduMi Admin{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
@@ -10,275 +10,421 @@
 {% block content %}
 <div class="admin-container">
     <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">User Directory</span>
-    </div>
+    {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
     <!-- Header Section -->
     <div class="admin-header">
         <div>
             <h1>User Directory</h1>
-            <p class="admin-subtitle">Manage students, teachers, and system administrators with role-based controls</p>
+            <p class="admin-subtitle">Govern platform users, manage faculty assignments, and enforce access controls</p>
         </div>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            {% if admin_perms.manage_users %}
             <button type="button" onclick="openModal('addUserModal')" class="btn-action btn-action-primary">
                 <i data-lucide="user-plus"></i> Add User
             </button>
-            <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary"
-                title="Export Users CSV">
+            <button type="button" onclick="openImportWizard()" class="btn-action btn-action-secondary" title="Bulk Import Users from CSV">
+                <i data-lucide="upload-cloud"></i> Import Users
+            </button>
+            {% endif %}
+            {% if admin_perms.export_data %}
+            <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary" title="Export All Users as CSV">
                 <i data-lucide="download"></i> Export CSV
             </a>
+            {% endif %}
         </div>
     </div>
 
-    <!-- KPI Row -->
-    <div class="kpi-grid">
-        <a href="?role=all" class="kpi-card {% if active_role == 'all' or not active_role %}active-kpi{% endif %}"
-            style="text-decoration:none;">
-            <div class="kpi-icon indigo"><i data-lucide="users"></i></div>
-            <div class="kpi-details">
-                <span class="kpi-value">{{ total_count|default:0 }}</span>
-                <span class="kpi-label">Total Users</span>
-            </div>
+    <!-- 5 Institutional Role Tabs -->
+    <div class="user-dir-tabs">
+        <a href="javascript:void(0)" onclick="switchTab('all')" class="user-dir-tab {% if active_tab == 'all' %}active{% endif %}">
+            <i data-lucide="users" style="width:16px;height:16px;"></i> All Users
+            <span class="user-tab-badge">{{ total_count|default:0 }}</span>
         </a>
-        <a href="?role=student" class="kpi-card {% if active_role == 'student' %}active-kpi{% endif %}"
-            style="text-decoration:none;">
-            <div class="kpi-icon emerald"><i data-lucide="graduation-cap"></i></div>
-            <div class="kpi-details">
-                <span class="kpi-value">{{ student_count|default:0 }}</span>
-                <span class="kpi-label">Students</span>
-            </div>
+        <a href="javascript:void(0)" onclick="switchTab('students')" class="user-dir-tab {% if active_tab == 'students' %}active{% endif %}">
+            <i data-lucide="graduation-cap" style="width:16px;height:16px;"></i> Students
+            <span class="user-tab-badge">{{ student_count|default:0 }}</span>
         </a>
-        <a href="?role=teacher" class="kpi-card {% if active_role == 'teacher' %}active-kpi{% endif %}"
-            style="text-decoration:none;">
-            <div class="kpi-icon blue"><i data-lucide="user-check"></i></div>
-            <div class="kpi-details">
-                <span class="kpi-value">{{ teacher_count|default:0 }}</span>
-                <span class="kpi-label">Teachers</span>
-            </div>
+        <a href="javascript:void(0)" onclick="switchTab('teachers')" class="user-dir-tab {% if active_tab == 'teachers' %}active{% endif %}">
+            <i data-lucide="award" style="width:16px;height:16px;"></i> Teachers / Faculty
+            <span class="user-tab-badge">{{ teacher_count|default:0 }}</span>
         </a>
-        <a href="?role=admin" class="kpi-card {% if active_role == 'admin' %}active-kpi{% endif %}"
-            style="text-decoration:none;">
-            <div class="kpi-icon purple"><i data-lucide="shield-check"></i></div>
-            <div class="kpi-details">
-                <span class="kpi-value">{{ admin_count|default:0 }}</span>
-                <span class="kpi-label">Administrators</span>
-            </div>
+        <a href="javascript:void(0)" onclick="switchTab('admins')" class="user-dir-tab {% if active_tab == 'admins' %}active{% endif %}">
+            <i data-lucide="shield-check" style="width:16px;height:16px;"></i> Administrators
+            <span class="user-tab-badge">{{ admin_count|default:0 }}</span>
+        </a>
+        <a href="javascript:void(0)" onclick="switchTab('suspended')" class="user-dir-tab {% if active_tab == 'suspended' %}active{% endif %}">
+            <i data-lucide="user-x" style="width:16px;height:16px;"></i> Suspended
+            <span class="user-tab-badge">{{ suspended_count|default:0 }}</span>
         </a>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="admin-filter-bar" style="margin-bottom: 1.25rem;">
-        <div style="display: flex; gap: 0.5rem; overflow-x: auto;">
-            <a href="?role=all{% if search_query %}&q={{ search_query }}{% endif %}"
-                class="btn-action-sm {% if active_role == 'all' or not active_role %}btn-action-primary{% else %}btn-action-secondary{% endif %}">All
-                Roles</a>
-            <a href="?role=student{% if search_query %}&q={{ search_query }}{% endif %}"
-                class="btn-action-sm {% if active_role == 'student' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Students</a>
-            <a href="?role=teacher{% if search_query %}&q={{ search_query }}{% endif %}"
-                class="btn-action-sm {% if active_role == 'teacher' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Teachers</a>
-            <a href="?role=admin{% if search_query %}&q={{ search_query }}{% endif %}"
-                class="btn-action-sm {% if active_role == 'admin' %}btn-action-primary{% else %}btn-action-secondary{% endif %}">Admins</a>
-        </div>
+    <!-- Filter & Live Search Bar -->
+    <div class="admin-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
+        <form id="filterForm" method="GET" action="" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;" onsubmit="event.preventDefault(); applyFilters();">
+            <input type="hidden" name="tab" id="filterTab" value="{{ active_tab }}">
+            <input type="hidden" name="sort" id="filterSort" value="{{ sort_by }}">
+            <input type="hidden" name="dir" id="filterDir" value="{{ sort_dir }}">
+            <input type="hidden" name="view" id="filterView" value="{{ view_mode }}">
+            <input type="hidden" name="page" id="filterPage" value="{{ page_obj.number|default:1 }}">
 
-        <form method="GET" action=""
-            style="display: flex; gap: 0.5rem; align-items: center; min-width: 260px; max-width: 420px;">
-            {% if active_role %}<input type="hidden" name="role" value="{{ active_role }}">{% endif %}
-            <div class="admin-search-wrapper">
+            <!-- Search input -->
+            <div class="admin-search-wrapper" style="min-width: 260px; flex: 1;">
                 <i data-lucide="search"></i>
-                <input type="text" name="q" value="{{ search_query|default:'' }}"
-                    placeholder="Search name, email, username..." class="admin-search-input">
+                <input type="text" name="q" id="searchQueryInput" value="{{ search_query|default:'' }}"
+                    placeholder="Search name, email, username, student/faculty ID..." class="admin-search-input"
+                    oninput="debounceSearch()">
             </div>
-            <button type="submit" class="btn-action-sm btn-action-primary" style="white-space: nowrap;">Search</button>
+
+            <!-- Status Filter -->
+            <select name="status" id="statusFilterSelect" class="filter-input" style="min-width: 140px;" onchange="applyFilters()">
+                <option value="all" {% if active_status == 'all' %}selected{% endif %}>All Statuses</option>
+                <option value="active" {% if active_status == 'active' %}selected{% endif %}>Active Only</option>
+                <option value="suspended" {% if active_status == 'suspended' or active_status == 'inactive' %}selected{% endif %}>Suspended Only</option>
+                <option value="verified" {% if active_status == 'verified' %}selected{% endif %}>Verified Only</option>
+            </select>
+
+            <!-- Department Filter -->
+            {% if departments %}
+            <select name="dept" id="deptFilterSelect" class="filter-input" style="min-width: 170px;" onchange="applyFilters()">
+                <option value="all" {% if active_dept == 'all' or not active_dept %}selected{% endif %}>All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept }}" {% if active_dept == dept %}selected{% endif %}>{{ dept }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <!-- Joined Date Range Filter -->
+            <div style="display:flex;align-items:center;gap:0.35rem;">
+                <input type="date" name="joined_from" id="joinedFromInput" value="{{ joined_from|default:'' }}" class="filter-input" title="Joined from" onchange="applyFilters()" style="font-size:0.8rem;padding:0.4rem 0.6rem;">
+                <span style="color:var(--color-text-muted);font-size:0.8rem;">to</span>
+                <input type="date" name="joined_to" id="joinedToInput" value="{{ joined_to|default:'' }}" class="filter-input" title="Joined to" onchange="applyFilters()" style="font-size:0.8rem;padding:0.4rem 0.6rem;">
+            </div>
+
+            <button type="button" class="btn-action-sm btn-action-secondary" onclick="resetAllFilters()" title="Reset all filters">
+                <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i> Reset
+            </button>
         </form>
     </div>
 
-    <!-- Table Card -->
-    <div class="admin-card">
-        {% if users_data %}
+    <!-- Table & Cards Main Card -->
+    <div class="admin-card" id="usersContainer">
+        {% include "accounts/admin/partials/user_table_partial.html" %}
+    </div>
+</div>
 
-        <!-- Table info bar -->
-        <div
-            style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid var(--color-border);">
-            <div style="font-size:.82rem;color:var(--color-text-muted);">
-                Showing <strong style="color:var(--color-text-main);">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
-                of <strong style="color:var(--color-text-main);">{{ page_obj.paginator.count }}</strong> users
-                {% if search_query %}<span style="color:var(--color-primary);margin-left:.5rem;">· filtered by "{{ search_query }}"</span>{% endif %}
+<!-- =========================================================
+     FLOATING BULK ACTIONS TOOLBAR
+     ========================================================= -->
+<div id="floatingBulkBar" class="floating-bulk-bar">
+    <div class="bulk-selection-count">
+        <i data-lucide="check-square" style="width:16px;height:16px;"></i>
+        <span id="selectedCountText">0 selected</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <button type="button" class="btn-action-sm btn-action-secondary" onclick="exportSelectedUsers()">
+            <i data-lucide="download"></i> Export Selected
+        </button>
+
+        <button type="button" class="btn-action-sm btn-action-secondary" onclick="openModal('changeRoleModal')">
+            <i data-lucide="user-cog"></i> Change Role
+        </button>
+
+        <button type="button" class="btn-action-sm btn-action-success" onclick="bulkActivateUsers()">
+            <i data-lucide="user-check"></i> Activate
+        </button>
+
+        <button type="button" class="btn-action-sm btn-action-danger" onclick="bulkSuspendUsers()">
+            <i data-lucide="user-x"></i> Suspend
+        </button>
+
+        <button type="button" class="btn-action-sm" style="background:transparent;border:none;color:var(--color-text-muted);cursor:pointer;" onclick="clearUserSelection()" title="Clear Selection">
+            &times;
+        </button>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL: CHANGE ROLE IN BULK
+     ========================================================= -->
+<div id="changeRoleModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 440px;">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="user-cog"></i> Change Selected Users' Role</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('changeRoleModal')">&times;</button>
+        </div>
+        <div class="admin-modal-body">
+            <p style="font-size:0.875rem;color:var(--color-text-secondary);margin-bottom:1rem;">
+                Select a new role for the <strong id="roleChangeCountText">selected</strong> accounts.
+            </p>
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.4rem;">New Role Assignment</label>
+                <select id="newRoleSelect" class="filter-input" style="width:100%;">
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher / Faculty</option>
+                    <option value="admin">Administrator</option>
+                </select>
             </div>
-            <div style="font-size:.78rem;color:var(--color-text-muted);">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:var(--radius-md,0.375rem);padding:0.75rem;font-size:0.78rem;color:var(--color-text-muted);">
+                <i data-lucide="info" style="width:13px;height:13px;display:inline;vertical-align:middle;color:var(--color-primary);"></i>
+                Changing roles updates permissions immediately and will be logged in the Security Audit Trail.
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('changeRoleModal')">Cancel</button>
+            <button type="button" class="btn-action btn-action-primary" onclick="submitBulkRoleChange()">
+                <i data-lucide="check"></i> Apply Role
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL: PASSWORD RESET LINK GENERATED
+     ========================================================= -->
+<div id="passwordResetModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 520px;">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="key-round"></i> Password Reset Link Generated</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('passwordResetModal')">&times;</button>
+        </div>
+        <div class="admin-modal-body">
+            <p style="font-size:0.875rem;color:var(--color-text-secondary);margin-bottom:0.75rem;">
+                A secure one-time password reset link has been generated for <strong id="resetTargetUserText">@user</strong>.
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block;font-weight:600;font-size:0.82rem;margin-bottom:0.35rem;">Reset URL</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="resetUrlInput" readonly class="filter-input" style="width:100%;font-family:monospace;font-size:0.8rem;background:var(--color-bg-app);" onclick="this.select()">
+                    <button type="button" class="btn-action btn-action-primary" onclick="copyResetUrl()">
+                        <i data-lucide="copy"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--color-text-muted);">
+                This link allows setting a new account credential without requiring current password verification. Valid for 24 hours.
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('passwordResetModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL WIZARD: BULK USER IMPORTER
+     ========================================================= -->
+<div id="bulkImportModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 840px; width: 95%;">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="upload-cloud"></i> Bulk User Onboarding Importer</h3>
+            <button type="button" class="admin-modal-close" onclick="closeImportWizard()">&times;</button>
+        </div>
+
+        <!-- Wizard Step Indicators -->
+        <div class="import-wizard-steps">
+            <div id="stepIndicator1" class="wizard-step-item active">
+                <span class="wizard-step-num">1</span>
+                <span>Upload CSV</span>
+            </div>
+            <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--color-text-muted);"></i>
+            <div id="stepIndicator2" class="wizard-step-item">
+                <span class="wizard-step-num">2</span>
+                <span>Preview & Validate</span>
+            </div>
+            <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--color-text-muted);"></i>
+            <div id="stepIndicator3" class="wizard-step-item">
+                <span class="wizard-step-num">3</span>
+                <span>Confirm & Import</span>
             </div>
         </div>
 
-        <div class="admin-table-wrapper">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Activity</th>
-                        <th>Joined</th>
-                        <th style="text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in users_data %}
-                    <tr>
-                        <td>
-                            {% url 'admin_user_detail' item.user.id as url_user_detail %}
-                            {% include "components/admin/user_avatar.html" with user=item.user link=url_user_detail %}
-                        </td>
-                        <td>
-                            {% if item.role == 'admin' %}
-                            <span class="role-badge role-badge-admin"><i data-lucide="shield-check"
-                                    style="width:11px;height:11px;display:inline;"></i> Admin</span>
-                            {% elif item.role == 'teacher' %}
-                            <span class="role-badge role-badge-teacher"><i data-lucide="user-check"
-                                    style="width:11px;height:11px;display:inline;"></i> Teacher</span>
-                            {% else %}
-                            <span class="role-badge role-badge-student"><i data-lucide="graduation-cap"
-                                    style="width:11px;height:11px;display:inline;"></i> Student</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.user.is_active %}
-                            {% include "components/admin/status_pill.html" with status="active" %}
-                            {% else %}
-                            {% include "components/admin/status_pill.html" with status="suspended" label="Suspended" %}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="font-size:.83rem;color:var(--color-text-main);font-weight:600;">
-                                {{ item.courses_count }} {% if item.role == 'teacher' %}courses{% else %}enrolled{% endif %}
-                            </div>
-                            <div style="font-size:.73rem;color:var(--color-text-muted);margin-top:.1rem;">
-                                {{ item.classes_count }} sessions {% if item.role == 'teacher' %}hosted{% else %}attended{% endif %}
-                            </div>
-                        </td>
-                        <td style="font-size:.83rem;color:var(--color-text-muted);white-space:nowrap;">
-                            {{ item.user.date_joined|date:"M d, Y" }}
-                        </td>
-                        <td style="text-align:right;">
-                            <div class="admin-dropdown">
-                                <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle"
-                                    onclick="toggleDropdown(this)" title="Actions">
-                                    <i data-lucide="more-vertical" style="width:15px;height:15px;"></i>
-                                </button>
-                                <div class="admin-dropdown-menu">
-                                    <a href="{% url 'admin_user_detail' item.user.id %}" class="admin-dropdown-item">
-                                        <i data-lucide="eye"></i> View Profile
-                                    </a>
-                                    <a href="{% url 'admin_edit_user' item.user.id %}" class="admin-dropdown-item">
-                                        <i data-lucide="edit-3"></i> Edit Account
-                                    </a>
-                                    {% if item.user != request.user %}
-                                    <form method="POST" action="{% url 'admin_toggle_user_active' item.user.id %}"
-                                        style="margin:0;"
-                                        onsubmit="return confirm('Change active status for {{ item.user.username }}?');">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                            class="admin-dropdown-item {% if item.user.is_active %}danger{% endif %}">
-                                            {% if item.user.is_active %}
-                                            <i data-lucide="user-x"></i> Suspend
-                                            {% else %}
-                                            <i data-lucide="user-check"></i> Activate
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                    <a href="{% url 'delete_user' item.user.id %}" class="admin-dropdown-item danger"
-                                       onclick="return confirm('PERMANENTLY DELETE user @{{ item.user.username }}? This action cannot be undone.');">
-                                        <i data-lucide="trash-2"></i> Delete Account
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Professional Numbered Pagination -->
-        {% if page_obj.has_other_pages %}
-        <div
-            style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:.75rem;">
-            <div style="font-size:.8rem;color:var(--color-text-muted);">
-                {{ page_obj.paginator.count }} total results
+        <!-- STEP 1: Upload CSV -->
+        <div id="wizardStep1" class="admin-modal-body">
+            <div id="importDropzone" class="import-dropzone" onclick="document.getElementById('csvFileInput').click()">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; color: var(--color-primary);">
+                    <i data-lucide="upload-cloud" style="width: 28px; height: 28px;"></i>
+                </div>
+                <div>
+                    <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700;">Drag & drop your CSV file here</h4>
+                    <p style="margin: 0.25rem 0 0; font-size: 0.82rem; color: var(--color-text-muted);">
+                        or <span style="color: var(--color-primary); text-decoration: underline; font-weight: 600;">browse files</span> from your computer
+                    </p>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                    Expected format: <code>username, email, first_name, last_name, role, department</code>
+                </div>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleFileSelect(this.files)">
             </div>
-            <div style="display:flex;align-items:center;gap:.3rem;">
-                <!-- Prev -->
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+
+            <div id="selectedFileInfo" style="display: none; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <i data-lucide="file-spreadsheet" style="width: 20px; height: 20px; color: #10b981;"></i>
+                    <div>
+                        <div id="selectedFileName" style="font-weight: 700; font-size: 0.875rem;">filename.csv</div>
+                        <div id="selectedFileSize" style="font-size: 0.75rem; color: var(--color-text-muted);">0 KB</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-action-sm btn-action-secondary" onclick="resetSelectedFile()">Change File</button>
+            </div>
+
+            <!-- Download sample template box -->
+            <div style="margin-top: 1.25rem; display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.85rem 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <div style="font-weight: 700; font-size: 0.85rem;">Need the standard layout?</div>
+                    <div style="font-size: 0.78rem; color: var(--color-text-muted);">Download our pre-formatted sample template with example headers.</div>
+                </div>
+                <a href="{% url 'admin_user_import_sample_csv' %}" class="btn-action-sm btn-action-secondary">
+                    <i data-lucide="download"></i> Download Sample CSV
                 </a>
-                {% else %}
-                <span
-                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
-                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
-                </span>
-                {% endif %}
-
-                <!-- Page Numbers -->
-                {% for pg_num in page_obj.paginator.page_range %}
-                {% if pg_num == page_obj.number %}
-                <span
-                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;background:var(--color-primary);color:#fff;font-weight:700;font-size:.82rem;border:1px solid var(--color-primary);">
-                    {{ pg_num }}
-                </span>
-                {% elif pg_num >= page_obj.number|add:"-2" and pg_num <= page_obj.number|add:"2" %} <a
-                    href="?page={{ pg_num }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                    {{ pg_num }}
-                    </a>
-                    {% elif pg_num == 1 or pg_num == page_obj.paginator.num_pages %}
-                    <a href="?page={{ pg_num }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                        onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                        onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                        {{ pg_num }}
-                    </a>
-                    {% elif pg_num == page_obj.number|add:"-3" or pg_num == page_obj.number|add:"3" %}
-                    <span
-                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--color-text-muted);font-size:.82rem;">…</span>
-                    {% endif %}
-                    {% endfor %}
-
-                    <!-- Next -->
-                    {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if active_role and active_role != 'all' %}&role={{ active_role }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                        onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                        onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                        <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
-                    </a>
-                    {% else %}
-                    <span
-                        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
-                        <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
-                    </span>
-                    {% endif %}
             </div>
         </div>
-        {% endif %}
 
-        {% else %}
-        <div class="empty-state" style="padding:3rem 1.5rem;">
-            <div class="empty-icon"><i data-lucide="user-x"></i></div>
-            <h3>No users found</h3>
-            <p>No user accounts matched your search criteria or role filters.</p>
-            <a href="?" class="btn-action-sm btn-action-primary" style="margin-top:1rem;display:inline-flex;">Reset
-                Filters</a>
+        <!-- Step 1 Footer -->
+        <div id="wizardStep1Footer" class="admin-modal-footer">
+            <button type="button" class="btn-action btn-action-secondary" onclick="closeImportWizard()">Cancel</button>
+            <button type="button" id="btnPreviewValidation" class="btn-action btn-action-primary" onclick="uploadAndPreviewCsv()" disabled>
+                Next: Preview & Validate <i data-lucide="arrow-right"></i>
+            </button>
         </div>
-        {% endif %}
+
+        <!-- STEP 2: Preview & Validation Table -->
+        <div id="wizardStep2" class="admin-modal-body" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
+                <!-- Stat badges -->
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span id="previewTotalBadge" class="status-pill" style="font-weight: 700;">0 Total</span>
+                    <span id="previewValidBadge" class="status-pill status-active" style="font-weight: 700;">0 Valid</span>
+                    <span id="previewInvalidBadge" class="status-pill status-suspended" style="font-weight: 700;">0 Invalid</span>
+                </div>
+
+                <!-- Preview filter tabs -->
+                <div style="display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;">
+                    <button type="button" id="filterBtnAll" class="btn-action-sm btn-action-primary" style="border-radius:0;border:none;font-size:0.75rem;" onclick="filterPreviewRows('all')">All Rows</button>
+                    <button type="button" id="filterBtnValid" class="btn-action-sm btn-action-secondary" style="border-radius:0;border:none;font-size:0.75rem;" onclick="filterPreviewRows('valid')">Valid Only</button>
+                    <button type="button" id="filterBtnInvalid" class="btn-action-sm btn-action-secondary" style="border-radius:0;border:none;font-size:0.75rem;" onclick="filterPreviewRows('invalid')">Invalid Only</button>
+                </div>
+            </div>
+
+            <div class="import-preview-wrapper">
+                <table class="admin-table" style="margin: 0; font-size: 0.82rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 45px; text-align: center;">#</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th style="width: 170px;">Validation Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="previewTableEmptyNote" style="display: none; padding: 2rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem;">
+                No rows match the selected filter.
+            </div>
+        </div>
+
+        <!-- Step 2 Footer -->
+        <div id="wizardStep2Footer" class="admin-modal-footer" style="display: none;">
+            <button type="button" class="btn-action btn-action-secondary" onclick="goToStep(1)">
+                <i data-lucide="arrow-left"></i> Back to Upload
+            </button>
+            <button type="button" id="btnGoToConfirm" class="btn-action btn-action-primary" onclick="goToStep(3)">
+                Next: Confirm & Import <i data-lucide="arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- STEP 3: Confirm & Import Settings -->
+        <div id="wizardStep3" class="admin-modal-body" style="display: none;">
+            <div style="background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem;">
+                <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--color-primary); font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="check-circle-2"></i> Ready to Provision Accounts
+                </h4>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: var(--color-text-main); display: flex; flex-direction: column; gap: 0.4rem;">
+                    <li><strong id="confirmValidCountText">0</strong> valid user accounts will be created immediately.</li>
+                    <li><span id="confirmInvalidCountText" style="color: #ef4444;">0 invalid rows will be skipped</span> and compiled into a downloadable failure report.</li>
+                    <li>Security Audit Trail will record this bulk import event under <code>BULK_ACTION</code>.</li>
+                </ul>
+            </div>
+
+            <div style="background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
+                <label style="display: flex; align-items: flex-start; gap: 0.65rem; cursor: pointer; margin: 0;">
+                    <input type="checkbox" id="sendInvitesCheckbox" checked class="admin-checkbox" style="margin-top: 0.15rem;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.85rem;">Send invitation & set-password emails</div>
+                        <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                            Each newly provisioned user receives an invitation email with a secure one-time password setup link. (Falls back gracefully if SMTP is not configured).
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Step 3 Footer -->
+        <div id="wizardStep3Footer" class="admin-modal-footer" style="display: none;">
+            <button type="button" class="btn-action btn-action-secondary" onclick="goToStep(2)">
+                <i data-lucide="arrow-left"></i> Back to Preview
+            </button>
+            <button type="button" id="btnStartImport" class="btn-action btn-action-primary" onclick="startBulkImport()">
+                <i data-lucide="check"></i> Confirm & Start Import
+            </button>
+        </div>
+
+        <!-- STEP 4: Live Progress & Done -->
+        <div id="wizardStep4" class="admin-modal-body" style="display: none; padding: 2rem 1.5rem;">
+            <div id="importInProgressView" style="text-align: center;">
+                <div style="margin-bottom: 1rem;">
+                    <i data-lucide="loader-2" style="width: 42px; height: 42px; color: var(--color-primary); display: inline-block;"></i>
+                </div>
+                <h4 style="margin: 0 0 0.5rem; font-size: 1.15rem; font-weight: 800;">Creating User Accounts...</h4>
+                <p id="importProgressStatusText" style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">
+                    Initializing background worker...
+                </p>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar-wrap" style="height: 10px; margin: 1.5rem 0; background: var(--color-border); border-radius: 999px; overflow: hidden;">
+                    <div id="importProgressBar" class="progress-bar-fill" style="width: 0%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary) 0%, #10b981 100%); transition: width 0.3s ease;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--color-text-muted);">
+                    <span id="importProgressCounter">0 / 0 completed</span>
+                    <span id="importProgressPctText" style="font-weight: 700; color: var(--color-primary);">0%</span>
+                </div>
+            </div>
+
+            <!-- Complete View -->
+            <div id="importCompleteView" style="display: none; text-align: center;">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <i data-lucide="check-circle" style="width: 32px; height: 32px;"></i>
+                </div>
+                <h4 style="margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 800;">Bulk Import Complete</h4>
+                <p id="importCompleteSummaryText" style="font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: 1.5rem;">
+                    Successfully imported 0 accounts.
+                </p>
+
+                <div id="failedRowsDownloadBox" style="display: none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.85rem; color: #ef4444;">Some rows failed validation</div>
+                            <div id="failedCountSubtext" style="font-size: 0.78rem; color: var(--color-text-muted);">Download the report to review error reasons.</div>
+                        </div>
+                        <a id="btnDownloadFailedCsv" href="#" class="btn-action-sm btn-action-danger">
+                            <i data-lucide="download"></i> Download Failed Rows CSV
+                        </a>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-action btn-action-primary" onclick="finishImportAndRefresh()" style="padding: 0.65rem 1.5rem;">
+                    <i data-lucide="check"></i> Done & Refresh User Directory
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -291,54 +437,39 @@
             <h3><i data-lucide="user-plus"></i> Add New Platform User</h3>
             <button type="button" class="admin-modal-close" onclick="closeModal('addUserModal')">&times;</button>
         </div>
-        <form method="POST" action="{% url 'admin_create_user' %}">
+        <form method="POST" action="{% url 'admin_create_user' %}" data-loading data-loading-message="Creating user account...">
             {% csrf_token %}
             <div class="admin-modal-body">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username
-                            *</label>
-                        <input type="text" name="username" class="filter-input" style="width: 100%;" required
-                            placeholder="e.g. john_doe">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username *</label>
+                        <input type="text" name="username" class="filter-input" style="width: 100%;" required placeholder="e.g. john_doe">
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password
-                            *</label>
-                        <input type="password" name="password" class="filter-input" style="width: 100%;" required
-                            placeholder="••••••••">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password *</label>
+                        <input type="password" name="password" class="filter-input" style="width: 100%;" required placeholder="••••••••">
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First
-                            Name</label>
-                        <input type="text" name="first_name" class="filter-input" style="width: 100%;"
-                            placeholder="John">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First Name</label>
+                        <input type="text" name="first_name" class="filter-input" style="width: 100%;" placeholder="John">
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last
-                            Name</label>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last Name</label>
                         <input type="text" name="last_name" class="filter-input" style="width: 100%;" placeholder="Doe">
                     </div>
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email
-                        Address</label>
-                    <input type="email" name="email" class="filter-input" style="width: 100%;"
-                        placeholder="john@example.com">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email Address</label>
+                    <input type="email" name="email" class="filter-input" style="width: 100%;" placeholder="john@example.com">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role
-                            Assignment *</label>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role Assignment *</label>
                         <select name="user_type" class="filter-input" style="width: 100%;">
                             <option value="student">Student</option>
                             <option value="teacher">Teacher / Faculty</option>
@@ -346,42 +477,677 @@
                         </select>
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department
-                            (Optional)</label>
-                        <input type="text" name="department" class="filter-input" style="width: 100%;"
-                            placeholder="Computer Science">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department (Optional)</label>
+                        <input type="text" name="department" class="filter-input" style="width: 100%;" placeholder="Computer Science">
                     </div>
                 </div>
             </div>
             <div class="admin-modal-footer">
-                <button type="button" class="btn-action btn-action-secondary"
-                    onclick="closeModal('addUserModal')">Cancel</button>
-                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create
-                    User</button>
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create User</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+    let searchDebounceTimer = null;
+
     function openModal(id) {
-        document.getElementById(id).classList.add('active');
-    }
-    function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('active');
     }
 
-    // Dropdown Logic
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('active');
+    }
+
+    // Dropdown Handling
     function toggleDropdown(btn) {
         const parent = btn.closest('.admin-dropdown');
         const wasOpen = parent.classList.contains('open');
         document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
         if (!wasOpen) parent.classList.add('open');
     }
+
     document.addEventListener('click', e => {
         if (!e.target.closest('.admin-dropdown')) {
             document.querySelectorAll('.admin-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // Tab Navigation
+    function switchTab(tabName) {
+        document.getElementById('filterTab').value = tabName;
+        document.getElementById('filterPage').value = '1';
+        // Auto default cards view for teachers
+        if (tabName === 'teachers' && !document.getElementById('filterView').dataset.userSet) {
+            document.getElementById('filterView').value = 'cards';
+        }
+        applyFilters();
+    }
+
+    // View Mode Toggle
+    function switchViewMode(mode) {
+        document.getElementById('filterView').value = mode;
+        document.getElementById('filterView').dataset.userSet = 'true';
+        applyFilters();
+    }
+
+    // Column Sorting
+    function sortByColumn(col) {
+        const currentSort = document.getElementById('filterSort').value;
+        const currentDir = document.getElementById('filterDir').value;
+        let newDir = 'desc';
+        if (currentSort === col) {
+            newDir = currentDir === 'desc' ? 'asc' : 'desc';
+        }
+        document.getElementById('filterSort').value = col;
+        document.getElementById('filterDir').value = newDir;
+        document.getElementById('filterPage').value = '1';
+        applyFilters();
+    }
+
+    // Pagination
+    function navigateToPage(pageNum) {
+        document.getElementById('filterPage').value = pageNum;
+        applyFilters();
+    }
+
+    // Debounced Live Search
+    function debounceSearch() {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            document.getElementById('filterPage').value = '1';
+            applyFilters();
+        }, 300);
+    }
+
+    // Reset Filters
+    function resetAllFilters() {
+        document.getElementById('searchQueryInput').value = '';
+        document.getElementById('statusFilterSelect').value = 'all';
+        const deptSelect = document.getElementById('deptFilterSelect');
+        if (deptSelect) deptSelect.value = 'all';
+        document.getElementById('joinedFromInput').value = '';
+        document.getElementById('joinedToInput').value = '';
+        document.getElementById('filterSort').value = 'joined';
+        document.getElementById('filterDir').value = 'desc';
+        document.getElementById('filterPage').value = '1';
+        applyFilters();
+    }
+
+    // In-memory Client-Side Tab & Filter Cache for Instant 0ms Switching
+    const tabCache = new Map();
+
+    // Invalidate client-side cache when actions modify data
+    function invalidateTabCache() {
+        tabCache.clear();
+    }
+
+    // Fetch / Apply Filters via AJAX with HTML Replacement & Client-Side Cache
+    function applyFilters(bypassCache = false) {
+        const tab = document.getElementById('filterTab').value || 'all';
+        const q = document.getElementById('searchQueryInput').value.trim();
+        const status = document.getElementById('statusFilterSelect').value;
+        const deptSelect = document.getElementById('deptFilterSelect');
+        const dept = deptSelect ? deptSelect.value : 'all';
+        const joined_from = document.getElementById('joinedFromInput').value;
+        const joined_to = document.getElementById('joinedToInput').value;
+        const sort = document.getElementById('filterSort').value;
+        const dir = document.getElementById('filterDir').value;
+        const view = document.getElementById('filterView').value;
+        const page = document.getElementById('filterPage').value;
+
+        // Update tab pill UI
+        document.querySelectorAll('.user-dir-tab').forEach(t => t.classList.remove('active'));
+        const activeTabEl = document.querySelector(`.user-dir-tab[onclick*="'${tab}'"]`);
+        if (activeTabEl) activeTabEl.classList.add('active');
+
+        const params = new URLSearchParams({
+            tab: tab,
+            q: q,
+            status: status,
+            dept: dept,
+            joined_from: joined_from,
+            joined_to: joined_to,
+            sort: sort,
+            dir: dir,
+            view: view,
+            page: page,
+            partial: '1'
+        });
+
+        // Update browser URL without reloading
+        const urlParams = new URLSearchParams(params);
+        urlParams.delete('partial');
+        window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
+
+        const cacheKey = params.toString();
+        const container = document.getElementById('usersContainer');
+
+        // Check if pre-rendered in client cache for 0ms instant tab change
+        if (!bypassCache && tabCache.has(cacheKey)) {
+            container.innerHTML = tabCache.get(cacheKey);
+            container.style.opacity = '1';
+            if (window.lucide) lucide.createIcons();
+            handleUserSelectionChange();
+            return;
+        }
+
+        container.style.opacity = '0.5';
+
+        fetch(`${window.location.pathname}?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.text())
+        .then(html => {
+            // Save to client cache
+            tabCache.set(cacheKey, html);
+            container.innerHTML = html;
+            container.style.opacity = '1';
+            if (window.lucide) lucide.createIcons();
+            handleUserSelectionChange();
+        })
+        .catch(err => {
+            console.error('Filter error:', err);
+            container.style.opacity = '1';
+        });
+    }
+
+    // =========================================================
+    // SELECTION & FLOATING BULK TOOLBAR
+    // =========================================================
+    function getSelectedUserIds() {
+        return Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+    }
+
+    function toggleSelectAll(masterCb) {
+        const checkboxes = document.querySelectorAll('.user-checkbox');
+        checkboxes.forEach(cb => cb.checked = masterCb.checked);
+        handleUserSelectionChange();
+    }
+
+    function handleUserSelectionChange() {
+        const selected = getSelectedUserIds();
+        const bar = document.getElementById('floatingBulkBar');
+        const countText = document.getElementById('selectedCountText');
+        const roleChangeCountText = document.getElementById('roleChangeCountText');
+
+        if (selected.length > 0) {
+            countText.textContent = `${selected.length} user${selected.length > 1 ? 's' : ''} selected`;
+            if (roleChangeCountText) roleChangeCountText.textContent = `${selected.length} user${selected.length > 1 ? 's' : ''}`;
+            bar.classList.add('visible');
+        } else {
+            bar.classList.remove('visible');
+            const selectAll = document.getElementById('selectAllCheckbox');
+            if (selectAll) selectAll.checked = false;
+        }
+    }
+
+    function clearUserSelection() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) selectAll.checked = false;
+        handleUserSelectionChange();
+    }
+
+    function exportSelectedUsers() {
+        const ids = getSelectedUserIds();
+        if (ids.length === 0) return;
+        window.location.href = `{% url 'admin_export_users_csv' %}?user_ids=${ids.join(',')}`;
+    }
+
+    function bulkSuspendUsers() {
+        const ids = getSelectedUserIds();
+        if (ids.length === 0) return;
+        EdumiConfirm.show({
+            title: 'Suspend Selected Accounts',
+            description: `Are you sure you want to suspend access for ${ids.length} selected user(s)?`,
+            impact: [
+                'Invalidates active login sessions immediately',
+                'Blocks all student & instructor portal access',
+                'Preserves historical course records, deliverables, and submissions'
+            ],
+            variant: 'danger',
+            confirmText: 'Suspend Accounts'
+        }).then(ok => {
+            if (!ok) return;
+            postBulkStatus(ids, 'suspend');
+        });
+    }
+
+    function bulkActivateUsers() {
+        const ids = getSelectedUserIds();
+        if (ids.length === 0) return;
+        EdumiConfirm.show({
+            title: 'Activate Selected Accounts',
+            description: `Restore active portal access for ${ids.length} selected user(s)?`,
+            impact: [
+                'Restores immediate authentication & login capabilities',
+                'Re-enables participation in assigned courses & live classrooms'
+            ],
+            variant: 'primary',
+            confirmText: 'Activate Accounts'
+        }).then(ok => {
+            if (!ok) return;
+            postBulkStatus(ids, 'activate');
+        });
+    }
+
+    function postBulkStatus(ids, action) {
+        fetch('{% url "admin_bulk_users_status" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ user_ids: ids, status_action: action })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (window.EdumiToast) EdumiToast.success(data.message);
+                clearUserSelection();
+                invalidateTabCache();
+                applyFilters(true);
+            } else {
+                if (window.EdumiToast) EdumiToast.error(data.message || 'Operation failed.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            if (window.EdumiToast) EdumiToast.error('Network error executing bulk action.');
+        });
+    }
+
+    function submitBulkRoleChange() {
+        const ids = getSelectedUserIds();
+        const newRole = document.getElementById('newRoleSelect').value;
+        if (ids.length === 0 || !newRole) return;
+
+        closeModal('changeRoleModal');
+
+        fetch('{% url "admin_bulk_change_role" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ user_ids: ids, new_role: newRole })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (window.EdumiToast) EdumiToast.success(data.message);
+                clearUserSelection();
+                invalidateTabCache();
+                applyFilters(true);
+            } else {
+                if (window.EdumiToast) EdumiToast.error(data.message || 'Failed to update roles.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            if (window.EdumiToast) EdumiToast.error('Network error updating roles.');
+        });
+    }
+
+    // =========================================================
+    // PASSWORD RESET LINK GENERATION
+    // =========================================================
+    function triggerPasswordReset(userId, username) {
+        EdumiConfirm.show({
+            title: `Reset Password for @${username}`,
+            description: `Generate a secure one-time password reset link for @${username}? This event will be logged in the Security Audit Trail.`,
+            variant: 'primary',
+            confirmText: 'Generate Reset Link'
+        }).then(ok => {
+            if (!ok) return;
+
+            fetch(`/admin/users/${userId}/reset-password/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('resetTargetUserText').textContent = `@${data.username}`;
+                    document.getElementById('resetUrlInput').value = data.reset_url;
+                    openModal('passwordResetModal');
+                    if (window.EdumiToast) EdumiToast.success('Password reset link created.');
+                } else {
+                    if (window.EdumiToast) EdumiToast.error(data.message || 'Failed to generate link.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                if (window.EdumiToast) EdumiToast.error('Network error generating reset link.');
+            });
+        });
+    }
+
+    function copyResetUrl() {
+        const input = document.getElementById('resetUrlInput');
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            if (window.EdumiToast) EdumiToast.success('Password reset link copied to clipboard!');
+        });
+    }
+
+    // =========================================================
+    // BULK USER IMPORTER WIZARD CONTROLLER
+    // =========================================================
+    let selectedImportFile = null;
+    let importFileToken = null;
+    let previewRowsData = [];
+    let activePreviewFilter = 'all';
+    let importPollTimer = null;
+
+    function openImportWizard() {
+        goToStep(1);
+        resetSelectedFile();
+        openModal('bulkImportModal');
+    }
+
+    function closeImportWizard() {
+        if (importPollTimer) clearInterval(importPollTimer);
+        closeModal('bulkImportModal');
+    }
+
+    function goToStep(stepNum) {
+        // Step views
+        document.getElementById('wizardStep1').style.display = (stepNum === 1) ? 'block' : 'none';
+        document.getElementById('wizardStep1Footer').style.display = (stepNum === 1) ? 'flex' : 'none';
+
+        document.getElementById('wizardStep2').style.display = (stepNum === 2) ? 'block' : 'none';
+        document.getElementById('wizardStep2Footer').style.display = (stepNum === 2) ? 'flex' : 'none';
+
+        document.getElementById('wizardStep3').style.display = (stepNum === 3) ? 'block' : 'none';
+        document.getElementById('wizardStep3Footer').style.display = (stepNum === 3) ? 'flex' : 'none';
+
+        document.getElementById('wizardStep4').style.display = (stepNum === 4) ? 'block' : 'none';
+
+        // Update step indicators
+        for (let i = 1; i <= 3; i++) {
+            const el = document.getElementById(`stepIndicator${i}`);
+            if (!el) continue;
+            el.classList.remove('active', 'completed');
+            if (i === stepNum) el.classList.add('active');
+            else if (i < stepNum) el.classList.add('completed');
+        }
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // Dropzone Events Setup
+    const dropzone = document.getElementById('importDropzone');
+    if (dropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+        });
+        dropzone.addEventListener('drop', e => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length) {
+                handleFileSelect(dt.files);
+            }
+        });
+    }
+
+    function handleFileSelect(files) {
+        if (!files || !files.length) return;
+        const file = files[0];
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            if (window.EdumiToast) EdumiToast.error('Please select a valid CSV file.');
+            return;
+        }
+
+        selectedImportFile = file;
+        document.getElementById('selectedFileName').textContent = file.name;
+        document.getElementById('selectedFileSize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        document.getElementById('selectedFileInfo').style.display = 'flex';
+        document.getElementById('importDropzone').style.display = 'none';
+        document.getElementById('btnPreviewValidation').disabled = false;
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function resetSelectedFile() {
+        selectedImportFile = null;
+        importFileToken = null;
+        previewRowsData = [];
+        const fileInput = document.getElementById('csvFileInput');
+        if (fileInput) fileInput.value = '';
+        document.getElementById('selectedFileInfo').style.display = 'none';
+        document.getElementById('importDropzone').style.display = 'flex';
+        document.getElementById('btnPreviewValidation').disabled = true;
+    }
+
+    function uploadAndPreviewCsv() {
+        if (!selectedImportFile) return;
+
+        const btn = document.getElementById('btnPreviewValidation');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="animation: spin 1s linear infinite;"></i> Validating...';
+        if (window.lucide) lucide.createIcons();
+
+        const formData = new FormData();
+        formData.append('file', selectedImportFile);
+
+        fetch('{% url "admin_user_import_preview" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Next: Preview & Validate <i data-lucide="arrow-right"></i>';
+
+            if (data.status === 'success') {
+                importFileToken = data.file_token;
+                previewRowsData = data.rows || [];
+
+                document.getElementById('previewTotalBadge').textContent = `${data.total_rows} Total`;
+                document.getElementById('previewValidBadge').textContent = `${data.valid_count} Valid`;
+                document.getElementById('previewInvalidBadge').textContent = `${data.invalid_count} Invalid`;
+
+                document.getElementById('confirmValidCountText').textContent = data.valid_count;
+                document.getElementById('confirmInvalidCountText').textContent = `${data.invalid_count} invalid row(s) will be skipped`;
+
+                document.getElementById('btnGoToConfirm').disabled = (data.valid_count === 0);
+
+                filterPreviewRows('all');
+                goToStep(2);
+            } else {
+                if (window.EdumiToast) EdumiToast.error(data.message || 'Validation failed.');
+            }
+        })
+        .catch(err => {
+            console.error('Validation error:', err);
+            btn.disabled = false;
+            btn.innerHTML = 'Next: Preview & Validate <i data-lucide="arrow-right"></i>';
+            if (window.EdumiToast) EdumiToast.error('Network error during file validation.');
+        });
+    }
+
+    function filterPreviewRows(filterType) {
+        activePreviewFilter = filterType;
+
+        ['All', 'Valid', 'Invalid'].forEach(t => {
+            const b = document.getElementById(`filterBtn${t}`);
+            if (b) {
+                b.classList.remove('btn-action-primary', 'btn-action-secondary');
+                b.classList.add(filterType === t.toLowerCase() ? 'btn-action-primary' : 'btn-action-secondary');
+            }
+        });
+
+        const filtered = previewRowsData.filter(r => {
+            if (filterType === 'valid') return r.is_valid;
+            if (filterType === 'invalid') return !r.is_valid;
+            return true;
+        });
+
+        renderPreviewTable(filtered);
+    }
+
+    function renderPreviewTable(rows) {
+        const tbody = document.getElementById('previewTableBody');
+        const emptyNote = document.getElementById('previewTableEmptyNote');
+        tbody.innerHTML = '';
+
+        if (!rows.length) {
+            emptyNote.style.display = 'block';
+            return;
+        }
+        emptyNote.style.display = 'none';
+
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            if (!r.is_valid) tr.style.background = 'rgba(239, 68, 68, 0.04)';
+
+            const roleBadge = r.role === 'admin' 
+                ? '<span class="role-badge role-badge-admin">Admin</span>'
+                : (r.role === 'teacher' ? '<span class="role-badge role-badge-teacher">Teacher</span>' : '<span class="role-badge role-badge-student">Student</span>');
+
+            const statusCell = r.is_valid
+                ? '<span class="status-pill status-active"><i data-lucide="check" style="width:11px;height:11px;"></i> Valid</span>'
+                : `<span class="status-pill status-suspended" title="${(r.errors || []).join('; ')}"><i data-lucide="alert-circle" style="width:11px;height:11px;"></i> ${(r.errors && r.errors[0]) || 'Error'}</span>`;
+
+            tr.innerHTML = `
+                <td style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem;">${r.row_num}</td>
+                <td style="font-weight: 600;">@${r.username || '<span style="color:#ef4444;">missing</span>'}</td>
+                <td style="color: var(--color-text-secondary);">${r.email || '<span style="color:#ef4444;">missing</span>'}</td>
+                <td>${(r.first_name || r.last_name) ? `${r.first_name} ${r.last_name}`.trim() : '<span style="color:var(--color-text-muted);">—</span>'}</td>
+                <td>${roleBadge}</td>
+                <td style="color: var(--color-text-secondary);">${r.department || '—'}</td>
+                <td>${statusCell}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function startBulkImport() {
+        if (!importFileToken) return;
+
+        const sendInvites = document.getElementById('sendInvitesCheckbox').checked;
+        const btn = document.getElementById('btnStartImport');
+        btn.disabled = true;
+
+        goToStep(4);
+        document.getElementById('importInProgressView').style.display = 'block';
+        document.getElementById('importCompleteView').style.display = 'none';
+        document.getElementById('importProgressBar').style.width = '0%';
+        document.getElementById('importProgressPctText').textContent = '0%';
+        document.getElementById('importProgressCounter').textContent = 'Starting task...';
+
+        fetch('{% url "admin_user_import_execute" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                file_token: importFileToken,
+                send_invites: sendInvites
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.task_id) {
+                pollImportProgress(data.task_id);
+            } else {
+                if (window.EdumiToast) EdumiToast.error(data.message || 'Failed to initiate import.');
+                goToStep(3);
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error('Import launch error:', err);
+            if (window.EdumiToast) EdumiToast.error('Network error starting import task.');
+            goToStep(3);
+            btn.disabled = false;
+        });
+    }
+
+    function pollImportProgress(taskId) {
+        if (importPollTimer) clearInterval(importPollTimer);
+
+        importPollTimer = setInterval(() => {
+            fetch(`/admin/api/user-import-progress/${taskId}/`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(progress => {
+                const pct = progress.progress_pct || 0;
+                document.getElementById('importProgressBar').style.width = `${pct}%`;
+                document.getElementById('importProgressPctText').textContent = `${pct}%`;
+                document.getElementById('importProgressCounter').textContent = `${progress.current || 0} / ${progress.total || 0} completed`;
+                document.getElementById('importProgressStatusText').textContent = `Created ${progress.success_count || 0} accounts (${progress.failed_count || 0} failed)`;
+
+                if (progress.status === 'SUCCESS' || pct >= 100) {
+                    clearInterval(importPollTimer);
+                    importPollTimer = null;
+
+                    setTimeout(() => {
+                        document.getElementById('importInProgressView').style.display = 'none';
+                        document.getElementById('importCompleteView').style.display = 'block';
+                        document.getElementById('importCompleteSummaryText').textContent = 
+                            `Successfully created ${progress.success_count || 0} user accounts. (${progress.failed_count || 0} failed rows skipped).`;
+
+                        if (progress.has_failed_rows && progress.failed_count > 0) {
+                            const failBox = document.getElementById('failedRowsDownloadBox');
+                            failBox.style.display = 'block';
+                            document.getElementById('failedCountSubtext').textContent = 
+                                `${progress.failed_count} row(s) could not be provisioned. Download the report for details.`;
+                            document.getElementById('btnDownloadFailedCsv').href = `/admin/api/user-import-failed-csv/${taskId}/`;
+                        } else {
+                            document.getElementById('failedRowsDownloadBox').style.display = 'none';
+                        }
+
+                        if (window.lucide) lucide.createIcons();
+                        if (window.EdumiToast) EdumiToast.success(`Import complete: ${progress.success_count || 0} accounts created.`);
+                    }, 500);
+                }
+            })
+            .catch(err => console.error('Polling error:', err));
+        }, 700);
+    }
+
+    function finishImportAndRefresh() {
+        closeImportWizard();
+        applyFilters();
+    }
+
+    // Auto-open modal if URL contains action parameters
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('open_import') === '1' || window.location.hash === '#import') {
+            openImportWizard();
+        } else if (urlParams.get('action') === 'new' || window.location.hash === '#addUser') {
+            openModal('addUserModal');
         }
     });
 </script>

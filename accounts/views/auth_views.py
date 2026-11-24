@@ -648,6 +648,12 @@ def password_reset_confirm(request):
         user.set_password(new_password1)
         user.save()
 
+        try:
+            from common.models import AdminAuditTrail, log_admin_action
+            log_admin_action(request, AdminAuditTrail.ACTION_PASSWORD_RESET, target=user, changes={'method': 'password_reset_confirm'})
+        except Exception:
+            pass
+
         # Clean session verified flag
         request.session.pop('verified_reset_user_id', None)
 

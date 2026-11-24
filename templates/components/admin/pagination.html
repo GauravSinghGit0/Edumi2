@@ -1,103 +1,86 @@
-﻿{% comment %}
-  Professional Pagination Component
-  Usage: {% include "components/admin/pagination.html" with page_obj=page_obj extra_params="" %}
-  extra_params: URL query string extras like "&role=admin&q=search" (without leading ?)
+{% comment %}
+Reusable Pagination Component for Admin Views
+Usage (standard link navigation):
+  {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+Usage (AJAX navigation):
+  {% include "components/admin/pagination.html" with page_obj=page_obj js_func="navigateToPage" %}
 {% endcomment %}
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="pagination-wrapper">
 
-  <!-- Info -->
-  <div class="pagination-info">
-    Showing <strong>{{ page_obj.start_index }}</strong>&ndash;<strong>{{ page_obj.end_index }}</strong>
-    of <strong>{{ page_obj.paginator.count }}</strong>
-    {% if item_label %}{{ item_label }}{% else %}records{% endif %}
-  </div>
+{% if page_obj.has_other_pages %}
+<div class="admin-pagination-wrapper" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:.75rem;">
+    <div class="pagination-info" style="font-size:.8rem;color:var(--color-text-muted);">
+        Showing <strong style="color:var(--color-text-main);">{{ page_obj.start_index }}</strong> to <strong style="color:var(--color-text-main);">{{ page_obj.end_index }}</strong> of <strong style="color:var(--color-text-main);">{{ page_obj.paginator.count }}</strong> results
+    </div>
+    
+    <div class="pagination-controls" style="display:flex;align-items:center;gap:.3rem;">
+        <!-- Previous Button -->
+        {% if page_obj.has_previous %}
+        <a {% if js_func %}href="javascript:void(0)" onclick="{{ js_func }}('{{ page_obj.previous_page_number }}')"{% else %}href="?page={{ page_obj.previous_page_number }}{% for key, value in query_params.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"{% endif %}
+            class="pagination-btn pagination-arrow"
+            style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+            onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+            onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+            <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+        </a>
+        {% else %}
+        <span class="pagination-btn pagination-disabled"
+            style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+            <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
+        </span>
+        {% endif %}
 
-  <!-- Controls -->
-  <div class="pagination-controls">
-
-    <!-- First -->
-    {% if page_obj.has_previous %}
-      <a href="?page=1{{ extra_params }}" class="page-btn page-btn--icon" title="First page" aria-label="First page">
-        &#171;
-      </a>
-      <a href="?page={{ page_obj.previous_page_number }}{{ extra_params }}" class="page-btn" aria-label="Previous page">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Prev
-      </a>
-    {% else %}
-      <span class="page-btn page-btn--icon page-btn--disabled" aria-disabled="true">&#171;</span>
-      <span class="page-btn page-btn--disabled" aria-disabled="true">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Prev
-      </span>
-    {% endif %}
-
-    <!-- Page number pills — smart windowed display -->
-    {% with current=page_obj.number total=page_obj.paginator.num_pages %}
-      {% if total <= 7 %}
-        {% for p in page_obj.paginator.page_range %}
-          {% if p == current %}
-            <span class="page-btn page-btn--active" aria-current="page">{{ p }}</span>
-          {% else %}
-            <a href="?page={{ p }}{{ extra_params }}" class="page-btn">{{ p }}</a>
-          {% endif %}
+        <!-- Page Numbers -->
+        {% for pg_num in page_obj.paginator.page_range %}
+            {% if pg_num == page_obj.number %}
+                <!-- Current Page -->
+                <span class="pagination-btn pagination-active"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;background:var(--color-primary);color:#fff;font-weight:700;font-size:.82rem;border:1px solid var(--color-primary);">
+                    {{ pg_num }}
+                </span>
+            {% elif pg_num >= page_obj.number|add:"-2" and pg_num <= page_obj.number|add:"2" %}
+                <!-- Near Current Page -->
+                <a {% if js_func %}href="javascript:void(0)" onclick="{{ js_func }}('{{ pg_num }}')"{% else %}href="?page={{ pg_num }}{% for key, value in query_params.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"{% endif %}
+                    class="pagination-btn"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    {{ pg_num }}
+                </a>
+            {% elif pg_num == 1 or pg_num == page_obj.paginator.num_pages %}
+                <!-- First and Last Page -->
+                <a {% if js_func %}href="javascript:void(0)" onclick="{{ js_func }}('{{ pg_num }}')"{% else %}href="?page={{ pg_num }}{% for key, value in query_params.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"{% endif %}
+                    class="pagination-btn"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+                    onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+                    onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+                    {{ pg_num }}
+                </a>
+            {% elif pg_num == page_obj.number|add:"-3" or pg_num == page_obj.number|add:"3" %}
+                <!-- Ellipsis -->
+                <span class="pagination-ellipsis"
+                    style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--color-text-muted);font-size:.82rem;">…</span>
+            {% endif %}
         {% endfor %}
-      {% else %}
-        {# Always show first #}
-        {% if current == 1 %}
-          <span class="page-btn page-btn--active" aria-current="page">1</span>
+
+        <!-- Next Button -->
+        {% if page_obj.has_next %}
+        <a {% if js_func %}href="javascript:void(0)" onclick="{{ js_func }}('{{ page_obj.next_page_number }}')"{% else %}href="?page={{ page_obj.next_page_number }}{% for key, value in query_params.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"{% endif %}
+            class="pagination-btn pagination-arrow"
+            style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
+            onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
+            onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
+            <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+        </a>
         {% else %}
-          <a href="?page=1{{ extra_params }}" class="page-btn">1</a>
+        <span class="pagination-btn pagination-disabled"
+            style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
+            <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
+        </span>
         {% endif %}
-
-        {# Left ellipsis #}
-        {% if current > 3 %}
-          <span class="page-btn page-btn--ellipsis">&hellip;</span>
-        {% endif %}
-
-        {# Window around current: current-1, current, current+1 #}
-        {% if current > 2 %}
-          <a href="?page={{ current|add:"-1" }}{{ extra_params }}" class="page-btn">{{ current|add:"-1" }}</a>
-        {% endif %}
-        {% if current != 1 and current != total %}
-          <span class="page-btn page-btn--active" aria-current="page">{{ current }}</span>
-        {% endif %}
-        {% if current < total|add:"-1" %}
-          <a href="?page={{ current|add:"1" }}{{ extra_params }}" class="page-btn">{{ current|add:"1" }}</a>
-        {% endif %}
-
-        {# Right ellipsis #}
-        {% if current < total|add:"-2" %}
-          <span class="page-btn page-btn--ellipsis">&hellip;</span>
-        {% endif %}
-
-        {# Always show last #}
-        {% if current == total %}
-          <span class="page-btn page-btn--active" aria-current="page">{{ total }}</span>
-        {% else %}
-          <a href="?page={{ total }}{{ extra_params }}" class="page-btn">{{ total }}</a>
-        {% endif %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- Next / Last -->
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}{{ extra_params }}" class="page-btn" aria-label="Next page">
-        Next
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </a>
-      <a href="?page={{ page_obj.paginator.num_pages }}{{ extra_params }}" class="page-btn page-btn--icon" title="Last page" aria-label="Last page">
-        &#187;
-      </a>
-    {% else %}
-      <span class="page-btn page-btn--disabled" aria-disabled="true">
-        Next
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </span>
-      <span class="page-btn page-btn--icon page-btn--disabled" aria-disabled="true">&#187;</span>
-    {% endif %}
-
-  </div>
+    </div>
+    
+    <div class="pagination-page-info" style="font-size:.78rem;color:var(--color-text-muted);">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
 </div>
 {% endif %}

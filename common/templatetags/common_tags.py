@@ -51,6 +51,61 @@ def duration_hms_filter(duration):
         return f"{minutes}:{secs:02d}"
 
 
+@register.filter(name='human_duration')
+def human_duration_filter(value):
+    """
+    Format a duration (timedelta, seconds int/float, or string like '0:02:03.485000')
+    into a clean human-readable string: e.g., '2m 03s', '1h 05m 12s', or '45s'.
+    Usage: {{ recording.duration|human_duration }}
+    """
+    if value is None or value == '' or value == '--':
+        return "--"
+
+    total_seconds = None
+
+    if hasattr(value, 'total_seconds'):
+        total_seconds = int(value.total_seconds())
+    elif isinstance(value, (int, float)):
+        total_seconds = int(value)
+    elif isinstance(value, str):
+        val_str = value.strip()
+        if not val_str or val_str == '--':
+            return "--"
+        if ':' in val_str:
+            parts = val_str.split(':')
+            try:
+                if len(parts) == 3:
+                    h = int(parts[0])
+                    m = int(parts[1])
+                    s = int(float(parts[2]))
+                    total_seconds = h * 3600 + m * 60 + s
+                elif len(parts) == 2:
+                    m = int(parts[0])
+                    s = int(float(parts[1]))
+                    total_seconds = m * 60 + s
+            except (ValueError, TypeError):
+                pass
+        if total_seconds is None:
+            try:
+                total_seconds = int(float(val_str))
+            except (ValueError, TypeError):
+                return val_str
+
+    if total_seconds is None or total_seconds < 0:
+        return "--"
+
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    if hours > 0:
+        return f"{hours}h {minutes:02d}m {seconds:02d}s"
+    elif minutes > 0:
+        return f"{minutes}m {seconds:02d}s"
+    else:
+        return f"{seconds}s"
+
+
 
 @register.filter(name='time_since')
 def time_since_filter(dt):

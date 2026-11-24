@@ -1,336 +1,833 @@
-{% extends 'layouts/sidebar_base.html' %}
+{% extends 'layouts/admin_base.html' %}
 {% load static %}
 
-{% block page_title %}Admin Control Center | EduMi{% endblock %}
+{% block page_title %}Executive Dashboard | EduMi Admin{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
+{% block admin_extra_css %}
+<!-- ApexCharts from CDNJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.49.0/apexcharts.min.js"></script>
 {% endblock %}
 
-{% block content %}
-<div class="admin-container">
-    <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">Executive Dashboard</span>
+{% block admin_page_header %}
+<nav class="admin-breadcrumbs" aria-label="Breadcrumbs">
+    <a href="{% url 'admin_panel' %}">Home</a>
+    <i data-lucide="chevron-right" class="separator-icon"></i>
+    <span class="current">Executive Dashboard</span>
+</nav>
+
+<div class="admin-header">
+    <div class="admin-header-title">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <h1><i data-lucide="layout-dashboard" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Executive Control Center</h1>
+            {% if streaming_service_online %}
+                <span class="status-pill status-active" title="LiveKit SFU WebRTC media bridge is operational">
+                    <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> Systems Operational
+                </span>
+            {% else %}
+                <span class="status-pill status-suspended" title="LiveKit streaming server is currently unreachable">
+                    <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i> Service Degraded
+                </span>
+            {% endif %}
+        </div>
+        <p class="admin-subtitle">Institutional oversight, real-time platform telemetry, and system governance.</p>
     </div>
 
-    <!-- Header Section with Live Status & Quick Action Controls -->
-    <div class="admin-header">
-        <div>
-            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <h1>Admin Control Center</h1>
-                {% if streaming_service_online %}
-                    {% include "components/admin/status_pill.html" with status="active" label="LiveKit SFU Online" custom_style="cursor: help;" %}
-                {% else %}
-                    {% include "components/admin/status_pill.html" with status="suspended" label="SFU Offline" custom_style="cursor: help;" %}
-                {% endif %}
+    <div class="admin-header-actions">
+        <button type="button" onclick="openModal('addUserModal')" class="btn-action btn-action-primary">
+            <i data-lucide="user-plus"></i> Add User
+        </button>
+        <button type="button" onclick="openModal('addCourseModal')" class="btn-action btn-action-secondary">
+            <i data-lucide="book-plus"></i> Create Course
+        </button>
+        <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary" title="Export Users CSV Report (Audit Logged)">
+            <i data-lucide="download"></i> Export Data
+        </a>
+    </div>
+</div>
+{% endblock admin_page_header %}
+
+{% block admin_content %}
+
+    <!-- =========================================================
+         1. NEEDS ATTENTION PANEL (OR ALL SYSTEMS NORMAL)
+         ========================================================= -->
+    {% if needs_attention_items %}
+    <div class="needs-attention-container">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-danger, #ef4444); display: flex; align-items: center; gap: 0.4rem;">
+                <i data-lucide="alert-circle" style="width: 15px; height: 15px;"></i> Action Required ({{ needs_attention_items|length }})
             </div>
-            <p class="admin-subtitle">Real-time learning metrics, active video streams, and administrative controls</p>
         </div>
 
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-            <button type="button" onclick="openModal('addUserModal')" class="btn-action btn-action-primary">
-                <i data-lucide="user-plus"></i> Add User
-            </button>
-            <button type="button" onclick="openModal('addCourseModal')" class="btn-action btn-action-secondary">
-                <i data-lucide="book-plus"></i> Create Course
-            </button>
-            <a href="{% url 'admin_export_users_csv' %}" class="btn-action btn-action-secondary" title="Export Users CSV Report">
-                <i data-lucide="download"></i> Export Data
-            </a>
-        </div>
-    </div>
-
-    <!-- Live Sessions Alert Banner (Dynamic) -->
-    {% if live_meetings > 0 %}
-    <div class="admin-card" style="border-left: 4px solid var(--color-danger); background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%); margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 1.25rem 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.85rem;">
-                <div style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444; animation: pulse 1.5s infinite;"></div>
+        {% for item in needs_attention_items %}
+        <div class="attention-item severity-{{ item.severity }}">
+            <div class="attention-left">
+                <div class="attention-icon-box">
+                    <i data-lucide="{{ item.icon }}" style="width: 20px; height: 20px;"></i>
+                </div>
                 <div>
-                    <strong style="font-size: 1.05rem; color: var(--color-danger);">🔴 {{ live_meetings }} Live Virtual Sessions Broadcast In Progress</strong>
-                    <div style="font-size: 0.85rem; color: var(--color-text-secondary);">Real-time LiveKit SFU WebRTC streams active across learning classrooms.</div>
+                    <div class="attention-title">{{ item.title }}</div>
+                    <div class="attention-desc">{{ item.description }}</div>
                 </div>
             </div>
-            <a href="{% url 'admin_live_meetings' %}" class="btn-action-sm btn-action-danger">
-                <i data-lucide="radio"></i> Open Live Monitor &rarr;
-            </a>
+            <div>
+                <a href="{{ item.action_url }}" class="btn-action-sm btn-action-secondary" style="white-space: nowrap;">
+                    {{ item.action_label }} &rarr;
+                </a>
+            </div>
         </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="systems-normal-banner">
+        <i data-lucide="check-circle-2"></i>
+        <span>All systems normal &mdash; All services operational, cameras connected, and zero pending enrollment backlogs.</span>
     </div>
     {% endif %}
 
-    <!-- Key Performance Indicators (KPIs) -->
-    <div class="kpi-grid">
-        {% url 'user_management' as url_users %}
-        {% include "components/admin/kpi_card.html" with href=url_users icon="users" color_class="indigo" label="Total Registered Users" value=total_users subtext=active_users|stringformat:"s"|add:" Active &bull; "|add:total_students|stringformat:"s"|add:" Students" subtext_style="color: var(--color-success);" %}
 
-        {% url 'admin_all_teachers' as url_teachers %}
-        {% include "components/admin/kpi_card.html" with href=url_teachers icon="award" color_class="blue" label="Teaching Staff" value=total_teachers subtext=active_teachers|stringformat:"s"|add:" Active Instructors" %}
+    <!-- =========================================================
+         2. EXECUTIVE KPI CARDS (DELTA VS 7 DAYS & SPARKLINES)
+         ========================================================= -->
+    <div class="kpi-exec-grid">
+        <!-- KPI 1: Users -->
+        <a href="{% url 'user_management' %}" class="kpi-card-exec" style="text-decoration: none;">
+            <div class="kpi-exec-top">
+                <span class="kpi-exec-label">Total Users</span>
+                <div class="kpi-icon indigo" style="width: 32px; height: 32px; border-radius: 8px;">
+                    <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+            <div class="kpi-exec-middle">
+                <div class="kpi-exec-value">{{ kpi_users.value }}</div>
+                <div class="kpi-sparkline-wrapper">
+                    {{ kpi_users.sparkline_svg|safe }}
+                </div>
+            </div>
+            <div class="kpi-exec-bottom">
+                <span class="kpi-delta-pill {% if kpi_users.is_positive %}delta-up{% else %}delta-down{% endif %}">
+                    <i data-lucide="{% if kpi_users.is_positive %}trending-up{% else %}trending-down{% endif %}" style="width: 11px; height: 11px;"></i>
+                    {{ kpi_users.delta_text }}
+                </span>
+                <span style="color: var(--color-text-muted); font-size: 0.775rem;">{{ kpi_users.subtext }}</span>
+            </div>
+        </a>
 
-        {% url 'admin_all_classrooms' as url_classrooms %}
-        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="book-open" color_class="emerald" label="Active Classrooms" value=total_classrooms subtext=total_enrollments|stringformat:"s"|add:" Enrolled &bull; "|add:pending_enrollments|stringformat:"s"|add:" Pending" %}
+        <!-- KPI 2: Active Today -->
+        <a href="{% url 'admin_security_audit' %}?tab=login_activity" class="kpi-card-exec" style="text-decoration: none;">
+            <div class="kpi-exec-top">
+                <span class="kpi-exec-label">Active Today</span>
+                <div class="kpi-icon blue" style="width: 32px; height: 32px; border-radius: 8px;">
+                    <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+            <div class="kpi-exec-middle">
+                <div class="kpi-exec-value">{{ kpi_active.value }}</div>
+                <div class="kpi-sparkline-wrapper">
+                    {{ kpi_active.sparkline_svg|safe }}
+                </div>
+            </div>
+            <div class="kpi-exec-bottom">
+                <span class="kpi-delta-pill {% if kpi_active.is_positive %}delta-up{% else %}delta-down{% endif %}">
+                    <i data-lucide="{% if kpi_active.is_positive %}trending-up{% else %}trending-down{% endif %}" style="width: 11px; height: 11px;"></i>
+                    {{ kpi_active.delta_text }}
+                </span>
+                <span style="color: var(--color-text-muted); font-size: 0.775rem;">{{ kpi_active.subtext }}</span>
+            </div>
+        </a>
 
-        {% url 'admin_all_meetings' as url_meetings %}
-        {% include "components/admin/kpi_card.html" with href=url_meetings icon="video" color_class="purple" label="Total Class Sessions" value=total_meetings subtext=live_meetings|stringformat:"s"|add:" Live &bull; "|add:upcoming_meetings|stringformat:"s"|add:" Scheduled" %}
+        <!-- KPI 3: Live Sessions -->
+        <a href="{% url 'admin_all_meetings' %}" class="kpi-card-exec" style="text-decoration: none;">
+            <div class="kpi-exec-top">
+                <span class="kpi-exec-label">Live Sessions</span>
+                <div class="kpi-icon {% if live_meetings > 0 %}rose{% else %}purple{% endif %}" style="width: 32px; height: 32px; border-radius: 8px; {% if live_meetings > 0 %}background: rgba(239, 68, 68, 0.12); color: #ef4444;{% endif %}">
+                    <i data-lucide="radio" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+            <div class="kpi-exec-middle">
+                <div class="kpi-exec-value">{{ kpi_sessions.value }}</div>
+                <div class="kpi-sparkline-wrapper">
+                    {{ kpi_sessions.sparkline_svg|safe }}
+                </div>
+            </div>
+            <div class="kpi-exec-bottom">
+                <span class="kpi-delta-pill {% if kpi_sessions.is_positive %}delta-up{% else %}delta-down{% endif %}">
+                    <i data-lucide="{% if kpi_sessions.is_positive %}trending-up{% else %}trending-down{% endif %}" style="width: 11px; height: 11px;"></i>
+                    {{ kpi_sessions.delta_text }}
+                </span>
+                <span style="color: var(--color-text-muted); font-size: 0.775rem;">{{ kpi_sessions.subtext }}</span>
+            </div>
+        </a>
+
+        <!-- KPI 4: Avg Attendance % -->
+        <a href="{% url 'admin_all_meetings' %}" class="kpi-card-exec" style="text-decoration: none;">
+            <div class="kpi-exec-top">
+                <span class="kpi-exec-label">Avg Attendance %</span>
+                <div class="kpi-icon emerald" style="width: 32px; height: 32px; border-radius: 8px;">
+                    <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                </div>
+            </div>
+            <div class="kpi-exec-middle">
+                <div class="kpi-exec-value">{{ kpi_attendance.value }}</div>
+                <div class="kpi-sparkline-wrapper">
+                    {{ kpi_attendance.sparkline_svg|safe }}
+                </div>
+            </div>
+            <div class="kpi-exec-bottom">
+                <span class="kpi-delta-pill {% if kpi_attendance.is_positive %}delta-up{% else %}delta-down{% endif %}">
+                    <i data-lucide="{% if kpi_attendance.is_positive %}trending-up{% else %}trending-down{% endif %}" style="width: 11px; height: 11px;"></i>
+                    {{ kpi_attendance.delta_text }}
+                </span>
+                <span style="color: var(--color-text-muted); font-size: 0.775rem;">{{ kpi_attendance.subtext }}</span>
+            </div>
+        </a>
     </div>
 
-    <!-- Second row KPI cards -->
-    <div class="kpi-grid" style="margin-bottom:1.5rem;">
-        {% url 'admin_all_classrooms' as url_classrooms %}
-        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="file-text" custom_icon_style="background:rgba(245,158,11,.1);color:#d97706;" label="Assignments" value=total_assignments subtext=total_assignment_submissions|stringformat:"s"|add:" submissions" %}
 
-        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="check-circle-2" custom_icon_style="background:rgba(6,182,212,.1);color:#0891b2;" label="Quizzes" value=total_quizzes subtext=total_quiz_submissions|stringformat:"s"|add:" completions" %}
+    <!-- =========================================================
+         3. TWO APEXCHARTS (AREA UTILIZATION & STACKED SUBMISSIONS)
+         ========================================================= -->
+    <div class="charts-exec-grid">
+        <!-- Chart 1: Attendance & Session Utilization -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">
+                        <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                        Attendance & Session Utilization
+                    </div>
+                    <div style="font-size: 0.775rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                        Real-time student participation rate and active session throughput
+                    </div>
+                </div>
 
-        {% include "components/admin/kpi_card.html" with href=url_classrooms icon="folder" custom_icon_style="background:rgba(236,72,153,.1);color:#db2777;" label="Study Materials" value=total_materials subtext="Across all classrooms" %}
+                <div class="chart-toggle-group">
+                    <button type="button" class="chart-toggle-btn active" id="btn-chart-7d" onclick="switchChartRange(7)">7D</button>
+                    <button type="button" class="chart-toggle-btn" id="btn-chart-30d" onclick="switchChartRange(30)">30D</button>
+                </div>
+            </div>
 
-        {% include "components/admin/kpi_card.html" with icon="calendar-check" custom_icon_style="background:rgba(100,116,139,.1);color:#64748b;" label="Completed Sessions" value=completed_meetings subtext=upcoming_meetings|stringformat:"s"|add:" upcoming" %}
+            <!-- Skeleton Loader -->
+            <div id="chart-attendance-skeleton" class="chart-skeleton-container">
+                <div class="chart-skeleton-bar-row">
+                    <div class="chart-skeleton-col" style="height: 45%;"></div>
+                    <div class="chart-skeleton-col" style="height: 65%;"></div>
+                    <div class="chart-skeleton-col" style="height: 55%;"></div>
+                    <div class="chart-skeleton-col" style="height: 80%;"></div>
+                    <div class="chart-skeleton-col" style="height: 70%;"></div>
+                    <div class="chart-skeleton-col" style="height: 90%;"></div>
+                    <div class="chart-skeleton-col" style="height: 85%;"></div>
+                </div>
+                <div style="text-align: center; font-size: 0.8rem; color: var(--color-text-muted);">
+                    Loading attendance telemetry...
+                </div>
+            </div>
+
+            <div id="chart-attendance" style="min-height: 310px; display: none;"></div>
+        </div>
+
+        <!-- Chart 2: Submissions vs Quiz Completions -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">
+                        <i data-lucide="bar-chart-3" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                        Submissions vs. Quiz Completions
+                    </div>
+                    <div style="font-size: 0.775rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                        Aggregated assignment workload vs knowledge checks completed
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skeleton Loader -->
+            <div id="chart-workload-skeleton" class="chart-skeleton-container">
+                <div class="chart-skeleton-bar-row">
+                    <div class="chart-skeleton-col" style="height: 30%;"></div>
+                    <div class="chart-skeleton-col" style="height: 50%;"></div>
+                    <div class="chart-skeleton-col" style="height: 75%;"></div>
+                    <div class="chart-skeleton-col" style="height: 60%;"></div>
+                    <div class="chart-skeleton-col" style="height: 85%;"></div>
+                    <div class="chart-skeleton-col" style="height: 70%;"></div>
+                    <div class="chart-skeleton-col" style="height: 95%;"></div>
+                </div>
+                <div style="text-align: center; font-size: 0.8rem; color: var(--color-text-muted);">
+                    Loading workload distribution...
+                </div>
+            </div>
+
+            <div id="chart-workload" style="min-height: 310px; display: none;"></div>
+        </div>
     </div>
 
-    <!-- Active Live Sessions & Activity Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+
+    <!-- =========================================================
+         4. SYSTEM HEALTH CARD
+         ========================================================= -->
+    <div class="admin-card" id="system-health-card" style="margin-bottom: 1.5rem;">
+        <div class="admin-card-header">
+            <h2 class="admin-card-title">
+                <i data-lucide="cpu" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                System Infrastructure & Services Health
+            </h2>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500;">
+                Live Hardware, Network & Queue Telemetry
+            </span>
+        </div>
+
+        <div class="admin-card-body">
+            <div class="health-metrics-grid">
+                <!-- LiveKit -->
+                <div class="health-metric-box">
+                    <div class="health-metric-top">
+                        <span class="health-metric-label">LiveKit Video SFU</span>
+                        {% if system_health.livekit.online %}
+                            <span class="status-pill status-active" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">Online</span>
+                        {% else %}
+                            <span class="status-pill status-suspended" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">Offline</span>
+                        {% endif %}
+                    </div>
+                    <div class="health-metric-val" style="font-size: 1.1rem;">
+                        {{ system_health.livekit.label }}
+                    </div>
+                    <div style="font-size: 0.725rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                        WebRTC Video & Audio Server
+                    </div>
+                </div>
+
+                <!-- Redis Latency -->
+                <div class="health-metric-box">
+                    <div class="health-metric-top">
+                        <span class="health-metric-label">Redis Cache Latency</span>
+                        <span class="status-pill {% if system_health.redis.status == 'online' or system_health.redis.status == 'in_memory' %}status-active{% else %}status-suspended{% endif %}" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">
+                            {{ system_health.redis.status|upper }}
+                        </span>
+                    </div>
+                    <div class="health-metric-val" style="font-size: 1.1rem;">
+                        {{ system_health.redis.label }}
+                    </div>
+                    <div style="font-size: 0.725rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                        Sub-millisecond Session Store
+                    </div>
+                </div>
+
+                <!-- Celery Queue Depth -->
+                <div class="health-metric-box">
+                    <div class="health-metric-top">
+                        <span class="health-metric-label">Celery Task Queue</span>
+                        <span class="status-pill status-active" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">Ready</span>
+                    </div>
+                    <div class="health-metric-val" style="font-size: 1.1rem;">
+                        {{ system_health.celery.label }}
+                    </div>
+                    <div style="font-size: 0.725rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                        Async Background Processing
+                    </div>
+                </div>
+
+                <!-- Disk Usage Bar -->
+                <div class="health-metric-box">
+                    <div class="health-metric-top">
+                        <span class="health-metric-label">Server Disk Volume</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: {% if system_health.disk.status == 'danger' %}#ef4444{% elif system_health.disk.status == 'warning' %}#f59e0b{% else %}#10b981{% endif %};">
+                            {{ system_health.disk.percent }}% Used
+                        </span>
+                    </div>
+                    <div class="health-metric-val" style="font-size: 1.1rem;">
+                        {{ system_health.disk.used_gb }} GB <span style="font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted);">/ {{ system_health.disk.total_gb }} GB</span>
+                    </div>
+                    <div class="health-disk-bar">
+                        <div class="health-disk-fill" style="width: {{ system_health.disk.percent }}%; background: {% if system_health.disk.status == 'danger' %}#ef4444{% elif system_health.disk.status == 'warning' %}#f59e0b{% else %}var(--color-primary, #8b5cf6){% endif %};"></div>
+                    </div>
+                </div>
+
+                <!-- Hardware Cameras -->
+                <div class="health-metric-box">
+                    <div class="health-metric-top">
+                        <span class="health-metric-label">Classroom Cameras</span>
+                        <a href="{% url 'admin_dashboard' %}" style="font-size: 0.725rem; color: var(--color-primary); font-weight: 600; text-decoration: none;">Manage &rarr;</a>
+                    </div>
+                    <div class="health-metric-val" style="font-size: 1.1rem;">
+                        {{ system_health.cameras.label }}
+                    </div>
+                    <div style="font-size: 0.725rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                        RTSP & Mobile Feed Hardware
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         5. "LIVE NOW / UPCOMING TODAY" LIST
+         ========================================================= -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
         
-        <!-- Currently Active Sessions Card -->
+        <!-- Live Sessions & Scheduled Sessions -->
         <div class="admin-card">
             <div class="admin-card-header">
                 <h2 class="admin-card-title">
-                    <i data-lucide="radio" style="color: var(--color-danger); width: 18px; height: 18px;"></i> Active Live Sessions
+                    <i data-lucide="radio" style="color: var(--color-danger); width: 18px; height: 18px;"></i>
+                    Live Now & Upcoming Today
                 </h2>
-                <a href="{% url 'admin_all_meetings' %}" class="btn-action-sm btn-action-secondary">All Meetings &rarr;</a>
+                <a href="{% url 'admin_all_meetings' %}" class="btn-action-sm btn-action-secondary">All Sessions &rarr;</a>
             </div>
-            
+
             <div class="admin-card-body">
                 {% if live_meeting_list %}
                     <div style="display: flex; flex-direction: column; gap: 0.85rem;">
                         {% for m in live_meeting_list %}
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); border-radius: var(--radius-md); border: 1px solid var(--color-border); border-left: 3px solid var(--color-danger);">
                             <div>
-                                <div style="font-weight: 700; font-size: 0.95rem;">{{ m.title }}</div>
-                                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">
-                                    Teacher: Prof. {{ m.teacher.get_full_name|default:m.teacher.username }} &bull; Classroom: {{ m.classroom.title|default:"Standalone" }}
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1.5s infinite;"></div>
+                                    <div style="font-weight: 700; font-size: 0.95rem;">{{ m.title }}</div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 0.2rem;">
+                                    Instructor: Prof. {{ m.teacher.get_full_name|default:m.teacher.username }} &bull; Classroom: {{ m.classroom.title|default:"Standalone" }}
                                 </div>
                             </div>
-                            <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-danger">Inspect</a>
+                            <a href="{% url 'admin_meeting_detail' m.id %}" class="btn-action-sm btn-action-danger">Inspect &rarr;</a>
                         </div>
                         {% endfor %}
                     </div>
-                {% else %}
-                    <div class="empty-state">
-                        <div class="empty-icon"><i data-lucide="video-off"></i></div>
-                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-weight: 700;">No Active Live Meetings</h4>
-                        <p style="font-size: 0.85rem; margin: 0;">All classrooms are currently offline.</p>
+                {% elif next_meeting %}
+                    <!-- Next Scheduled Session (Replaces empty live box) -->
+                    <div class="next-session-highlight">
+                        <div style="flex: 1; min-width: 240px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                                <span class="status-pill status-active" style="padding: 0.15rem 0.5rem; font-size: 0.725rem;">Next Scheduled</span>
+                                <span style="font-size: 0.775rem; font-weight: 600; color: var(--color-primary);">{{ next_meeting.time_until }}</span>
+                            </div>
+                            <div style="font-size: 1.05rem; font-weight: 800; color: var(--color-text-main);">{{ next_meeting.title }}</div>
+                            <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                                Instructor: Prof. {{ next_meeting.teacher_name }} &bull; Classroom: {{ next_meeting.classroom_title }}
+                            </div>
+                            <div style="font-size: 0.775rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                                Scheduled: {{ next_meeting.scheduled_time|date:"D, M d @ H:i" }}
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'admin_meeting_detail' next_meeting.id %}" class="btn-action btn-action-primary">
+                                View Session Details &rarr;
+                            </a>
+                        </div>
                     </div>
+                {% else %}
+                    {% include "components/admin/empty_state.html" with icon="calendar" title="No Sessions Scheduled Today" description="All classrooms are currently offline with no pending upcoming sessions." cta_text="Schedule Session" cta_icon="calendar-plus" cta_url="/admin/meetings/" %}
                 {% endif %}
             </div>
         </div>
 
-        <!-- Real Platform Activity Feed -->
+        <!-- =========================================================
+             6. RECENT ADMIN ACTIONS FEED (FROM AdminAuditTrail)
+             ========================================================= -->
         <div class="admin-card">
             <div class="admin-card-header">
                 <h2 class="admin-card-title">
-                    <i data-lucide="activity" style="color: var(--color-primary); width: 18px; height: 18px;"></i>
-                    Platform Activity Feed
-                    <span style="font-size:.72rem;font-weight:500;color:var(--color-text-muted);margin-left:.5rem;">Latest 5 Events</span>
+                    <i data-lucide="shield-check" style="color: var(--color-primary); width: 18px; height: 18px;"></i>
+                    Recent Admin Actions
                 </h2>
-                <a href="{% url 'admin_activity_feed' %}" class="btn-action-sm btn-action-secondary">View All Activity &rarr;</a>
+                <a href="{% url 'admin_security_audit' %}" class="btn-action-sm btn-action-secondary">Full Audit Trail &rarr;</a>
             </div>
 
-            {% if activity_feed %}
-            <div class="admin-table-wrapper">
+            {% if recent_admin_actions %}
+            <div class="admin-table-wrapper" style="overflow-x: auto;">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th style="width:36px;"></th>
-                            <th>Event</th>
-                            <th>User</th>
-                            <th>Time</th>
+                            <th style="width: 120px;">Time</th>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Target</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for event in activity_feed %}
+                        {% for row in recent_admin_actions %}
                         <tr>
-                            <td style="padding:.7rem 1rem;">
-                                <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ event.color }}18;color:{{ event.color }};flex-shrink:0;">
-                                    <i data-lucide="{{ event.icon }}" style="width:13px;height:13px;"></i>
-                                </div>
-                            </td>
-                            <td style="max-width:220px;">
-                                <div style="font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-main);" title="{{ event.title }}">{{ event.title }}</div>
-                                <div style="font-size:.7rem;color:var(--color-text-muted);margin-top:.1rem;">{{ event.action }}</div>
+                            <td style="font-size: 0.775rem; color: var(--color-text-muted); white-space: nowrap;">
+                                {{ row.timestamp|date:"M d, H:i" }}
                             </td>
                             <td>
-                                {% if event.user %}
-                                    <a href="{% url 'admin_user_detail' event.user.id %}" style="color:var(--color-primary);font-weight:600;text-decoration:none;font-size:.8rem;">@{{ event.username }}</a>
+                                {% if row.admin_user %}
+                                    <a href="{% url 'admin_user_detail' row.admin_user.id %}" style="font-weight: 600; color: var(--color-primary); text-decoration: none; font-size: 0.8rem;">
+                                        @{{ row.admin_user.username }}
+                                    </a>
                                 {% else %}
-                                    <span style="font-size:.8rem;color:var(--color-text-muted);">@{{ event.username }}</span>
+                                    <span style="color: var(--color-text-muted); font-size: 0.8rem;">System</span>
                                 {% endif %}
                             </td>
-                            <td style="font-size:.75rem;color:var(--color-text-muted);white-space:nowrap;">
-                                {{ event.timestamp|date:"M d, H:i" }}
+                            <td>
+                                {% if row.action_type == 'USER_CREATED' %}
+                                    <span class="audit-badge created">{{ row.get_action_type_display }}</span>
+                                {% elif row.action_type == 'USER_DELETED' %}
+                                    <span class="audit-badge deleted">{{ row.get_action_type_display }}</span>
+                                {% elif row.action_type == 'ROLE_CHANGED' %}
+                                    <span class="audit-badge role">{{ row.get_action_type_display }}</span>
+                                {% elif row.action_type == 'DATA_EXPORTED' %}
+                                    <span class="audit-badge export">{{ row.get_action_type_display }}</span>
+                                {% elif row.action_type == 'SETTINGS_CHANGED' %}
+                                    <span class="audit-badge settings">{{ row.get_action_type_display }}</span>
+                                {% else %}
+                                    <span class="audit-badge updated">{{ row.get_action_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width: 180px;">
+                                <div style="font-weight: 600; font-size: 0.8rem; color: var(--color-text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ row.target_label }}">
+                                    {{ row.target_label|default:"—" }}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% elif recent_users %}
-                <!-- Fallback: show recently joined users if no activity yet -->
-                <div class="admin-card-body">
-                    <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                        {% for u in recent_users %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                            {% url 'admin_user_detail' u.id as user_url %}
-                            {% include "components/admin/user_avatar.html" with user=u size=30 link=user_url subtext="Joined "|add:u.date_joined|date:"M d, Y" %}
-                            {% if u.is_superuser or u.userprofile.user_type == 'admin' %}
-                                <span class="role-badge role-badge-admin" style="font-size:.68rem;">Admin</span>
-                            {% elif u.userprofile.user_type == 'teacher' %}
-                                <span class="role-badge role-badge-teacher" style="font-size:.68rem;">Teacher</span>
-                            {% else %}
-                                <span class="role-badge role-badge-student" style="font-size:.68rem;">Student</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
             {% else %}
-                <div class="admin-card-body">
-                    <div class="empty-state">
-                        <div class="empty-icon"><i data-lucide="clock"></i></div>
-                        <h4 style="margin: 0.5rem 0 0.25rem 0; font-weight: 700;">No Activity Yet</h4>
-                        <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0;">Events will appear here as users interact with the platform.</p>
-                    </div>
-                </div>
+            <div class="admin-card-body">
+                {% include "components/admin/empty_state.html" with icon="shield" title="No Audit Records" description="Administrative governance actions will be logged here in real-time." %}
+            </div>
             {% endif %}
         </div>
-
     </div>
-</div>
 
-<!-- =========================================================
-     MODAL DRAWER 1: QUICK ADD USER
-     ========================================================= -->
-<div id="addUserModal" class="admin-modal-overlay">
-    <div class="admin-modal-card">
-        <div class="admin-modal-header">
-            <h3><i data-lucide="user-plus"></i> Add New Platform User</h3>
-            <button type="button" class="admin-modal-close" onclick="closeModal('addUserModal')">&times;</button>
+
+    <!-- =========================================================
+         MODAL 1: QUICK ADD USER
+         ========================================================= -->
+    <div id="addUserModal" class="admin-modal-overlay">
+        <div class="admin-modal-card">
+            <div class="admin-modal-header">
+                <h3><i data-lucide="user-plus"></i> Add New Platform User</h3>
+                <button type="button" class="admin-modal-close" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <form method="POST" action="{% url 'admin_create_user' %}">
+                {% csrf_token %}
+                <div class="admin-modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username *</label>
+                            <input type="text" name="username" class="filter-input" style="width: 100%;" required placeholder="e.g. john_doe">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password *</label>
+                            <input type="password" name="password" class="filter-input" style="width: 100%;" required placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First Name</label>
+                            <input type="text" name="first_name" class="filter-input" style="width: 100%;" placeholder="John">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last Name</label>
+                            <input type="text" name="last_name" class="filter-input" style="width: 100%;" placeholder="Doe">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email Address</label>
+                        <input type="email" name="email" class="filter-input" style="width: 100%;" placeholder="john@example.com">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role Assignment *</label>
+                            <select name="user_type" class="filter-input" style="width: 100%;">
+                                <option value="student">Student</option>
+                                <option value="teacher">Teacher / Faculty</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department (Optional)</label>
+                            <input type="text" name="department" class="filter-input" style="width: 100%;" placeholder="Computer Science">
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-modal-footer">
+                    <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create User</button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="{% url 'admin_create_user' %}">
-            {% csrf_token %}
-            <div class="admin-modal-body">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Username *</label>
-                        <input type="text" name="username" class="filter-input" style="width: 100%;" required placeholder="e.g. john_doe">
-                    </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Password *</label>
-                        <input type="password" name="password" class="filter-input" style="width: 100%;" required placeholder="••••••••">
-                    </div>
-                </div>
+    </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">First Name</label>
-                        <input type="text" name="first_name" class="filter-input" style="width: 100%;" placeholder="John">
+    <!-- =========================================================
+         MODAL 2: QUICK CREATE COURSE
+         ========================================================= -->
+    <div id="addCourseModal" class="admin-modal-overlay">
+        <div class="admin-modal-card">
+            <div class="admin-modal-header">
+                <h3><i data-lucide="book-plus"></i> Create Learning Classroom</h3>
+                <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+            </div>
+            <form method="POST" action="{% url 'admin_create_classroom' %}">
+                {% csrf_token %}
+                <div class="admin-modal-body">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Title *</label>
+                        <input type="text" name="title" class="filter-input" style="width: 100%;" required placeholder="e.g. Advanced Computer Science 101">
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Last Name</label>
-                        <input type="text" name="last_name" class="filter-input" style="width: 100%;" placeholder="Doe">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Class Code *</label>
+                            <input type="text" name="class_code" class="filter-input" style="width: 100%;" placeholder="CS101" required>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Password</label>
+                            <input type="text" name="password" class="filter-input" style="width: 100%;" placeholder="Access password (optional)">
+                        </div>
                     </div>
-                </div>
 
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Email Address</label>
-                    <input type="email" name="email" class="filter-input" style="width: 100%;" placeholder="john@example.com">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Role Assignment *</label>
-                        <select name="user_type" class="filter-input" style="width: 100%;">
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher / Faculty</option>
-                            <option value="admin">Administrator</option>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign Instructor *</label>
+                        <select name="teacher_id" class="filter-input" style="width: 100%;" required>
+                            <option value="">-- Select Instructor --</option>
+                            {% for t in all_teachers_list %}
+                                <option value="{{ t.id }}">Prof. {{ t.get_full_name|default:t.username }}</option>
+                            {% endfor %}
                         </select>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Department (Optional)</label>
-                        <input type="text" name="department" class="filter-input" style="width: 100%;" placeholder="Computer Science">
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Description</label>
+                        <textarea name="description" class="filter-input" style="width: 100%; height: 80px;" placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="auto_approve" id="auto_approve" checked style="width: 18px; height: 18px;">
+                        <label for="auto_approve" style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">Auto-Approve Student Enrollment Requests</label>
                     </div>
                 </div>
-            </div>
-            <div class="admin-modal-footer">
-                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addUserModal')">Cancel</button>
-                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create User</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- =========================================================
-     MODAL DRAWER 2: QUICK CREATE COURSE / CLASSROOM
-     ========================================================= -->
-<div id="addCourseModal" class="admin-modal-overlay">
-    <div class="admin-modal-card">
-        <div class="admin-modal-header">
-            <h3><i data-lucide="book-plus"></i> Create Learning Classroom</h3>
-            <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+                <div class="admin-modal-footer">
+                    <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addCourseModal')">Cancel</button>
+                    <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create Classroom</button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="{% url 'admin_create_classroom' %}">
-            {% csrf_token %}
-            <div class="admin-modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Title *</label>
-                    <input type="text" name="title" class="filter-input" style="width: 100%;" required placeholder="e.g. Advanced Computer Science 101">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Class Code *</label>
-                        <input type="text" name="class_code" class="filter-input" style="width: 100%;" placeholder="CS101" required>
-                    </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Password</label>
-                        <input type="text" name="password" class="filter-input" style="width: 100%;" placeholder="Enter a classroom access password">
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign Instructor *</label>
-                    <select name="teacher_id" class="filter-input" style="width: 100%;" required>
-                        <option value="">-- Select Teacher --</option>
-                        {% for u in recent_users %}
-                            <option value="{{ u.id }}">Prof. {{ u.get_full_name|default:u.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom Description</label>
-                    <textarea name="description" class="filter-input" style="width: 100%; height: 80px;" placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" name="auto_approve" id="auto_approve" checked style="width: 18px; height: 18px;">
-                    <label for="auto_approve" style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">Auto-Approve Student Enrollment Requests</label>
-                </div>
-            </div>
-            <div class="admin-modal-footer">
-                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addCourseModal')">Cancel</button>
-                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create Classroom</button>
-            </div>
-        </form>
     </div>
-</div>
 
+{% endblock admin_content %}
+
+{% block admin_extra_js %}
 <script>
+// Modal Open/Close helpers
 function openModal(id) {
-    document.getElementById(id).classList.add('active');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
 }
 function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
 }
+
+// ─────────────────────────────────────────────────────────────
+// APEXCHARTS DASHBOARD ENGINE (DARK-MODE & SKELETON INTEGRATED)
+// ─────────────────────────────────────────────────────────────
+(function() {
+    let attendanceChart = null;
+    let workloadChart = null;
+    let currentRange = 7;
+
+    function isDarkMode() {
+        return document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+    }
+
+    function getChartTheme() {
+        const dark = isDarkMode();
+        return {
+            mode: dark ? 'dark' : 'light',
+            palette: 'palette1',
+            monochrome: { enabled: false }
+        };
+    }
+
+    function getChartGridColors() {
+        const dark = isDarkMode();
+        return {
+            borderColor: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+        };
+    }
+
+    window.switchChartRange = function(range) {
+        currentRange = range;
+        const btn7d = document.getElementById('btn-chart-7d');
+        const btn30d = document.getElementById('btn-chart-30d');
+        if (btn7d && btn30d) {
+            btn7d.classList.toggle('active', range === 7);
+            btn30d.classList.toggle('active', range === 30);
+        }
+        loadDashboardCharts(range);
+    };
+
+    function loadDashboardCharts(range) {
+        const attSkeleton = document.getElementById('chart-attendance-skeleton');
+        const attEl = document.getElementById('chart-attendance');
+        const workSkeleton = document.getElementById('chart-workload-skeleton');
+        const workEl = document.getElementById('chart-workload');
+
+        if (attSkeleton && !attendanceChart) attSkeleton.style.display = 'flex';
+        if (workSkeleton && !workloadChart) workSkeleton.style.display = 'flex';
+
+        fetch(`/admin/api/dashboard-metrics/?range=${range}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') return;
+
+                // Hide Skeletons & Show Charts
+                if (attSkeleton) attSkeleton.style.display = 'none';
+                if (attEl) attEl.style.display = 'block';
+                if (workSkeleton) workSkeleton.style.display = 'none';
+                if (workEl) workEl.style.display = 'block';
+
+                const theme = getChartTheme();
+                const grid = getChartGridColors();
+
+                // ── Area Chart: Attendance & Session Utilization ──
+                const attOptions = {
+                    series: [
+                        { name: 'Attendance Rate (%)', data: data.attendance.attendance_rate },
+                        { name: 'Sessions Conducted', data: data.attendance.sessions_count }
+                    ],
+                    chart: {
+                        type: 'area',
+                        height: 310,
+                        toolbar: { show: false },
+                        background: 'transparent',
+                        fontFamily: 'inherit'
+                    },
+                    colors: ['#8b5cf6', '#10b981'],
+                    dataLabels: { enabled: false },
+                    stroke: { curve: 'smooth', width: 2.5 },
+                    fill: {
+                        type: 'gradient',
+                        gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 95, 100] }
+                    },
+                    xaxis: {
+                        categories: data.categories,
+                        labels: { style: { colors: isDarkMode() ? '#94a3b8' : '#64748b', fontSize: '11px' } },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: [
+                        {
+                            seriesName: 'Attendance Rate (%)',
+                            max: 100,
+                            min: 0,
+                            labels: {
+                                formatter: val => `${Math.round(val)}%`,
+                                style: { colors: isDarkMode() ? '#94a3b8' : '#64748b' }
+                            }
+                        },
+                        {
+                            opposite: true,
+                            seriesName: 'Sessions Conducted',
+                            labels: {
+                                formatter: val => Math.round(val),
+                                style: { colors: isDarkMode() ? '#94a3b8' : '#64748b' }
+                            }
+                        }
+                    ],
+                    tooltip: { theme: isDarkMode() ? 'dark' : 'light' },
+                    grid: grid,
+                    theme: theme,
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'right',
+                        labels: { colors: isDarkMode() ? '#94a3b8' : '#64748b' }
+                    }
+                };
+
+                if (!attendanceChart) {
+                    attendanceChart = new ApexCharts(attEl, attOptions);
+                    attendanceChart.render();
+                } else {
+                    attendanceChart.updateOptions({
+                        xaxis: { categories: data.categories },
+                        series: attOptions.series
+                    });
+                }
+
+                // ── Stacked Bar Chart: Submissions vs Quiz Completions ──
+                const workOptions = {
+                    series: [
+                        { name: 'Assignment Submissions', data: data.workload.assignment_submissions },
+                        { name: 'Quiz Completions', data: data.workload.quiz_completions }
+                    ],
+                    chart: {
+                        type: 'bar',
+                        height: 310,
+                        stacked: true,
+                        toolbar: { show: false },
+                        background: 'transparent',
+                        fontFamily: 'inherit'
+                    },
+                    colors: ['#8b5cf6', '#f59e0b'],
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            borderRadius: 4,
+                            columnWidth: '45%'
+                        }
+                    },
+                    dataLabels: { enabled: false },
+                    xaxis: {
+                        categories: data.categories,
+                        labels: { style: { colors: isDarkMode() ? '#94a3b8' : '#64748b', fontSize: '11px' } },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: val => Math.round(val),
+                            style: { colors: isDarkMode() ? '#94a3b8' : '#64748b' }
+                        }
+                    },
+                    tooltip: { theme: isDarkMode() ? 'dark' : 'light' },
+                    grid: grid,
+                    theme: theme,
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'right',
+                        labels: { colors: isDarkMode() ? '#94a3b8' : '#64748b' }
+                    }
+                };
+
+                if (!workloadChart) {
+                    workloadChart = new ApexCharts(workEl, workOptions);
+                    workloadChart.render();
+                } else {
+                    workloadChart.updateOptions({
+                        xaxis: { categories: data.categories },
+                        series: workOptions.series
+                    });
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load dashboard metrics:", err);
+            });
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboardCharts(7);
+    });
+
+    // Theme toggle observer
+    const themeToggleBtn = document.getElementById('themeToggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            setTimeout(() => {
+                const dark = isDarkMode();
+                const theme = { mode: dark ? 'dark' : 'light' };
+                if (attendanceChart) attendanceChart.updateOptions({ theme: theme, tooltip: theme });
+                if (workloadChart) workloadChart.updateOptions({ theme: theme, tooltip: theme });
+            }, 50);
+        });
+    }
+})();
 </script>
-{% endblock %}
+{% endblock admin_extra_js %}

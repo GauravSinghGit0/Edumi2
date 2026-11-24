@@ -4,24 +4,35 @@
 
 {% block title %}Manage Lectures - Edumi{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="page-section">
-    <div class="page-header-bar">
-        <div>
-            <h1>My Lectures</h1>
-            <p>Manage your recorded sessions and uploaded videos.</p>
-        </div>
-        <div class="page-header-actions">
-            <a href="{% url 'recording_analytics' %}" class="btn-page-action-outline">
-                <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
-                Analytics Studio
-            </a>
-            <button type="button" class="btn-page-action" onclick="openUploadModal()">
-                <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i>
-                Upload New
-            </button>
+<div class="admin-container">
+    {% block admin_page_header %}
+    <div class="admin-header-wrapper">
+        <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'admin_panel' %}">Home</a>
+            <span class="sep">/</span>
+            <span class="current">Recordings Library</span>
+        </nav>
+        <div class="admin-header">
+            <div class="admin-header-title">
+                <h1><i data-lucide="video" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Recordings Library</h1>
+                <p class="admin-subtitle">Manage recorded sessions, uploaded course videos, and lecture archives</p>
+            </div>
+            <div class="admin-header-actions">
+                <a href="{% url 'recording_analytics' %}" class="btn-action btn-action-secondary">
+                    <i data-lucide="bar-chart-2"></i> Analytics Studio
+                </a>
+                <button type="button" class="btn-action btn-action-primary" onclick="openUploadModal()">
+                    <i data-lucide="upload-cloud"></i> Upload New
+                </button>
+            </div>
         </div>
     </div>
+    {% endblock admin_page_header %}
 
     <div style="background: var(--white); border-radius: clamp(10px, 1.5vw, 12px); border: 1px solid var(--gray-200); overflow: hidden;">
         <div class="table-responsive">
@@ -54,7 +65,7 @@
                                         {% if rec.duration %}
                                         <div class="video-duration-badge small text-muted font-weight-bold" style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center;">
                                             <i data-lucide="clock" style="width: 12px; height: 12px; margin-right: 4px;"></i>
-                                            {{ rec.duration|duration_hms }}
+                                            {{ rec.duration|human_duration }}
                                         </div>
                                         {% endif %}
                                     </div>
@@ -172,8 +183,8 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <p class="text-muted mb-0">You haven't recorded any lectures yet.</p>
+                        <td colspan="6" class="text-center py-4">
+                            {% include "components/admin/empty_state.html" with icon="video-off" title="No Lectures Found" description="You haven't recorded or uploaded any lectures yet." cta_text="Upload New" cta_icon="upload-cloud" cta_action="openUploadModal()" %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -1564,7 +1575,11 @@ function closeUploadModal() {
             e.preventDefault();
 
             const videoFile = modalVideoInput.files[0];
-            if (!videoFile) { alert('Please select a video file.'); return; }
+            if (!videoFile) {
+                if (window.EdumiToast) EdumiToast.warning('Please select a video file.');
+                else alert('Please select a video file.');
+                return;
+            }
 
             const title = modalVideoTitle?.value || 'Untitled Lecture';
             const description = this.querySelector('[name="description"]')?.value || '';
@@ -1621,7 +1636,8 @@ function closeUploadModal() {
                 }
             } catch (err) {
                 console.error('Upload failed:', err);
-                alert('Upload connection interrupted. Please try again.');
+                if (window.EdumiToast) EdumiToast.error('Upload connection interrupted. Please try again.');
+                else alert('Upload connection interrupted. Please try again.');
                 isModalUploading = false;
                 submitBtn.disabled = false;
             }

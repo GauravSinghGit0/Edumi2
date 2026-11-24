@@ -1,0 +1,719 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block admin_extra_css %}
+<style>
+    /* Reports & Analytics Styles */
+    .reports-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .report-kpi-card {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .report-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    }
+
+    .report-kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted, #64748b);
+        margin-bottom: 0.4rem;
+    }
+
+    .report-kpi-val {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        line-height: 1.2;
+    }
+
+    .report-kpi-val.highlight {
+        color: var(--color-primary, #8b5cf6);
+    }
+
+    .report-filter-bar {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+    }
+
+    .report-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        align-items: flex-end;
+    }
+
+    .report-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .report-filter-group label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #475569);
+    }
+
+    .report-filter-input,
+    .report-filter-select {
+        width: 100%;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.875rem;
+        border: 1px solid var(--color-border, #cbd5e1);
+        border-radius: var(--radius-md, 0.375rem);
+        background: var(--color-surface, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .report-filter-input:focus,
+    .report-filter-select:focus {
+        border-color: var(--color-primary, #8b5cf6);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    }
+
+    .report-filter-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .report-table-card {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        text-align: left;
+    }
+
+    .report-table th {
+        background: var(--color-bg-subtle, #f8fafc);
+        color: var(--color-text-muted, #64748b);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .report-table td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border, #f1f5f9);
+        color: var(--color-text-main, #1e293b);
+        vertical-align: middle;
+    }
+
+    .report-table tr:hover td {
+        background: rgba(139, 92, 246, 0.02);
+    }
+
+    .btn-export {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border-radius: var(--radius-md, 0.375rem);
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+
+    .btn-export-csv {
+        background: var(--color-surface, #ffffff);
+        color: var(--color-text-main, #334155);
+        border: 1px solid var(--color-border, #cbd5e1);
+    }
+
+    .btn-export-csv:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .btn-export-pdf {
+        background: var(--color-primary, #8b5cf6);
+        color: #ffffff;
+        border: 1px solid var(--color-primary, #8b5cf6);
+    }
+
+    .btn-export-pdf:hover {
+        background: #7c3aed;
+        color: #ffffff;
+    }
+
+    body.dark-mode .reports-kpi-grid .report-kpi-card,
+    body.dark-mode .report-filter-bar,
+    body.dark-mode .report-table-card {
+        background: var(--color-surface-dark, #1e293b);
+        border-color: var(--color-border-dark, #334155);
+    }
+
+    body.dark-mode .report-table th {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    body.dark-mode .report-table td {
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+
+    body.dark-mode .report-filter-input,
+    body.dark-mode .report-filter-select {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f8fafc;
+    }
+
+    body.dark-mode .btn-export-csv {
+        background: #1e293b;
+        border-color: #475569;
+        color: #f1f5f9;
+    }
+</style>
+{% endblock %}
+
+{% block page_heading %}Reports & Analytics{% endblock %}
+{% block page_subheading %}
+<p class="admin-subtitle">Institutional intelligence, student engagement scores, telemetry audits, and course
+    compliance.</p>
+{% endblock %}
+
+{% block page_actions %}
+{% if admin_perms.export_data %}
+<div class="admin-header-actions" style="display: flex; gap: 0.75rem;">
+    <a href="{% url 'admin_export_report_csv' active_tab %}?{{ request.GET.urlencode }}"
+        class="btn-export btn-export-csv" id="btnExportCsv">
+        <i data-lucide="file-spreadsheet"></i>
+        <span>Export CSV</span>
+    </a>
+    <a href="{% url 'admin_export_report_pdf' active_tab %}?{{ request.GET.urlencode }}"
+        class="btn-export btn-export-pdf" id="btnExportPdf">
+        <i data-lucide="file-text"></i>
+        <span>Export PDF</span>
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_content %}
+<!-- Subnavigation Tabs -->
+        <div class="user-dir-tabs" style="margin-bottom: 1.5rem;">
+            <a href="?tab=attendance" class="user-dir-tab {% if active_tab == 'attendance' %}active{% endif %}">
+                <i data-lucide="calendar-check" style="width: 16px; height: 16px;"></i>
+                <span>Attendance Report</span>
+            </a>
+                <a href="?tab=engagement" class="user-dir-tab {% if active_tab == 'engagement' %}active{% endif %}">
+                    <i data-lucide="gauge" style="width: 16px; height: 16px;"></i>
+                    <span>Engagement & Attention</span>
+                </a>
+                    <a href="?tab=user_activity"
+                        class="user-dir-tab {% if active_tab == 'user_activity' %}active{% endif %}">
+                        <i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i>
+                        <span>User Activity & Telemetry</span>
+                    </a>
+                        <a href="?tab=course_performance"
+                            class="user-dir-tab {% if active_tab == 'course_performance' %}active{% endif %}">
+                            <i data-lucide="graduation-cap" style="width: 16px; height: 16px;"></i>
+                            <span>Course Performance</span>
+                        </a>
+        </div>
+
+        <!-- KPI Metrics Grid -->
+        <div class="reports-kpi-grid">
+            {% if active_tab == 'attendance' %}
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Total Student Records</span>
+                <span class="report-kpi-val">{{ metrics.total_records|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Present Headcount</span>
+                <span class="report-kpi-val" style="color: #10b981;">{{ metrics.present_count|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Late Arrivals</span>
+                <span class="report-kpi-val" style="color: #f59e0b;">{{ metrics.late_count|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Unexcused Absences</span>
+                <span class="report-kpi-val" style="color: #ef4444;">{{ metrics.absent_count|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Average Attendance Rate</span>
+                <span class="report-kpi-val highlight">{{ metrics.attendance_rate|default:"0" }}%</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Verified (Face / RFID)</span>
+                <span class="report-kpi-val" style="color: #3b82f6;">{{ metrics.verified_count|default:"0" }}</span>
+            </div>
+
+            {% elif active_tab == 'engagement' %}
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Evaluated Sessions</span>
+                <span class="report-kpi-val">{{ metrics.total_sessions|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Avg Class Engagement</span>
+                <span class="report-kpi-val highlight">{{ metrics.avg_engagement_score|default:"0" }}%</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Avg Facial Attention</span>
+                <span class="report-kpi-val" style="color: #10b981;">{{ metrics.avg_attention_score|default:"0"
+                    }}%</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">High Engagement Sessions</span>
+                <span class="report-kpi-val" style="color: #8b5cf6;">{{ metrics.high_engagement_sessions|default:"0"
+                    }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Evaluated Student Joins</span>
+                <span class="report-kpi-val">{{ metrics.total_students_evaluated|default:"0" }}</span>
+            </div>
+
+            {% elif active_tab == 'user_activity' %}
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Total Logged Events</span>
+                <span class="report-kpi-val highlight">{{ metrics.total_events|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Unique Active Users</span>
+                <span class="report-kpi-val">{{ metrics.unique_users|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Authentication Events</span>
+                <span class="report-kpi-val" style="color: #10b981;">{{ metrics.auth_events|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">System Actions / Mutations</span>
+                <span class="report-kpi-val" style="color: #3b82f6;">{{ metrics.action_events|default:"0" }}</span>
+            </div>
+
+            {% elif active_tab == 'course_performance' %}
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Total Monitored Courses</span>
+                <span class="report-kpi-val">{{ metrics.total_courses|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Total Enrolled Students</span>
+                <span class="report-kpi-val highlight">{{ metrics.total_enrolled|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Total Live Sessions Hosted</span>
+                <span class="report-kpi-val">{{ metrics.total_sessions|default:"0" }}</span>
+            </div>
+            <div class="report-kpi-card">
+                <span class="report-kpi-label">Campus Attendance Rate</span>
+                <span class="report-kpi-val" style="color: #10b981;">{{ metrics.avg_attendance_rate|default:"0"
+                    }}%</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Interactive Filter Bar -->
+        <div class="report-filter-bar">
+            <form method="GET" class="report-filter-grid">
+                <input type="hidden" name="tab" value="{{ active_tab }}">
+
+                {% if active_tab == 'attendance' %}
+                <div class="report-filter-group">
+                    <label>Course / Classroom</label>
+                    <select name="classroom_id" class="report-filter-select">
+                        <option value="">All Courses</option>
+                        {% for c in courses %}
+                        <option value="{{ c.id }}" {% if filters.classroom_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.class_code }}: {{ c.title|truncatechars:28 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Attendance Status</label>
+                    <select name="status" class="report-filter-select">
+                        <option value="all" {% if filters.status == 'all' or not filters.status %}selected{% endif %}>All Statuses</option>
+                        <option value="present" {% if filters.status == 'present' %}selected{% endif %}>Present</option>
+                        <option value="late" {% if filters.status == 'late' %}selected{% endif %}>Late</option>
+                        <option value="absent" {% if filters.status == 'absent' %}selected{% endif %}>Absent</option>
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>To Date</label>
+                    <input type="date" name="date_to" value="{{ filters.date_to }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>Search Student</label>
+                    <input type="text" name="q" value="{{ filters.q }}" placeholder="Name, Roll ID..."
+                        class="report-filter-input">
+                </div>
+
+                {% elif active_tab == 'engagement' %}
+                <div class="report-filter-group">
+                    <label>Course / Classroom</label>
+                    <select name="classroom_id" class="report-filter-select">
+                        <option value="">All Courses</option>
+                        {% for c in courses %}
+                        <option value="{{ c.id }}" {% if filters.classroom_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.class_code }}: {{ c.title|truncatechars:28 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Min Engagement Score</label>
+                    <select name="min_score" class="report-filter-select">
+                        <option value="">Any Score</option>
+                        <option value="50" {% if filters.min_score == '50' %}selected{% endif %}>≥ 50% (Passing)</option>
+                        <option value="75" {% if filters.min_score == '75' %}selected{% endif %}>≥ 75% (High Attention)</option>
+                        <option value="90" {% if filters.min_score == '90' %}selected{% endif %}>≥ 90% (Exemplary)</option>
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>To Date</label>
+                    <input type="date" name="date_to" value="{{ filters.date_to }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>Search Meeting</label>
+                    <input type="text" name="q" value="{{ filters.q }}" placeholder="Session title or code..."
+                        class="report-filter-input">
+                </div>
+
+                {% elif active_tab == 'user_activity' %}
+                <div class="report-filter-group">
+                    <label>User Role</label>
+                    <select name="user_role" class="report-filter-select">
+                        <option value="all">All Roles</option>
+                        <option value="admin" {% if filters.user_role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="teacher" {% if filters.user_role == 'teacher' %}selected{% endif %}>Teacher</option>
+                        <option value="student" {% if filters.user_role == 'student' %}selected{% endif %}>Student</option>
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Event Type</label>
+                    <select name="event_type" class="report-filter-select">
+                        <option value="all">All Events</option>
+                        <option value="auth" {% if filters.event_type == 'auth' %}selected{% endif %}>Authentication</option>
+                        <option value="action" {% if filters.event_type == 'action' %}selected{% endif %}>Admin / Actions</option>
+                        <option value="navigation" {% if filters.event_type == 'navigation' %}selected{% endif %}>Navigation</option>
+                        <option value="error" {% if filters.event_type == 'error' %}selected{% endif %}>Errors</option>
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>To Date</label>
+                    <input type="date" name="date_to" value="{{ filters.date_to }}" class="report-filter-input">
+                </div>
+                <div class="report-filter-group">
+                    <label>Search User / IP</label>
+                    <input type="text" name="q" value="{{ filters.q }}" placeholder="Username, IP..."
+                        class="report-filter-input">
+                </div>
+
+                {% elif active_tab == 'course_performance' %}
+                <div class="report-filter-group">
+                    <label>Department</label>
+                    <select name="department" class="report-filter-select">
+                        <option value="all">All Departments</option>
+                        {% for d in departments %}
+                        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Instructor</label>
+                    <select name="teacher_id" class="report-filter-select">
+                        <option value="">All Instructors</option>
+                        {% for t in teachers %}
+                        <option value="{{ t.id }}" {% if filters.teacher_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.get_full_name|default:t.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Course Status</label>
+                    <select name="status" class="report-filter-select">
+                        <option value="all">All Statuses</option>
+                        <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active Courses</option>
+                        <option value="archived" {% if filters.status == 'archived' %}selected{% endif %}>Archived</option>
+                    </select>
+                </div>
+                <div class="report-filter-group">
+                    <label>Search Course</label>
+                    <input type="text" name="q" value="{{ filters.q }}" placeholder="Code, title..."
+                        class="report-filter-input">
+                </div>
+                {% endif %}
+
+                <div class="report-filter-actions">
+                    <button type="submit" class="admin-btn admin-btn-primary"
+                        style="height: 38px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <i data-lucide="filter"></i>
+                        <span>Filter</span>
+                    </button>
+                    <a href="?tab={{ active_tab }}" class="admin-btn admin-btn-secondary"
+                        style="height: 38px; display: inline-flex; align-items: center;">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table Card -->
+        <div class="report-table-card">
+            <div style="overflow-x: auto;">
+                <table class="report-table">
+                    {% if active_tab == 'attendance' %}
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Roll ID</th>
+                            <th>Course</th>
+                            <th>Session / Date</th>
+                            <th>Status</th>
+                            <th>Verified At</th>
+                            <th>Method</th>
+                            <th>Late</th>
+                            <th>Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in page_obj %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600;">{{ r.student.get_full_name|default:r.student.username }}
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--color-text-muted, #64748b);">@{{
+                                    r.student.username }}</div>
+                            </td>
+                            <td>{{ r.student.userprofile.student_id|default:"-" }}</td>
+                            <td>
+                                {% if r.classroom %}
+                                <div style="font-weight: 600;">{{ r.classroom.course_code }}</div>
+                                <div style="font-size: 0.75rem; color: var(--color-text-muted, #64748b);">{{
+                                    r.classroom.title|truncatechars:24 }}</div>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ r.date }}</td>
+                            <td>
+                                {% if r.status == 'present' %}
+                                <span class="admin-badge admin-badge-success">Present</span>
+                                {% elif r.status == 'late' %}
+                                <span class="admin-badge admin-badge-warning">Late</span>
+                                {% else %}
+                                <span class="admin-badge admin-badge-danger">Absent</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if r.face_verified_at %}{{ r.face_verified_at|date:"H:i:s" }}{% elif r.marked_present_at %}{{ r.marked_present_at|date:"H:i:s" }}{% else %}-{% endif %}</td>
+                            <td>
+                                <span class="role-badge" style="font-size: 0.75rem;">{{ r.verification_method|title }}</span>
+                            </td>
+                            <td>-</td>
+                            <td>{% if r.face_match_confidence %}{{ r.face_match_confidence|floatformat:2 }}{% else %}-{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 3rem 1rem;">
+                                {% include "components/admin/empty_state.html" with icon="calendar-x" title="No Attendance Records Found" description="Try adjusting your filter parameters, date range, or course selection." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    {% elif active_tab == 'engagement' %}
+                    <thead>
+                        <tr>
+                            <th>Session Title</th>
+                            <th>Course Code</th>
+                            <th>Instructor</th>
+                            <th>Engagement Score</th>
+                            <th>Attention Score</th>
+                            <th>Head Pose Score</th>
+                            <th>Attended Students</th>
+                            <th>Generated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in page_obj %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ r.meeting.title|default:"Session" }}</td>
+                            <td>
+                                {% if r.meeting.classroom %}
+                                <span class="admin-badge admin-badge-purple">{{ r.meeting.classroom.course_code
+                                    }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ r.meeting.teacher.get_full_name|default:r.meeting.teacher.username }}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span
+                                        style="font-weight: 700; color: {% if r.class_engagement_score >= 75 %}#10b981{% elif r.class_engagement_score >= 50 %}#f59e0b{% else %}#ef4444{% endif %};">
+                                        {{ r.class_engagement_score }}%
+                                    </span>
+                                </div>
+                            </td>
+                            <td>{{ r.avg_attention_score }}%</td>
+                            <td>{{ r.avg_head_pose_score }}%</td>
+                            <td>{{ r.attended_students }}</td>
+                            <td style="font-size: 0.8rem; color: var(--color-text-muted, #64748b);">{{
+                                r.generated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 3rem 1rem;">
+                                {% include "components/admin/empty_state.html" with icon="gauge" title="No Engagement Reports Found" description="No meetings matched your criteria or engagement data has not yet been computed for this timeframe." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    {% elif active_tab == 'user_activity' %}
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Event Type</th>
+                            <th>Event Name</th>
+                            <th>IP Address</th>
+                            <th>Device / Browser</th>
+                            <th>Target Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in page_obj %}
+                        <tr>
+                            <td style="font-size: 0.8rem; white-space: nowrap;">{{ r.created_at|date:"Y-m-d H:i:s" }}
+                            </td>
+                            <td style="font-weight: 600;">@{{ r.username }}</td>
+                            <td>
+                                <span class="role-badge role-badge-{{ r.user_role }}">{{ r.user_role|upper }}</span>
+                            </td>
+                            <td>
+                                <span class="admin-badge admin-badge-info">{{ r.event_type|title }}</span>
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.8rem;">{{ r.event_name }}</td>
+                            <td style="font-family: monospace; font-size: 0.8rem;">{{ r.ip_address|default:"-" }}</td>
+                            <td style="font-size: 0.8rem; color: var(--color-text-muted, #64748b);">
+                                {{ r.device_type|title }} / {{ r.browser|default:"Browser" }}
+                            </td>
+                            <td
+                                style="font-size: 0.75rem; color: var(--color-text-muted, #64748b); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ r.page_url|default:"-" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 3rem 1rem;">
+                                {% include "components/admin/empty_state.html" with icon="shield-alert" title="No Telemetry Logs Found" description="No activity logs match the selected filters." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    {% elif active_tab == 'course_performance' %}
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Course Title</th>
+                            <th>Department</th>
+                            <th>Instructor</th>
+                            <th>Status</th>
+                            <th>Enrolled</th>
+                            <th>Sessions</th>
+                            <th>Attendance Rate</th>
+                            <th>Academic Health</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in page_obj %}
+                        <tr>
+                            <td style="font-weight: 700;">{{ item.course.class_code }}</td>
+                            <td>
+                                <div style="font-weight: 600;">{{ item.course.title }}</div>
+                            </td>
+                            <td>{{ item.course.teacher.userprofile.department|default:"General" }}</td>
+                            <td>{{
+                                item.course.teacher.get_full_name|default:item.course.teacher.username|default:"Unassigned"
+                                }}</td>
+                            <td>
+                                {% if item.course.is_active %}
+                                <span class="admin-badge admin-badge-success">Active</span>
+                                {% else %}
+                                <span class="admin-badge admin-badge-gray">Archived</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.enrolled_count }} students</td>
+                            <td>{{ item.meetings_count }}</td>
+                            <td>
+                                <div
+                                    style="font-weight: 700; color: {% if item.attendance_rate >= 75 %}#10b981{% elif item.attendance_rate > 0 %}#f59e0b{% else %}#94a3b8{% endif %};">
+                                    {{ item.attendance_rate }}%
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.health_score == 'Good' %}
+                                <span class="admin-badge admin-badge-success">Good</span>
+                                {% else %}
+                                <span class="admin-badge admin-badge-warning">Needs Attention</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 3rem 1rem;">
+                                {% include "components/admin/empty_state.html" with icon="graduation-cap" title="No Courses Found" description="No courses match the specified department or instructor filter." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--color-border, #e2e8f0);">
+                {% include "components/admin/pagination.html" with page_obj=page_obj %}
+            </div>
+            {% endif %}
+        </div>
+        {% endblock %}

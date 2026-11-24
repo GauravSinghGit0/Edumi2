@@ -10,18 +10,18 @@
 {% block content %}
 <div class="admin-container">
     <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
+    <nav class="admin-breadcrumbs" aria-label="Breadcrumbs">
         <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
+        <i data-lucide="chevron-right" class="separator-icon"></i>
         <a href="{% url 'user_management' %}">User Directory</a>
-        <span class="separator">/</span>
+        <i data-lucide="chevron-right" class="separator-icon"></i>
         <span class="current">Edit @{{ target_user.username }}</span>
-    </div>
+    </nav>
 
     <!-- Header Section -->
     <div class="admin-header">
         <div>
-            <h1>Edit User Dossier & Role</h1>
+            <h1>Edit User Profile & Role</h1>
             <p class="admin-subtitle">Modify credentials, system access level, and active status for @{{ target_user.username }}</p>
         </div>
         <div>

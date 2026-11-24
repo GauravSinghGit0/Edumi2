@@ -1,0 +1,496 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block admin_extra_css %}
+<style>
+    .roles-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .role-kpi-card {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .role-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    }
+
+    .role-kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    .role-kpi-content {
+        flex: 1;
+    }
+
+    .role-kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted, #64748b);
+        margin-bottom: 0.25rem;
+    }
+
+    .role-kpi-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        line-height: 1.1;
+    }
+
+    .matrix-table th {
+        text-align: center;
+    }
+
+    .matrix-table th:first-child {
+        text-align: left;
+    }
+
+    .matrix-table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .matrix-table td:first-child {
+        text-align: left;
+    }
+
+    .perm-check-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+    }
+
+    .perm-check-active {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+    }
+
+    .perm-check-inactive {
+        background: rgba(100, 116, 139, 0.08);
+        color: #94a3b8;
+    }
+
+    .role-badge-pill {
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_title %}Roles & Permissions{% endblock %}
+
+{% block page_heading %}<i data-lucide="shield"
+    style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Roles
+& Permissions{% endblock %}
+
+{% block page_subheading %}
+<p class="admin-subtitle">Manage granular administrative access control, configure permission matrices, and assign roles
+    to platform administrators.</p>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Top KPI Cards -->
+    <div class="roles-kpi-grid">
+        <div class="role-kpi-card">
+            <div class="role-kpi-icon" style="background: rgba(124, 58, 237, 0.12); color: #7c3aed;">
+                <i data-lucide="shield"></i>
+            </div>
+            <div class="role-kpi-content">
+                <div class="role-kpi-label">Configured Roles</div>
+                <div class="role-kpi-value">{{ roles|length }}</div>
+            </div>
+        </div>
+
+        <div class="role-kpi-card">
+            <div class="role-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #2563eb;">
+                <i data-lucide="users"></i>
+            </div>
+            <div class="role-kpi-content">
+                <div class="role-kpi-label">Platform Administrators</div>
+                <div class="role-kpi-value">{{ admin_users|length }}</div>
+            </div>
+        </div>
+
+        <div class="role-kpi-card">
+            <div class="role-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+                <i data-lucide="key"></i>
+            </div>
+            <div class="role-kpi-content">
+                <div class="role-kpi-label">Permission Capabilities</div>
+                <div class="role-kpi-value">{{ permission_flags|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 1: Permission Matrix -->
+    <div class="admin-card" style="margin-bottom: 2rem;">
+        <div class="admin-card-header"
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 class="admin-card-title">
+                    <i data-lucide="grid" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                    Administrative Permission Matrix
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0.25rem 0 0 0;">
+                    Review active capabilities for each administrative role or edit permission flags.
+                </p>
+            </div>
+            <button type="button" class="btn-action btn-action-primary" onclick="openCreateRoleModal()">
+                <i data-lucide="plus"></i> Create Custom Role
+            </button>
+        </div>
+
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+            <table class="admin-table matrix-table">
+                <thead>
+                    <tr>
+                        <th style="min-width: 250px;">Permission Capability</th>
+                        {% for role in roles %}
+                        <th style="min-width: 150px;">
+                            <div style="font-weight: 700; color: var(--color-text-main);">{{ role.name }}</div>
+                            {% if role.is_system_role %}
+                            <span
+                                style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-bg-hover); padding: 0.1rem 0.4rem; border-radius: 4px; color: var(--color-text-muted);">
+                                System
+                            </span>
+                            {% else %}
+                            <span
+                                style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(124, 58, 237, 0.1); padding: 0.1rem 0.4rem; border-radius: 4px; color: var(--color-primary);">
+                                Custom
+                            </span>
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for flag_key, flag_label, flag_desc in permission_flags %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; color: var(--color-text-main); font-size: 0.875rem;">
+                                {{ flag_label }}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                                {{ flag_desc }}
+                            </div>
+                        </td>
+                        {% for role in roles %}
+                        <td>
+                            {% if flag_key == 'manage_users' and role.manage_users %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'manage_courses' and role.manage_courses %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'manage_sessions' and role.manage_sessions %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'view_audit' and role.view_audit %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'manage_settings' and role.manage_settings %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'manage_cameras' and role.manage_cameras %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% elif flag_key == 'export_data' and role.export_data %}
+                            <span class="perm-check-icon perm-check-active" title="Allowed"><i data-lucide="check"
+                                    style="width: 16px; height: 16px;"></i></span>
+                            {% else %}
+                            <span class="perm-check-icon perm-check-inactive" title="Denied"><i data-lucide="minus"
+                                    style="width: 14px; height: 14px;"></i></span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <!-- Edit Actions Row -->
+                    <tr>
+                        <td
+                            style="font-weight: 700; color: var(--color-text-muted); font-size: 0.8rem; text-transform: uppercase;">
+                            Configure Permissions
+                        </td>
+                        {% for role in roles %}
+                        <td>
+                            <button type="button" class="btn-action-sm btn-action-secondary"
+                                onclick="openEditRoleModal('{{ role.id }}', '{{ role.name|escapejs }}', '{{ role.description|escapejs }}', {{ role.manage_users|yesno:'true,false' }}, {{ role.manage_courses|yesno:'true,false' }}, {{ role.manage_sessions|yesno:'true,false' }}, {{ role.view_audit|yesno:'true,false' }}, {{ role.manage_settings|yesno:'true,false' }}, {{ role.manage_cameras|yesno:'true,false' }}, {{ role.export_data|yesno:'true,false' }})"
+                                style="height: 30px; font-size: 0.75rem;">
+                                <i data-lucide="edit-2" style="width: 12px; height: 12px;"></i> Edit Flags
+                            </button>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 2: Administrator User Role Assignment -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h3 class="admin-card-title">
+                <i data-lucide="user-check" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                Administrator Role Assignments
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0.25rem 0 0 0;">
+                Assign granular roles to individual administrators. Superusers maintain full root access regardless of
+                assigned role.
+            </p>
+        </div>
+
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Administrator</th>
+                        <th style="width: 130px;">Access Level</th>
+                        <th style="width: 180px;">Assigned Role</th>
+                        <th style="width: 280px; text-align: right;">Change Assignment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admin in admin_users %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                <div
+                                    style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-bg-hover); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary);">
+                                    {{ admin.username|first|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--color-text-main); font-size: 0.875rem;">
+                                        {{ admin.get_full_name|default:admin.username }}
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                                        @{{ admin.username }} &bull; {{ admin.email }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if admin.is_superuser %}
+                            <span class="role-badge-pill"
+                                style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);">
+                                <i data-lucide="crown" style="width: 12px; height: 12px;"></i> Superuser
+                            </span>
+                            {% else %}
+                            <span class="role-badge-pill"
+                                style="background: rgba(124, 58, 237, 0.12); color: #7c3aed; border: 1px solid rgba(124, 58, 237, 0.25);">
+                                <i data-lucide="shield" style="width: 12px; height: 12px;"></i> Admin
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if admin.userprofile.admin_role %}
+                            <span style="font-weight: 700; color: var(--color-text-main); font-size: 0.875rem;">
+                                {{ admin.userprofile.admin_role.name }}
+                            </span>
+                            {% else %}
+                            <span style="color: var(--color-text-muted); font-size: 0.825rem; font-style: italic;">
+                                None (Root Fallback)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <form method="POST" action="{% url 'admin_assign_user_role' %}"
+                                style="display: inline-flex; gap: 0.4rem; align-items: center;">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ admin.id }}">
+                                <select name="role_id" class="filter-input"
+                                    style="height: 34px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); padding: 0 0.5rem; font-size: 0.825rem;">
+                                    <option value="">No Role Assigned</option>
+                                    {% for r in roles %}
+                                    <option value="{{ r.id }}" {% if admin.userprofile.admin_role_id == r.id %}selected{% endif %}>
+                                        {{ r.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn-action-sm btn-action-primary"
+                                    style="height: 34px; padding: 0 0.75rem;">
+                                    Update
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<!-- =========================================================
+     EDIT ROLE PERMISSIONS MODAL
+     ========================================================= -->
+<div id="editRoleModal" class="admin-modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div
+        style="background: var(--color-surface, #ffffff); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem); max-width: 520px; width: 90%; padding: 1.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--color-text-main);">
+                Edit Permissions: <span id="modalRoleName"></span>
+            </h3>
+            <button type="button" onclick="closeEditRoleModal()"
+                style="background: none; border: none; cursor: pointer; color: var(--color-text-muted);">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'admin_role_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="role_id" id="modalRoleId">
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                {% for flag_key, flag_label, flag_desc in permission_flags %}
+                <label
+                    style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; padding: 0.5rem 0.65rem; border-radius: var(--radius-md); background: var(--color-bg-hover);">
+                    <input type="checkbox" name="{{ flag_key }}" id="flag_{{ flag_key }}"
+                        style="width: 18px; height: 18px; margin-top: 0.15rem; cursor: pointer;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.875rem; color: var(--color-text-main);">{{ flag_label }}</div>
+                        <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ flag_desc }}</div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="button" class="btn-action btn-action-secondary"
+                    onclick="closeEditRoleModal()">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary">Save Permissions</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =========================================================
+     CREATE CUSTOM ROLE MODAL
+     ========================================================= -->
+<div id="createRoleModal" class="admin-modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div
+        style="background: var(--color-surface, #ffffff); border: 1px solid var(--color-border, #e2e8f0); border-radius: var(--radius-lg, 0.75rem); max-width: 520px; width: 90%; padding: 1.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--color-text-main);">
+                Create Custom Role
+            </h3>
+            <button type="button" onclick="closeCreateRoleModal()"
+                style="background: none; border: none; cursor: pointer; color: var(--color-text-muted);">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'admin_role_update' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--color-text-main);">Role
+                    Name <span style="color: #ef4444;">*</span></label>
+                <input type="text" name="name" class="filter-input" placeholder="e.g. Dean of Students" required
+                    style="width: 100%; height: 38px; border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 0 0.75rem;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--color-text-main);">Description</label>
+                <textarea name="description" class="filter-input" rows="2" placeholder="Brief summary of duties..."
+                    style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 0.5rem 0.75rem;"></textarea>
+            </div>
+
+            <div
+                style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-main);">Select
+                    Capabilities:</label>
+                {% for flag_key, flag_label, flag_desc in permission_flags %}
+                <label
+                    style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; padding: 0.45rem 0.65rem; border-radius: var(--radius-md); background: var(--color-bg-hover);">
+                    <input type="checkbox" name="{{ flag_key }}"
+                        style="width: 18px; height: 18px; margin-top: 0.15rem; cursor: pointer;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-text-main);">{{ flag_label }}</div>
+                        <div style="font-size: 0.72rem; color: var(--color-text-muted);">{{ flag_desc }}</div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="button" class="btn-action btn-action-secondary"
+                    onclick="closeCreateRoleModal()">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary">Create Role</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditRoleModal(id, name, desc, mu, mc, ms, va, mset, mcam, ed) {
+        document.getElementById('modalRoleId').value = id;
+        document.getElementById('modalRoleName').textContent = name;
+        document.getElementById('flag_manage_users').checked = mu;
+        document.getElementById('flag_manage_courses').checked = mc;
+        document.getElementById('flag_manage_sessions').checked = ms;
+        document.getElementById('flag_view_audit').checked = va;
+        document.getElementById('flag_manage_settings').checked = mset;
+        document.getElementById('flag_manage_cameras').checked = mcam;
+        document.getElementById('flag_export_data').checked = ed;
+        const modal = document.getElementById('editRoleModal');
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditRoleModal() {
+        const modal = document.getElementById('editRoleModal');
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function openCreateRoleModal() {
+        const modal = document.getElementById('createRoleModal');
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateRoleModal() {
+        const modal = document.getElementById('createRoleModal');
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+</script>
+{% endblock %}

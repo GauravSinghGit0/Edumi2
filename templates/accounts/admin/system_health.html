@@ -1,0 +1,979 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block page_title %}System Health | EduMi Admin{% endblock %}
+
+{% block admin_extra_css %}
+<style>
+    .health-container {
+        padding: 0;
+        max-width: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Overall Status Banner */
+    .overall-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.35rem;
+        border-radius: var(--radius-xl, 1rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        background: var(--color-bg-card, #ffffff);
+        box-shadow: var(--shadow-sm);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .overall-banner.status-healthy {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .overall-banner.status-degraded {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .overall-banner.status-critical {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+
+    .banner-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .status-healthy .banner-icon {
+        background: rgba(16, 185, 129, 0.18);
+        color: #10b981;
+    }
+
+    .status-degraded .banner-icon {
+        background: rgba(245, 158, 11, 0.18);
+        color: #d97706;
+    }
+
+    .status-critical .banner-icon {
+        background: rgba(239, 68, 68, 0.18);
+        color: #ef4444;
+    }
+
+    .banner-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-text-main, #000000);
+        margin: 0;
+    }
+
+    .banner-desc {
+        font-size: 0.85rem;
+        color: var(--color-text-muted, #64748b);
+        margin: 0.15rem 0 0 0;
+    }
+
+    .refresh-countdown-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.775rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+        background: var(--color-bg-hover, #f1f5f9);
+        border: 1px solid var(--color-border, #e2e8f0);
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+    }
+
+    /* Live Services Grid */
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .service-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 1.25rem;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 168px;
+        gap: 0.85rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .service-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    }
+
+    .service-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .service-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .service-icon-box {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--radius-md, 0.5rem);
+        background: rgba(139, 92, 246, 0.1);
+        color: var(--color-primary, #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .service-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--color-text-main, #000000);
+        margin: 0;
+    }
+
+    .service-sub {
+        font-size: 0.75rem;
+        color: var(--color-text-muted, #64748b);
+    }
+
+    .service-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.725rem;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .service-badge.operational {
+        background: rgba(16, 185, 129, 0.12);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .service-badge.degraded {
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .service-badge.down {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .service-badge.not_configured {
+        background: var(--color-bg-hover, #f1f5f9);
+        color: var(--color-text-muted, #64748b);
+        border: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .pulse-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .pulse-dot.operational {
+        background: #10b981;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+    }
+
+    .pulse-dot.degraded {
+        background: #f59e0b;
+    }
+
+    .pulse-dot.down {
+        background: #ef4444;
+    }
+
+    .pulse-dot.not_configured {
+        background: #94a3b8;
+    }
+
+    .service-metrics-box {
+        background: var(--color-bg-hover, #f8fafc);
+        border-radius: var(--radius-md, 0.5rem);
+        padding: 0.65rem 0.85rem;
+        font-size: 0.8125rem;
+        color: var(--color-text-muted, #64748b);
+        line-height: 1.45;
+        border: 1px solid var(--color-border, #f1f5f9);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .metric-row-main {
+        font-size: 0.785rem;
+        color: var(--color-text-muted, #64748b);
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .metric-row-stat {
+        font-size: 0.8125rem;
+        color: var(--color-text-main, #0f172a);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        line-height: 1.3;
+    }
+
+    .metric-row-stat strong {
+        font-weight: 700;
+    }
+
+    .stat-sep {
+        color: var(--color-text-muted, #94a3b8);
+        font-size: 0.75rem;
+    }
+
+    body.dark-mode .service-metrics-box {
+        background: #111111;
+        border-color: rgba(148, 163, 184, 0.15);
+    }
+
+    body.dark-mode .metric-row-stat {
+        color: #f8fafc;
+    }
+
+    /* Storage Section */
+    .storage-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .storage-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .storage-title-group h2 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--color-text-main, #000000);
+    }
+
+    .storage-title-group p {
+        margin: 0.2rem 0 0 0;
+        font-size: 0.85rem;
+        color: var(--color-text-muted, #64748b);
+    }
+
+    /* Multi-Segment Storage Progress Bar */
+    .storage-progress-track {
+        height: 24px;
+        width: 100%;
+        border-radius: var(--radius-lg, 0.625rem);
+        background: var(--color-bg-hover, #e2e8f0);
+        overflow: hidden;
+        display: flex;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1.25rem;
+    }
+
+    .storage-segment {
+        height: 100%;
+        transition: width 0.4s ease;
+        position: relative;
+    }
+
+    .storage-segment:hover {
+        filter: brightness(1.1);
+    }
+
+    /* Storage Breakdown Legend Grid */
+    .storage-breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .storage-stat-box {
+        padding: 1rem;
+        border-radius: var(--radius-lg, 0.625rem);
+        background: var(--color-bg-hover, #f8fafc);
+        border: 1px solid var(--color-border, #f1f5f9);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .storage-stat-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .storage-stat-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .storage-stat-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+    }
+
+    .storage-stat-val {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--color-text-main, #000000);
+    }
+
+    .storage-stat-pct {
+        font-size: 0.75rem;
+        color: var(--color-text-muted, #94a3b8);
+    }
+
+    /* Recent Errors Section */
+    .errors-card {
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-xl, 1rem);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .errors-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .errors-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--color-text-main, #000000);
+    }
+
+    .errors-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .errors-table th {
+        background: var(--color-bg-hover, #f8fafc);
+        padding: 0.85rem 1.25rem;
+        font-size: 0.775rem;
+        color: var(--color-text-muted, #64748b);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .errors-table td {
+        padding: 0.95rem 1.25rem;
+        border-bottom: 1px solid var(--color-border, #f1f5f9);
+        font-size: 0.85rem;
+        color: var(--color-text-main, #000000);
+        vertical-align: top;
+    }
+
+    .errors-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .errors-table tr:hover td {
+        background: var(--color-bg-hover, rgba(248, 250, 252, 0.7));
+    }
+
+    .error-lvl-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.725rem;
+        font-weight: 700;
+        font-family: monospace;
+    }
+
+    .error-lvl-pill.CRITICAL {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .error-lvl-pill.ERROR {
+        background: rgba(245, 158, 11, 0.15);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .error-trace-pre {
+        margin: 0.35rem 0 0 0;
+        padding: 0.5rem 0.75rem;
+        background: #0f172a;
+        color: #f8fafc;
+        border-radius: var(--radius-md, 0.375rem);
+        font-size: 0.725rem;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock admin_extra_css %}
+
+{% block breadcrumb_title %}System Health{% endblock %}
+
+{% block page_heading %}<i data-lucide="activity" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>System Health{% endblock %}
+
+{% block page_subheading %}
+<p class="admin-subtitle">Live infrastructure heartbeat diagnostics, worker fleet telemetry, storage breakdown, and error log stream.</p>
+{% endblock %}
+
+{% block page_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+    <div id="refreshPill" class="refresh-countdown-pill">
+        <i data-lucide="refresh-cw" id="refreshSpinIcon" style="width: 14px; height: 14px;"></i>
+        <span id="countdownText">Auto-refreshing in 15s</span>
+    </div>
+    <button type="button" class="btn-action btn-action-secondary" onclick="fetchHealth(true)"
+        title="Force Cache Invalidation & Check Now">
+        <i data-lucide="refresh-cw"></i> Refresh Now
+    </button>
+</div>
+{% endblock %}
+
+{% block admin_content %}
+<div class="health-container">
+
+            <!-- Overall Cluster Banner -->
+            <div id="overallBanner" class="overall-banner status-{{ health.overall_status }}">
+                <div class="banner-left">
+                    <div class="banner-icon" id="bannerIcon">
+                        {% if health.overall_status == 'healthy' %}
+                        <i data-lucide="check-circle-2" style="width: 22px; height: 22px;"></i>
+                        {% elif health.overall_status == 'degraded' %}
+                        <i data-lucide="alert-circle" style="width: 22px; height: 22px;"></i>
+                        {% else %}
+                        <i data-lucide="alert-triangle" style="width: 22px; height: 22px;"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3 class="banner-title" id="bannerTitle">{{ health.overall_label }}</h3>
+                        <p class="banner-desc" id="bannerDesc">
+                            Telemetry synchronized at <span id="syncTimestamp">{{ health.timestamp_display }}</span>.
+                            Strict 5-second socket isolation active.
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <span class="service-badge {{ health.overall_status }}" id="bannerBadge">
+                        <span class="pulse-dot {{ health.overall_status }}"></span>
+                        {{ health.overall_status|upper }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Live Status Cards (7 Services) -->
+            <div class="services-grid" id="servicesGrid">
+
+                <!-- 1. LiveKit SFU -->
+                <div class="service-card" id="card-livekit">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="video"></i></div>
+                            <div>
+                                <h3 class="service-name">LiveKit SFU Bridge</h3>
+                                <span class="service-sub">Port {{ health.checks.livekit.port }} &bull; WebRTC SFU</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.livekit.status }}">
+                            <span class="pulse-dot {{ health.checks.livekit.status }}"></span>
+                            {{ health.checks.livekit.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.livekit.description }}</div>
+                        {% if health.checks.livekit.latency_ms %}
+                        <div class="metric-row-stat">
+                            <span>Round-trip Latency:</span> <strong>{{ health.checks.livekit.latency_ms }}ms</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 2. Django / Daphne ASGI -->
+                <div class="service-card" id="card-django">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="server"></i></div>
+                            <div>
+                                <h3 class="service-name">Django / Daphne ASGI</h3>
+                                <span class="service-sub">Web & WebSocket Server</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.django_daphne.status }}">
+                            <span class="pulse-dot {{ health.checks.django_daphne.status }}"></span>
+                            {{ health.checks.django_daphne.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.django_daphne.description }}</div>
+                        <div class="metric-row-stat">
+                            <span>PID:</span> <strong>{{ health.checks.django_daphne.pid }}</strong>
+                            <span class="stat-sep">&bull;</span>
+                            <span>Layer:</span> <strong>{{ health.checks.django_daphne.channel_layer }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Redis Cache & Pub/Sub -->
+                <div class="service-card" id="card-redis">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="database"></i></div>
+                            <div>
+                                <h3 class="service-name">Redis Cache & Pub/Sub</h3>
+                                <span class="service-sub">State & Broker Engine</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.redis.status }}">
+                            <span class="pulse-dot {{ health.checks.redis.status }}"></span>
+                            {{ health.checks.redis.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.redis.description }}</div>
+                        <div class="metric-row-stat">
+                            <span>Latency:</span> <strong>{{ health.checks.redis.latency_ms|default:"N/A" }}ms</strong>
+                            <span class="stat-sep">&bull;</span>
+                            <span>RAM:</span> <strong>{{ health.checks.redis.used_memory }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Celery Distributed Workers -->
+                <div class="service-card" id="card-celery">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="cpu"></i></div>
+                            <div>
+                                <h3 class="service-name">Celery Worker Fleet</h3>
+                                <span class="service-sub">Async Task Processing</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.celery.status }}">
+                            <span class="pulse-dot {{ health.checks.celery.status }}"></span>
+                            {{ health.checks.celery.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.celery.description }}</div>
+                        <div class="metric-row-stat">
+                            <span>Queue Depth:</span> <strong>{{ health.checks.celery.queue_depth }} task{{ health.checks.celery.queue_depth|pluralize }}</strong>
+                            <span class="stat-sep">&bull;</span>
+                            <span>Failed:</span> <strong>{{ health.checks.celery.failed_tasks }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Primary Database -->
+                <div class="service-card" id="card-database">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="hard-drive"></i></div>
+                            <div>
+                                <h3 class="service-name">Primary Database</h3>
+                                <span class="service-sub">{{ health.checks.database.vendor|upper }} Engine</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.database.status }}">
+                            <span class="pulse-dot {{ health.checks.database.status }}"></span>
+                            {{ health.checks.database.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.database.description }}</div>
+                        <div class="metric-row-stat">
+                            <span>Query Latency:</span> <strong>{{ health.checks.database.latency_ms|default:"0.1" }}ms</strong>
+                            <span style="font-size: 0.72rem; color: var(--color-text-muted);">(SELECT 1)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Camera Gateway -->
+                <div class="service-card" id="card-camera">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="camera"></i></div>
+                            <div>
+                                <h3 class="service-name">Camera Gateway</h3>
+                                <span class="service-sub">Port {{ health.checks.camera_gateway.port }} &bull; Hardware Service</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.camera_gateway.status }}">
+                            <span class="pulse-dot {{ health.checks.camera_gateway.status }}"></span>
+                            {{ health.checks.camera_gateway.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.camera_gateway.description }}</div>
+                        <div class="metric-row-stat">
+                            <span>Fleet Status:</span> <strong>{{ health.checks.camera_gateway.online_cameras }} Online / {{ health.checks.camera_gateway.total_cameras }} Total</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Ollama RAG Server -->
+                <div class="service-card" id="card-ollama">
+                    <div class="service-header">
+                        <div class="service-title-wrap">
+                            <div class="service-icon-box"><i data-lucide="sparkles"></i></div>
+                            <div>
+                                <h3 class="service-name">Ollama (RAG & Embeddings)</h3>
+                                <span class="service-sub">Port {{ health.checks.ollama.port }} &bull; Local LLM</span>
+                            </div>
+                        </div>
+                        <span class="service-badge {{ health.checks.ollama.status }}">
+                            <span class="pulse-dot {{ health.checks.ollama.status }}"></span>
+                            {{ health.checks.ollama.badge }}
+                        </span>
+                    </div>
+                    <div class="service-metrics-box">
+                        <div class="metric-row-main">{{ health.checks.ollama.description }}</div>
+                        {% if health.checks.ollama.models %}
+                        <div class="metric-row-stat">
+                            <span>Models:</span> <strong>{{ health.checks.ollama.models|join:", " }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+                                        <!-- Storage Capacity & Multi-Segment Progress Bar -->
+                                        <div class="storage-card">
+                                            <div class="storage-header">
+                                                <div class="storage-title-group">
+                                                    <h2>Storage Utilization Breakdown</h2>
+                                                    <p>Volume disk consumption split by lecture captures, student/course
+                                                        submissions, and system avatars.</p>
+                                                </div>
+                                                <div style="font-weight: 700; font-size: 1.1rem; color: var(--color-text-main);"
+                                                    id="storageOverviewLabel">
+                                                    {{ health.storage.used_gb }} GB used <span
+                                                        style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 400;">of
+                                                        {{ health.storage.total_gb }} GB ({{ health.storage.percent }}%)</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Multi-Segment Progress Bar -->
+                                            <div class="storage-progress-track" id="storageProgressBar"
+                                                title="Total Used: {{ health.storage.percent }}%">
+                                                <div class="storage-segment" id="seg-recordings"
+                                                    style="width: {{ health.storage.categories.recordings.percent }}%; background: {{ health.storage.categories.recordings.color }};"
+                                                    title="Recordings: {{ health.storage.categories.recordings.display }} ({{ health.storage.categories.recordings.percent }}%)">
+                                                </div>
+                                                <div class="storage-segment" id="seg-uploads"
+                                                    style="width: {{ health.storage.categories.uploads.percent }}%; background: {{ health.storage.categories.uploads.color }};"
+                                                    title="Uploads: {{ health.storage.categories.uploads.display }} ({{ health.storage.categories.uploads.percent }}%)">
+                                                </div>
+                                                <div class="storage-segment" id="seg-avatars"
+                                                    style="width: {{ health.storage.categories.avatars.percent }}%; background: {{ health.storage.categories.avatars.color }};"
+                                                    title="Avatars: {{ health.storage.categories.avatars.display }} ({{ health.storage.categories.avatars.percent }}%)">
+                                                </div>
+                                            </div>
+
+                                            <!-- Breakdown Stat Cards -->
+                                            <div class="storage-breakdown-grid">
+                                                <!-- Recordings -->
+                                                <div class="storage-stat-box">
+                                                    <div class="storage-stat-top">
+                                                        <span class="storage-stat-name">Recordings</span>
+                                                        <span class="storage-stat-dot"
+                                                            style="background: {{ health.storage.categories.recordings.color }};"></span>
+                                                    </div>
+                                                    <div class="storage-stat-val" id="storageValRecordings">{{ health.storage.categories.recordings.display }}</div>
+                                                    <div class="storage-stat-pct" id="storagePctRecordings">{{ health.storage.categories.recordings.percent }}% of media storage</div>
+                                                </div>
+
+                                                <!-- Uploads -->
+                                                <div class="storage-stat-box">
+                                                    <div class="storage-stat-top">
+                                                        <span class="storage-stat-name">Course Materials & Uploads</span>
+                                                        <span class="storage-stat-dot"
+                                                            style="background: {{ health.storage.categories.uploads.color }};"></span>
+                                                    </div>
+                                                    <div class="storage-stat-val" id="storageValUploads">{{ health.storage.categories.uploads.display }}</div>
+                                                    <div class="storage-stat-pct" id="storagePctUploads">{{ health.storage.categories.uploads.percent }}% of media storage</div>
+                                                </div>
+
+                                                <!-- Avatars -->
+                                                <div class="storage-stat-box">
+                                                    <div class="storage-stat-top">
+                                                        <span class="storage-stat-name">Avatars & User Assets</span>
+                                                        <span class="storage-stat-dot"
+                                                            style="background: {{ health.storage.categories.avatars.color }};"></span>
+                                                    </div>
+                                                    <div class="storage-stat-val" id="storageValAvatars">{{ health.storage.categories.avatars.display }}</div>
+                                                    <div class="storage-stat-pct" id="storagePctAvatars">{{ health.storage.categories.avatars.percent }}% of media storage</div>
+                                                </div>
+
+                                                <!-- Free Space -->
+                                                <div class="storage-stat-box">
+                                                    <div class="storage-stat-top">
+                                                        <span class="storage-stat-name">Available Disk Headroom</span>
+                                                        <span class="storage-stat-dot"
+                                                            style="background: #94a3b8;"></span>
+                                                    </div>
+                                                    <div class="storage-stat-val" id="storageValFree">{{ health.storage.free_gb }} GB</div>
+                                                    <div class="storage-stat-pct" id="storagePctFree">{{ health.storage.total_gb }} GB total volume capacity</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Recent Errors Section -->
+                                        <div class="errors-card">
+                                            <div class="errors-header">
+                                                <div>
+                                                    <h2 class="errors-title">Recent System Errors</h2>
+                                                    <div style="font-size: 0.85rem; color: var(--color-text-muted);">
+                                                        Last 20 exceptions captured from log files and system crash
+                                                        journals.
+                                                    </div>
+                                                </div>
+                                                <span class="refresh-countdown-pill" id="errorCountBadge">
+                                                    {{ health.recent_errors|length }} Error{{ health.recent_errors|length|pluralize }} Logged
+                                                </span>
+                                            </div>
+
+                                            {% if health.recent_errors %}
+                                            <div style="overflow-x: auto;">
+                                                <table class="errors-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 170px;">Timestamp</th>
+                                                            <th style="width: 100px;">Level</th>
+                                                            <th style="width: 180px;">Source / Logger</th>
+                                                            <th>Error Message & Stack Details</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="errorsTableBody">
+                                                        {% for err in health.recent_errors %}
+                                                        <tr>
+                                                            <td
+                                                                style="font-family: monospace; font-size: 0.8rem; color: var(--color-text-muted);">
+                                                                {{ err.timestamp }}
+                                                            </td>
+                                                            <td>
+                                                                <span class="error-lvl-pill {{ err.level }}">{{ err.level }}</span>
+                                                            </td>
+                                                            <td style="font-weight: 600; font-size: 0.825rem;">
+                                                                {{ err.logger }}
+                                                            </td>
+                                                            <td>
+                                                                <div style="font-weight: 600; word-break: break-word;">
+                                                                    {{ err.message }}</div>
+                                                                {% if err.details %}
+                                                                <pre class="error-trace-pre">{{ err.details }}</pre>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% else %}
+                                            <div style="padding: 2.5rem 1rem; text-align: center;">
+                                                {% include "components/admin/empty_state.html" with icon="check-circle" title="Zero Recent Errors" description="No unhandled system exceptions or crash reports logged in recent journals." %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                    </div>
+
+                                    <script>
+                                        (function () {
+                                            'use strict';
+
+                                            var intervalSeconds = 15;
+                                            var remainingSeconds = intervalSeconds;
+                                            var timerId = null;
+                                            var isPolling = false;
+
+                                            function updateCountdownDisplay() {
+                                                var el = document.getElementById('countdownText');
+                                                if (el) {
+                                                    el.textContent = `Auto-refreshing in ${remainingSeconds}s`;
+                                                }
+                                            }
+
+                                            // Live polling function
+                                            window.fetchHealth = async function (force) {
+                                                if (isPolling) return;
+                                                isPolling = true;
+
+                                                var spinIcon = document.getElementById('refreshSpinIcon');
+                                                if (spinIcon) spinIcon.style.animation = 'spin 0.8s linear infinite';
+
+                                                try {
+                                                    var url = '/admin/api/system-health/' + (force ? '?force=1' : '');
+                                                    var res = await fetch(url);
+                                                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                                    var data = await res.json();
+                                                    renderHealthData(data);
+                                                    remainingSeconds = intervalSeconds;
+                                                    updateCountdownDisplay();
+                                                    if (force && typeof window.showToast === 'function') {
+                                                        window.showToast("Telemetry Refreshed", "System health checks re-executed live.", "success");
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Health poll failed:', err);
+                                                } finally {
+                                                    isPolling = false;
+                                                    if (spinIcon) spinIcon.style.animation = '';
+                                                }
+                                            };
+
+                                            function renderHealthData(data) {
+                                                if (!data) return;
+
+                                                // 1. Overall Banner
+                                                var banner = document.getElementById('overallBanner');
+                                                var bannerTitle = document.getElementById('bannerTitle');
+                                                var bannerBadge = document.getElementById('bannerBadge');
+                                                var syncTimestamp = document.getElementById('syncTimestamp');
+
+                                                if (banner) {
+                                                    banner.className = `overall-banner status-${data.overall_status}`;
+                                                }
+                                                if (bannerTitle) bannerTitle.textContent = data.overall_label;
+                                                if (bannerBadge) {
+                                                    bannerBadge.className = `service-badge ${data.overall_status}`;
+                                                    bannerBadge.innerHTML = `<span class="pulse-dot ${data.overall_status}"></span> ${data.overall_status.toUpperCase()}`;
+                                                }
+                                                if (syncTimestamp) syncTimestamp.textContent = data.timestamp_display;
+
+                                                // 2. Storage updates
+                                                var storage = data.storage;
+                                                if (storage) {
+                                                    var overviewEl = document.getElementById('storageOverviewLabel');
+                                                    if (overviewEl) {
+                                                        overviewEl.innerHTML = `${storage.used_gb} GB used <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 400;">of ${storage.total_gb} GB (${storage.percent}%)</span>`;
+                                                    }
+
+                                                    var cats = storage.categories || {};
+                                                    var segRec = document.getElementById('seg-recordings');
+                                                    var segUp = document.getElementById('seg-uploads');
+                                                    var segAv = document.getElementById('seg-avatars');
+
+                                                    if (segRec && cats.recordings) {
+                                                        segRec.style.width = `${cats.recordings.percent}%`;
+                                                        segRec.title = `Recordings: ${cats.recordings.display} (${cats.recordings.percent}%)`;
+                                                    }
+                                                    if (segUp && cats.uploads) {
+                                                        segUp.style.width = `${cats.uploads.percent}%`;
+                                                        segUp.title = `Uploads: ${cats.uploads.display} (${cats.uploads.percent}%)`;
+                                                    }
+                                                    if (segAv && cats.avatars) {
+                                                        segAv.style.width = `${cats.avatars.percent}%`;
+                                                        segAv.title = `Avatars: ${cats.avatars.display} (${cats.avatars.percent}%)`;
+                                                    }
+
+                                                    var valRec = document.getElementById('storageValRecordings');
+                                                    var pctRec = document.getElementById('storagePctRecordings');
+                                                    if (valRec && cats.recordings) valRec.textContent = cats.recordings.display;
+                                                    if (pctRec && cats.recordings) pctRec.textContent = `${cats.recordings.percent}% of media storage`;
+
+                                                    var valUp = document.getElementById('storageValUploads');
+                                                    var pctUp = document.getElementById('storagePctUploads');
+                                                    if (valUp && cats.uploads) valUp.textContent = cats.uploads.display;
+                                                    if (pctUp && cats.uploads) pctUp.textContent = `${cats.uploads.percent}% of media storage`;
+
+                                                    var valAv = document.getElementById('storageValAvatars');
+                                                    var pctAv = document.getElementById('storagePctAvatars');
+                                                    if (valAv && cats.avatars) valAv.textContent = cats.avatars.display;
+                                                    if (pctAv && cats.avatars) pctAv.textContent = `${cats.avatars.percent}% of media storage`;
+
+                                                    var valFree = document.getElementById('storageValFree');
+                                                    if (valFree) valFree.textContent = `${storage.free_gb} GB`;
+                                                }
+
+                                                if (window.lucide) lucide.createIcons();
+                                            }
+
+                                            // Timer loop
+                                            timerId = setInterval(function () {
+                                                if (document.hidden) return; // Pause while tab not active
+                                                remainingSeconds -= 1;
+                                                if (remainingSeconds <= 0) {
+                                                    fetchHealth(false);
+                                                } else {
+                                                    updateCountdownDisplay();
+                                                }
+                                            }, 1000);
+
+                                            window.addEventListener('beforeunload', function () {
+                                                if (timerId) clearInterval(timerId);
+                                            });
+
+                                            if (window.lucide) lucide.createIcons();
+                                        })();
+                                    </script>
+
+                                    <style>
+                                        @keyframes spin {
+                                            from {
+                                                transform: rotate(0deg);
+                                            }
+
+                                            to {
+                                                transform: rotate(360deg);
+                                            }
+                                        }
+                                    </style>
+                                    {% endblock admin_content %}

@@ -168,7 +168,8 @@ if [ "$IS_ROOT" = true ]; then
         python3 python3-venv python3-dev python3-pip \
         build-essential cmake g++ libpq-dev libffi-dev \
         ffmpeg postgresql postgresql-contrib redis-server nginx supervisor \
-        libopenblas-dev liblapack-dev libgl1 libglx-mesa0 libglib2.0-0 libsm6 libxext6 libxrender-dev 2>/dev/null \
+        libopenblas-dev liblapack-dev libgl1 libglx-mesa0 libglib2.0-0 libsm6 libxext6 libxrender-dev \
+        libfreetype6-dev libjpeg-dev zlib1g-dev 2>/dev/null \
         || apt-get install -y -qq libgl1-mesa-glx libglib2.0-0 2>/dev/null || true
     log "Ubuntu system packages installed."
 fi

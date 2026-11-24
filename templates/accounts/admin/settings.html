@@ -1,0 +1,848 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block admin_extra_css %}
+<style>
+/* Settings Center Styling */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1.75rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.settings-nav {
+    background: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    border-radius: var(--radius-md, 0.375rem);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.settings-nav-item:hover {
+    background: var(--color-bg-subtle, #f8fafc);
+    color: var(--color-text-main, #0f172a);
+}
+
+.settings-nav-item.active {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--color-primary, #8b5cf6);
+}
+
+.settings-panel-card {
+    background: var(--color-surface, #ffffff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
+}
+
+.settings-panel-header {
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.settings-panel-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-main, #0f172a);
+    margin-bottom: 0.25rem;
+}
+
+.settings-panel-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #64748b);
+    margin: 0;
+}
+
+.settings-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.settings-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.settings-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.settings-form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-main, #334155);
+}
+
+.settings-form-help {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #64748b);
+    margin-top: 0.2rem;
+}
+
+.settings-form-input,
+.settings-form-textarea {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: var(--radius-md, 0.375rem);
+    background: var(--color-surface, #ffffff);
+    color: var(--color-text-main, #0f172a);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.settings-form-input:focus,
+.settings-form-textarea:focus {
+    border-color: var(--color-primary, #8b5cf6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.settings-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.settings-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.settings-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.settings-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.settings-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+.settings-toggle-switch input:checked + .settings-toggle-slider {
+    background-color: var(--color-primary, #8b5cf6);
+}
+
+.settings-toggle-switch input:checked + .settings-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.academic-subtable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.375rem);
+    overflow: hidden;
+}
+
+.academic-subtable th {
+    background: var(--color-bg-subtle, #f8fafc);
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    text-align: left;
+}
+
+.academic-subtable td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--color-border, #f1f5f9);
+    color: var(--color-text-main, #1e293b);
+    vertical-align: middle;
+}
+
+.smtp-test-box {
+    background: var(--color-bg-subtle, #f8fafc);
+    border: 1px dashed var(--color-border, #cbd5e1);
+    border-radius: var(--radius-md, 0.375rem);
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+body.dark-mode .settings-nav,
+body.dark-mode .settings-panel-card,
+body.dark-mode .smtp-test-box {
+    background: var(--color-surface-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+}
+
+body.dark-mode .settings-form-input,
+body.dark-mode .settings-form-textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+body.dark-mode .academic-subtable th {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body.dark-mode .academic-subtable td {
+    border-color: #334155;
+    color: #e2e8f0;
+}
+</style>
+{% endblock %}
+
+{% block page_heading %}System Settings{% endblock %}
+{% block page_subheading %}
+<p class="admin-subtitle">Platform governance, institutional branding, biometric parameters, and mail gateways.</p>
+{% endblock %}
+
+{% block admin_content %}
+<div class="settings-layout">
+    <!-- Left Navigation Menu -->
+    <div class="settings-nav">
+        <a href="?section=institution" class="settings-nav-item {% if active_section == 'institution' %}active{% endif %}">
+            <i data-lucide="building"></i>
+            <span>Institution</span>
+        </a>
+        <a href="?section=academic" class="settings-nav-item {% if active_section == 'academic' %}active{% endif %}">
+            <i data-lucide="graduation-cap"></i>
+            <span>Academic Structure</span>
+        </a>
+        <a href="?section=attendance" class="settings-nav-item {% if active_section == 'attendance' %}active{% endif %}">
+            <i data-lucide="scan-face"></i>
+            <span>Attendance & AI</span>
+        </a>
+        <a href="?section=security" class="settings-nav-item {% if active_section == 'security' %}active{% endif %}">
+            <i data-lucide="lock"></i>
+            <span>Security & Auth</span>
+        </a>
+        <a href="?section=email" class="settings-nav-item {% if active_section == 'email' %}active{% endif %}">
+            <i data-lucide="mail"></i>
+            <span>Email / SMTP</span>
+        </a>
+    </div>
+
+    <!-- Right Content Card -->
+    <div class="settings-panel-card">
+        {% if active_section == 'institution' %}
+            <div class="settings-panel-header">
+                <h2 class="settings-panel-title">Institution Profile & Branding</h2>
+                <p class="settings-panel-desc">Configure campus entity information, contact metadata, and official visual branding.</p>
+            </div>
+
+            <form method="POST" action="{% url 'admin_update_settings' 'institution' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="settings-form-grid">
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Institution Name</label>
+                        <input type="text" name="institution_name" value="{{ settings.institution.institution_name }}" required class="settings-form-input">
+                    </div>
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Tagline / Motto</label>
+                        <input type="text" name="institution_tagline" value="{{ settings.institution.institution_tagline }}" class="settings-form-input">
+                    </div>
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Contact / Registrar Email</label>
+                        <input type="email" name="contact_email" value="{{ settings.institution.contact_email }}" required class="settings-form-input">
+                    </div>
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Support Phone</label>
+                        <input type="text" name="support_phone" value="{{ settings.institution.support_phone }}" class="settings-form-input">
+                    </div>
+                    <div class="settings-form-group full-width">
+                        <label class="settings-form-label">Campus Physical Address</label>
+                        <textarea name="institution_address" rows="2" class="settings-form-textarea">{{ settings.institution.institution_address }}</textarea>
+                    </div>
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Current Logo URL</label>
+                        <input type="text" name="logo_url" value="{{ settings.institution.logo_url }}" class="settings-form-input">
+                    </div>
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Upload New Logo (Image)</label>
+                        <input type="file" name="logo_file" accept="image/*" class="settings-form-input">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 1.25rem;">
+                    <button type="submit" class="admin-btn admin-btn-primary">
+                        <i data-lucide="save"></i>
+                        <span>Save Institution Settings</span>
+                    </button>
+                </div>
+            </form>
+
+        {% elif active_section == 'academic' %}
+            <div class="settings-panel-header">
+                <h2 class="settings-panel-title">Academic Structure</h2>
+                <p class="settings-panel-desc">Manage institutional semesters, active terms, and academic departments.</p>
+            </div>
+
+            <!-- Semesters Section -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Academic Semesters / Terms</h3>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="openSemesterModal()" style="font-size: 0.8rem; height: 32px;">
+                    <i data-lucide="plus"></i> Add Semester
+                </button>
+            </div>
+
+            <table class="academic-subtable">
+                <thead>
+                    <tr>
+                        <th>Term Name</th>
+                        <th>Code</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in settings.academic.semesters %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ s.name }}</td>
+                            <td><span class="admin-badge admin-badge-purple">{{ s.code }}</span></td>
+                            <td>{{ s.start_date }}</td>
+                            <td>{{ s.end_date }}</td>
+                            <td>
+                                {% if s.is_current %}
+                                    <span class="admin-badge admin-badge-success">Current Term</span>
+                                {% else %}
+                                    <span class="admin-badge admin-badge-gray">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <button type="button" class="admin-btn-icon danger" onclick="confirmDeleteSemester({{ s.id }}, '{{ s.name }}')" title="Delete Semester">
+                                    <i data-lucide="trash-2"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6" style="text-align: center; color: var(--color-text-muted);">No semesters registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Departments Section -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+                <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Colleges & Departments</h3>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="openDepartmentModal()" style="font-size: 0.8rem; height: 32px;">
+                    <i data-lucide="plus"></i> Add Department
+                </button>
+            </div>
+
+            <table class="academic-subtable">
+                <thead>
+                    <tr>
+                        <th>Department Name</th>
+                        <th>Code</th>
+                        <th>Department Head / Chair</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in settings.academic.departments %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ d.name }}</td>
+                            <td><span class="admin-badge admin-badge-info">{{ d.code }}</span></td>
+                            <td>{{ d.head|default:"Unassigned" }}</td>
+                            <td style="text-align: right;">
+                                <button type="button" class="admin-btn-icon danger" onclick="confirmDeleteDepartment({{ d.id }}, '{{ d.name }}')" title="Delete Department">
+                                    <i data-lucide="trash-2"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" style="text-align: center; color: var(--color-text-muted);">No departments registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% elif active_section == 'attendance' %}
+            <div class="settings-panel-header">
+                <h2 class="settings-panel-title">Attendance & AI Facial Verification</h2>
+                <p class="settings-panel-desc">Configure biometric tolerance, late arrival thresholds, and autonomous auditing.</p>
+            </div>
+
+            <form method="POST" action="{% url 'admin_update_settings' 'attendance' %}">
+                {% csrf_token %}
+                <div class="settings-form-grid">
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Face Matching Confidence Threshold (0.50 – 0.95)</label>
+                        <input type="number" step="0.01" min="0.50" max="0.95" name="face_match_threshold" value="{{ settings.attendance.face_match_threshold }}" required class="settings-form-input">
+                        <span class="settings-form-help">Recommended: 0.70. Higher values reject impostors more aggressively; lower values accommodate variable lighting.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Late Arrival Grace Period (Minutes)</label>
+                        <input type="number" min="1" max="60" name="late_join_minutes" value="{{ settings.attendance.late_join_minutes }}" required class="settings-form-input">
+                        <span class="settings-form-help">Students joining after this threshold from session start are flagged as 'Late'.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Auto-Mark Absent Cutoff (Minutes)</label>
+                        <input type="number" min="5" max="180" name="auto_mark_absent_minutes" value="{{ settings.attendance.auto_mark_absent_minutes }}" required class="settings-form-input">
+                        <span class="settings-form-help">Time after scheduled session start after which absent records are locked.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Consecutive Missing Detections Alert</label>
+                        <input type="number" min="1" max="20" name="consecutive_face_misses_alert" value="{{ settings.attendance.consecutive_face_misses_alert }}" required class="settings-form-input">
+                        <span class="settings-form-help">Triggers instructor warning if face is not detected for N consecutive camera sweeps.</span>
+                    </div>
+
+                    <div class="settings-form-group full-width">
+                        <label class="settings-form-label">Periodic Re-Verification During Sessions</label>
+                        <div class="settings-toggle-container">
+                            <label class="settings-toggle-switch">
+                                <input type="checkbox" name="require_face_reverification" {% if settings.attendance.require_face_reverification %}checked{% endif %}>
+                                <span class="settings-toggle-slider"></span>
+                            </label>
+                            <span style="font-size: 0.875rem; color: var(--color-text-main, #334155);">Require background face reverification every 10 minutes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 1.25rem;">
+                    <button type="submit" class="admin-btn admin-btn-primary">
+                        <i data-lucide="save"></i>
+                        <span>Save Attendance Rules</span>
+                    </button>
+                </div>
+            </form>
+
+        {% elif active_section == 'security' %}
+            <div class="settings-panel-header">
+                <h2 class="settings-panel-title">Security & Authentication Policy</h2>
+                <p class="settings-panel-desc">Enforce institutional password complexity, inactivity session timeouts, and rate limiting.</p>
+            </div>
+
+            <form method="POST" action="{% url 'admin_update_settings' 'security' %}">
+                {% csrf_token %}
+                <div class="settings-form-grid">
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Minimum Password Length</label>
+                        <input type="number" min="6" max="32" name="password_min_length" value="{{ settings.security.password_min_length }}" required class="settings-form-input">
+                        <span class="settings-form-help">Recommended: At least 8 characters.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Session Idle Timeout (Minutes)</label>
+                        <input type="number" min="15" max="1440" name="session_timeout_minutes" value="{{ settings.security.session_timeout_minutes }}" required class="settings-form-input">
+                        <span class="settings-form-help">480 minutes = 8 hours. Browser sessions expire after this inactivity duration.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Max Failed Login Attempts</label>
+                        <input type="number" min="3" max="20" name="max_login_attempts" value="{{ settings.security.max_login_attempts }}" required class="settings-form-input">
+                        <span class="settings-form-help">Lockout threshold for brute-force prevention.</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Lockout Duration (Minutes)</label>
+                        <input type="number" min="5" max="120" name="lockout_duration_minutes" value="{{ settings.security.lockout_duration_minutes }}" required class="settings-form-input">
+                    </div>
+
+                    <div class="settings-form-group full-width">
+                        <label class="settings-form-label">Password Complexity Constraints</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" name="password_require_numbers" {% if settings.security.password_require_numbers %}checked{% endif %}>
+                                <span>Require at least one numeric digit (0-9)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" name="password_require_special" {% if settings.security.password_require_special %}checked{% endif %}>
+                                <span>Require at least one special character (!@#$%^&*)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" name="enforce_mfa" {% if settings.security.enforce_mfa %}checked{% endif %}>
+                                <span>Enforce Two-Factor Authentication (MFA) for Administrative Staff</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 1.25rem;">
+                    <button type="submit" class="admin-btn admin-btn-primary">
+                        <i data-lucide="save"></i>
+                        <span>Save Security Policy</span>
+                    </button>
+                </div>
+            </form>
+
+        {% elif active_section == 'email' %}
+            <div class="settings-panel-header">
+                <h2 class="settings-panel-title">Email / SMTP Gateway</h2>
+                <p class="settings-panel-desc">Configure the outbound SMTP mail server for invitations, password resets, and alerts.</p>
+            </div>
+
+            <form method="POST" action="{% url 'admin_update_settings' 'email' %}">
+                {% csrf_token %}
+                <div class="settings-form-grid">
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">SMTP Hostname</label>
+                        <input type="text" name="smtp_host" value="{{ settings.email.smtp_host }}" required class="settings-form-input">
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">SMTP Port</label>
+                        <input type="number" name="smtp_port" value="{{ settings.email.smtp_port }}" required class="settings-form-input">
+                        <span class="settings-form-help">Standard: 587 (STARTTLS) or 465 (SSL).</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">SMTP Username</label>
+                        <input type="text" name="smtp_username" value="{{ settings.email.smtp_username }}" class="settings-form-input">
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">SMTP Password / App Password</label>
+                        <input type="password" name="smtp_password" placeholder="••••••••" class="settings-form-input">
+                        <span class="settings-form-help">Leave blank to retain currently configured secret.</span>
+                    </div>
+
+                    <div class="settings-form-group full-width">
+                        <label class="settings-form-label">Default From Email Header</label>
+                        <input type="text" name="smtp_from_email" value="{{ settings.email.smtp_from_email }}" required class="settings-form-input">
+                    </div>
+
+                    <div class="settings-form-group full-width">
+                        <div class="settings-toggle-container">
+                            <label class="settings-toggle-switch">
+                                <input type="checkbox" name="smtp_use_tls" {% if settings.email.smtp_use_tls %}checked{% endif %}>
+                                <span class="settings-toggle-slider"></span>
+                            </label>
+                            <span style="font-size: 0.875rem; color: var(--color-text-main, #334155);">Use Explicit TLS (STARTTLS) Encryption</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--color-border, #e2e8f0); padding-top: 1.25rem;">
+                    <button type="submit" class="admin-btn admin-btn-primary">
+                        <i data-lucide="save"></i>
+                        <span>Save SMTP Gateway</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- SMTP Live Verification Test Card -->
+            <div class="smtp-test-box">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <i data-lucide="send" style="color: var(--color-primary, #8b5cf6);"></i>
+                    <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0;">Live SMTP Connectivity Diagnostic</h3>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--color-text-muted, #64748b); margin-bottom: 1rem;">
+                    Dispatch an instantaneous verification email to verify routing, authentication credentials, and TLS handshake.
+                </p>
+
+                <div style="display: flex; gap: 0.75rem; max-width: 500px;">
+                    <input type="email" id="testEmailInput" placeholder="recipient@example.com" class="settings-form-input" style="flex: 1;">
+                    <button type="button" class="admin-btn admin-btn-secondary" id="btnSendTestEmail" onclick="executeSmtpTest()">
+                        <span>Send Test</span>
+                    </button>
+                </div>
+
+                <div id="smtpTestResult" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: var(--radius-md, 0.375rem); font-size: 0.85rem;"></div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Semester Modal -->
+<div id="semesterModal" class="edumi-modal-backdrop" style="display: none;">
+    <div class="edumi-modal" style="max-width: 480px;">
+        <div class="edumi-modal-header">
+            <h3>Add Academic Semester</h3>
+            <button type="button" class="edumi-modal-close" onclick="closeSemesterModal()">&times;</button>
+        </div>
+        <form id="formAddSemester" onsubmit="submitAddSemester(event)">
+            {% csrf_token %}
+            <div class="edumi-modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Term Name</label>
+                    <input type="text" name="name" placeholder="e.g. Fall 2026" required class="settings-form-input">
+                </div>
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Term Code</label>
+                    <input type="text" name="code" placeholder="e.g. FA26" required class="settings-form-input">
+                </div>
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Start Date</label>
+                    <input type="date" name="start_date" required class="settings-form-input">
+                </div>
+                <div class="settings-form-group">
+                    <label class="settings-form-label">End Date</label>
+                    <input type="date" name="end_date" required class="settings-form-input">
+                </div>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                    <input type="checkbox" name="is_current">
+                    <span>Set as current active term</span>
+                </label>
+            </div>
+            <div class="edumi-modal-footer">
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="closeSemesterModal()">Cancel</button>
+                <button type="submit" class="admin-btn admin-btn-primary">Add Semester</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Department Modal -->
+<div id="departmentModal" class="edumi-modal-backdrop" style="display: none;">
+    <div class="edumi-modal" style="max-width: 480px;">
+        <div class="edumi-modal-header">
+            <h3>Add Department</h3>
+            <button type="button" class="edumi-modal-close" onclick="closeDepartmentModal()">&times;</button>
+        </div>
+        <form id="formAddDepartment" onsubmit="submitAddDepartment(event)">
+            {% csrf_token %}
+            <div class="edumi-modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Department Name</label>
+                    <input type="text" name="name" placeholder="e.g. Mechanical Engineering" required class="settings-form-input">
+                </div>
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Department Code</label>
+                    <input type="text" name="code" placeholder="e.g. MECH" required class="settings-form-input">
+                </div>
+                <div class="settings-form-group">
+                    <label class="settings-form-label">Chair / Head of Department</label>
+                    <input type="text" name="head" placeholder="e.g. Dr. James Watt" class="settings-form-input">
+                </div>
+            </div>
+            <div class="edumi-modal-footer">
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="closeDepartmentModal()">Cancel</button>
+                <button type="submit" class="admin-btn admin-btn-primary">Add Department</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openSemesterModal() {
+    document.getElementById('semesterModal').style.display = 'flex';
+}
+function closeSemesterModal() {
+    document.getElementById('semesterModal').style.display = 'none';
+}
+
+function openDepartmentModal() {
+    document.getElementById('departmentModal').style.display = 'flex';
+}
+function closeDepartmentModal() {
+    document.getElementById('departmentModal').style.display = 'none';
+}
+
+function submitAddSemester(e) {
+    e.preventDefault();
+    const form = document.getElementById('formAddSemester');
+    const data = new FormData(form);
+    data.append('action', 'add');
+
+    fetch("{% url 'admin_semester_crud' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: data
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            window.location.reload();
+        } else {
+            alert(res.message || 'Failed to add semester');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function confirmDeleteSemester(id, name) {
+    EdumiConfirm.show({
+        title: 'Delete Semester',
+        description: `Are you sure you want to delete semester "${name}"?`,
+        variant: 'danger',
+        confirmText: 'Delete Term',
+        onConfirm: () => {
+            const data = new FormData();
+            data.append('action', 'delete');
+            data.append('id', id);
+
+            fetch("{% url 'admin_semester_crud' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: data
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+    });
+}
+
+function submitAddDepartment(e) {
+    e.preventDefault();
+    const form = document.getElementById('formAddDepartment');
+    const data = new FormData(form);
+    data.append('action', 'add');
+
+    fetch("{% url 'admin_department_crud' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: data
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === 'success') {
+            window.location.reload();
+        } else {
+            alert(res.message || 'Failed to add department');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function confirmDeleteDepartment(id, name) {
+    EdumiConfirm.show({
+        title: 'Delete Department',
+        description: `Are you sure you want to remove the department "${name}"?`,
+        variant: 'danger',
+        confirmText: 'Delete Department',
+        onConfirm: () => {
+            const data = new FormData();
+            data.append('action', 'delete');
+            data.append('id', id);
+
+            fetch("{% url 'admin_department_crud' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: data
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+    });
+}
+
+function executeSmtpTest() {
+    const input = document.getElementById('testEmailInput');
+    const btn = document.getElementById('btnSendTestEmail');
+    const resultBox = document.getElementById('smtpTestResult');
+    const email = input.value.trim();
+
+    if (!email) {
+        alert('Please enter a recipient email address.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = 'Sending...';
+    resultBox.style.display = 'none';
+
+    const data = new FormData();
+    data.append('recipient_email', email);
+
+    fetch("{% url 'admin_test_email' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: data
+    })
+    .then(r => r.json())
+    .then(res => {
+        btn.disabled = false;
+        btn.innerHTML = 'Send Test';
+        resultBox.style.display = 'block';
+
+        if (res.status === 'success') {
+            resultBox.style.background = '#dcfce7';
+            resultBox.style.color = '#15803d';
+            resultBox.style.border = '1px solid #bbf7d0';
+            resultBox.innerHTML = `<strong>Success:</strong> ${res.message}`;
+        } else {
+            resultBox.style.background = '#fee2e2';
+            resultBox.style.color = '#b91c1c';
+            resultBox.style.border = '1px solid #fecaca';
+            resultBox.innerHTML = `<strong>Diagnostic Failed:</strong> ${res.message}`;
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = 'Send Test';
+        resultBox.style.display = 'block';
+        resultBox.style.background = '#fee2e2';
+        resultBox.style.color = '#b91c1c';
+        resultBox.innerHTML = `<strong>Network Error:</strong> ${err}`;
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

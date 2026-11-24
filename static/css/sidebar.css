@@ -314,6 +314,97 @@ body.dark-mode .sidebar-nav-item {
     flex-shrink: 0;
 }
 
+/* Command Palette Trigger Button (Ctrl+K) */
+.topbar-cmd-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 320px;
+    min-width: 260px;
+    max-width: 420px;
+    height: 38px;
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--border-color, var(--color-border, #e2e8f0));
+    border-radius: var(--radius-lg, 0.625rem);
+    padding: 0.45rem 1rem 0.45rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    outline: none;
+    line-height: 1;
+}
+
+.topbar-cmd-btn:hover {
+    background: var(--color-bg-hover, #f8fafc);
+    border-color: var(--color-primary, #8b5cf6);
+    color: var(--color-text-main, #0f172a);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+    transform: translateY(-1px);
+}
+
+.topbar-cmd-btn:active {
+    transform: translateY(0);
+}
+
+.topbar-cmd-btn .cmd-btn-text {
+    font-size: 0.8125rem;
+    color: inherit;
+    font-family: inherit;
+}
+
+.topbar-cmd-btn .cmd-kbd {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    background: var(--color-bg-hover, #f1f5f9);
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    line-height: 1;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+body.dark-mode .topbar-cmd-btn {
+    background: #111111;
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .topbar-cmd-btn:hover {
+    background: #1a1a1a;
+    border-color: var(--color-primary, #8b5cf6);
+    color: #f8fafc;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+}
+
+body.dark-mode .topbar-cmd-btn .cmd-kbd {
+    background: #222222;
+    border-color: #333333;
+    color: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+    .topbar-cmd-btn .cmd-btn-text,
+    .topbar-cmd-btn .cmd-kbd {
+        display: none;
+    }
+    .topbar-cmd-btn {
+        width: auto;
+        min-width: unset;
+        padding: 0.4rem;
+        border-radius: var(--radius-md, 0.375rem);
+    }
+}
+
 .topbar-search {
     position: relative;
 }

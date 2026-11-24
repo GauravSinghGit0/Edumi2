@@ -1,0 +1,471 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block admin_extra_css %}
+<style>
+    .announcements-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .announcement-kpi-card {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .announcement-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    }
+
+    .announcement-kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    .announcement-kpi-content {
+        flex: 1;
+    }
+
+    .announcement-kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted, #64748b);
+        margin-bottom: 0.25rem;
+    }
+
+    .announcement-kpi-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        line-height: 1.1;
+    }
+
+    /* Two-column layout */
+    .announcements-grid-layout {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+        .announcements-grid-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-text-main, #0f172a);
+        margin-bottom: 0.35rem;
+    }
+
+    .form-control-modern {
+        width: 100%;
+        border-radius: var(--radius-md, 0.5rem);
+        border: 1px solid var(--color-border, #e2e8f0);
+        background: var(--color-bg-card, #ffffff);
+        color: var(--color-text-main, #0f172a);
+        padding: 0.65rem 0.85rem;
+        font-size: 0.875rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .form-control-modern:focus {
+        outline: none;
+        border-color: var(--color-primary, #7c3aed);
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    }
+
+    .audience-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .audience-all {
+        background: rgba(124, 58, 237, 0.12);
+        color: #7c3aed;
+        border: 1px solid rgba(124, 58, 237, 0.25);
+    }
+
+    .audience-students {
+        background: rgba(59, 130, 246, 0.12);
+        color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .audience-teachers {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .audience-course {
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .audience-department {
+        background: rgba(236, 72, 153, 0.12);
+        color: #db2777;
+        border: 1px solid rgba(236, 72, 153, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_title %}Campus Announcements{% endblock %}
+
+{% block page_heading %}<i data-lucide="megaphone" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Campus Announcements{% endblock %}
+
+{% block page_subheading %}
+<p class="admin-subtitle">Broadcast real-time notifications or schedule alerts targeted by role, course, or department.
+</p>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Top KPI Cards -->
+    <div class="announcements-kpi-grid">
+        <div class="announcement-kpi-card">
+            <div class="announcement-kpi-icon" style="background: rgba(124, 58, 237, 0.12); color: #7c3aed;">
+                <i data-lucide="megaphone"></i>
+            </div>
+            <div class="announcement-kpi-content">
+                <div class="announcement-kpi-label">Total Announcements</div>
+                <div class="announcement-kpi-value">{{ total_announcements }}</div>
+            </div>
+        </div>
+
+        <div class="announcement-kpi-card">
+            <div class="announcement-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+                <i data-lucide="check-circle"></i>
+            </div>
+            <div class="announcement-kpi-content">
+                <div class="announcement-kpi-label">Delivered Broadcasts</div>
+                <div class="announcement-kpi-value">{{ sent_count }}</div>
+            </div>
+        </div>
+
+        <div class="announcement-kpi-card">
+            <div class="announcement-kpi-icon" style="background: rgba(245, 158, 11, 0.12); color: #d97706;">
+                <i data-lucide="clock"></i>
+            </div>
+            <div class="announcement-kpi-content">
+                <div class="announcement-kpi-label">Scheduled Queued</div>
+                <div class="announcement-kpi-value">{{ scheduled_count }}</div>
+            </div>
+        </div>
+
+        <div class="announcement-kpi-card">
+            <div class="announcement-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #2563eb;">
+                <i data-lucide="users"></i>
+            </div>
+            <div class="announcement-kpi-content">
+                <div class="announcement-kpi-label">Total Recipients Reached</div>
+                <div class="announcement-kpi-value">{{ total_recipients }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Compose (Left) & Feed (Right) -->
+    <div class="announcements-grid-layout">
+        <!-- Column 1: Compose Announcement -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3 class="admin-card-title">
+                    <i data-lucide="send" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                    Compose Announcement
+                </h3>
+            </div>
+            <div class="admin-card-body">
+                <form method="POST" action="{% url 'admin_announcements' %}">
+                    {% csrf_token %}
+                    <div style="margin-bottom: 1rem;">
+                        <label class="form-label" for="annTitle">Title <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="annTitle" name="title" class="form-control-modern"
+                            placeholder="e.g. Campus Network Maintenance Tonight" required maxlength="250">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label class="form-label" for="annAudience">Audience Cohort <span
+                                style="color: #ef4444;">*</span></label>
+                        <select id="annAudience" name="audience" class="form-control-modern"
+                            onchange="toggleAudienceTarget(this.value)">
+                            <option value="all">All Campus Users (Students, Teachers, Admins)</option>
+                            <option value="students">All Enrolled Students</option>
+                            <option value="teachers">All Faculty / Teachers</option>
+                            <option value="course">Specific Course / Classroom</option>
+                            <option value="department">Specific Academic Department</option>
+                        </select>
+                    </div>
+
+                    <!-- Target Course Selector (Conditional) -->
+                    <div id="courseTargetContainer" style="margin-bottom: 1rem; display: none;">
+                        <label class="form-label" for="courseTarget">Select Course / Classroom</label>
+                        <select id="courseTarget" name="target_id_course" class="form-control-modern"
+                            onchange="syncTargetId(this.value)">
+                            <option value="">Choose a classroom...</option>
+                            {% for c in courses %}
+                            <option value="{{ c.id }}">{{ c.title }} ({{ c.class_code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Target Department Selector (Conditional) -->
+                    <div id="deptTargetContainer" style="margin-bottom: 1rem; display: none;">
+                        <label class="form-label" for="deptTarget">Select Academic Department</label>
+                        <select id="deptTarget" name="target_id_dept" class="form-control-modern"
+                            onchange="syncTargetId(this.value)">
+                            <option value="">Choose a department...</option>
+                            {% for d in departments %}
+                            <option value="{{ d }}">{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Actual hidden input submitted as target_id -->
+                    <input type="hidden" name="target_id" id="finalTargetId" value="">
+
+                    <div style="margin-bottom: 1rem;">
+                        <label class="form-label" for="annBody">Message Body <span
+                                style="color: #ef4444;">*</span></label>
+                        <textarea id="annBody" name="body" class="form-control-modern" rows="5"
+                            placeholder="Write announcement content here. This message will be delivered immediately to user notifications and WebSockets."
+                            required oninput="updateCharCount(this)"></textarea>
+                        <div
+                            style="text-align: right; font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                            <span id="charCount">0</span> characters
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label class="form-label" for="annSchedule">Schedule Delivery (Optional)</label>
+                        <input type="datetime-local" id="annSchedule" name="scheduled_at" class="form-control-modern">
+                        <small
+                            style="display: block; font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                            Leave empty to broadcast instantly across active WebSocket connections.
+                        </small>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button type="submit" class="btn-action btn-action-primary"
+                            style="flex: 1; height: 42px; justify-content: center;">
+                            <i data-lucide="send"></i> Dispatch Broadcast
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Column 2: Announcement History & Queue -->
+        <div>
+            <!-- Filter Bar -->
+            <div class="admin-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem;">
+                <form method="GET" action="{% url 'admin_announcements' %}"
+                    style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 0.35rem;">
+                        <a href="?status=all{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="btn-action-sm {% if status_filter == 'all' %}btn-action-primary{% else %}btn-action-secondary{% endif %}"
+                            style="height: 36px; padding: 0 0.85rem;">
+                            All
+                        </a>
+                        <a href="?status=sent{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="btn-action-sm {% if status_filter == 'sent' %}btn-action-primary{% else %}btn-action-secondary{% endif %}"
+                            style="height: 36px; padding: 0 0.85rem;">
+                            Delivered
+                        </a>
+                        <a href="?status=scheduled{% if search_query %}&search={{ search_query }}{% endif %}"
+                            class="btn-action-sm {% if status_filter == 'scheduled' %}btn-action-primary{% else %}btn-action-secondary{% endif %}"
+                            style="height: 36px; padding: 0 0.85rem;">
+                            Scheduled
+                        </a>
+                    </div>
+                    <div class="admin-search-wrapper" style="flex: 1; min-width: 180px;">
+                        <i data-lucide="search" class="admin-search-icon"></i>
+                        <input type="text" name="search" class="admin-search-input"
+                            placeholder="Search announcements..." value="{{ search_query }}" style="height: 36px;">
+                    </div>
+                    <button type="submit" class="btn-action btn-action-primary" style="height: 36px;">
+                        <i data-lucide="filter"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Feed Table / Card -->
+            <div class="admin-card">
+                {% if page_obj and page_obj.object_list %}
+                <div class="admin-table-wrapper" style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Announcement</th>
+                                <th style="width: 140px;">Audience</th>
+                                <th style="width: 130px;">Status / Date</th>
+                                <th style="width: 90px; text-align: center;">Recipients</th>
+                                <th style="width: 130px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in page_obj %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 700; color: var(--color-text-main); font-size: 0.9rem;">
+                                        {{ a.title }}
+                                    </div>
+                                    <div
+                                        style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.2rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35;">
+                                        {{ a.body }}
+                                    </div>
+                                    <div
+                                        style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.35rem;">
+                                        By @{{ a.created_by.username|default:"Admin" }} &bull; Created {{ a.created_at|date:"M d, H:i" }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if a.audience == 'all' %}
+                                    <span class="audience-badge audience-all"><i data-lucide="globe"
+                                            style="width: 11px; height: 11px;"></i> All Users</span>
+                                    {% elif a.audience == 'students' %}
+                                    <span class="audience-badge audience-students"><i data-lucide="book-open"
+                                            style="width: 11px; height: 11px;"></i> Students</span>
+                                    {% elif a.audience == 'teachers' %}
+                                    <span class="audience-badge audience-teachers"><i data-lucide="graduation-cap"
+                                            style="width: 11px; height: 11px;"></i> Teachers</span>
+                                    {% elif a.audience == 'course' %}
+                                    <span class="audience-badge audience-course"><i data-lucide="school"
+                                            style="width: 11px; height: 11px;"></i> Course</span>
+                                    <div
+                                        style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                                        {{ a.target_label }}</div>
+                                    {% elif a.audience == 'department' %}
+                                    <span class="audience-badge audience-department"><i data-lucide="building"
+                                            style="width: 11px; height: 11px;"></i> Dept</span>
+                                    <div
+                                        style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                                        {{ a.target_label }}</div>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size: 0.825rem; white-space: nowrap;">
+                                    {% if a.is_sent %}
+                                    <span class="status-pill status-active"
+                                        style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">
+                                        <i data-lucide="check" style="width: 11px; height: 11px;"></i> Sent
+                                    </span>
+                                    <div
+                                        style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                                        {{ a.sent_at|date:"M d, H:i" }}
+                                    </div>
+                                    {% else %}
+                                    <span class="status-pill"
+                                        style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.15rem 0.5rem; font-size: 0.72rem;">
+                                        <i data-lucide="clock" style="width: 11px; height: 11px;"></i> Scheduled
+                                    </span>
+                                    <div
+                                        style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                                        {{ a.scheduled_at|date:"M d, H:i"|default:"Pending" }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td
+                                    style="text-align: center; font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">
+                                    {{ a.recipient_count }}
+                                </td>
+                                <td style="text-align: right; white-space: nowrap;">
+                                    <div style="display: inline-flex; gap: 0.35rem;">
+                                        {% if not a.is_sent %}
+                                        <form method="POST" action="{% url 'admin_announcement_send_now' a.id %}"
+                                            style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-action-sm btn-action-primary"
+                                                style="height: 30px; padding: 0 0.5rem;" title="Send Immediately"
+                                                onclick="return confirm('Send this scheduled announcement right now?');">
+                                                <i data-lucide="send" style="width: 12px; height: 12px;"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="POST" action="{% url 'admin_announcement_delete' a.id %}"
+                                            style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-action-sm btn-action-secondary"
+                                                style="height: 30px; padding: 0 0.5rem; color: #ef4444;"
+                                                title="Delete Announcement"
+                                                onclick="return confirm('Delete this announcement?');">
+                                                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if page_obj.paginator.num_pages > 1 %}
+                {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+                {% endif %}
+
+                {% else %}
+                <div class="admin-card-body">
+                    {% include "components/admin/empty_state.html" with icon="megaphone" title="No Announcements" description="No campus announcements have been created yet or none match your filter." %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+<script>
+    function toggleAudienceTarget(val) {
+        const courseContainer = document.getElementById('courseTargetContainer');
+        const deptContainer = document.getElementById('deptTargetContainer');
+        const finalInput = document.getElementById('finalTargetId');
+
+        if (val === 'course') {
+            courseContainer.style.display = 'block';
+            deptContainer.style.display = 'none';
+            finalInput.value = document.getElementById('courseTarget').value;
+        } else if (val === 'department') {
+            deptContainer.style.display = 'block';
+            courseContainer.style.display = 'none';
+            finalInput.value = document.getElementById('deptTarget').value;
+        } else {
+            courseContainer.style.display = 'none';
+            deptContainer.style.display = 'none';
+            finalInput.value = '';
+        }
+    }
+
+    function syncTargetId(val) {
+        document.getElementById('finalTargetId').value = val;
+    }
+
+    function updateCharCount(textarea) {
+        document.getElementById('charCount').textContent = textarea.value.length;
+    }
+</script>
+{% endblock %}

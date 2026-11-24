@@ -1,190 +1,665 @@
-{% extends 'layouts/sidebar_base.html' %}
-{% load static %}
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
 
-{% block page_title %}Platform Activity Feed | EduMi Admin{% endblock %}
+{% block page_title %}Security & Audit | EduMi Admin{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
-{% endblock %}
+{% block breadcrumb_title %}Security & Audit Logs{% endblock %}
 
-{% block content %}
-<div class="admin-container">
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">Platform Activity Feed</span>
-    </div>
+{% block page_heading %}<i data-lucide="shield-check"
+    style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Security
+& Audit{% endblock %}
 
-    <div class="admin-header">
+{% block page_subheading %}
+<p class="admin-subtitle">Immutable administrative audit log, governance actions, and authentication telemetry.</p>
+{% endblock page_subheading %}
+
+{% block page_actions %}
+<a href="?export=csv&tab={{ tab }}&search={{ search_query|urlencode }}&admin={{ admin_filter|urlencode }}&action_type={{ action_type_filter|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}"
+    class="btn-action btn-action-secondary" title="Export filtered records as CSV spreadsheet (Audit logged)">
+    <i data-lucide="download"></i> Export CSV
+</a>
+{% endblock page_actions %}
+
+{% block admin_content %}
+<!-- KPI Metrics Strip -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="admin-card"
+        style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0;">
+        <div class="kpi-icon indigo" style="width: 42px; height: 42px; border-radius: 0.75rem;">
+            <i data-lucide="shield-alert" style="width: 20px; height: 20px;"></i>
+        </div>
         <div>
-            <h1><i data-lucide="activity" style="width:28px;height:28px;vertical-align:middle;margin-right:.5rem;color:var(--color-primary);"></i>Platform Activity Feed</h1>
-            <p class="admin-subtitle">Complete real-time audit trail of all user actions, enrollments, meetings, and submissions across the platform</p>
+            <div style="font-size: 1.45rem; font-weight: 800; color: var(--color-text-main);">{{ total_admin_actions }}
+            </div>
+            <div
+                style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                Admin Actions</div>
         </div>
     </div>
 
-    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
-            <div class="kpi-icon indigo" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="activity" style="width:18px;height:18px;"></i></div>
-            <div>
-                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ total_events }}</div>
-                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Total Events</div>
-            </div>
+    <div class="admin-card"
+        style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0;">
+        <div class="kpi-icon emerald" style="width: 42px; height: 42px; border-radius: 0.75rem;">
+            <i data-lucide="user-check" style="width: 20px; height: 20px;"></i>
         </div>
-        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
-            <div class="kpi-icon blue" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
-            <div>
-                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ page_obj.paginator.count }}</div>
-                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Loaded Records</div>
-            </div>
-        </div>
-        <div class="admin-card" style="padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;flex:1;min-width:160px;margin-bottom:0;">
-            <div class="kpi-icon emerald" style="width:38px;height:38px;border-radius:.65rem;"><i data-lucide="layers" style="width:18px;height:18px;"></i></div>
-            <div>
-                <div style="font-size:1.4rem;font-weight:800;color:var(--color-text-main);">{{ page_obj.paginator.num_pages }}</div>
-                <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;">Total Pages</div>
-            </div>
+        <div>
+            <div style="font-size: 1.45rem; font-weight: 800; color: var(--color-text-main);">{{ total_logins }}</div>
+            <div
+                style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                Successful Logins</div>
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">
-            <h2 class="admin-card-title">
-                <i data-lucide="list" style="width:18px;height:18px;color:var(--color-primary);"></i>
-                All Activity Events
-                <span style="font-size:.75rem;font-weight:500;color:var(--color-text-muted);margin-left:.5rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-            </h2>
+    <div class="admin-card"
+        style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0;">
+        <div class="kpi-icon rose"
+            style="width: 42px; height: 42px; border-radius: 0.75rem; background: rgba(239, 68, 68, 0.12); color: #ef4444;">
+            <i data-lucide="alert-octagon" style="width: 20px; height: 20px;"></i>
         </div>
-
-        {% if activity_feed %}
-        <div class="admin-table-wrapper">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th style="width:36px;"></th>
-                        <th>Event</th>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Timestamp</th>
-                        <th>Source</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for event in activity_feed %}
-                    <tr>
-                        <td style="padding:.75rem 1rem;">
-                            <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ event.color }}18;color:{{ event.color }};flex-shrink:0;">
-                                <i data-lucide="{{ event.icon }}" style="width:14px;height:14px;"></i>
-                            </div>
-                        </td>
-                        <td style="font-weight:600;max-width:340px;">
-                            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ event.title }}">{{ event.title }}</div>
-                            <div style="font-size:.73rem;color:var(--color-text-muted);font-weight:400;margin-top:.1rem;">{{ event.action }}</div>
-                        </td>
-                        <td>
-                            {% if event.user %}
-                                <a href="{% url 'admin_user_detail' event.user.id %}" style="color:var(--color-primary);font-weight:600;text-decoration:none;font-size:.85rem;">@{{ event.username }}</a>
-                            {% else %}
-                                <span style="color:var(--color-text-muted);font-size:.85rem;">@{{ event.username }}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if event.user_role == 'admin' %}
-                                <span class="role-badge role-badge-admin">Admin</span>
-                            {% elif event.user_role == 'teacher' %}
-                                <span class="role-badge role-badge-teacher">Teacher</span>
-                            {% elif event.user_role == 'student' %}
-                                <span class="role-badge role-badge-student">Student</span>
-                            {% else %}
-                                <span class="role-badge" style="background:rgba(100,116,139,.1);color:#64748b;border-color:rgba(100,116,139,.2);">{{ event.user_role|title }}</span>
-                            {% endif %}
-                        </td>
-                        <td style="font-size:.82rem;color:var(--color-text-muted);white-space:nowrap;">
-                            {{ event.timestamp|date:"M d, Y" }}<br>
-                            <span style="font-size:.72rem;">{{ event.timestamp|date:"H:i:s" }}</span>
-                        </td>
-                        <td>
-                            <span style="font-size:.72rem;padding:.2rem .55rem;border-radius:.35rem;background:var(--color-bg-hover);color:var(--color-text-muted);font-family:monospace;">{{ event.source|default:"log" }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.paginator.num_pages > 1 %}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--color-border);flex-wrap:wrap;gap:.75rem;">
-            <div style="font-size:.82rem;color:var(--color-text-muted);">
-                Showing <strong>{{ page_obj.start_index }}&#8211;{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> activity events
+        <div>
+            <div style="font-size: 1.45rem; font-weight: 800; color: var(--color-text-main);">{{ total_failed_logins }}
             </div>
-            <div style="display:flex;gap:.35rem;align-items:center;">
-                <!-- Prev -->
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}"
-                   style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                   onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                   onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
-                </a>
-                {% else %}
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
-                    <i data-lucide="chevron-left" style="width:15px;height:15px;"></i>
-                </span>
-                {% endif %}
-
-                <!-- Page Numbers -->
-                {% for pg_num in page_obj.paginator.page_range %}
-                    {% if pg_num == page_obj.number %}
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;background:var(--color-primary);color:#fff;font-weight:700;font-size:.82rem;border:1px solid var(--color-primary);">
-                        {{ pg_num }}
-                    </span>
-                    {% elif pg_num >= page_obj.number|add:"-2" and pg_num <= page_obj.number|add:"2" %}
-                    <a href="?page={{ pg_num }}"
-                       style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                       onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                       onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                        {{ pg_num }}
-                    </a>
-                    {% elif pg_num == 1 or pg_num == page_obj.paginator.num_pages %}
-                    <a href="?page={{ pg_num }}"
-                       style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                       onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                       onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                        {{ pg_num }}
-                    </a>
-                    {% elif pg_num == page_obj.number|add:"-3" or pg_num == page_obj.number|add:"3" %}
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:var(--color-text-muted);font-size:.82rem;">…</span>
-                    {% endif %}
-                {% endfor %}
-
-                <!-- Next -->
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}"
-                   style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-text-muted);text-decoration:none;font-size:.82rem;transition:all .15s ease;"
-                   onmouseover="this.style.borderColor='var(--color-primary)';this.style.color='var(--color-primary)'"
-                   onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text-muted)'">
-                    <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
-                </a>
-                {% else %}
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:.5rem;border:1px solid var(--color-border);background:var(--color-bg-app);color:var(--color-text-muted);opacity:.4;font-size:.82rem;cursor:not-allowed;">
-                    <i data-lucide="chevron-right" style="width:15px;height:15px;"></i>
-                </span>
-                {% endif %}
-            </div>
+            <div
+                style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                Failed Logins</div>
         </div>
-        {% endif %}
+    </div>
 
-        {% else %}
-        <div class="admin-card-body">
-            <div class="empty-state">
-                <div class="empty-icon"><i data-lucide="activity"></i></div>
-                <h3>No Activity Recorded Yet</h3>
-                <p>Events will appear here as users interact with the platform.</p>
-            </div>
+    <div class="admin-card"
+        style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0;">
+        <div class="kpi-icon amber" style="width: 42px; height: 42px; border-radius: 0.75rem;">
+            <i data-lucide="filter" style="width: 20px; height: 20px;"></i>
         </div>
-        {% endif %}
+        <div>
+            <div style="font-size: 1.45rem; font-weight: 800; color: var(--color-text-main);">{{ total_count }}</div>
+            <div
+                style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                Filtered Records</div>
+        </div>
     </div>
 </div>
+
+<!-- Navigation Tabs -->
+<div
+    style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem; flex-wrap: wrap;">
+    <a href="?tab=admin_actions&search={{ search_query|urlencode }}&admin={{ admin_filter|urlencode }}&action_type={{ action_type_filter|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}"
+        class="tab-link {% if tab == 'admin_actions' %}active{% endif %}"
+        style="padding: 0.6rem 1.25rem; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; {% if tab == 'admin_actions' %}background: var(--color-primary); color: white;{% else %}background: var(--color-bg-hover); color: var(--color-text-muted);{% endif %}">
+        <i data-lucide="shield" style="width: 16px; height: 16px;"></i> Admin Actions
+        <span
+            style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 999px; {% if tab == 'admin_actions' %}background: rgba(255,255,255,0.25); color: white;{% else %}background: var(--color-border); color: var(--color-text-muted);{% endif %}">
+            {{ total_admin_actions }}
+        </span>
+    </a>
+    <a href="?tab=login_activity&search={{ search_query|urlencode }}&admin={{ admin_filter|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}"
+        class="tab-link {% if tab == 'login_activity' %}active{% endif %}"
+        style="padding: 0.6rem 1.25rem; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; {% if tab == 'login_activity' %}background: var(--color-primary); color: white;{% else %}background: var(--color-bg-hover); color: var(--color-text-muted);{% endif %}">
+        <i data-lucide="key-round" style="width: 16px; height: 16px;"></i> Login Activity
+        <span
+            style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 999px; {% if tab == 'login_activity' %}background: rgba(255,255,255,0.25); color: white;{% else %}background: var(--color-border); color: var(--color-text-muted);{% endif %}">
+            {{ total_logins }}
+        </span>
+    </a>
+</div>
+
+<!-- Live Search & Filtering Toolbar -->
+<div class="admin-card" style="padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+    <form method="GET" id="securityAuditFilterForm"
+        style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <input type="hidden" name="tab" value="{{ tab }}">
+
+        <!-- Debounced Live Search -->
+        <div class="admin-search-wrapper" style="flex: 2; min-width: 240px; position: relative;">
+            <i data-lucide="search" class="admin-search-icon"></i>
+            <input type="text" name="search" id="auditSearchInput" class="admin-search-input"
+                placeholder="Search by target, admin, username, or IP address..." value="{{ search_query }}"
+                autocomplete="off">
+        </div>
+
+        <!-- Admin User Filter -->
+        <div style="flex: 1; min-width: 160px;">
+            <select name="admin" class="filter-input"
+                style="width: 100%; height: 42px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); padding: 0 0.75rem; font-size: 0.85rem;"
+                onchange="this.form.submit()">
+                <option value="">All Administrators</option>
+                {% for a in admins_list %}
+                <option value="{{ a.id }}" {% if admin_filter == a.id|stringformat:"s" or admin_filter == a.username %}selected{% endif %}>
+                    @{{ a.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Action Type Filter (Admin Actions Tab) -->
+        {% if tab == 'admin_actions' %}
+        <div style="flex: 1; min-width: 170px;">
+            <select name="action_type" class="filter-input"
+                style="width: 100%; height: 42px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); padding: 0 0.75rem; font-size: 0.85rem;"
+                onchange="this.form.submit()">
+                <option value="">All Action Types</option>
+                {% for val, label in action_choices %}
+                <option value="{{ val }}" {% if action_type_filter == val %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- Date Range Filters -->
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex: 1.5; min-width: 260px;">
+            <input type="date" name="date_from" value="{{ date_from }}" class="filter-input" title="Date From"
+                style="flex: 1; height: 42px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); padding: 0 0.75rem; font-size: 0.85rem;"
+                onchange="this.form.submit()">
+            <span style="color: var(--color-text-muted); font-size: 0.85rem;">to</span>
+            <input type="date" name="date_to" value="{{ date_to }}" class="filter-input" title="Date To"
+                style="flex: 1; height: 42px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-card); color: var(--color-text-main); padding: 0 0.75rem; font-size: 0.85rem;"
+                onchange="this.form.submit()">
+        </div>
+
+        <!-- Action Controls -->
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button type="submit" class="btn-action btn-action-primary" style="height: 42px;">
+                <i data-lucide="filter"></i> Filter
+            </button>
+            {% if search_query or admin_filter or action_type_filter or date_from or date_to %}
+            <a href="?tab={{ tab }}" class="btn-action btn-action-secondary" style="height: 42px;"
+                title="Reset All Filters">
+                <i data-lucide="rotate-ccw"></i> Reset
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Tab 1: Admin Actions Table -->
+{% if tab == 'admin_actions' %}
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2 class="admin-card-title">
+            <i data-lucide="shield" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+            Administrative Audit Trail (Immutable)
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); margin-left: 0.5rem;">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }} ({{ total_count }} total
+                entries)
+            </span>
+        </h2>
+    </div>
+
+    {% if page_obj %}
+    <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th style="width: 170px;">Timestamp</th>
+                    <th style="width: 160px;">Admin User</th>
+                    <th style="width: 180px;">Action</th>
+                    <th>Target</th>
+                    <th style="width: 130px;">Client IP</th>
+                    <th style="width: 130px; text-align: right;">Diff & Audit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in page_obj %}
+                <tr>
+                    <!-- Timestamp -->
+                    <td style="font-size: 0.825rem; color: var(--color-text-main); white-space: nowrap;">
+                        <div style="font-weight: 600;">{{ row.timestamp|date:"M d, Y" }}</div>
+                        <div style="font-size: 0.72rem; color: var(--color-text-muted);">{{ row.timestamp|date:"H:i:s" }} UTC</div>
+                    </td>
+
+                    <!-- Admin User -->
+                    <td>
+                        {% if row.admin_user %}
+                        <a href="{% url 'admin_user_detail' row.admin_user.id %}"
+                            style="font-weight: 600; color: var(--color-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="user" style="width: 13px; height: 13px;"></i> @{{ row.admin_user.username }}
+                        </a>
+                        {% else %}
+                        <span style="color: var(--color-text-muted); font-weight: 600;">System</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Action Badge -->
+                    <td>
+                        {% if 'CREATED' in row.action_type %}
+                        <span class="audit-badge created"><i data-lucide="plus-circle"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% elif 'DELETED' in row.action_type %}
+                        <span class="audit-badge deleted"><i data-lucide="trash-2"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% elif 'SUSPENDED' in row.action_type or 'ARCHIVED' in row.action_type or 'REJECTED' in row.action_type %}
+                        <span class="audit-badge suspended"><i data-lucide="alert-triangle"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% elif 'ACTIVATED' in row.action_type or 'APPROVED' in row.action_type %}
+                        <span class="audit-badge activated"><i data-lucide="check-circle"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% elif 'ROLE' in row.action_type %}
+                        <span class="audit-badge role"><i data-lucide="shield" style="width: 12px; height: 12px;"></i>
+                            {{ row.get_action_type_display }}</span>
+                        {% elif 'BULK' in row.action_type %}
+                        <span class="audit-badge bulk"><i data-lucide="layers" style="width: 12px; height: 12px;"></i>
+                            {{ row.get_action_type_display }}</span>
+                        {% elif 'EXPORT' in row.action_type %}
+                        <span class="audit-badge export"><i data-lucide="download"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% else %}
+                        <span class="audit-badge settings"><i data-lucide="sliders"
+                                style="width: 12px; height: 12px;"></i> {{ row.get_action_type_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Target -->
+                    <td>
+                        <div style="font-weight: 600; color: var(--color-text-main); font-size: 0.875rem;">
+                            {{ row.target_label|default:"—" }}
+                        </div>
+                        <div
+                            style="font-size: 0.725rem; color: var(--color-text-muted); display: flex; gap: 0.5rem; align-items: center; margin-top: 0.15rem;">
+                            {% if row.target_type %}
+                            <span style="background: var(--color-bg-hover); padding: 0.1rem 0.35rem; border-radius: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.03em;">{{ row.target_type }}</span>
+                            {% endif %}
+                            {% if row.target_id %}
+                            <span style="font-family: monospace;">#{{ row.target_id }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- IP Address -->
+                    <td>
+                        {% if row.ip_address %}
+                        <span
+                            style="font-family: monospace; font-size: 0.775rem; background: var(--color-bg-hover); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-text-muted);">
+                            {{ row.ip_address }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--color-text-muted); font-size: 0.8rem;">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions / View Changes Drawer -->
+                    <td style="text-align: right;">
+                        <button type="button" class="btn-action-sm btn-action-secondary"
+                            onclick="openChangesDrawer('{{ row.id }}')"
+                            title="View Audit Details and Before/After Diff">
+                            <i data-lucide="eye" style="width: 13px; height: 13px;"></i> View changes
+                        </button>
+                        <!-- Script storing row change payload for 0-latency instant rendering -->
+                        <script type="application/json" id="audit-data-{{ row.id }}">
+                            {
+                                "id": "{{ row.id }}",
+                                "timestamp": "{{ row.timestamp|date:'Y-m-d H:i:s' }}",
+                                "admin_user": "{{ row.admin_user.username|default:'System' }}",
+                                "action_type": "{{ row.action_type }}",
+                                "action_display": "{{ row.get_action_type_display|escapejs }}",
+                                "target_type": "{{ row.target_type|escapejs }}",
+                                "target_id": "{{ row.target_id|escapejs }}",
+                                "target_label": "{{ row.target_label|escapejs }}",
+                                "ip_address": "{{ row.ip_address|default:''|escapejs }}",
+                                "user_agent": "{{ row.user_agent|default:''|escapejs }}",
+                                "changes": {{ row.changes_json|default:"{}"|safe }}
+                            }
+                            </script>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+    {% endif %}
+
+    {% else %}
+    <div class="admin-card-body">
+        {% include "components/admin/empty_state.html" with icon="shield" title="No Audit Records Found" description="No administrative actions matched your search or filter parameters." cta_text="Reset Filters" cta_icon="rotate-ccw" cta_url="?tab=admin_actions" %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Tab 2: Login Activity Table -->
+{% else %}
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2 class="admin-card-title">
+            <i data-lucide="key-round" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+            Authentication & Session Telemetry
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); margin-left: 0.5rem;">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages|default:1 }} ({{ total_count }} total
+                entries)
+            </span>
+        </h2>
+    </div>
+
+    {% if page_obj %}
+    <div class="admin-table-wrapper" style="overflow-x: auto;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th style="width: 170px;">Timestamp</th>
+                    <th>User Account</th>
+                    <th style="width: 120px;">Role</th>
+                    <th style="width: 160px;">Event Status</th>
+                    <th style="width: 140px;">Client IP</th>
+                    <th>Client Telemetry</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in page_obj %}
+                <tr>
+                    <!-- Timestamp -->
+                    <td style="font-size: 0.825rem; color: var(--color-text-main); white-space: nowrap;">
+                        <div style="font-weight: 600;">{{ row.created_at|date:"M d, Y" }}</div>
+                        <div style="font-size: 0.72rem; color: var(--color-text-muted);">{{ row.created_at|date:"H:i:s" }} UTC</div>
+                    </td>
+
+                    <!-- User Account -->
+                    <td>
+                        {% if row.user %}
+                        <a href="{% url 'admin_user_detail' row.user.id %}"
+                            style="font-weight: 600; color: var(--color-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="user" style="width: 13px; height: 13px;"></i> @{{ row.username|default:row.user.username }}
+                        </a>
+                        {% else %}
+                        <span style="font-weight: 600; color: var(--color-text-main);">@{{ row.username|default:"unknown" }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Role -->
+                    <td>
+                        {% if row.user_role == 'admin' %}
+                        <span class="role-badge role-badge-admin">Admin</span>
+                        {% elif row.user_role == 'teacher' %}
+                        <span class="role-badge role-badge-teacher">Teacher</span>
+                        {% elif row.user_role == 'student' %}
+                        <span class="role-badge role-badge-student">Student</span>
+                        {% else %}
+                        <span class="role-badge" style="background: rgba(100,116,139,.1); color: #64748b;">{{ row.user_role|default:"N/A"|title }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Event Status -->
+                    <td>
+                        {% if row.event_name == 'LOGIN' %}
+                        <span class="status-pill status-active" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">
+                            <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> Login Success
+                        </span>
+                        {% elif row.event_name == 'LOGIN_FAILED' %}
+                        <span class="status-pill status-suspended"
+                            style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border-color: rgba(239, 68, 68, 0.25); padding: 0.25rem 0.65rem; font-size: 0.75rem;">
+                            <i data-lucide="alert-octagon" style="width: 12px; height: 12px;"></i> Failed Attempt
+                        </span>
+                        {% elif row.event_name == 'LOGOUT' %}
+                        <span class="status-pill"
+                            style="background: rgba(100, 116, 139, 0.12); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.25); padding: 0.25rem 0.65rem; font-size: 0.75rem;">
+                            <i data-lucide="log-out" style="width: 12px; height: 12px;"></i> Logged Out
+                        </span>
+                        {% else %}
+                        <span class="status-pill" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">
+                            {{ row.event_name }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- IP Address -->
+                    <td>
+                        {% if row.ip_address %}
+                        <span
+                            style="font-family: monospace; font-size: 0.775rem; background: var(--color-bg-hover); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-text-muted);">
+                            {{ row.ip_address }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--color-text-muted); font-size: 0.8rem;">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Client Telemetry -->
+                    <td>
+                        <div style="font-size: 0.825rem; color: var(--color-text-main); font-weight: 500;">
+                            {{ row.browser|default:"Browser" }} on {{ row.os|default:"Device" }}
+                        </div>
+                        {% if row.user_agent %}
+                        <div style="font-size: 0.72rem; color: var(--color-text-muted); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                            title="{{ row.user_agent }}">
+                            {{ row.user_agent }}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+    {% endif %}
+
+    {% else %}
+    <div class="admin-card-body">
+        {% include "components/admin/empty_state.html" with icon="key-round" title="No Login Records Found" description="No authentication events matched your search or filter parameters." cta_text="Reset Filters" cta_icon="rotate-ccw" cta_url="?tab=login_activity" %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- =========================================================
+         SLIDE-OVER CHANGES DRAWER (BEFORE / AFTER DIFF VIEWER)
+         ========================================================= -->
+<div id="auditChangesDrawerOverlay" class="admin-modal-overlay" aria-hidden="true">
+    <div class="admin-drawer-card" id="auditChangesDrawer">
+        <div class="admin-drawer-header">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div id="drawerBadge" class="audit-badge settings">
+                    <i data-lucide="shield"></i> <span id="drawerActionType">ACTION</span>
+                </div>
+                <h3 class="admin-drawer-title" id="drawerTitle">Audit Details</h3>
+            </div>
+            <button type="button" class="admin-modal-close" onclick="closeChangesDrawer()">&times;</button>
+        </div>
+
+        <div class="admin-drawer-body">
+            <!-- Meta Dossier Box -->
+            <div class="admin-drawer-meta-grid">
+                <div>
+                    <div class="drawer-meta-label">Admin Actor</div>
+                    <div class="drawer-meta-value" id="drawerAdmin">—</div>
+                </div>
+                <div>
+                    <div class="drawer-meta-label">Timestamp</div>
+                    <div class="drawer-meta-value" id="drawerTimestamp">—</div>
+                </div>
+                <div>
+                    <div class="drawer-meta-label">Target Entity</div>
+                    <div class="drawer-meta-value" id="drawerTarget">—</div>
+                </div>
+                <div>
+                    <div class="drawer-meta-label">Client IP Address</div>
+                    <div class="drawer-meta-value" id="drawerIP" style="font-family: monospace;">—</div>
+                </div>
+            </div>
+
+            <!-- Diff Container -->
+            <div style="margin-bottom: 1.25rem;">
+                <h4
+                    style="font-size: 0.875rem; font-weight: 700; color: var(--color-text-main); margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                    State Changes & Mutation Diff
+                </h4>
+                <div id="drawerDiffContainer">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Raw JSON Toggle -->
+            <details style="margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 0.75rem;">
+                <summary
+                    style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); cursor: pointer; user-select: none;">
+                    Inspect Raw Audit Payload (JSON)
+                </summary>
+                <pre id="drawerRawJson"
+                    style="margin-top: 0.5rem; background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.75rem; overflow-x: auto; color: var(--color-text-main);"></pre>
+            </details>
+        </div>
+
+        <div
+            style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); background: var(--color-bg-hover); display: flex; justify-content: flex-end;">
+            <button type="button" class="btn-action btn-action-secondary" onclick="closeChangesDrawer()">Close
+                Drawer</button>
+        </div>
+    </div>
+</div>
+{% endblock admin_content %}
+
+{% block admin_extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+    (function () {
+        // ── Debounced Live Search ──
+        const searchInput = document.getElementById('auditSearchInput');
+        const filterForm = document.getElementById('securityAuditFilterForm');
+        if (searchInput && filterForm) {
+            let debounceTimer = null;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    filterForm.submit();
+                }, 450);
+            });
+        }
+
+        // ── Slide-over Changes Drawer Logic ──
+        window.openChangesDrawer = function (auditId) {
+            const overlay = document.getElementById('auditChangesDrawerOverlay');
+            if (!overlay) return;
+
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            const diffContainer = document.getElementById('drawerDiffContainer');
+            if (diffContainer) {
+                diffContainer.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--color-text-muted); font-size:0.875rem;">Loading audit changes...</div>';
+            }
+
+            fetch(`/admin/activity/${auditId}/changes/`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success' && res.audit) {
+                        renderDrawerContent(res.audit);
+                    } else {
+                        if (diffContainer) {
+                            diffContainer.innerHTML = `<div class="diff-card" style="text-align:center; color:var(--color-danger); padding:1rem;">${res.message || 'Failed to load details.'}</div>`;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching audit changes:", err);
+                    if (diffContainer) {
+                        diffContainer.innerHTML = '<div class="diff-card" style="text-align:center; color:var(--color-danger); padding:1rem;">Error fetching audit changes.</div>';
+                    }
+                });
+        };
+
+        window.closeChangesDrawer = function () {
+            const overlay = document.getElementById('auditChangesDrawerOverlay');
+            if (overlay) overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+
+        function renderDrawerContent(audit) {
+            document.getElementById('drawerActionType').textContent = audit.action_display || audit.action_type;
+            document.getElementById('drawerTitle').textContent = audit.target_label || 'Audit Event';
+            document.getElementById('drawerAdmin').textContent = `@${audit.admin_user}`;
+            document.getElementById('drawerTimestamp').textContent = audit.timestamp;
+            document.getElementById('drawerTarget').textContent = `${audit.target_type || ''} ${audit.target_id ? '#' + audit.target_id : ''}`;
+            document.getElementById('drawerIP').textContent = audit.ip_address || '—';
+
+            const diffContainer = document.getElementById('drawerDiffContainer');
+            const rawJsonEl = document.getElementById('drawerRawJson');
+            const changes = audit.changes || {};
+
+            rawJsonEl.textContent = JSON.stringify(changes, null, 2);
+            diffContainer.innerHTML = '';
+
+            const keys = Object.keys(changes);
+            if (keys.length === 0) {
+                diffContainer.innerHTML = `
+                <div class="diff-card" style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 1.5rem;">
+                    No detailed attribute diff captured for this action.
+                </div>
+            `;
+                return;
+            }
+
+            keys.forEach(key => {
+                const val = changes[key];
+                const isDiff = val && typeof val === 'object' && ('before' in val || 'after' in val);
+
+                const card = document.createElement('div');
+                card.className = 'diff-card';
+
+                const fieldTitle = document.createElement('div');
+                fieldTitle.className = 'diff-field-name';
+                fieldTitle.textContent = key.replace(/_/g, ' ');
+                card.appendChild(fieldTitle);
+
+                if (isDiff) {
+                    const valuesGrid = document.createElement('div');
+                    valuesGrid.className = 'diff-values-split';
+
+                    const beforeBox = document.createElement('div');
+                    beforeBox.className = 'diff-box-before';
+                    beforeBox.innerHTML = `
+                    <span class="diff-tag-before">- Before</span>
+                    <div>${formatDiffVal(val.before)}</div>
+                `;
+
+                    const afterBox = document.createElement('div');
+                    afterBox.className = 'diff-box-after';
+                    afterBox.innerHTML = `
+                    <span class="diff-tag-after">+ After</span>
+                    <div>${formatDiffVal(val.after)}</div>
+                `;
+
+                    valuesGrid.appendChild(beforeBox);
+                    valuesGrid.appendChild(afterBox);
+                    card.appendChild(valuesGrid);
+                } else {
+                    const paramBox = document.createElement('div');
+                    paramBox.style.cssText = 'background: var(--color-bg-hover); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.825rem; font-family: monospace; word-break: break-all;';
+                    paramBox.textContent = formatDiffVal(val);
+                    card.appendChild(paramBox);
+                }
+
+                diffContainer.appendChild(card);
+            });
+
+            if (window.lucide && lucide.createIcons) lucide.createIcons();
+        }
+
+        function formatDiffVal(val) {
+            if (val === null || val === undefined) return 'null';
+            if (typeof val === 'boolean') return val ? 'true' : 'false';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return String(val);
+        }
+
+        // Backdrop click dismiss
+        document.addEventListener('click', (e) => {
+            const overlay = document.getElementById('auditChangesDrawerOverlay');
+            if (overlay && e.target === overlay) {
+                closeChangesDrawer();
+            }
+        });
+
+        // Escape key dismiss
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeChangesDrawer();
+            }
+        });
+    })();
 </script>
-{% endblock %}
+{% endblock admin_extra_js %}

@@ -1,0 +1,26 @@
+{% comment %}
+Reusable Breadcrumb Component for Admin Views
+Usage: {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
+Where breadcrumb_list = [{'title': 'Home', 'url': 'admin_panel'}, {'title': 'Users'}]
+{% endcomment %}
+
+<nav class="admin-breadcrumbs" aria-label="Breadcrumbs">
+    {% with items=crumbs %}
+    {% for crumb in items %}
+    {% if forloop.last %}
+    <span class="current">{{ crumb.title }}</span>
+    {% else %}
+    {% if crumb.url %}
+    {% if '/' in crumb.url %}
+    <a href="{{ crumb.url }}">{{ crumb.title }}</a>
+    {% else %}
+    <a href="{% url crumb.url %}">{{ crumb.title }}</a>
+    {% endif %}
+    {% else %}
+    <span>{{ crumb.title }}</span>
+    {% endif %}
+    <i data-lucide="chevron-right" class="separator-icon"></i>
+    {% endif %}
+    {% endfor %}
+    {% endwith %}
+</nav>

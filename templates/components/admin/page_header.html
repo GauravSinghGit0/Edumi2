@@ -1,0 +1,38 @@
+{% comment %}
+Reusable Admin Page Header Component
+Usage:
+  {% include "components/admin/page_header.html" with title="User Directory" subtitle="Manage all accounts" crumbs=breadcrumb_list action_text="Add User" action_icon="user-plus" modal_target="addUserModal" %}
+{% endcomment %}
+<div class="admin-header-wrapper">
+    {% if crumbs %}
+        {% include "components/admin/breadcrumbs.html" with crumbs=crumbs %}
+    {% elif breadcrumb_list %}
+        {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
+    {% endif %}
+
+    <div class="admin-header">
+        <div class="admin-header-title">
+            <h1>
+                {% if icon %}<i data-lucide="{{ icon }}" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>{% endif %}
+                {{ title }}
+            </h1>
+            {% if subtitle %}
+                <p class="admin-subtitle">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-header-actions">
+            {% if modal_target and action_text %}
+                <button type="button" class="btn-action btn-action-primary" onclick="openModal('{{ modal_target }}')">
+                    {% if action_icon %}<i data-lucide="{{ action_icon }}"></i>{% endif %}
+                    {{ action_text }}
+                </button>
+            {% elif action_url and action_text %}
+                <a href="{{ action_url }}" class="btn-action btn-action-primary">
+                    {% if action_icon %}<i data-lucide="{{ action_icon }}"></i>{% endif %}
+                    {{ action_text }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

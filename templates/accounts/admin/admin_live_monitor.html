@@ -1,0 +1,184 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block page_title %}Live Monitor — Real-Time Session Governance | EduMi Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Breadcrumb Bar -->
+    {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
+
+    <!-- Page Header -->
+    <div class="admin-header">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span class="live-pulse-dot" style="width: 14px; height: 14px;"></span>
+                <h1 style="margin: 0;">Live Monitor</h1>
+            </div>
+            <p class="admin-subtitle">Real-time command center for active video classrooms, connected attendees, and emergency session control</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="window.location.reload()" class="btn-action btn-action-secondary" title="Refresh Live Data">
+                <i data-lucide="refresh-cw"></i> Refresh
+            </button>
+            <a href="{% url 'admin_all_meetings' %}" class="btn-action btn-action-secondary">
+                <i data-lucide="arrow-left"></i> All Live Sessions
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Live Rooms Overview -->
+    {% if live_rooms %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md); padding: 0.85rem 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; color: #dc2626; font-weight: 700; font-size: 0.95rem;">
+            <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+            <span>{{ live_rooms|length }} Active Room{{ live_rooms|length|pluralize }} Online</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+            Auto-syncing active participant rosters
+        </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        {% for room in live_rooms %}
+        <div class="admin-card" style="padding: 1.5rem; border-left: 4px solid #ef4444;">
+            <!-- Room Top Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.4rem;">
+                        <span class="status-pill status-pill-active" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                            <span class="live-pulse-dot" style="margin-right: 0.25rem;"></span> BROADCASTING LIVE
+                        </span>
+                        <code style="font-size: 0.85rem; font-weight: 700; background: var(--color-bg-subtle, #f1f5f9); padding: 0.15rem 0.5rem; border-radius: 0.25rem; color: var(--color-text-main);">
+                            {{ room.meeting_code }}
+                        </code>
+                        {% if room.classroom %}
+                        <a href="{% url 'admin_classroom_detail' room.classroom.id %}" style="font-size: 0.8rem; font-weight: 600; color: var(--color-primary); text-decoration: none;">
+                            Course: {{ room.classroom.title }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: var(--color-text-main);">
+                        {{ room.title }}
+                    </h2>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <a href="{% url 'join_meeting' room.meeting_code %}" target="_blank" class="btn-action btn-action-secondary" style="font-size: 0.85rem;">
+                        <i data-lucide="external-link"></i> Join as Observer
+                    </a>
+                    <button type="button" class="btn-action btn-action-danger" onclick="confirmForceEnd('{{ room.id }}', '{{ room.title|escapejs }}', '{{ room.meeting_code }}')">
+                        <i data-lucide="power"></i> Force End Session
+                    </button>
+                </div>
+            </div>
+
+            <!-- Host & Telemetry Meta Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Host Instructor</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; margin-top: 0.2rem;">
+                        <a href="{% url 'admin_teacher_detail' room.teacher.id %}" style="color: inherit; text-decoration: underline;">
+                            Prof. {{ room.teacher.get_full_name|default:room.teacher.username }}
+                        </a>
+                    </div>
+                    {% if room.teacher.userprofile.department %}
+                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ room.teacher.userprofile.department }}</div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Session Elapsed</div>
+                    <div style="font-weight: 700; font-size: 1.1rem; color: #ef4444; margin-top: 0.2rem;">
+                        {{ room.elapsed_duration }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Active Attendees</div>
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--color-primary); margin-top: 0.2rem;">
+                        {{ room.active_participants|length }} online
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Started Time</div>
+                    <div style="font-weight: 600; font-size: 0.9rem; margin-top: 0.2rem;">
+                        {{ room.started_at|date:"M d, Y H:i:s"|default:room.scheduled_time|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connected Attendees Roster -->
+            <div>
+                <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="users" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                    Connected Participants ({{ room.active_participants|length }})
+                </h3>
+
+                {% if room.active_participants %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem;">
+                    {% for p in room.active_participants %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.65rem 0.85rem;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(139, 92, 246, 0.15); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">
+                                {{ p.user.first_name|default:p.user.username|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem;">{{ p.user.get_full_name|default:p.user.username }}</div>
+                                <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                                    {% if p.user == room.teacher %}Host Teacher{% else %}Student (joined {{ p.joined_at|date:"H:i" }}){% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="status-pill status-pill-active" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">Online</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); padding: 0.75rem; background: var(--color-bg-app); border-radius: var(--radius-md);">
+                    Waiting for attendees to connect to this live session...
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="admin-card">
+        {% include "components/admin/empty_state.html" with icon="radio" title="No Active Live Sessions" description="All virtual classroom channels and meeting rooms are currently idle. When an instructor launches a scheduled session, it will immediately stream telemetry into this monitor." cta_text="View Scheduled Sessions" cta_icon="calendar" cta_url="/admin/meetings/?tab=upcoming" %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Hidden POST form for force-end action -->
+<form id="forceEndForm" method="POST" action="" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+    function confirmForceEnd(meetingId, title, code) {
+        EdumiConfirm.show({
+            title: `Force End Session: ${code}`,
+            description: `Are you sure you want to immediately terminate the live session "${title}"?`,
+            impact: [
+                'Disconnects all connected students and instructors immediately',
+                'Stops all active WebRTC audio, video, and screen sharing streams',
+                'Marks meeting status as Ended and logs administrative audit record'
+            ],
+            variant: 'danger',
+            confirmText: 'Force End Session'
+        }).then(ok => {
+            if (!ok) return;
+            const form = document.getElementById('forceEndForm');
+            form.action = `/admin/meetings/${meetingId}/force-end/`;
+            form.submit();
+        });
+    }
+</script>
+{% endblock %}

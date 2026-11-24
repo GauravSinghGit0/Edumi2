@@ -1,8 +1,8 @@
-# ⚙️ Edumi Core (`edumi_core`) — Configuration & ASGI Engine
+# ⚙️ Edumi Core (`edumi_core`) — Master Configuration & ASGI Engine
 
 <details open>
 <summary><b>1. Core Purpose</b></summary>
-The `edumi_core` directory is the central Django configuration root for EduMi. It coordinates all modular applications, binds ASGI and WSGI entry points, configures the dual-database architecture, orchestrates Celery distributed tasks, and enforces institutional security policies.
+The `edumi_core` directory is the central Django configuration root for EduMi. It coordinates all modular applications, binds ASGI and WSGI entry points, configures the dual-database architecture, orchestrates Celery distributed tasks, injects global context processors (including Granular RBAC permissions), and enforces institutional security policies.
 </details>
 
 <details open>
@@ -20,7 +20,13 @@ Configures asynchronous protocol routing via Django Channels:
 
 ### 3. Distributed Task Queue (`celery.py`)
 - Initializes Celery 5.3 with Redis broker (`redis://127.0.0.1:6379/0`).
-- Auto-discovers asynchronous tasks across all installed apps (`video_editing`, `cameras`, `attendance`, `videos`, `accounts`).
+- Auto-discovers asynchronous tasks across all installed apps:
+  - `accounts.tasks.admin_import_users_task` (Asynchronous bulk user CSV onboarding)
+  - Video proxy transcoding, audio waveform extraction, and lecture archival tasks.
+
+### 4. Enterprise Context Processors (`settings.py`)
+- `accounts.context_processors.admin_permissions_context`: Evaluates user roles against `AdminRole` capability flags, exposing the `admin_perms` dictionary globally to templates for dynamic UI element hiding.
+- `accounts.context_processors.admin_approvals_context`: Injects real-time pending enrollment and teacher verification counts for sidebar notification badges.
 </details>
 
 <details>
@@ -46,10 +52,10 @@ The system provides fully automated startup scripts that verify dependencies, st
 <details>
 <summary><b>5. Key Files Breakdown</b></summary>
 
-- `settings.py`: Master configuration file. Contains database routers, security policies, LiveKit credentials, cache tiers, and automated FFmpeg/FFprobe binary detection (`FFMPEG_BINARY`, `FFPROBE_BINARY`) for `EduMiCompressionService`.
+- `settings.py`: Master configuration file. Contains database routers, security policies, LiveKit credentials, cache tiers, context processors, and automated FFmpeg/FFprobe binary detection (`FFMPEG_BINARY`, `FFPROBE_BINARY`) for `EduMiCompressionService`.
 - `asgi.py`: ASGI entry point configuring Daphne protocol routers for HTTP and WebSockets.
 - `wsgi.py`: Standard WSGI entry point for traditional web servers.
 - `celery.py`: Initializes the Celery application and worker discovery.
-- `urls.py`: Master URL routing table distributing paths across all modular applications.
+- `urls.py`: Master URL routing table distributing paths across all modular applications and administrative endpoints.
 - `middleware.py`: Custom middleware for error handling, database locking resilience, and telemetry.
 </details>

@@ -330,8 +330,16 @@
         if (!form) return;
         var formData = new FormData(form);
         var id = formData.get('camera_id');
-        var url = id ? `/cameras/edit-camera/${id}/` : `/cameras/add-camera/`;
+        var camType = formData.get('camera_type');
+        var ipRaw = (formData.get('ip_address') || '').trim();
 
+        // Client-side RTSP validation
+        if (camType === 'rtsp' && ipRaw.indexOf('://') !== -1 && !ipRaw.startsWith('rtsp://')) {
+            showTestResult('error', 'Invalid RTSP URL: RTSP cameras must begin with "rtsp://".');
+            return;
+        }
+
+        var url = id ? `/cameras/edit-camera/${id}/` : `/cameras/add-camera/`;
         var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 
         try {
@@ -348,16 +356,23 @@
 
             var data = await res.json();
             if (data.status === 'success') {
+                if (typeof window.showToast === 'function') {
+                    window.showToast("Camera Saved", data.message || "Camera configuration updated.", "success");
+                }
+                closeModal();
                 if (typeof Turbo !== 'undefined') {
                     Turbo.visit(window.location.href, { action: 'replace' });
                 } else {
                     window.location.reload();
                 }
             } else {
-                alert(data.message || 'Failed to save camera');
+                showTestResult('error', data.message || 'Failed to save camera.');
+                if (typeof window.showToast === 'function') {
+                    window.showToast("Validation Error", data.message || "Failed to save camera.", "danger");
+                }
             }
         } catch (err) {
-            alert('Error submitting camera form: ' + err.message);
+            showTestResult('error', 'Error submitting camera form: ' + err.message);
         }
     }
 

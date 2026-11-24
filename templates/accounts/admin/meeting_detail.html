@@ -1,5 +1,6 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
+{% load common_tags %}
 
 {% block page_title %}{{ meeting.title }} — Session Detail | EduMi Admin{% endblock %}
 
@@ -11,143 +12,199 @@
 <div class="admin-container">
 
   <!-- Breadcrumbs Bar -->
-  <div class="admin-breadcrumbs">
+  <nav class="admin-breadcrumbs" aria-label="Breadcrumbs">
     <a href="{% url 'admin_panel' %}">Home</a>
-    <span class="separator">/</span>
-    <a href="{% url 'admin_all_meetings' %}">Meetings</a>
-    <span class="separator">/</span>
+    <i data-lucide="chevron-right" class="separator-icon"></i>
+    <a href="{% url 'admin_all_meetings' %}">Live Sessions</a>
+    <i data-lucide="chevron-right" class="separator-icon"></i>
     <span class="current">{{ meeting.title }}</span>
-  </div>
+  </nav>
 
-  <!-- Hero Header Dossier Banner -->
+  <!-- Hero Header Banner -->
   <div class="profile-hero">
     <div class="profile-hero-content">
       <div>
-        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem;">
-          {% include "components/admin/status_pill.html" with status=meeting.status label=meeting.get_status_display %}
-          <code style="font-size:.8rem;padding:.15rem .5rem;background:var(--color-border);border-radius:.25rem;color:var(--color-text-secondary);">{{ meeting.meeting_code }}</code>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+          {% if meeting.status == 'live' %}
+            <span class="status-pill status-pill-active" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+              <span class="live-pulse-dot" style="margin-right: 0.25rem;"></span> LIVE NOW
+            </span>
+          {% else %}
+            {% include "components/admin/status_pill.html" with status=meeting.status label=meeting.get_status_display %}
+          {% endif %}
+          <code style="font-size: 0.85rem; padding: 0.2rem 0.55rem; background: var(--color-border); border-radius: 0.25rem; color: var(--color-text-main); font-weight: 700;">{{ meeting.meeting_code }}</code>
         </div>
-        <h1 style="margin:0;font-size:1.6rem;font-weight:800;color:var(--color-text-main);">{{ meeting.title }}</h1>
-        <div style="color:var(--color-text-secondary);font-size:.9rem;margin-top:.35rem;">
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--color-text-main);">{{ meeting.title }}</h1>
+        <div style="color: var(--color-text-secondary); font-size: 0.9rem; margin-top: 0.35rem;">
           Host:
-          <strong><a href="{% url 'admin_teacher_detail' meeting.teacher.id %}" style="color:inherit;text-decoration:underline;">
+          <strong><a href="{% url 'admin_teacher_detail' meeting.teacher.id %}" style="color: inherit; text-decoration: underline;">
             Prof. {{ meeting.teacher.get_full_name|default:meeting.teacher.username }}
           </a></strong>
           {% if meeting.classroom %}
-            &bull; Classroom:
-            <strong><a href="{% url 'admin_classroom_detail' meeting.classroom.id %}" style="color:inherit;text-decoration:underline;">
-              {{ meeting.classroom.title }}
+            &bull; Course:
+            <strong><a href="{% url 'admin_classroom_detail' meeting.classroom.id %}" style="color: inherit; text-decoration: underline;">
+              {{ meeting.classroom.title }} ({{ meeting.classroom.class_code }})
             </a></strong>
           {% else %}
-            &bull; <span style="font-style:italic;">Standalone Meeting</span>
+            &bull; <span style="font-style: italic;">Standalone Session</span>
           {% endif %}
         </div>
       </div>
-      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <a href="{% url 'admin_export_meeting_attendance_csv' meeting.id %}" class="btn-action btn-action-primary">
+          <i data-lucide="download"></i> Export Attendance CSV
+        </a>
         {% if meeting.status == 'live' %}
           <a href="{% url 'join_meeting' meeting.meeting_code %}" class="btn-action btn-action-danger" target="_blank">
             <i data-lucide="video"></i> Join Session
           </a>
+          <a href="{% url 'admin_live_monitor' %}" class="btn-action btn-action-secondary">
+            <i data-lucide="radio"></i> Live Monitor
+          </a>
         {% endif %}
         <a href="{% url 'admin_all_meetings' %}" class="btn-action btn-action-secondary">
-          <i data-lucide="arrow-left"></i> All Meetings
+          <i data-lucide="arrow-left"></i> All Sessions
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Meeting Info Grid -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Scheduled Time</div>
-      <div style="font-weight:700;margin-top:.25rem;">{{ meeting.scheduled_time|date:"M d, Y H:i" }}</div>
+  <!-- Session KPI Info Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Scheduled Time</div>
+      <div style="font-weight: 700; margin-top: 0.25rem; font-size: 1rem;">{{ meeting.scheduled_time|date:"M d, Y H:i" }}</div>
     </div>
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Duration</div>
-      <div style="font-weight:700;margin-top:.25rem;">{{ meeting.duration_minutes }} minutes</div>
+
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Allocated Duration</div>
+      <div style="font-weight: 700; margin-top: 0.25rem; font-size: 1rem;">{{ meeting.duration_minutes }} minutes</div>
     </div>
+
     {% if meeting.started_at %}
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Started At</div>
-      <div style="font-weight:700;margin-top:.25rem;">{{ meeting.started_at|date:"M d, Y H:i" }}</div>
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Started At</div>
+      <div style="font-weight: 700; margin-top: 0.25rem; font-size: 1rem;">{{ meeting.started_at|date:"M d, Y H:i:s" }}</div>
     </div>
     {% endif %}
+
     {% if meeting.ended_at %}
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Ended At</div>
-      <div style="font-weight:700;margin-top:.25rem;">{{ meeting.ended_at|date:"M d, Y H:i" }}</div>
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Ended At</div>
+      <div style="font-weight: 700; margin-top: 0.25rem; font-size: 1rem;">{{ meeting.ended_at|date:"M d, Y H:i:s" }}</div>
     </div>
     {% endif %}
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Total Participants</div>
-      <div style="font-weight:700;margin-top:.25rem;font-size:1.25rem;color:var(--color-primary);">{{ participants|length }}</div>
+
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Total Attendees</div>
+      <div style="font-weight: 800; margin-top: 0.25rem; font-size: 1.35rem; color: var(--color-primary);">{{ roster_rows|length }}</div>
     </div>
-    {% if attendance_records %}
-    <div class="admin-card" style="padding:1rem;">
-      <div style="font-size:.72rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;">Biometric Verifications</div>
-      <div style="font-weight:700;margin-top:.25rem;font-size:1.25rem;color:#10b981;">{{ attendance_records|length }}</div>
+
+    <div class="admin-card" style="padding: 1rem 1.25rem;">
+      <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;">Attendance Rate</div>
+      <div style="font-weight: 800; margin-top: 0.25rem; font-size: 1.35rem; color: #10b981;">{{ attendance_rate }}</div>
     </div>
-    {% endif %}
   </div>
 
-  <!-- Participant Attendance Roster -->
-  <div class="admin-card" style="margin-bottom:1.5rem;">
-    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
-      <i data-lucide="users" style="width:16px;height:16px;color:var(--color-primary);"></i>
-      Participant Attendance Roster
-      {% if participants %}
-        <span style="background:var(--color-primary);color:#fff;font-size:.65rem;padding:.1rem .45rem;border-radius:999px;font-weight:700;">{{ participants|length }}</span>
-      {% endif %}
-    </h2>
-    {% if participants %}
+  <!-- Participant Attendance & Biometric Verification Roster -->
+  <div class="admin-card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+      <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="users" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+        Attendance & Biometric Verification Log
+        <span style="background: var(--color-primary); color: #fff; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 700;">
+          {{ roster_rows|length }}
+        </span>
+      </h2>
+      <a href="{% url 'admin_export_meeting_attendance_csv' meeting.id %}" class="btn-action-sm btn-action-secondary">
+        <i data-lucide="download"></i> Download CSV
+      </a>
+    </div>
+
+    {% if roster_rows %}
     <div class="admin-table-wrapper" style="overflow-x: auto;">
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Participant</th>
+            <th>Student / Attendee</th>
             <th>Role</th>
-            <th>Joined At</th>
-            <th>Left At</th>
-            <th>Duration Attended</th>
-            <th>Currently Active</th>
+            <th>Join Time</th>
+            <th>Leave Time</th>
+            <th>Duration</th>
+            <th style="text-align: center;">Status</th>
+            <th>Face-Verification Result</th>
+            <th>Active</th>
           </tr>
         </thead>
         <tbody>
-          {% for p in participants %}
+          {% for r in roster_rows %}
           <tr>
             <td>
-              {% url 'admin_user_detail' p.user.id as url_p_user_detail %}
-              {% include "components/admin/user_avatar.html" with user=p.user size=32 link=url_p_user_detail name_style="font-size:.9rem;" email_style="font-size:.75rem;" %}
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(139, 92, 246, 0.15); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;">
+                  {{ r.user.first_name|default:r.user.username|make_list|first|upper }}
+                </div>
+                <div>
+                  <a href="{% url 'admin_user_detail' r.user.id %}" style="font-weight: 700; color: inherit; text-decoration: none; font-size: 0.9rem;">
+                    {{ r.user.get_full_name|default:r.user.username }}
+                  </a>
+                  <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                    @{{ r.user.username }} &bull; {{ r.user.email }}
+                  </div>
+                </div>
+              </div>
             </td>
             <td>
-              {% if p.user == meeting.teacher %}
+              {% if r.is_teacher %}
                 <span class="role-badge role-badge-teacher">Host Teacher</span>
               {% else %}
                 <span class="role-badge role-badge-student">Student</span>
               {% endif %}
             </td>
-            <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ p.joined_at|date:"M d, Y H:i:s"|default:"—" }}</td>
-            <td style="font-size:.85rem;color:var(--color-text-secondary);">
-              {% if p.left_at %}
-                {{ p.left_at|date:"M d, Y H:i:s" }}
-              {% elif p.is_active %}
-                <span style="color:#10b981;font-weight:600;">Still in session</span>
+            <td style="font-size: 0.85rem; color: var(--color-text-secondary); white-space: nowrap;">
+              {{ r.joined_at|date:"M d, H:i:s"|default:"—" }}
+            </td>
+            <td style="font-size: 0.85rem; color: var(--color-text-secondary); white-space: nowrap;">
+              {% if r.left_at %}
+                {{ r.left_at|date:"M d, H:i:s" }}
+              {% elif r.is_active %}
+                <span style="color: #10b981; font-weight: 600;">Still in Session</span>
               {% else %}
-                <span style="color:var(--color-text-muted);">—</span>
+                <span style="color: var(--color-text-muted);">—</span>
               {% endif %}
             </td>
-            <td style="font-size:.85rem;">
-              {% if p.total_duration_seconds > 0 %}
-                <strong>{{ p.get_duration_formatted }}</strong>
+            <td style="font-size: 0.85rem; font-weight: 600;">
+              {{ r.duration_formatted }}
+            </td>
+            <td style="text-align: center;">
+              {% if r.attendance_status == 'present' %}
+                <span class="status-pill status-pill-active"><span class="dot"></span> Present</span>
+              {% elif r.attendance_status == 'late' %}
+                <span class="status-pill status-pill-pending"><span class="dot"></span> Late</span>
               {% else %}
-                <span style="color:var(--color-text-muted);">—</span>
+                <span class="status-pill status-pill-suspended"><span class="dot"></span> {{ r.attendance_status_display }}</span>
               {% endif %}
             </td>
             <td>
-              {% if p.is_active %}
-                {% include "components/admin/status_pill.html" with status="live" label="Online" %}
+              {% if r.is_teacher %}
+                <span style="font-size: 0.78rem; color: var(--color-text-muted); font-style: italic;">Host exempt</span>
+              {% elif r.verification_method == 'Face Recognition' and r.confidence_pct %}
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.2rem 0.55rem; background: rgba(16, 185, 129, 0.12); color: #059669; border-radius: 999px; font-weight: 600;">
+                  <i data-lucide="scan-face" style="width: 13px; height: 13px;"></i> Verified ({{ r.confidence_pct }})
+                </span>
+              {% elif r.verification_method == 'Manual Override' %}
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.2rem 0.55rem; background: rgba(217, 119, 6, 0.12); color: #d97706; border-radius: 999px; font-weight: 600;">
+                  <i data-lucide="user-check" style="width: 13px; height: 13px;"></i> Manual Override
+                </span>
               {% else %}
-                <span style="color:var(--color-text-muted);font-size:.82rem;">Offline</span>
+                <span style="font-size: 0.78rem; color: var(--color-text-muted);">Unverified</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.is_active %}
+                <span class="status-pill status-pill-active" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">Online</span>
+              {% else %}
+                <span style="color: var(--color-text-muted); font-size: 0.78rem;">Offline</span>
               {% endif %}
             </td>
           </tr>
@@ -156,40 +213,9 @@
       </table>
     </div>
     {% else %}
-      {% include "components/admin/empty_state.html" with use_section_empty=True icon="user-x" message="No participants have joined this meeting yet." %}
+      {% include "components/admin/empty_state.html" with icon="user-x" title="No Attendees Recorded" description="No students or instructors have joined this session yet." %}
     {% endif %}
   </div>
-
-  <!-- Biometric Attendance Records -->
-  {% if attendance_records %}
-  <div class="admin-card">
-    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;">
-      <i data-lucide="scan-face" style="width:16px;height:16px;color:#ec4899;"></i>
-      Biometric Attendance Verification
-      <span style="background:#ec4899;color:#fff;font-size:.65rem;padding:.1rem .45rem;border-radius:999px;font-weight:700;">{{ attendance_records|length }}</span>
-    </h2>
-    <div class="admin-table-wrapper" style="overflow-x: auto;">
-      <table class="admin-table">
-        <thead>
-          <tr><th>Student</th><th>Date</th><th>Verification Status</th></tr>
-        </thead>
-        <tbody>
-          {% for rec in attendance_records %}
-          <tr>
-            <td>
-              {% include "components/admin/user_avatar.html" with user=rec.student size=32 show_username_instead=True name_style="font-size:.9rem;" email_style="font-size:.75rem;" %}
-            </td>
-            <td style="font-size:.85rem;color:var(--color-text-secondary);">{{ rec.date|date:"M d, Y" }}</td>
-            <td>
-              {% include "components/admin/status_pill.html" with status=rec.status label=rec.get_status_display %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
 
 </div>
 {% endblock %}

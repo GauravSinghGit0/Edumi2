@@ -89,8 +89,7 @@
                             <path d="M12 8v8" />
                             <path d="M8 12h8" />
                         </svg>
-                        <span id="studentCameraStatusText">{% if student_can_view_camera %}Block Student Cam View{% else
-                            %}Allow Student Cam View{% endif %}</span>
+                        <span id="studentCameraStatusText">{% if student_can_view_camera %}Block Student Cam View{% else %}Allow Student Cam View{% endif %}</span>
                     </button>
                     <button class="menu-item" id="toggleStudentScreenshareBtn"
                         onclick="toggleStudentViewPermission('student_can_view_screenshare'); toggleMoreOptions();">

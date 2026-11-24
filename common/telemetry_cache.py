@@ -13,10 +13,12 @@ logger = logging.getLogger(__name__)
 CACHE_KEY_ADMIN_STATS = 'edumi:telemetry:admin_dashboard_stats'
 CACHE_KEY_LIVE_SUMMARY = 'edumi:telemetry:live_summary'
 CACHE_KEY_EVENT_COUNT = 'edumi:telemetry:event_count:'
+CACHE_KEY_DASHBOARD_METRICS = 'edumi:telemetry:dashboard_chart_metrics:'
 
-TTL_ADMIN_STATS = 15       # 15 seconds for admin dashboard
-TTL_LIVE_SUMMARY = 10      # 10 seconds for real-time live monitor
-TTL_EVENT_COUNT = 86400    # 24 hours for daily telemetry counter
+TTL_ADMIN_STATS = 15          # 15 seconds for admin dashboard
+TTL_LIVE_SUMMARY = 10         # 10 seconds for real-time live monitor
+TTL_EVENT_COUNT = 86400       # 24 hours for daily telemetry counter
+TTL_DASHBOARD_METRICS = 30    # 30 seconds for analytics charts
 
 
 def get_cached_admin_stats(force_refresh=False):
@@ -38,6 +40,27 @@ def get_cached_admin_stats(force_refresh=False):
         logger.warning(f"Failed to set telemetry cache: {e}")
 
     return stats
+
+
+def get_cached_dashboard_chart_metrics(days=7, force_refresh=False):
+    """
+    Retrieves cached chart metrics for the executive dashboard or computes them.
+    """
+    cache_key = f"{CACHE_KEY_DASHBOARD_METRICS}{days}"
+    if not force_refresh:
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
+    from accounts.admin_services import compute_dashboard_chart_metrics
+    data = compute_dashboard_chart_metrics(days=days)
+
+    try:
+        cache.set(cache_key, data, timeout=TTL_DASHBOARD_METRICS)
+    except Exception as e:
+        logger.warning(f"Failed to set dashboard metrics cache: {e}")
+
+    return data
 
 
 def invalidate_telemetry_cache():

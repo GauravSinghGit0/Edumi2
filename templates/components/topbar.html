@@ -1,4 +1,98 @@
 {% load static %}
+<style>
+    /* ── Industry-Grade Topbar Command Palette Button ── */
+    .topbar-cmd-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: 230px;
+        min-width: 200px;
+        max-width: 260px;
+        height: 36px;
+        background: var(--color-bg-card, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: 9999px;
+        padding: 0.4rem 0.85rem 0.4rem 0.75rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-text-muted, #64748b);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        outline: none;
+        line-height: 1;
+    }
+
+    .topbar-cmd-btn:hover {
+        background: var(--color-bg-hover, #f8fafc);
+        border-color: var(--color-primary, #8b5cf6);
+        color: var(--color-text-main, #0f172a);
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .topbar-cmd-btn:active {
+        transform: translateY(0);
+    }
+
+    .topbar-cmd-btn .cmd-btn-text {
+        font-size: 0.8125rem;
+        color: inherit;
+        font-family: inherit;
+    }
+
+    .topbar-cmd-btn .cmd-kbd {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+        background: var(--color-bg-hover, #f1f5f9);
+        border: 1px solid var(--color-border, #cbd5e1);
+        border-radius: 4px;
+        padding: 0.15rem 0.4rem;
+        line-height: 1;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    body.dark-mode .topbar-cmd-btn {
+        background: #111111;
+        border-color: rgba(148, 163, 184, 0.2);
+        color: #94a3b8;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    body.dark-mode .topbar-cmd-btn:hover {
+        background: #1a1a1a;
+        border-color: var(--color-primary, #8b5cf6);
+        color: #f8fafc;
+        box-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+    }
+
+    body.dark-mode .topbar-cmd-btn .cmd-kbd {
+        background: #222222;
+        border-color: #333333;
+        color: #cbd5e1;
+    }
+
+    @media (max-width: 640px) {
+
+        .topbar-cmd-btn .cmd-btn-text,
+        .topbar-cmd-btn .cmd-kbd {
+            display: none;
+        }
+
+        .topbar-cmd-btn {
+            width: auto;
+            min-width: unset;
+            padding: 0.4rem;
+            border-radius: var(--radius-md, 0.375rem);
+        }
+    }
+</style>
 <!-- Top Bar -->
 <div class="topbar" id="topbar" data-turbo-permanent>
     <div class="topbar-left">
@@ -10,6 +104,13 @@
         </a>
     </div>
     <div class="topbar-right">
+        <!-- Command Palette Trigger Button (Ctrl+K) -->
+        <button type="button" class="topbar-cmd-btn" id="topbarCmdTrigger" onclick="openCommandPalette()"
+            title="Search actions, users, courses (Ctrl+K)" aria-label="Open Command Palette (Ctrl+K)">
+            <i data-lucide="search" style="width: 15px; height: 15px; color: var(--color-primary, #8b5cf6);"></i>
+            <span class="cmd-btn-text">Quick Search...</span>
+            <kbd class="cmd-kbd">Ctrl+K</kbd>
+        </button>
 
         <!-- Theme Toggle -->
         <button type="button" class="topbar-icon-btn theme-toggle" id="themeToggle" onclick="toggleTheme()"
@@ -76,11 +177,12 @@
                 </a>
                 <div class="topbar-user-dropdown-divider"></div>
                 <a href="#" class="topbar-user-dropdown-item logout"
-                   onclick="event.preventDefault(); document.getElementById('topbar-logout-form').submit();">
+                    onclick="event.preventDefault(); document.getElementById('topbar-logout-form').submit();">
                     <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                     <span>Log Out</span>
                 </a>
-                <form id="topbar-logout-form" method="post" action="{% url 'logout' %}" data-turbo="false" style="display:none;">
+                <form id="topbar-logout-form" method="post" action="{% url 'logout' %}" data-turbo="false"
+                    style="display:none;">
                     {% csrf_token %}
                 </form>
             </div>
@@ -89,38 +191,38 @@
 </div>
 
 <script>
-function toggleUserDropdown(e) {
-    if (e) e.stopPropagation();
-    const wrapper = document.getElementById('topbarUserWrapper');
-    const dropdown = document.getElementById('topbarUserDropdown');
-    if (!wrapper || !dropdown) return;
+    function toggleUserDropdown(e) {
+        if (e) e.stopPropagation();
+        const wrapper = document.getElementById('topbarUserWrapper');
+        const dropdown = document.getElementById('topbarUserDropdown');
+        if (!wrapper || !dropdown) return;
 
-    const notifDropdown = document.getElementById('notificationDropdown');
-    if (notifDropdown) notifDropdown.classList.remove('active');
+        const notifDropdown = document.getElementById('notificationDropdown');
+        if (notifDropdown) notifDropdown.classList.remove('active');
 
-    wrapper.classList.toggle('active');
-}
-
-document.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('topbarUserWrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        wrapper.classList.remove('active');
+        wrapper.classList.toggle('active');
     }
-});
 
-document.addEventListener('DOMContentLoaded', function() {
-    const wrapper = document.getElementById('topbarUserWrapper');
-    if (!wrapper) return;
-
-    let timeout;
-    wrapper.addEventListener('mouseenter', function() {
-        clearTimeout(timeout);
-        wrapper.classList.add('active');
-    });
-    wrapper.addEventListener('mouseleave', function() {
-        timeout = setTimeout(function() {
+    document.addEventListener('click', function (e) {
+        const wrapper = document.getElementById('topbarUserWrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
             wrapper.classList.remove('active');
-        }, 180);
+        }
     });
-});
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const wrapper = document.getElementById('topbarUserWrapper');
+        if (!wrapper) return;
+
+        let timeout;
+        wrapper.addEventListener('mouseenter', function () {
+            clearTimeout(timeout);
+            wrapper.classList.add('active');
+        });
+        wrapper.addEventListener('mouseleave', function () {
+            timeout = setTimeout(function () {
+                wrapper.classList.remove('active');
+            }, 180);
+        });
+    });
 </script>

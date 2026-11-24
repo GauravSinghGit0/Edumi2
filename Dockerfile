@@ -24,7 +24,7 @@ ENV SECRET_KEY=${SECRET_KEY} \
     LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET} \
     FACE_ENCRYPTION_KEY=${FACE_ENCRYPTION_KEY}
 
-# Install essential system libraries (PostgreSQL client, FFmpeg, OpenCV headless libs)
+# Install essential system libraries (PostgreSQL client, FFmpeg, OpenCV headless libs, FreeType/JPEG for ReportLab)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -33,6 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libgl1 \
     libglib2.0-0 \
+    libfreetype6 \
+    libjpeg62-turbo \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -54,4 +56,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000 8002 8008 7880
 
 # Default entrypoint command (can be overridden in docker-compose.yml)
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "edumi_core.asgi:application"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8002", "edumi_core.asgi:application"]

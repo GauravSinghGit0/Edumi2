@@ -1,7 +1,7 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}Classroom & Course Directory | EduMi Admin{% endblock %}
+{% block page_title %}Courses & Curriculum Governance | EduMi Admin{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
@@ -10,202 +10,605 @@
 {% block content %}
 <div class="admin-container">
     <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">Classroom Catalog</span>
-    </div>
+    {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
+    <!-- Page Header -->
     <div class="admin-header">
         <div>
-            <h1>Classroom Catalog</h1>
-            <p class="admin-subtitle">Overview of active learning courses, enrolled students, and pending access
-                approvals</p>
+            <h1>Courses</h1>
+            <p class="admin-subtitle">Comprehensive governance of active learning courses, student enrollments, attendance rates, and settings</p>
         </div>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            {% if admin_perms.manage_courses %}
             <button type="button" onclick="openModal('addCourseModal')" class="btn-action btn-action-primary">
-                <i data-lucide="book-plus"></i> Create Classroom
+                <i data-lucide="book-plus"></i> Create Course
             </button>
+            {% endif %}
         </div>
     </div>
 
-    {% if classrooms %}
-    <div id="bulkActionsBar"
-        style="display: none; justify-content: space-between; align-items: center; background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;">
+    <!-- Quick Stats Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="kpi-card" style="padding: 1.15rem 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="kpi-label">Total Courses</span>
+                <span style="color: var(--color-primary);"><i data-lucide="book-open" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="kpi-value" style="font-size: 1.6rem; margin-top: 0.35rem;">{{ total_classrooms }}</div>
+            <div class="kpi-subtext">Catalogued curricula</div>
+        </div>
+
+        <div class="kpi-card" style="padding: 1.15rem 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="kpi-label">Active Courses</span>
+                <span style="color: #10b981;"><i data-lucide="check-circle" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="kpi-value" style="font-size: 1.6rem; margin-top: 0.35rem; color: #10b981;">{{ active_classrooms }}</div>
+            <div class="kpi-subtext">Currently open for enrollment</div>
+        </div>
+
+        <div class="kpi-card" style="padding: 1.15rem 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="kpi-label">Archived Courses</span>
+                <span style="color: #64748b;"><i data-lucide="archive" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="kpi-value" style="font-size: 1.6rem; margin-top: 0.35rem; color: var(--color-text-muted);">{{ archived_classrooms }}</div>
+            <div class="kpi-subtext">Historical courses preserved</div>
+        </div>
+
+        <div class="kpi-card" style="padding: 1.15rem 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="kpi-label">Total Enrollments</span>
+                <span style="color: #6366f1;"><i data-lucide="users" style="width: 18px; height: 18px;"></i></span>
+            </div>
+            <div class="kpi-value" style="font-size: 1.6rem; margin-top: 0.35rem;">{{ total_enrollments }}</div>
+            <div class="kpi-subtext">Active student seats filled</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar & View Switcher -->
+    <div class="admin-card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+        <form method="GET" action="" id="courseFilterForm" style="display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; flex: 1;">
+                <!-- Search Input -->
+                <div style="position: relative; min-width: 240px; max-width: 320px; flex: 1;">
+                    <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search course title, code, teacher..." class="filter-input" style="padding-left: 2.25rem; width: 100%;" onchange="document.getElementById('courseFilterForm').submit()">
+                </div>
+
+                <!-- Status Filter -->
+                <select name="status" class="filter-input" onchange="document.getElementById('courseFilterForm').submit()" style="min-width: 130px;">
+                    <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>All Statuses</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+                    <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived Only</option>
+                </select>
+
+                <!-- Teacher Filter -->
+                <select name="teacher" class="filter-input" onchange="document.getElementById('courseFilterForm').submit()" style="min-width: 160px;">
+                    <option value="all">All Instructors</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.id }}" {% if teacher_filter == t.id|stringformat:"s" or teacher_filter == t.username %}selected{% endif %}>
+                        Prof. {{ t.get_full_name|default:t.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Department Filter -->
+                {% if departments %}
+                <select name="dept" class="filter-input" onchange="document.getElementById('courseFilterForm').submit()" style="min-width: 150px;">
+                    <option value="all">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if dept_filter == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+
+                {% if search_query or status_filter != 'all' or teacher_filter != 'all' or dept_filter != 'all' %}
+                <a href="{% url 'admin_all_classrooms' %}" class="btn-action-sm btn-action-secondary" style="height: 38px;">
+                    <i data-lucide="x"></i> Clear
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- View Switcher (Cards vs Table) -->
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="view-toggle-group">
+                    <button type="button" id="btnViewCards" class="view-toggle-btn active" onclick="switchView('cards')">
+                        <i data-lucide="layout-grid" style="width: 15px; height: 15px;"></i> Cards
+                    </button>
+                    <button type="button" id="btnViewTable" class="view-toggle-btn" onclick="switchView('table')">
+                        <i data-lucide="list" style="width: 15px; height: 15px;"></i> Table
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions Floating Bar -->
+    <div id="bulkActionsBar" style="display: none; justify-content: space-between; align-items: center; background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem;">
         <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">
-            <span id="selectedCount">0</span> classrooms selected
+            <span id="selectedCount">0</span> courses selected
         </div>
         <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-action-sm btn-action-secondary"
-                onclick="alert('Bulk export selected classrooms. (Backend logic required)')">
+            <button type="button" class="btn-action-sm btn-action-secondary" onclick="submitBulkCourses('{% url 'admin_bulk_export_classrooms' %}')">
                 <i data-lucide="download"></i> Export Selected
             </button>
-            <button type="button" class="btn-action-sm btn-action-danger"
-                onclick="alert('Bulk archive selected classrooms. (Backend logic required)')">
+            <button type="button" class="btn-action-sm btn-action-danger" onclick="confirmBulkArchive()">
                 <i data-lucide="archive"></i> Archive Selected
             </button>
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem;">
+    {% if classrooms %}
+    <!-- VIEW 1: CARDS GRID VIEW -->
+    <div id="coursesCardView" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem;">
         {% for cr in classrooms %}
-        <div class="admin-card"
-            style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div class="admin-card" style="padding: 1.4rem; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
             <div>
-                <div
-                    style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <!-- Top Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.85rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" class="admin-checkbox card-checkbox" value="{{ cr.id }}">
-                        <span class="role-badge role-badge-teacher">{{ cr.class_code|default:"CLASS" }}</span>
+                        <span class="role-badge role-badge-teacher">{{ cr.class_code|default:"COURSE" }}</span>
+                        {% if cr.auto_approve %}
+                        <span style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: rgba(16, 185, 129, 0.12); color: #059669; border-radius: 999px; font-weight: 600;">Auto-Enroll</span>
+                        {% else %}
+                        <span style="font-size: 0.72rem; padding: 0.15rem 0.45rem; background: rgba(217, 119, 6, 0.12); color: #d97706; border-radius: 999px; font-weight: 600;">Manual Approval</span>
+                        {% endif %}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
                         {% if cr.is_active %}
                         {% include "components/admin/status_pill.html" with status="active" %}
                         {% else %}
                         {% include "components/admin/status_pill.html" with status="suspended" label="Archived" %}
                         {% endif %}
+
                         <div class="admin-dropdown">
-                            <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle"
-                                onclick="toggleDropdown(this)" style="padding: 0.35rem 0.5rem;">
+                            <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle" onclick="toggleDropdown(this)" style="padding: 0.35rem 0.5rem;">
                                 <i data-lucide="more-vertical"></i>
                             </button>
                             <div class="admin-dropdown-menu">
-                                <a href="{% url 'admin_classroom_detail' cr.id %}" class="admin-dropdown-item"><i
-                                        data-lucide="eye"></i> View 360</a>
-                                <button type="button" class="admin-dropdown-item"><i data-lucide="edit-3"></i> Edit
-                                    Settings</button>
-                                <button type="button" class="admin-dropdown-item danger"><i data-lucide="archive"></i>
-                                    Archive</button>
+                                <a href="{% url 'admin_classroom_detail' cr.id %}" class="admin-dropdown-item">
+                                    <i data-lucide="eye"></i> View Course 360
+                                </a>
+                                <button type="button" class="admin-dropdown-item" onclick="openEditCourseDrawer('{{ cr.id }}', '{{ cr.title|escapejs }}', '{{ cr.class_code|escapejs }}', '{{ cr.teacher.id }}', '{{ cr.description|default:''|escapejs }}', {{ cr.auto_approve|yesno:'true,false' }}, {{ cr.is_active|yesno:'true,false' }})">
+                                    <i data-lucide="edit-3"></i> Edit Settings
+                                </button>
+                                <button type="button" class="admin-dropdown-item {% if cr.is_active %}danger{% endif %}" onclick="confirmToggleArchive('{{ cr.id }}', '{{ cr.title|escapejs }}', {{ cr.is_active|yesno:'true,false' }})">
+                                    <i data-lucide="{% if cr.is_active %}archive{% else %}rotate-ccw{% endif %}"></i>
+                                    {% if cr.is_active %}Archive Course{% else %}Restore Course{% endif %}
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.15rem; font-weight: 700;">
+
+                <!-- Course Title & Instructor -->
+                <h3 style="margin: 0 0 0.4rem 0; font-size: 1.15rem; font-weight: 700; line-height: 1.35;">
                     <a href="{% url 'admin_classroom_detail' cr.id %}" style="color: inherit; text-decoration: none;">
                         {{ cr.title }}
                     </a>
                 </h3>
-                <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 1rem;">
-                    Instructor: <strong><a href="{% url 'admin_teacher_detail' cr.teacher.id %}" style="color: inherit; text-decoration: underline;">{{ cr.teacher.get_full_name|default:cr.teacher.username }}</a></strong>
+                <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 1.15rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>Instructor:</span>
+                    <strong><a href="{% url 'admin_teacher_detail' cr.teacher.id %}" style="color: inherit; text-decoration: underline;">Prof. {{ cr.teacher.get_full_name|default:cr.teacher.username }}</a></strong>
+                    {% if cr.teacher.userprofile.department %}
+                    <span style="color: var(--color-text-muted); font-size: 0.78rem;">&bull; {{ cr.teacher.userprofile.department }}</span>
+                    {% endif %}
                 </div>
 
-                <div
-                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); padding: 0.75rem; border-radius: var(--radius-md, 0.5rem); margin-bottom: 1.25rem; border: 1px solid var(--color-border); font-size: 0.85rem;">
+                <!-- 4 Metrics Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; background: var(--color-bg-subtle, rgba(255,255,255,0.03)); padding: 0.85rem; border-radius: var(--radius-md, 0.5rem); margin-bottom: 1.25rem; border: 1px solid var(--color-border); font-size: 0.85rem;">
                     <div>
-                        <div style="color: var(--color-text-muted); font-size: 0.75rem;">Enrolled Students</div>
-                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--color-text-main);">{{ cr.approved_students|default:0 }}</div>
+                        <div style="color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Enrolled Students</div>
+                        <div style="font-weight: 700; font-size: 1.15rem; color: var(--color-text-main); margin-top: 0.1rem;">{{ cr.approved_students|default:0 }}</div>
                     </div>
                     <div>
-                        <div style="color: var(--color-text-muted); font-size: 0.75rem;">Pending Requests</div>
-                        <div
-                            style="font-weight: 700; font-size: 1.1rem; color: {% if cr.pending_students > 0 %}#d97706{% else %}var(--color-text-muted){% endif %};">
+                        <div style="color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Pending Requests</div>
+                        <div style="font-weight: 700; font-size: 1.15rem; color: {% if cr.pending_students > 0 %}#d97706{% else %}var(--color-text-muted){% endif %}; margin-top: 0.1rem;">
                             {{ cr.pending_students|default:0 }}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Attendance Rate</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: {% if cr.attendance_pct_val >= 75 %}#10b981{% elif cr.attendance_pct_val > 0 %}#f59e0b{% else %}var(--color-text-muted){% endif %}; margin-top: 0.1rem;">
+                            {{ cr.attendance_rate }}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Last Session</div>
+                        <div style="font-weight: 600; font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ cr.last_session_date|date:"M d, Y"|default:"None yet" }}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div>
-                <a href="{% url 'admin_classroom_detail' cr.id %}" class="btn-action-sm btn-action-primary"
-                    style="width: 100%; justify-content: center;">
-                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Classroom 360 Dossier
+            <!-- Card Bottom Quick Action -->
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{% url 'admin_classroom_detail' cr.id %}" class="btn-action-sm btn-action-primary" style="flex: 1; justify-content: center;">
+                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> View Course 360
                 </a>
+                <button type="button" class="btn-action-sm btn-action-secondary" onclick="openEditCourseDrawer('{{ cr.id }}', '{{ cr.title|escapejs }}', '{{ cr.class_code|escapejs }}', '{{ cr.teacher.id }}', '{{ cr.description|default:''|escapejs }}', {{ cr.auto_approve|yesno:'true,false' }}, {{ cr.is_active|yesno:'true,false' }})" title="Edit Settings">
+                    <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
+                </button>
             </div>
         </div>
         {% endfor %}
     </div>
+
+    <!-- VIEW 2: DATA TABLE VIEW -->
+    <div id="coursesTableView" class="admin-card" style="display: none;">
+        <div class="admin-table-wrapper" style="overflow-x: auto;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAllCourses" class="admin-checkbox" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>Course Title & Code</th>
+                        <th>Instructor</th>
+                        <th>Department</th>
+                        <th>Enrollment Mode</th>
+                        <th>Status</th>
+                        <th style="text-align: center;">Enrolled</th>
+                        <th style="text-align: center;">Pending</th>
+                        <th style="text-align: center;">Attendance %</th>
+                        <th>Last Session</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cr in classrooms %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="admin-checkbox card-checkbox" value="{{ cr.id }}" onchange="updateBulkActions()">
+                        </td>
+                        <td>
+                            <div>
+                                <a href="{% url 'admin_classroom_detail' cr.id %}" style="font-weight: 700; color: inherit; text-decoration: none; font-size: 0.95rem;">
+                                    {{ cr.title }}
+                                </a>
+                                <div style="font-size: 0.75rem; color: var(--color-primary); font-family: monospace; font-weight: 700;">
+                                    {{ cr.class_code }}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_teacher_detail' cr.teacher.id %}" style="color: inherit; text-decoration: underline; font-size: 0.88rem;">
+                                Prof. {{ cr.teacher.get_full_name|default:cr.teacher.username }}
+                            </a>
+                        </td>
+                        <td style="font-size: 0.85rem; color: var(--color-text-secondary);">
+                            {{ cr.teacher.userprofile.department|default:"—" }}
+                        </td>
+                        <td>
+                            {% if cr.auto_approve %}
+                            <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; background: rgba(16, 185, 129, 0.12); color: #059669; border-radius: 999px; font-weight: 600;">Auto-Enroll</span>
+                            {% else %}
+                            <span style="font-size: 0.75rem; padding: 0.15rem 0.5rem; background: rgba(217, 119, 6, 0.12); color: #d97706; border-radius: 999px; font-weight: 600;">Manual Approval</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cr.is_active %}
+                            {% include "components/admin/status_pill.html" with status="active" %}
+                            {% else %}
+                            {% include "components/admin/status_pill.html" with status="suspended" label="Archived" %}
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center; font-weight: 700; font-size: 0.95rem;">
+                            {{ cr.approved_students|default:0 }}
+                        </td>
+                        <td style="text-align: center;">
+                            {% if cr.pending_students > 0 %}
+                            <span style="color: #d97706; font-weight: 700;">{{ cr.pending_students }}</span>
+                            {% else %}
+                            <span style="color: var(--color-text-muted);">0</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center; font-weight: 700; color: {% if cr.attendance_pct_val >= 75 %}#10b981{% elif cr.attendance_pct_val > 0 %}#f59e0b{% else %}var(--color-text-muted){% endif %};">
+                            {{ cr.attendance_rate }}
+                        </td>
+                        <td style="font-size: 0.85rem; color: var(--color-text-secondary); white-space: nowrap;">
+                            {{ cr.last_session_date|date:"M d, Y"|default:"None yet" }}
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: inline-flex; gap: 0.4rem;">
+                                <a href="{% url 'admin_classroom_detail' cr.id %}" class="btn-action-sm btn-action-primary" title="View Course 360">
+                                    <i data-lucide="eye"></i>
+                                </a>
+                                <button type="button" class="btn-action-sm btn-action-secondary" onclick="openEditCourseDrawer('{{ cr.id }}', '{{ cr.title|escapejs }}', '{{ cr.class_code|escapejs }}', '{{ cr.teacher.id }}', '{{ cr.description|default:''|escapejs }}', {{ cr.auto_approve|yesno:'true,false' }}, {{ cr.is_active|yesno:'true,false' }})" title="Edit Settings">
+                                    <i data-lucide="edit-3"></i>
+                                </button>
+                                <button type="button" class="btn-action-sm {% if cr.is_active %}btn-action-danger{% else %}btn-action-secondary{% endif %}" onclick="confirmToggleArchive('{{ cr.id }}', '{{ cr.title|escapejs }}', {{ cr.is_active|yesno:'true,false' }})" title="{% if cr.is_active %}Archive{% else %}Restore{% endif %}">
+                                    <i data-lucide="{% if cr.is_active %}archive{% else %}rotate-ccw{% endif %}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj %}
+        {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+    {% endif %}
+
     {% else %}
     <div class="admin-card">
-        <div class="empty-state">
-            <div class="empty-icon"><i data-lucide="book-open"></i></div>
-            <h3>No Classrooms Found</h3>
-            <p>No active courses or classrooms have been created yet.</p>
-        </div>
+        {% include "components/admin/empty_state.html" with icon="book-open" title="No Courses Found" description="No active learning courses match your criteria. You can create your first course now." cta_text="Create Course" cta_icon="book-plus" cta_modal="addCourseModal" %}
     </div>
     {% endif %}
 </div>
 
 <!-- =========================================================
-     MODAL DRAWER: QUICK CREATE COURSE / CLASSROOM
+     SLIDE-OUT DRAWER: EDIT COURSE SETTINGS
      ========================================================= -->
-<div id="addCourseModal" class="admin-modal-overlay">
-    <div class="admin-modal-card">
-        <div class="admin-modal-header">
-            <h3><i data-lucide="book-plus"></i> Create Learning Classroom</h3>
-            <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+<div id="editCourseDrawer" class="admin-modal-overlay">
+    <div class="admin-drawer-card" style="max-width: 520px;">
+        <div class="admin-drawer-header">
+            <div>
+                <h3 class="admin-drawer-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="settings" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                    Edit Course Settings
+                </h3>
+                <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                    Manage metadata, instructor assignment, and enrollment rules
+                </div>
+            </div>
+            <button type="button" class="admin-modal-close" onclick="closeDrawer('editCourseDrawer')">&times;</button>
         </div>
-        <form method="POST" action="{% url 'admin_create_classroom' %}">
+
+        <form id="editCourseDrawerForm" method="POST" action="" data-loading data-loading-message="Saving course settings...">
             {% csrf_token %}
-            <div class="admin-modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <label
-                        style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
-                        Title *</label>
-                    <input type="text" name="title" class="filter-input" style="width: 100%;" required
-                        placeholder="e.g. Advanced Computer Science 101">
+            <div class="admin-drawer-body">
+                <!-- Course ID and Status banner -->
+                <div style="background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Course ID</div>
+                        <div id="drawerCourseIdText" style="font-weight: 700; font-size: 0.95rem; font-family: monospace;">#—</div>
+                    </div>
+                    <div id="drawerStatusPill"></div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <!-- Course Title -->
+                <div style="margin-bottom: 1.15rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                        Course Title *
+                    </label>
+                    <input type="text" id="drawer_title" name="title" class="filter-input" style="width: 100%;" required>
+                </div>
+
+                <!-- Course Code & Password -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.15rem;">
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Class
-                            Code *</label>
-                        <input type="text" name="class_code" class="filter-input" style="width: 100%;"
-                            placeholder="CS101" required>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                            Course Code *
+                        </label>
+                        <input type="text" id="drawer_class_code" name="class_code" class="filter-input" style="width: 100%; font-family: monospace;" required>
                     </div>
                     <div>
-                        <label
-                            style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
-                            Password</label>
-                        <input type="text" name="password" class="filter-input" style="width: 100%;"
-                            placeholder="Access password">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                            New Password
+                        </label>
+                        <input type="text" id="drawer_password" name="password" class="filter-input" style="width: 100%;" placeholder="Leave blank to keep">
                     </div>
                 </div>
 
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign
-                        Instructor *</label>
-                    <select name="teacher_id" class="filter-input" style="width: 100%;" required>
-                        <option value="">-- Select Teacher --</option>
+                <!-- Assign Instructor -->
+                <div style="margin-bottom: 1.15rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                        Assign Instructor (Must have 'Teacher' role) *
+                    </label>
+                    <select id="drawer_teacher_id" name="teacher_id" class="filter-input" style="width: 100%;" required>
+                        <option value="">-- Select Instructor --</option>
                         {% for teacher in teachers %}
-                        <option value="{{ teacher.id }}">Prof. {{ teacher.get_full_name|default:teacher.username }}
-                        </option>
+                        <option value="{{ teacher.id }}">Prof. {{ teacher.get_full_name|default:teacher.username }} ({{ teacher.username }})</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div style="margin-bottom: 1rem;">
-                    <label
-                        style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Classroom
-                        Description</label>
-                    <textarea name="description" class="filter-input" style="width: 100%; height: 80px;"
-                        placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
+                <!-- Enrollment Mode -->
+                <div style="margin-bottom: 1.15rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                        Enrollment Governance Mode *
+                    </label>
+                    <select id="drawer_enrollment_mode" name="enrollment_mode" class="filter-input" style="width: 100%;">
+                        <option value="auto">Auto-Approve — Students who join with valid credentials enter immediately</option>
+                        <option value="manual">Manual Approval — Students enter pending queue awaiting teacher/admin confirmation</option>
+                    </select>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" name="auto_approve" id="auto_approve" checked
-                        style="width: 18px; height: 18px;">
-                    <label for="auto_approve"
-                        style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">Auto-Approve Student Enrollment
-                        Requests</label>
+                <!-- Description -->
+                <div style="margin-bottom: 1.15rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                        Course Description & Learning Outcomes
+                    </label>
+                    <textarea id="drawer_description" name="description" class="filter-input" style="width: 100%; height: 75px;"></textarea>
+                </div>
+
+                <!-- Active / Archive Checkbox -->
+                <div style="background: var(--color-bg-app); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.85rem 1rem;">
+                    <label style="display: flex; align-items: flex-start; gap: 0.65rem; cursor: pointer; margin: 0;">
+                        <input type="checkbox" id="drawer_is_active" name="is_active" class="admin-checkbox" style="margin-top: 0.15rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.85rem;">Course Is Active</div>
+                            <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                                Unchecking will archive this course, hiding it from student self-enrollment while fully preserving historical grades, assignments, and attendance logs.
+                            </div>
+                        </div>
+                    </label>
                 </div>
             </div>
-            <div class="admin-modal-footer">
-                <button type="button" class="btn-action btn-action-secondary"
-                    onclick="closeModal('addCourseModal')">Cancel</button>
-                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create
-                    Classroom</button>
+
+            <!-- Drawer Footer Actions -->
+            <div class="admin-modal-footer" style="padding: 1rem 1.5rem; background: var(--color-bg-card);">
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeDrawer('editCourseDrawer')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Save Settings</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- =========================================================
+     MODAL: CREATE NEW COURSE
+     ========================================================= -->
+<div id="addCourseModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 540px;">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="book-plus"></i> Create Learning Course</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('addCourseModal')">&times;</button>
+        </div>
+        <form method="POST" action="{% url 'admin_create_classroom' %}" data-loading data-loading-message="Creating course...">
+            {% csrf_token %}
+            <div class="admin-modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Course Title *</label>
+                    <input type="text" name="title" class="filter-input" style="width: 100%;" required placeholder="e.g. Advanced Data Structures">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Course Code *</label>
+                        <input type="text" name="class_code" class="filter-input" style="width: 100%; font-family: monospace;" placeholder="CS201" required>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Access Password</label>
+                        <input type="text" name="password" class="filter-input" style="width: 100%;" placeholder="Optional password">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Assign Instructor *</label>
+                    <select name="teacher_id" class="filter-input" style="width: 100%;" required>
+                        <option value="">-- Select Instructor --</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">Prof. {{ teacher.get_full_name|default:teacher.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem;">Course Description</label>
+                    <textarea name="description" class="filter-input" style="width: 100%; height: 75px;" placeholder="Brief summary of syllabus and learning outcomes..."></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="auto_approve" id="auto_approve_new" checked style="width: 18px; height: 18px;">
+                    <label for="auto_approve_new" style="font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+                        Auto-Approve Student Enrollment Requests
+                    </label>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('addCourseModal')">Cancel</button>
+                <button type="submit" class="btn-action btn-action-primary"><i data-lucide="check"></i> Create Course</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Hidden form for archive toggle -->
+<form id="toggleArchiveForm" method="POST" action="" style="display: none;">
+    {% csrf_token %}
+</form>
+
 <script>
+    // View Switcher (Cards vs Table)
+    function switchView(mode) {
+        const cardView = document.getElementById('coursesCardView');
+        const tableView = document.getElementById('coursesTableView');
+        const btnCards = document.getElementById('btnViewCards');
+        const btnTable = document.getElementById('btnViewTable');
+
+        if (mode === 'table') {
+            if (cardView) cardView.style.display = 'none';
+            if (tableView) tableView.style.display = 'block';
+            if (btnCards) btnCards.classList.remove('active');
+            if (btnTable) btnTable.classList.add('active');
+            localStorage.setItem('edumi_courses_view', 'table');
+        } else {
+            if (cardView) cardView.style.display = 'grid';
+            if (tableView) tableView.style.display = 'none';
+            if (btnCards) btnCards.classList.add('active');
+            if (btnTable) btnTable.classList.remove('active');
+            localStorage.setItem('edumi_courses_view', 'cards');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // Initialize View Mode on Page Load
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedMode = localStorage.getItem('edumi_courses_view') || '{{ view_mode }}' || 'cards';
+        switchView(savedMode);
+    });
+
+    // Modal & Drawer Controller
     function openModal(id) {
         document.getElementById(id).classList.add('active');
     }
     function closeModal(id) {
         document.getElementById(id).classList.remove('active');
+    }
+    function openDrawer(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeDrawer(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Open Edit Course Drawer
+    function openEditCourseDrawer(id, title, code, teacherId, desc, autoApprove, isActive) {
+        const form = document.getElementById('editCourseDrawerForm');
+        form.action = `/admin/classrooms/${id}/edit/`;
+
+        document.getElementById('drawerCourseIdText').textContent = `#${id} — ${code}`;
+        document.getElementById('drawer_title').value = title;
+        document.getElementById('drawer_class_code').value = code;
+        document.getElementById('drawer_password').value = '';
+        document.getElementById('drawer_teacher_id').value = teacherId;
+        document.getElementById('drawer_description').value = desc || '';
+        document.getElementById('drawer_enrollment_mode').value = autoApprove ? 'auto' : 'manual';
+        document.getElementById('drawer_is_active').checked = !!isActive;
+
+        const pill = document.getElementById('drawerStatusPill');
+        if (pill) {
+            pill.innerHTML = isActive 
+                ? '<span class="status-pill status-pill-active"><span class="dot"></span> Active</span>'
+                : '<span class="status-pill status-pill-suspended"><span class="dot"></span> Archived</span>';
+        }
+
+        openDrawer('editCourseDrawer');
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // Confirm Archive / Restore Course
+    function confirmToggleArchive(id, title, isCurrentlyActive) {
+        const actionVerb = isCurrentlyActive ? 'Archive' : 'Restore';
+        const impactList = isCurrentlyActive ? [
+            'Hides this course from student discovery and self-enrollment',
+            'Preserves existing student grades, assignments, and historical logs',
+            'Can be restored back to Active status at any time'
+        ] : [
+            'Restores active enrollment and discovery for students',
+            'Enables live video session scheduling for the assigned instructor'
+        ];
+
+        EdumiConfirm.show({
+            title: `${actionVerb} Course: ${title}`,
+            description: `Are you sure you want to ${actionVerb.toLowerCase()} this course?`,
+            impact: impactList,
+            variant: isCurrentlyActive ? 'danger' : 'primary',
+            confirmText: `${actionVerb} Course`
+        }).then(ok => {
+            if (!ok) return;
+            const form = document.getElementById('toggleArchiveForm');
+            form.action = `/admin/classrooms/${id}/toggle-active/`;
+            form.submit();
+        });
     }
 
     // Dropdown Logic
@@ -221,23 +624,81 @@
         }
     });
 
-    // Checkbox Logic
-    const cardCheckboxes = document.querySelectorAll('.card-checkbox');
-    const bulkActionsBar = document.getElementById('bulkActionsBar');
-    const selectedCountEl = document.getElementById('selectedCount');
-
+    // Checkbox and Bulk Actions Logic
     function updateBulkActions() {
-        if (!bulkActionsBar) return;
-        const count = document.querySelectorAll('.card-checkbox:checked').length;
+        const selected = document.querySelectorAll('.card-checkbox:checked');
+        const count = selected.length;
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const countEl = document.getElementById('selectedCount');
+
         if (count > 0) {
-            bulkActionsBar.style.display = 'flex';
-            selectedCountEl.textContent = count;
+            if (bulkBar) bulkBar.style.display = 'flex';
+            if (countEl) countEl.textContent = count;
         } else {
-            bulkActionsBar.style.display = 'none';
+            if (bulkBar) bulkBar.style.display = 'none';
         }
     }
-    cardCheckboxes.forEach(cb => {
+
+    function toggleSelectAll(masterCb) {
+        document.querySelectorAll('.card-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+        updateBulkActions();
+    }
+
+    document.querySelectorAll('.card-checkbox').forEach(cb => {
         cb.addEventListener('change', updateBulkActions);
+    });
+
+    function confirmBulkArchive() {
+        const selected = Array.from(document.querySelectorAll('.card-checkbox:checked')).map(cb => cb.value);
+        if (!selected.length) return;
+
+        EdumiConfirm.show({
+            title: `Archive ${selected.length} Selected Courses`,
+            description: `Are you sure you want to archive ${selected.length} courses?`,
+            impact: [
+                'Selected courses will be hidden from student catalog',
+                'Existing student records, deliverables, and submissions will remain intact'
+            ],
+            variant: 'danger',
+            confirmText: 'Archive Selected'
+        }).then(ok => {
+            if (ok) submitBulkCourses('{% url 'admin_bulk_archive_classrooms' %}');
+        });
+    }
+
+    function submitBulkCourses(actionUrl) {
+        const selected = Array.from(document.querySelectorAll('.card-checkbox:checked')).map(cb => cb.value);
+        if (!selected.length) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = actionUrl;
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+
+        selected.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'classroom_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Auto-open modal if URL contains action parameters
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'new' || window.location.hash === '#addCourse') {
+            openModal('addCourseModal');
+        }
     });
 </script>
 {% endblock %}

@@ -220,13 +220,11 @@
                                 <button type="button" class="ve-card-quick-add" title="Add to timeline">
                                     <i data-lucide="plus" style="width:14px;height:14px;"></i>
                                 </button>
-                                <span class="ve-grid-duration-badge">{{ project.display_duration|default:"0:00"
-                                    }}</span>
+                                <span class="ve-grid-duration-badge">{{ project.display_duration|default:"0:00" }}</span>
                                 <div class="ve-grid-type-tag">Original Video</div>
                             </div>
                             <div class="ve-grid-footer">
-                                <span class="ve-grid-title" title="{{ project.display_title }}">{{ project.display_title
-                                    }}</span>
+                                <span class="ve-grid-title" title="{{ project.display_title }}">{{ project.display_title }}</span>
                             </div>
                             <button type="button" class="ve-grid-menu-btn" title="Options">
                                 <i data-lucide="more-horizontal" style="width:14px;height:14px;"></i>
@@ -258,8 +256,7 @@
                                 <button type="button" class="ve-card-quick-add" title="Add to timeline">
                                     <i data-lucide="plus" style="width:14px;height:14px;"></i>
                                 </button>
-                                <span class="ve-grid-duration-badge">{{ project.display_duration|default:"0:00"
-                                    }}</span>
+                                <span class="ve-grid-duration-badge">{{ project.display_duration|default:"0:00" }}</span>
                                 <div class="ve-grid-type-tag audio">Original Audio</div>
                             </div>
                             <div class="ve-grid-footer">
@@ -307,8 +304,7 @@
                                 </button>
                             </div>
                             <div class="ve-grid-footer">
-                                <span class="ve-grid-title" title="{{ asset.display_title }}">{{ asset.display_title
-                                    }}</span>
+                                <span class="ve-grid-title" title="{{ asset.display_title }}">{{ asset.display_title }}</span>
                             </div>
                             <button type="button" class="ve-grid-menu-btn" title="Options">
                                 <i data-lucide="more-horizontal" style="width:14px;height:14px;"></i>
@@ -429,8 +425,7 @@
                             style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
                             {% csrf_token %}
                             <div class="ve-field">
-                                <label for="id_text" style="font-size: 11px; font-weight: 600;">{{ text_form.text.label
-                                    }}</label>
+                                <label for="id_text" style="font-size: 11px; font-weight: 600;">{{ text_form.text.label }}</label>
                                 {{ text_form.text }}
                             </div>
                             <div class="ve-field-row" style="display: flex; gap: 8px;">
@@ -698,12 +693,10 @@
                             <div
                                 style="display: flex; gap: 10px; align-items: flex-start; min-width: 0; flex-wrap: wrap;">
                                 <span class="history-op-badge"
-                                    style="background: var(--ve-primary); color: white; padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 6px; text-transform: uppercase; white-space: nowrap;">{{
-                                    op.get_operation_type_display }}</span>
+                                    style="background: var(--ve-primary); color: white; padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 6px; text-transform: uppercase; white-space: nowrap;">{{ op.get_operation_type_display }}</span>
                             </div>
                             <span class="history-time"
-                                style="font-size: 12px; color: var(--ve-text-muted); white-space: nowrap;">{{
-                                op.created_at|timesince }} ago</span>
+                                style="font-size: 12px; color: var(--ve-text-muted); white-space: nowrap;">{{ op.created_at|timesince }} ago</span>
                         </div>
                         <!-- Row 2: description -->
                         {% if op.description %}

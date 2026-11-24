@@ -10,11 +10,7 @@
 {% block content %}
 <div class="admin-container">
     <!-- Breadcrumb Bar -->
-    <div class="admin-breadcrumbs">
-        <a href="{% url 'admin_panel' %}">Home</a>
-        <span class="separator">/</span>
-        <span class="current">Teacher Roster</span>
-    </div>
+    {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
     <!-- Header Section -->
     <div class="admin-header">
@@ -42,12 +38,10 @@
     <!-- Search + Filter bar -->
     <div class="admin-card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
         <form method="GET" action="" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            <div style="position: relative; flex: 1; min-width: 220px;">
-                <i data-lucide="search"
-                    style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-text-muted);"></i>
+            <div class="admin-search-wrapper">
+                <i data-lucide="search"></i>
                 <input type="text" name="q" value="{{ search_query|default:'' }}"
-                    placeholder="Search name, email, department..." class="filter-input"
-                    style="padding-left: 2.5rem; width: 100%;">
+                    placeholder="Search name, email, department..." class="admin-search-input">
             </div>
             {% if departments %}
             <select name="dept" class="filter-input" style="min-width: 180px;">
@@ -74,11 +68,11 @@
         </div>
         <div style="display: flex; gap: 0.5rem;">
             <button type="button" class="btn-action-sm btn-action-secondary"
-                onclick="alert('Bulk export selected teachers. (Backend logic required)')">
+                onclick="submitBulkTeachers('{% url 'admin_export_users_csv' %}')">
                 <i data-lucide="download"></i> Export Selected
             </button>
             <button type="button" class="btn-action-sm btn-action-danger"
-                onclick="alert('Bulk suspend selected teachers. (Backend logic required)')">
+                onclick="EdumiConfirm.show({title: 'Suspend Selected Teachers', description: 'Suspend access for all selected faculty accounts?', impact: ['Immediate revocation of classroom hosting permissions', 'Account sessions invalidated', 'Grades and course histories preserved'], variant: 'danger', confirmText: 'Suspend Selected'}).then(ok => { if(ok) submitBulkTeachers('{% url 'admin_bulk_users_status' %}', 'suspend'); });">
                 <i data-lucide="user-x"></i> Suspend Selected
             </button>
         </div>
@@ -114,11 +108,15 @@
                                 <a href="{% url 'admin_edit_user' t.user.id %}" class="admin-dropdown-item"><i
                                         data-lucide="edit-3"></i> Edit Account</a>
                                 <form method="POST" action="{% url 'admin_toggle_user_active' t.user.id %}"
-                                    data-turbo="false" style="margin:0;"
-                                    onsubmit="return confirm('Change status for this teacher?');">
+                                    data-turbo="false" style="margin:0;" data-loading data-loading-message="Updating teacher status...">
                                     {% csrf_token %}
                                     <button type="submit"
-                                        class="admin-dropdown-item {% if t.user.is_active %}danger{% endif %}">
+                                        class="admin-dropdown-item {% if t.user.is_active %}danger{% endif %}"
+                                        data-confirm="Change active status for teacher @{{ t.user.username }}?"
+                                        data-confirm-title="{% if t.user.is_active %}Suspend Faculty Member{% else %}Activate Faculty Member{% endif %}"
+                                        data-confirm-desc="{% if t.user.is_active %}Suspending this faculty account immediately pauses their live virtual classroom broadcasting abilities.{% else %}Activating restores full instructor teaching privileges.{% endif %}"
+                                        data-confirm-variant="{% if t.user.is_active %}danger{% else %}primary{% endif %}"
+                                        data-confirm-text="{% if t.user.is_active %}Suspend Teacher{% else %}Activate Teacher{% endif %}">
                                         {% if t.user.is_active %}<i data-lucide="user-x"></i> Suspend{% else %}<i
                                             data-lucide="user-check"></i> Activate{% endif %}
                                     </button>
@@ -151,7 +149,7 @@
             <div style="display: flex; gap: 0.5rem;">
                 <a href="{% url 'admin_teacher_detail' t.user.id %}" class="btn-action-sm btn-action-primary"
                     style="flex: 1; justify-content: center;">
-                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> View Dossier
+                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i> View Profile
                 </a>
                 <a href="{% url 'admin_edit_user' t.user.id %}" class="btn-action-sm btn-action-secondary"
                     style="padding: 0.5rem 0.75rem;">
@@ -161,13 +159,14 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj %}
+        {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+    {% endif %}
     {% else %}
     <div class="admin-card">
-        <div class="empty-state">
-            <div class="empty-icon"><i data-lucide="user-x"></i></div>
-            <h3>No Teachers Registered</h3>
-            <p>There are currently no active teacher profiles in the system.</p>
-        </div>
+        {% include "components/admin/empty_state.html" with icon="user-x" title="No Teachers Registered" description="There are currently no active teacher profiles in the system." cta_text="Add Faculty Member" cta_icon="user-plus" cta_modal="addTeacherModal" %}
     </div>
     {% endif %}
 </div>
@@ -204,5 +203,38 @@
     cardCheckboxes.forEach(cb => {
         cb.addEventListener('change', updateBulkActions);
     });
+
+    function submitBulkTeachers(actionUrl, actionType) {
+        const selected = Array.from(document.querySelectorAll('.card-checkbox:checked')).map(cb => cb.value);
+        if (!selected.length) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = actionUrl;
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+
+        if (actionType) {
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'status_action';
+            actionInput.value = actionType;
+            form.appendChild(actionInput);
+        }
+
+        selected.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'user_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
 </script>
 {% endblock %}

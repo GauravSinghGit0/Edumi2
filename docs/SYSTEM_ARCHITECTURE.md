@@ -14,7 +14,7 @@
 2. [Global 5-Tier System Architecture](#2-global-5-tier-system-architecture)
 3. [Network & Communications Topology](#3-network--communications-topology)
 4. [Subsystem Deep-Dive & Modular Architecture (All 10 Modules)](#4-subsystem-deep-dive--modular-architecture-all-10-modules)
-   - 4.1 [Core ASGI Routing, Gateway & Middleware (`school_project/`)](#41-core-asgi-routing-gateway--middleware-school_project)
+   - 4.1 [Core ASGI Routing, Gateway & Middleware (`edumi_core/`)](#41-core-asgi-routing-gateway--middleware-edumi_core)
    - 4.2 [Identity, Authentication & RBAC Lifecycle (`accounts/`)](#42-identity-authentication--rbac-lifecycle-accounts)
    - 4.3 [Real-Time WebRTC Virtual Classrooms (`meetings/`)](#43-real-time-webrtc-virtual-classrooms-meetings)
    - 4.4 [AI Facial Biometrics & Engagement Telemetry (`attendance/`)](#44-ai-facial-biometrics--engagement-telemetry-attendance)
@@ -24,6 +24,7 @@
    - 4.8 [Academic LMS & Anti-Cheating Surveillance (`assignments/`)](#48-academic-lms--anti-cheating-surveillance-assignments)
    - 4.9 [On-Premise AI Knowledge Base & RAG Workspace (`rag_workspace/`)](#49-on-premise-ai-knowledge-base--rag-workspace-rag_workspace)
    - 4.10 [Unified Compression Engine & Transcoding Pipeline (`common/`)](#410-unified-compression-engine--transcoding-pipeline-common)
+   - 4.11 [Administrative Governance, Audit & Telemetry Control Center (`accounts/`, `common/`)](#411-administrative-governance-audit--telemetry-control-center-accounts-common)
 5. [Data Architecture & Dual-Database Resilience](#5-data-architecture--dual-database-resilience)
 6. [System-Wide Entity-Relationship Architecture (55 Models)](#6-system-wide-entity-relationship-architecture-55-models)
 7. [End-to-End System Data Flows & Sequence Diagrams](#7-end-to-end-system-data-flows--sequence-diagrams)
@@ -232,36 +233,36 @@ The network architecture is explicitly optimized for asymmetric network conditio
 
 ---
 
-## 4. Subsystem Deep-Dive & Modular Architecture (All 10 Modules)
+## 4. Subsystem Deep-Dive & Modular Architecture (All 11 Modules)
 
-EduMi consists of **10 specialized modular Django applications**, comprising **55 database models** and **552 registered URL patterns**.
+EduMi consists of **11 specialized modular subsystems**, comprising **59 database models** and **560+ registered URL patterns**.
 
 ```
 Edumi2/
-├── school_project/    # Core Configuration, ASGI Routing, Middleware Stack
-├── accounts/          # Identity Access Management, RBAC, WebP Avatars, OTP
+├── edumi_core/        # Core Configuration, ASGI Routing, Middleware Stack
+├── accounts/          # Identity Access Management, Granular RBAC, WebP Avatars, OTP
 ├── meetings/          # LiveKit WebRTC Virtual Classrooms, Host Controls, Chat
 ├── attendance/        # YuNet + SFace Biometric Attendance, Anti-Spoofing, Analytics
 ├── cameras/           # Campus RTSP Surveillance, Headless H.265 Recording Engine
-├── streaming_service/    # Standalone Waitress WSGI OpenCV & Headcount Microservice
+├── streaming_service/ # Standalone Waitress WSGI OpenCV & Headcount Microservice
 ├── mobile_cameras/    # Smartphone IP Webcam & DroidCam Camera Pairing
 ├── video_editing/     # In-Browser Multi-Track Timeline Video Editor & FFmpeg NLE
 ├── videos/            # Progressive Streaming Video Lecture Catalog (HTTP 206)
 ├── assignments/       # Coursework LMS, Magic-Byte Inspection, Anti-Cheating Quizzes
 ├── rag_workspace/     # Local Vector Embeddings & Grounded Syllabus RAG Workspace
-└── common/            # Compression Service, 1MB Media Streamer, Cryptography, Telemetry
+└── common/            # Compression Service, SiteSetting, AdminRole, AdminAuditTrail, Telemetry
 ```
 
 ---
 
-### 4.1 Core ASGI Routing, Gateway & Middleware (`school_project/`)
+### 4.1 Core ASGI Routing, Gateway & Middleware (`edumi_core/`)
 
-The `school_project` package serves as the system nucleus, configuring asynchronous protocol routing, resilient database drivers, and security middleware:
+The `edumi_core` package serves as the system nucleus, configuring asynchronous protocol routing, resilient database drivers, and security middleware:
 
 ```mermaid
 flowchart TD
     Req[Incoming Ingress Connection] --> ProtoCheck{"Protocol Type?"}
-    ProtoCheck -->|HTTP / HTTPS| HttpHandler["Django ASGI HTTP Handler<br/>school_project.wsgi.application"]
+    ProtoCheck -->|HTTP / HTTPS| HttpHandler["Django ASGI HTTP Handler<br/>edumi_core.wsgi.application"]
     ProtoCheck -->|WebSocket WS / WSS| WsHandler["Django Channels URLRouter<br/>accounts & meetings consumers"]
 
     HttpHandler --> MW1["SecurityMiddleware (HSTS, SSL, X-Frame)"]
@@ -275,7 +276,7 @@ flowchart TD
 
 #### Key Capabilities & Architecture:
 - **Asynchronous Protocol Router (`asgi.py`):** Uses Channels' `ProtocolTypeRouter` to split incoming connections: standard HTTP requests are handed to the core Django ASGI application, while `websocket` connections are routed through `AuthMiddlewareStack` into modular URL routing trees.
-- **Resilient Middleware Pipeline (`school_project/middleware.py`):**
+- **Resilient Middleware Pipeline (`edumi_core/middleware.py`):**
   - `DatabaseErrorMiddleware`: Traps `OperationalError: database is locked` exceptions during SQLite fallback mode, returning automated HTTP 503 retry responses instead of unhandled 500 crashes.
   - `CentralizedIdentityMiddleware`: Attaches normalized identity objects to `request.identity`, computing user roles, permissions, active classrooms, and biometric registration statuses in a single query.
   - `SystemPerformanceLoggingMiddleware`: Monitors resident memory consumption, request execution time, and client IP addresses, outputting anomalies to `logs/performance.log`.
@@ -638,9 +639,43 @@ flowchart TD
 
 ---
 
+### 4.11 Administrative Governance, Audit & Telemetry Control Center (`accounts/`, `common/`)
+
+The administrative subsystem unifies institutional operations under a hardened, granularly authorized governance suite:
+
+```mermaid
+flowchart TD
+    subgraph Governance_Pipeline ["Administrative Control & Observability"]
+        CmdPalette["Global Command Palette (Ctrl+K)<br/>Instant Keyboard Nav across Actions, Users, Courses, Meetings"]
+        
+        CmdPalette --> PermGate{"@admin_permission_required(perm)<br/>Inspects AdminRole 7-Flag Matrix"}
+        PermGate -->|Denied (403)| ShieldPage["Render 403.html Security Shield<br/>OR JSON 403 for Fetch API"]
+        PermGate -->|Allowed (200)| ExecAction["Execute Action View"]
+        
+        ExecAction --> AuditLog["Append-Only AdminAuditTrail<br/>Log Timestamp, User, Action, Target, IP & Diff JSON"]
+        AuditLog --> DiffDrawer["Slide-Out Diffs Drawer<br/>Side-by-Side Visual Before & After"]
+        
+        ExecAction --> SysHealth["System Health Telemetry Engine<br/>common/system_health.py (15s TTL, 5s Timeouts)"]
+        SysHealth --> LiveTelemetry["Probe LiveKit, Redis, Celery, DB & Disk Allocation"]
+    end
+```
+
+#### Key Capabilities & Architecture:
+- **Universal Command Palette (`Ctrl+K`):** Spotlight-style modal providing debounced autocomplete across user profiles, course catalogs, live sessions, and admin workflows (Add User, Import CSV, Schedule Session, System Health, Reports).
+- **Granular 7-Flag Role-Based Access Control (`AdminRole`):** Deconstructs binary superuser checks into modular boolean capabilities (`manage_users`, `manage_courses`, `manage_sessions`, `view_audit`, `manage_settings`, `manage_cameras`, `export_data`). Seeded with *Super Admin*, *Academic Admin*, *Attendance Auditor*, and *IT Admin*.
+- **Immutable Security Audit Trail (`AdminAuditTrail`):** Tamper-proof governance ledger recording all administrative updates with before-and-after attribute diffs. Evaluators and auditors can inspect exact changes via a visual side-by-side JSON comparison drawer.
+- **Asynchronous Bulk User Onboarding:** 3-step CSV wizard with client/server validation, dry-run previews, background creation via Celery, and error-annotated CSV exports.
+- **Microservice Probing & Storage Telemetry (`common/system_health.py`):** Live telemetry checking LiveKit SFU port 7880, Redis latency, Celery worker concurrency, database ping, and disk usage split across recordings, uploads, and biometric assets. Built with 5-second socket timeouts and 15-second caching to prevent worker starvation.
+- **Dynamic Institutional Reporting (`report_services.py`):** Aggregates cross-app data for Attendance, Engagement, and Course Performance, generating downloadable CSV spreadsheets and styled ReportLab PDF reports (with defensive fallback).
+- **High-Performance User Directory Architecture ("Paginate First, Enrich Second"):** Solves $O(N)$ query storms by filtering and paginating database records *first* before running expensive metric computations. Bio-metrics, attendance %, and enrollment tallies are computed exclusively for the 10 displayed records on the active page.
+- **Sub-Millisecond Client-Side Tab Pre-Rendering & Caching:** Front-end maintains an in-memory `Map` (`tabCache`), delivering instant **< 1ms** tab transitions without repeating HTTP round-trips. Back-end tab counter pills are cached for 60 seconds with automatic invalidation upon user mutations.
+- **Unified Enterprise Breadcrumbs & Standardized Typography:** Centralized `templates/components/admin/breadcrumbs.html` component with Lucide chevron dividers, combined with ergonomic 22px heading typography and compact card padding (`16px 20px`) for zero visual clipping.
+
+---
+
 ## 5. Data Architecture & Dual-Database Resilience
 
-EduMi implements a self-healing, zero-downtime database failover architecture configured in [`school_project/settings.py`](file:///d:/Edumi2/school_project/settings.py):
+EduMi implements a self-healing, zero-downtime database failover architecture configured in [`edumi_core/settings.py`](file:///d:/Edumi2/edumi_core/settings.py):
 
 ```mermaid
 flowchart TD

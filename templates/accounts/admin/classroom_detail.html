@@ -11,13 +11,7 @@
 <div class="admin-container">
 
   <!-- Breadcrumbs Bar -->
-  <div class="admin-breadcrumbs">
-    <a href="{% url 'admin_panel' %}">Home</a>
-    <span class="separator">/</span>
-    <a href="{% url 'admin_all_classrooms' %}">Classrooms</a>
-    <span class="separator">/</span>
-    <span class="current">{{ classroom.title }}</span>
-  </div>
+  {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
   <!-- Hero Header Dossier Banner -->
   <div class="profile-hero">
@@ -133,13 +127,27 @@
                   <div style="display:flex;gap:.4rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
                     <a href="{% url 'admin_user_detail' m.student.id %}" class="btn-action-sm btn-action-secondary">360 →</a>
                     {% if m.status == 'pending' %}
-                    <form method="POST" action="{% url 'admin_approve_student' classroom.id m.student.id %}" style="display:inline;" onsubmit="return confirm('Approve this student?');">
+                    <form method="POST" action="{% url 'admin_approve_student' classroom.id m.student.id %}" style="display:inline;" data-loading data-loading-message="Approving student...">
                       {% csrf_token %}
-                      <button type="submit" class="btn-action-sm btn-action-success"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button>
+                      <button type="submit" class="btn-action-sm btn-action-success"
+                              data-confirm="Approve enrollment for {{ m.student.get_full_name|default:m.student.username }}?"
+                              data-confirm-title="Approve Enrollment"
+                              data-confirm-desc="This will grant the student immediate access to all classroom courseware and live sessions."
+                              data-confirm-variant="primary"
+                              data-confirm-text="Approve Student">
+                        <i data-lucide="check" style="width:12px;height:12px;"></i> Approve
+                      </button>
                     </form>
-                    <form method="POST" action="{% url 'admin_reject_student' classroom.id m.student.id %}" style="display:inline;" onsubmit="return confirm('Reject this student?');">
+                    <form method="POST" action="{% url 'admin_reject_student' classroom.id m.student.id %}" style="display:inline;" data-loading data-loading-message="Rejecting student...">
                       {% csrf_token %}
-                      <button type="submit" class="btn-action-sm btn-action-danger"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button>
+                      <button type="submit" class="btn-action-sm btn-action-danger"
+                              data-confirm="Reject enrollment application for {{ m.student.get_full_name|default:m.student.username }}?"
+                              data-confirm-title="Reject Enrollment"
+                              data-confirm-desc="This application will be rejected and the student will not be granted access."
+                              data-confirm-variant="danger"
+                              data-confirm-text="Reject Student">
+                        <i data-lucide="x" style="width:12px;height:12px;"></i> Reject
+                      </button>
                     </form>
                     {% endif %}
                   </div>

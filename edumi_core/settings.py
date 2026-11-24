@@ -222,6 +222,8 @@ TEMPLATES = [
                 'accounts.context_processors.timestamp',
                 'accounts.context_processors.face_registered',
                 'accounts.context_processors.user_identity',
+                'accounts.context_processors.admin_approvals_context',
+                'accounts.context_processors.admin_permissions_context',
             ],
         },
     },

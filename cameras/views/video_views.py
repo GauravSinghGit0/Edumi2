@@ -312,13 +312,13 @@ def camera_chunked_upload(request):
 @login_required
 def recordings_folder(request):
     """View to show recordings organized in a folder-like structure with date subfolders"""
+    # Redirect admins to unified Media Library
+    if request.user.is_superuser or (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin'):
+        return redirect('admin_content_manager')
+
     from django.utils.text import slugify
 
-    if request.user.is_superuser:
-        # Only show recordings that actually have a file
-        recordings = CameraRecording.objects.exclude(video_file='').order_by('-created_at')
-    else:
-        recordings = CameraRecording.objects.filter(teacher=request.user).exclude(video_file='').order_by('-created_at')
+    recordings = CameraRecording.objects.filter(teacher=request.user).exclude(video_file='').order_by('-created_at')
 
     # Group by camera, then by date
     from collections import defaultdict
@@ -365,14 +365,38 @@ def manage_recordings(request):
 
 @login_required
 def toggle_recording_publish(request, recording_id):
-    """Toggle the published status of a recording"""
+    """Toggle the published status of a recording with audit logging"""
     recording = get_object_or_404(CameraRecording, id=recording_id)
 
-    if not (request.user.is_superuser or recording.teacher == request.user):
+    is_adm = (
+        request.user.is_superuser or
+        (hasattr(request.user, 'userprofile') and request.user.userprofile.user_type == 'admin')
+    )
+
+    if not (is_adm or recording.teacher == request.user):
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
+    old_status = recording.is_published
     recording.is_published = not recording.is_published
-    recording.save()
+    recording.save(update_fields=['is_published'])
+
+    if is_adm:
+        try:
+            from common.activity import log_admin_action
+            from common.models import AdminAuditTrail
+            log_admin_action(
+                request,
+                action_type=AdminAuditTrail.ACTION_SETTINGS_CHANGED,
+                target=recording,
+                changes={
+                    'is_published': {
+                        'before': old_status,
+                        'after': recording.is_published
+                    }
+                }
+            )
+        except Exception as exc:
+            logger.warning(f"Audit log failed for toggle publish: {exc}")
 
     return JsonResponse({
         'status': 'success',

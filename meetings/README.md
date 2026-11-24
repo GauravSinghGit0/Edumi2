@@ -1,12 +1,30 @@
-# 🤝 Meetings Module & Virtual Classrooms
+# 🤝 Meetings Module & Live Virtual Classrooms
 
 <details open>
 <summary><b>1. Core Purpose</b></summary>
-The `meetings` app orchestrates virtual classrooms, scheduling, and live WebRTC interactions for EduMi. It serves as the enterprise bridge between the Django application and the on-premise LiveKit media server, offering sub-second audio/video conferencing, host classroom controls, synchronized in-meeting quizzes, and automated session attendance.
+The `meetings` app orchestrates virtual classrooms, live sessions, scheduling, and real-time WebRTC interactions for EduMi. It serves as the enterprise bridge between the Django application and the on-premise LiveKit media server, offering sub-second audio/video conferencing, host classroom controls, synchronized in-meeting quizzes, and automated session attendance.
 </details>
 
 <details open>
-<summary><b>2. WebRTC Adaptive Simulcast Architecture (3-Layer SVC)</b></summary>
+<summary><b>2. Live Sessions Hub & Live Monitoring Control Room</b></summary>
+
+### 1. Unified Live Sessions Hub (`/admin/meetings/`)
+- **Three Organized Tabs**:
+  - *Live now*: Actively broadcasting WebRTC rooms with live participant counts and pulsing broadcast indicators.
+  - *Upcoming*: Scheduled curriculum classes and conferences.
+  - *Past*: Completed sessions with recorded duration, participant reach, and overall attendance %.
+- **Session Attendance Rosters**:
+  - Inspect exact student arrival and departure times, stayed duration, and face-verification biometric confidence scores.
+  - 1-Click **Export Attendance CSV** for institutional recordkeeping and compliance auditing.
+
+### 2. Live Monitor Control Room (`/admin/live-monitor/`)
+- Interfaces directly with the LiveKit SFU to track all currently live rooms.
+- Displays live participant headcounts, host instructors, and room start times.
+- **Emergency Force-End Action**: Administrators can force-terminate rogue or over-running sessions with an `EdumiConfirm` impact summary modal; immediately dispatches room close signals and logs the termination in `AdminAuditTrail`.
+</details>
+
+<details open>
+<summary><b>3. WebRTC Adaptive Simulcast Architecture (3-Layer SVC)</b></summary>
 
 ### LiveKit Multi-Layer Simulcast
 Configured in `meeting_room.html` via `EduMiCompressionService.get_livekit_simulcast_config()`:
@@ -18,7 +36,7 @@ LiveKit SFU dynamically switches spatial layers per subscriber based on individu
 </details>
 
 <details open>
-<summary><b>3. Rationale, Port Architecture & Security</b></summary>
+<summary><b>4. Rationale, Port Architecture & Security</b></summary>
 
 ### Selective Forwarding Unit (SFU) vs. Mesh
 Unlike peer-to-peer mesh networks that require $O(N)$ upload streams per client, the LiveKit SFU accepts a single stream per participant ($O(1)$ client upload) and routes media packets directly to subscribers without re-encoding:
@@ -33,7 +51,7 @@ Unlike peer-to-peer mesh networks that require $O(N)$ upload streams per client,
 </details>
 
 <details>
-<summary><b>4. Usage Instructions</b></summary>
+<summary><b>5. Usage Instructions</b></summary>
 
 - **Scheduling:** Teachers create `Classroom` instances with specific start/end times and recurring schedules.
 - **Starting Lectures:** Teachers click "Start Class" which generates an active `Meeting` instance.
@@ -43,7 +61,7 @@ Unlike peer-to-peer mesh networks that require $O(N)$ upload streams per client,
 </details>
 
 <details>
-<summary><b>5. System Integrations</b></summary>
+<summary><b>6. System Integrations</b></summary>
 
 - **LiveKit Server:** Communicates via REST APIs (`livekit_api_client.py`) and WebSocket proxying (`livekit_ws_proxy.py`) to manage rooms, tokens, and kicks.
 - **Accounts App:** Verifies roles and permissions before allowing meeting creation or joins.
@@ -53,7 +71,7 @@ Unlike peer-to-peer mesh networks that require $O(N)$ upload streams per client,
 </details>
 
 <details>
-<summary><b>6. Key Files Breakdown</b></summary>
+<summary><b>7. Key Files Breakdown</b></summary>
 
 - `models.py`: Defines `Classroom`, `ClassroomMembership`, `Meeting`, `MeetingParticipant`, `MeetingChat`, and `MeetingAttendanceLog`.
 - `livekit_api_client.py`: Clean HTTP API client for LiveKit room management, dispatching participant commands, and token issuance.

@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Edumi - Educational Management System</title>
+    <title>{% block page_title %}{% block title %}Edumi - Educational Management System{% endblock %}{% endblock %}</title>
     {% load static %}
     <link rel="icon" href="{% static 'images/favicon.svg' %}" type="image/svg+xml">
     {% load compress %}
@@ -243,15 +243,22 @@
             <div class="content-area">
                 {% if messages %}
                 <script>
-                    document.addEventListener('DOMContentLoaded', () => {
-                        {% for message in messages %}
-                            showToast(
-                                "{% if message.tags == 'error' %}Error{% elif message.tags == 'success' %}Success{% elif message.tags == 'warning' %}Warning{% else %}Notice{% endif %}",
-                                "{{ message|escapejs }}",
-                                "{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}"
-                            );
-                        {% endfor %}
-                    });
+                    (function() {
+                        function renderMessages() {
+                            {% for message in messages %}
+                                showToast(
+                                    "{% if message.tags == 'error' %}Error{% elif message.tags == 'success' %}Success{% elif message.tags == 'warning' %}Warning{% else %}Notice{% endif %}",
+                                    "{{ message|escapejs }}",
+                                    "{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}"
+                                );
+                            {% endfor %}
+                        }
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', renderMessages, { once: true });
+                        } else {
+                            renderMessages();
+                        }
+                    })();
                 </script>
                 {% endif %}
 
@@ -260,6 +267,7 @@
 
 
             {% include 'partials/welcome_popup.html' %}
+            {% include 'components/admin/confirm_modal.html' %}
         </main>
     </div>
 
@@ -933,6 +941,7 @@
     <script src="{% static 'js/telemetry.js' %}"></script>
     {% block extra_js %}{% endblock %}
     {% include 'components/reusable_popup.html' %}
+    {% include 'components/admin/command_palette.html' %}
     {% include 'components/lucide_icons.html' %}
 </body>
 

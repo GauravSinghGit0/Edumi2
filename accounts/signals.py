@@ -104,7 +104,7 @@ def on_user_saved(sender, instance, created, **kwargs):
     transaction.on_commit(lambda: _broadcast_identity_change(user_id))
 
 
-from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 
 @receiver(user_logged_in)
 def on_user_logged_in(sender, request, user, **kwargs):
@@ -125,6 +125,23 @@ def on_user_logged_out(sender, request, user, **kwargs):
             log_lms_activity(user, ACTION_LOGOUT, title=f"User @{user.username} logged out of LMS", request=request)
     except Exception as e:
         logger.warning(f"Error logging logout activity: {e}")
+
+
+@receiver(user_login_failed)
+def on_user_login_failed(sender, credentials, request, **kwargs):
+    """Handler for failed user authentication attempts."""
+    try:
+        from common.activity import log_lms_activity
+        attempted_user = (credentials or {}).get('username') or (credentials or {}).get('email') or 'unknown'
+        log_lms_activity(
+            None,
+            'LOGIN_FAILED',
+            title=f"Failed login attempt for '{attempted_user}'",
+            metadata={'attempted_username': attempted_user, 'status': 'failed'},
+            request=request
+        )
+    except Exception as e:
+        logger.warning(f"Error logging failed login attempt: {e}")
 
 
 @receiver(post_save, sender=UserProfile)

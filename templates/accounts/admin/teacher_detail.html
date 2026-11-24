@@ -11,13 +11,7 @@
 <div class="admin-container">
 
   <!-- Breadcrumbs Bar -->
-  <div class="admin-breadcrumbs">
-    <a href="{% url 'admin_panel' %}">Home</a>
-    <span class="separator">/</span>
-    <a href="{% url 'admin_all_teachers' %}">Teacher Roster</a>
-    <span class="separator">/</span>
-    <span class="current">{{ teacher.get_full_name|default:teacher.username }}</span>
-  </div>
+  {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
   <!-- Profile Hero -->
   <div class="profile-hero">

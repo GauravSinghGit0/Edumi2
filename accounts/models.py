@@ -16,6 +16,14 @@ class UserProfile(SoftDeleteMixin, models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, db_index=True)
+    admin_role = models.ForeignKey(
+        'common.AdminRole',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_profiles',
+        help_text="Granular role assigned to this admin user."
+    )
     
     # Profile Information
     bio = models.TextField(blank=True, null=True)

@@ -1,0 +1,46 @@
+{% extends 'layouts/sidebar_base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
+{% block admin_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    {% block admin_page_header %}
+        {% block breadcrumbs %}
+            {% if breadcrumb_list %}
+                {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
+            {% elif crumbs %}
+                {% include "components/admin/breadcrumbs.html" with crumbs=crumbs %}
+            {% elif page_title or page_heading %}
+                <nav class="admin-breadcrumbs" aria-label="Breadcrumbs">
+                    <a href="{% url 'admin_panel' %}">Home</a>
+                    <i data-lucide="chevron-right" class="separator-icon"></i>
+                    <span class="current">{% block breadcrumb_title %}{{ page_title|default:"Admin Control Center" }}{% endblock %}</span>
+                </nav>
+            {% endif %}
+        {% endblock breadcrumbs %}
+
+        <div class="admin-header">
+            <div class="admin-header-title">
+                <h1>{% block page_heading %}{{ page_title|default:"Admin Control Center" }}{% endblock %}</h1>
+                {% block page_subheading %}
+                    {% if page_subtitle %}
+                        <p class="admin-subtitle">{{ page_subtitle }}</p>
+                    {% endif %}
+                {% endblock %}
+            </div>
+
+            <div class="admin-header-actions">
+                {% block page_actions %}{% endblock %}
+            </div>
+        </div>
+    {% endblock admin_page_header %}
+
+    {% block admin_content %}{% endblock %}
+</div>
+
+{% include "components/admin/confirm_modal.html" %}
+{% endblock content %}

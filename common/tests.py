@@ -197,9 +197,13 @@ class AdminDashboardRegressionTests(TestCase):
 
         User = get_user_model()
         admin = User.objects.create_user(username='admin_create_room', password='superpass123', is_staff=True, is_superuser=True)
-        UserProfile.objects.get_or_create(user=admin, defaults={'user_type': 'admin'})
+        prof_admin, _ = UserProfile.objects.get_or_create(user=admin)
+        prof_admin.user_type = 'admin'
+        prof_admin.save()
         teacher = User.objects.create_user(username='teacher_class_creator', password='teacherpass123')
-        UserProfile.objects.get_or_create(user=teacher, defaults={'user_type': 'teacher'})
+        prof_teacher, _ = UserProfile.objects.get_or_create(user=teacher)
+        prof_teacher.user_type = 'teacher'
+        prof_teacher.save()
 
         self.client.force_login(admin)
         response = self.client.post('/admin/classrooms/create/', {
@@ -421,6 +425,420 @@ class TelemetryAndLoggingTests(TestCase):
         self.client.force_login(admin_user)
         resp2 = self.client.get('/media/face_profiles/student_secret_face.jpg')
         self.assertEqual(resp2.status_code, 404)
+
+
+class AdminAuditTrailSecurityTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from meetings.models import Classroom, ClassroomMembership
+        User = get_user_model()
+
+        self.admin = User.objects.create_superuser(
+            username='security_admin',
+            email='sec_admin@example.com',
+            password='Password123!'
+        )
+        UserProfile.objects.filter(user=self.admin).update(user_type='admin')
+
+        self.teacher = User.objects.create_user(
+            username='audit_prof',
+            email='prof@example.com',
+            password='Password123!',
+            first_name='Audit',
+            last_name='Professor'
+        )
+        UserProfile.objects.filter(user=self.teacher).update(user_type='teacher')
+
+        self.student = User.objects.create_user(
+            username='audit_student',
+            email='student@example.com',
+            password='Password123!',
+            first_name='Audit',
+            last_name='Student'
+        )
+        UserProfile.objects.filter(user=self.student).update(user_type='student')
+
+        self.classroom = Classroom.objects.create(
+            title='Security Audit 101',
+            class_code='SEC-101',
+            teacher=self.teacher,
+            is_active=True
+        )
+
+        self.client.force_login(self.admin)
+
+    def test_immutability_and_append_only(self):
+        """Verify that AdminAuditTrail instances cannot be edited or deleted."""
+        from common.models import AdminAuditTrail
+        from django.core.exceptions import PermissionDenied
+
+        row = AdminAuditTrail.objects.create(
+            admin_user=self.admin,
+            action_type=AdminAuditTrail.ACTION_USER_CREATED,
+            target_type='User',
+            target_id='999',
+            target_label='@test_user',
+            changes_json={'initial': 'data'}
+        )
+        row_id = row.id
+
+        # 1. Direct save() update must raise PermissionDenied
+        row.target_label = '@hacked_user'
+        with self.assertRaises(PermissionDenied):
+            row.save()
+
+        # 2. Direct delete() must raise PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            row.delete()
+
+        # 3. QuerySet bulk update must raise PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            AdminAuditTrail.objects.filter(id=row_id).update(target_label='@mass_hacked')
+
+        # 4. QuerySet bulk delete must raise PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            AdminAuditTrail.objects.filter(id=row_id).delete()
+
+        # Check record unchanged
+        reloaded = AdminAuditTrail.objects.get(id=row_id)
+        self.assertEqual(reloaded.target_label, '@test_user')
+
+    def test_django_admin_permissions_blocked(self):
+        """Verify Admin site blocks add, change, and delete permissions."""
+        from common.models import AdminAuditTrail
+        from common.admin import AdminAuditTrailAdmin
+        from django.contrib.admin.sites import AdminSite
+        from django.test.client import RequestFactory
+
+        site = AdminSite()
+        model_admin = AdminAuditTrailAdmin(AdminAuditTrail, site)
+        rf = RequestFactory()
+        req = rf.get('/admin/common/adminaudittrail/')
+        req.user = self.admin
+
+        self.assertFalse(model_admin.has_add_permission(req))
+        self.assertFalse(model_admin.has_change_permission(req))
+        self.assertFalse(model_admin.has_delete_permission(req))
+
+    def test_user_created_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post('/admin/users/create/', {
+            'username': 'new_candidate_user',
+            'email': 'candidate@test.com',
+            'password': 'Password123!',
+            'first_name': 'Candidate',
+            'last_name': 'One',
+            'user_type': 'student',
+            'department': 'CS'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_USER_CREATED)
+        self.assertEqual(latest.admin_user, self.admin)
+        self.assertEqual(latest.changes_json.get('username'), 'new_candidate_user')
+
+    def test_user_toggle_active_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        # 1. Suspend
+        resp = self.client.post(f'/admin/users/{self.student.id}/toggle-active/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_USER_SUSPENDED)
+        self.assertEqual(latest.target_id, str(self.student.id))
+
+        # 2. Activate
+        resp2 = self.client.post(f'/admin/users/{self.student.id}/toggle-active/')
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 2)
+        latest2 = AdminAuditTrail.objects.first()
+        self.assertEqual(latest2.action_type, AdminAuditTrail.ACTION_USER_ACTIVATED)
+
+    def test_user_edit_and_role_changed_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post(f'/admin/users/{self.student.id}/edit/', {
+            'first_name': 'Renamed',
+            'last_name': 'Student',
+            'user_type': 'teacher'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_ROLE_CHANGED)
+        self.assertEqual(latest.changes_json['user_type']['after'], 'teacher')
+
+    def test_user_deleted_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post(f'/admin/users/{self.student.id}/delete/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_USER_DELETED)
+
+    def test_classroom_created_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post('/admin/classrooms/create/', {
+            'title': 'Operating Systems',
+            'teacher_id': str(self.teacher.id),
+            'class_code': 'OS-202',
+            'description': 'OS Concepts'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_CLASSROOM_CREATED)
+        self.assertEqual(latest.changes_json.get('title'), 'Operating Systems')
+
+    def test_classroom_edit_settings_and_archive_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        # 1. Edit settings
+        resp = self.client.post(f'/admin/classrooms/{self.classroom.id}/edit/', {
+            'title': 'Security Audit 102',
+            'class_code': 'SEC-102',
+            'teacher_id': str(self.teacher.id),
+            'is_active': 'on'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_SETTINGS_CHANGED)
+
+        # 2. Toggle active -> archive
+        resp2 = self.client.post(f'/admin/classrooms/{self.classroom.id}/toggle-active/')
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 2)
+        latest2 = AdminAuditTrail.objects.first()
+        self.assertEqual(latest2.action_type, AdminAuditTrail.ACTION_CLASSROOM_ARCHIVED)
+
+    def test_bulk_archive_classrooms_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post('/admin/classrooms/bulk-archive/', {
+            'classroom_ids': [str(self.classroom.id)]
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_BULK_ACTION)
+        self.assertEqual(latest.changes_json.get('action'), 'bulk_archive')
+
+    def test_bulk_users_status_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post('/admin/users/bulk-status/', {
+            'user_ids': [str(self.student.id)],
+            'status_action': 'suspend'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_BULK_ACTION)
+        self.assertEqual(latest.changes_json.get('action'), 'bulk_suspend')
+
+    def test_schedule_meeting_audit(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp = self.client.post('/admin/meetings/schedule/', {
+            'title': 'Audit Review Session',
+            'teacher_id': str(self.teacher.id),
+            'classroom_id': str(self.classroom.id),
+            'duration_minutes': '45'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_SETTINGS_CHANGED)
+        self.assertEqual(latest.changes_json.get('title'), 'Audit Review Session')
+
+    def test_enrollment_approve_and_reject_audit(self):
+        from common.models import AdminAuditTrail
+        from meetings.models import ClassroomMembership
+        membership = ClassroomMembership.objects.create(
+            classroom=self.classroom,
+            student=self.student,
+            status='pending'
+        )
+        initial_count = AdminAuditTrail.objects.count()
+
+        # Approve
+        resp = self.client.post(f'/admin/classrooms/{self.classroom.id}/approve-student/{self.student.id}/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        latest = AdminAuditTrail.objects.first()
+        self.assertEqual(latest.action_type, AdminAuditTrail.ACTION_ENROLLMENT_APPROVED)
+
+        # Reject
+        membership.status = 'pending'
+        membership.save()
+        resp2 = self.client.post(f'/admin/classrooms/{self.classroom.id}/reject-student/{self.student.id}/')
+        self.assertEqual(resp2.status_code, 302)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 2)
+        latest2 = AdminAuditTrail.objects.first()
+        self.assertEqual(latest2.action_type, AdminAuditTrail.ACTION_ENROLLMENT_REJECTED)
+
+    def test_csv_export_audits(self):
+        from common.models import AdminAuditTrail
+        initial_count = AdminAuditTrail.objects.count()
+
+        resp1 = self.client.get('/admin/export/users/')
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 1)
+        self.assertEqual(AdminAuditTrail.objects.first().action_type, AdminAuditTrail.ACTION_DATA_EXPORTED)
+
+        resp2 = self.client.get('/admin/classrooms/bulk-export/')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(AdminAuditTrail.objects.count(), initial_count + 2)
+        self.assertEqual(AdminAuditTrail.objects.first().action_type, AdminAuditTrail.ACTION_DATA_EXPORTED)
+
+
+class SecurityAndAuditViewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from common.models import AdminAuditTrail, UserActivityLog
+        User = get_user_model()
+        self.admin = User.objects.create_superuser(
+            username='audit_admin',
+            email='audit_admin@example.com',
+            password='testpassword123'
+        )
+        UserProfile.objects.filter(user=self.admin).update(user_type='admin')
+        self.client.force_login(self.admin)
+
+        # Create sample audit trail
+        self.audit_trail = AdminAuditTrail.objects.create(
+            admin_user=self.admin,
+            action_type=AdminAuditTrail.ACTION_USER_CREATED,
+            target_type='User',
+            target_id=999,
+            target_label='test_student_target',
+            ip_address='192.168.1.100',
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            changes_json={'before': {'is_active': False}, 'after': {'is_active': True}}
+        )
+
+        # Create sample user activity log
+        self.login_log = UserActivityLog.objects.create(
+            user=self.admin,
+            username=self.admin.username,
+            event_type='auth',
+            event_name='USER_LOGIN',
+            ip_address='127.0.0.1',
+            user_agent='Mozilla/5.0 (Test)',
+            metadata={'status': 'success'}
+        )
+        self.failed_log = UserActivityLog.objects.create(
+            user=None,
+            username='intruder',
+            event_type='auth',
+            event_name='LOGIN_FAILED',
+            ip_address='10.0.0.1',
+            user_agent='Mozilla/5.0 (Attacker)',
+            metadata={'attempted_username': 'intruder'}
+        )
+
+    def test_security_audit_page_admin_actions_tab(self):
+        resp = self.client.get('/admin/security-audit/?tab=admin_actions')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Security & Audit')
+        self.assertContains(resp, 'Admin Actions')
+        self.assertContains(resp, 'test_student_target')
+        self.assertContains(resp, 'USER_CREATED')
+
+    def test_security_audit_page_login_activity_tab(self):
+        resp = self.client.get('/admin/activity/?tab=login_activity')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Login Activity')
+        self.assertContains(resp, '10.0.0.1')
+        self.assertContains(resp, 'Failed Attempt')
+        self.assertContains(resp, 'intruder')
+
+    def test_security_audit_filters_and_search(self):
+        # Search by target label
+        resp = self.client.get('/admin/activity/?tab=admin_actions&search=test_student_target')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'test_student_target')
+
+        # Filter by action_type matching
+        resp_type = self.client.get('/admin/activity/?tab=admin_actions&action_type=USER_CREATED')
+        self.assertEqual(resp_type.status_code, 200)
+        self.assertContains(resp_type, 'USER_CREATED')
+
+        # Filter by action_type non-matching
+        resp_mismatch = self.client.get('/admin/activity/?tab=admin_actions&action_type=USER_DELETED')
+        self.assertEqual(resp_mismatch.status_code, 200)
+        self.assertNotContains(resp_mismatch, 'test_student_target')
+
+    def test_security_audit_changes_api(self):
+        resp = self.client.get(f'/admin/activity/{self.audit_trail.id}/changes/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data.get('status'), 'success')
+        audit_info = data.get('audit', {})
+        self.assertEqual(audit_info.get('target_label'), 'test_student_target')
+        self.assertIn('before', audit_info.get('changes', {}))
+        self.assertIn('after', audit_info.get('changes', {}))
+
+    def test_security_audit_csv_export_logged(self):
+        from common.models import AdminAuditTrail
+        before_count = AdminAuditTrail.objects.count()
+
+        # Admin Actions export
+        resp = self.client.get('/admin/activity/?tab=admin_actions&export=csv')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv')
+        self.assertIn('attachment; filename="security_audit_admin_actions_', resp['Content-Disposition'])
+        
+        # Verify export was logged
+        after_count = AdminAuditTrail.objects.count()
+        self.assertEqual(after_count, before_count + 1)
+        latest_audit = AdminAuditTrail.objects.first()
+        self.assertEqual(latest_audit.action_type, AdminAuditTrail.ACTION_DATA_EXPORTED)
+        self.assertEqual(latest_audit.target_label, 'AdminAuditTrail')
+
+        # Login Activity export
+        resp2 = self.client.get('/admin/activity/?tab=login_activity&export=csv')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(resp2['Content-Type'], 'text/csv')
+        self.assertIn('attachment; filename="security_audit_logins_', resp2['Content-Disposition'])
+        
+        # Verify second export was also logged
+        self.assertEqual(AdminAuditTrail.objects.count(), after_count + 1)
+        latest_audit2 = AdminAuditTrail.objects.first()
+        self.assertEqual(latest_audit2.action_type, AdminAuditTrail.ACTION_DATA_EXPORTED)
+        self.assertEqual(latest_audit2.target_label, 'UserActivityLog')
+
+    def test_failed_login_signal_records_activity(self):
+        from common.models import UserActivityLog
+        from django.contrib.auth.signals import user_login_failed
+        
+        initial_failed = UserActivityLog.objects.filter(event_name='LOGIN_FAILED').count()
+        # Trigger signal
+        user_login_failed.send(
+            sender=None,
+            credentials={'username': 'test_failed_user'},
+            request=None
+        )
+        self.assertEqual(UserActivityLog.objects.filter(event_name='LOGIN_FAILED').count(), initial_failed + 1)
+
+
 
 
 

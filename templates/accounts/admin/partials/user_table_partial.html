@@ -1,0 +1,397 @@
+{% load static %}
+{% if users_data %}
+
+<!-- Table info bar -->
+<div
+    style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid var(--color-border);flex-wrap:wrap;gap:0.75rem;">
+    <div style="font-size:.82rem;color:var(--color-text-muted);">
+        Showing <strong style="color:var(--color-text-main);">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
+        of <strong style="color:var(--color-text-main);">{{ page_obj.paginator.count }}</strong> users
+        {% if search_query %}<span style="color:var(--color-primary);margin-left:.5rem;">· filtered by "{{ search_query }}"</span>{% endif %}
+        {% if active_dept and active_dept != 'all' %}<span style="color:var(--color-primary);margin-left:.5rem;">· dept: {{ active_dept }}</span>{% endif %}
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+        <!-- View Toggle (Table vs Cards) -->
+        <div
+            style="display:inline-flex;border:1px solid var(--color-border);border-radius:var(--radius-md, 0.375rem);overflow:hidden;background:var(--color-bg-app);">
+            <button type="button"
+                class="btn-action-sm {% if view_mode == 'table' %}btn-action-primary{% else %}btn-action-secondary{% endif %}"
+                style="border-radius:0;border:none;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                onclick="switchViewMode('table')" title="Table View">
+                <i data-lucide="table" style="width:13px;height:13px;"></i> Table
+            </button>
+            <button type="button"
+                class="btn-action-sm {% if view_mode == 'cards' %}btn-action-primary{% else %}btn-action-secondary{% endif %}"
+                style="border-radius:0;border:none;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                onclick="switchViewMode('cards')" title="Card View">
+                <i data-lucide="layout-grid" style="width:13px;height:13px;"></i> Cards
+            </button>
+        </div>
+        <div style="font-size:.78rem;color:var(--color-text-muted);">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </div>
+    </div>
+</div>
+
+{% if view_mode == 'cards' %}
+<!-- =========================================================
+     FACULTY / USER CARD GRID VIEW
+     ========================================================= -->
+<div class="faculty-grid" style="padding: 1.5rem;">
+    {% for item in users_data %}
+    <div class="faculty-card">
+        <div>
+            <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.85rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <input type="checkbox" class="admin-checkbox user-checkbox" value="{{ item.user.id }}"
+                        onchange="handleUserSelectionChange()">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                            <a href="{% url 'admin_user_detail' item.user.id %}"
+                                style="font-weight:700;font-size:1rem;color:var(--color-text-main);text-decoration:none;">
+                                {{ item.user.get_full_name|default:item.user.username }}
+                            </a>
+                            {% if item.role == 'admin' %}
+                            <span class="role-badge role-badge-admin"><i data-lucide="shield-check"
+                                    style="width:11px;height:11px;"></i> Admin</span>
+                            {% elif item.role == 'teacher' %}
+                            <span class="role-badge role-badge-teacher"><i data-lucide="award"
+                                    style="width:11px;height:11px;"></i> Faculty</span>
+                            {% else %}
+                            <span class="role-badge role-badge-student"><i data-lucide="graduation-cap"
+                                    style="width:11px;height:11px;"></i> Student</span>
+                            {% endif %}
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--color-text-muted);margin-top:0.15rem;">
+                            @{{ item.user.username }} &bull; {{ item.user.email|default:"No email" }}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    {% if item.user.is_active %}
+                    {% include "components/admin/status_pill.html" with status="active" %}
+                    {% else %}
+                    {% include "components/admin/status_pill.html" with status="suspended" label="Suspended" %}
+                    {% endif %}
+
+                    <div class="admin-dropdown">
+                        <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle admin-action-btn"
+                            onclick="toggleDropdown(this)" title="Actions">
+                            <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
+                        </button>
+                        <div class="admin-dropdown-menu">
+                                <a href="{% url 'admin_user_detail' item.user.id %}" class="admin-dropdown-item">
+                                    <i data-lucide="eye"></i> View Profile
+                                </a>
+                                <a href="{% url 'admin_edit_user' item.user.id %}" class="admin-dropdown-item">
+                                    <i data-lucide="edit-3"></i> Edit Account
+                                </a>
+                                <button type="button" class="admin-dropdown-item"
+                                    onclick="triggerPasswordReset('{{ item.user.id }}', '{{ item.user.username }}')">
+                                    <i data-lucide="key-round"></i> Reset Password
+                                </button>
+                                {% if item.user != request.user %}
+                                <form method="POST" action="{% url 'admin_toggle_user_active' item.user.id %}"
+                                    style="margin:0;" data-loading data-loading-message="Updating status...">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="admin-dropdown-item {% if item.user.is_active %}danger{% endif %}"
+                                        data-confirm="Change status for @{{ item.user.username }}?"
+                                        data-confirm-title="{% if item.user.is_active %}Suspend User{% else %}Activate User{% endif %}"
+                                        data-confirm-desc="{% if item.user.is_active %}Suspending invalidates login sessions.{% else %}Restores platform access.{% endif %}"
+                                        data-confirm-variant="{% if item.user.is_active %}danger{% else %}primary{% endif %}"
+                                        data-confirm-text="{% if item.user.is_active %}Suspend{% else %}Activate{% endif %}">
+                                        {% if item.user.is_active %}
+                                        <i data-lucide="user-x"></i> Suspend
+                                        {% else %}
+                                        <i data-lucide="user-check"></i> Activate
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                <a href="{% url 'delete_user' item.user.id %}" class="admin-dropdown-item danger"
+                                    data-confirm="Soft-delete user @{{ item.user.username }}?"
+                                    data-confirm-title="Soft-Delete User"
+                                    data-confirm-desc="Archives user while preserving audit records."
+                                    data-confirm-variant="danger" data-confirm-require="{{ item.user.username }}"
+                                    data-confirm-text="Delete Account">
+                                    <i data-lucide="trash-2"></i> Delete Account
+                                </a>
+                                {% endif %}
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department / Specialization -->
+            <div
+                style="font-size:0.82rem;color:var(--color-text-secondary);display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+                <i data-lucide="building" style="width:13px;height:13px;color:var(--color-primary);"></i>
+                <span>{{ item.department|default:"General Department" }}</span>
+                {% if item.specialization %}
+                <span>&bull;</span><span>{{ item.specialization }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="faculty-stats-grid">
+                {% if item.role == 'teacher' %}
+                <div class="faculty-stat-item">
+                    <div class="f-val">{{ item.courses_count }}</div>
+                    <div class="f-lbl">Classrooms</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val">{{ item.classes_count }}</div>
+                    <div class="f-lbl">Sessions</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val">{{ item.students_count }}</div>
+                    <div class="f-lbl">Students</div>
+                </div>
+                {% elif item.role == 'student' %}
+                <div class="faculty-stat-item">
+                    <div class="f-val">{{ item.courses_count }}</div>
+                    <div class="f-lbl">Enrolled</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val">{{ item.classes_count }}</div>
+                    <div class="f-lbl">Sessions</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val">{% if item.attendance_pct is not None %}{{ item.attendance_pct }}%{% else %}—{% endif %}</div>
+                    <div class="f-lbl">Attendance</div>
+                </div>
+                {% else %}
+                <div class="faculty-stat-item">
+                    <div class="f-val" style="font-size:0.85rem;">{{ item.admin_level }}</div>
+                    <div class="f-lbl">Privilege</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val" style="font-size:0.85rem;">{% if item.user.is_superuser %}Full{% else %}Staff{% endif %}</div>
+                    <div class="f-lbl">Access</div>
+                </div>
+                <div class="faculty-stat-item">
+                    <div class="f-val" style="font-size:0.85rem;">{% if item.user.last_login %}{{ item.user.last_login|date:"M d" }}{% else %}Never{% endif %}</div>
+                    <div class="f-lbl">Last Active</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div
+            style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--color-border);padding-top:0.75rem;font-size:0.75rem;color:var(--color-text-muted);">
+            <span>Joined {{ item.date_joined|date:"M d, Y" }}</span>
+            <span>Last login: {{ item.user.last_login|date:"M d, Y"|default:"Never" }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- =========================================================
+     TABLE VIEW
+     ========================================================= -->
+<div class="admin-table-wrapper">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th style="width:40px;text-align:center;">
+                    <input type="checkbox" id="selectAllCheckbox" class="admin-checkbox"
+                        onchange="toggleSelectAll(this)" title="Select All">
+                </th>
+                <th class="sortable-th {% if sort_by == 'name' %}active{% endif %}" onclick="sortByColumn('name')">
+                    <span class="sortable-th-link">
+                        User
+                        <span class="sort-indicator">
+                            {% if sort_by == 'name' and sort_dir == 'asc' %}<i data-lucide="arrow-up"
+                                style="width:13px;height:13px;"></i>
+                            {% elif sort_by == 'name' %}<i data-lucide="arrow-down" style="width:13px;height:13px;"></i>
+                            {% else %}<i data-lucide="arrow-up-down" style="width:13px;height:13px;"></i>{% endif %}
+                        </span>
+                    </span>
+                </th>
+                <th class="sortable-th {% if sort_by == 'role' %}active{% endif %}" onclick="sortByColumn('role')">
+                    <span class="sortable-th-link">
+                        Role
+                        <span class="sort-indicator">
+                            {% if sort_by == 'role' and sort_dir == 'asc' %}<i data-lucide="arrow-up"
+                                style="width:13px;height:13px;"></i>
+                            {% elif sort_by == 'role' %}<i data-lucide="arrow-down" style="width:13px;height:13px;"></i>
+                            {% else %}<i data-lucide="arrow-up-down" style="width:13px;height:13px;"></i>{% endif %}
+                        </span>
+                    </span>
+                </th>
+                <th class="sortable-th {% if sort_by == 'status' %}active{% endif %}" onclick="sortByColumn('status')">
+                    <span class="sortable-th-link">
+                        Status
+                        <span class="sort-indicator">
+                            {% if sort_by == 'status' and sort_dir == 'asc' %}<i data-lucide="arrow-up"
+                                style="width:13px;height:13px;"></i>
+                            {% elif sort_by == 'status' %}<i data-lucide="arrow-down"
+                                style="width:13px;height:13px;"></i>
+                            {% else %}<i data-lucide="arrow-up-down" style="width:13px;height:13px;"></i>{% endif %}
+                        </span>
+                    </span>
+                </th>
+                <th>Department / Unit</th>
+                <th>Role Metrics</th>
+                <th class="sortable-th {% if sort_by == 'last_login' %}active{% endif %}"
+                    onclick="sortByColumn('last_login')">
+                    <span class="sortable-th-link">
+                        Last Login
+                        <span class="sort-indicator">
+                            {% if sort_by == 'last_login' and sort_dir == 'asc' %}<i data-lucide="arrow-up"
+                                style="width:13px;height:13px;"></i>
+                            {% elif sort_by == 'last_login' %}<i data-lucide="arrow-down"
+                                style="width:13px;height:13px;"></i>
+                            {% else %}<i data-lucide="arrow-up-down" style="width:13px;height:13px;"></i>{% endif %}
+                        </span>
+                    </span>
+                </th>
+                <th class="sortable-th {% if sort_by == 'joined' %}active{% endif %}" onclick="sortByColumn('joined')">
+                    <span class="sortable-th-link">
+                        Joined
+                        <span class="sort-indicator">
+                            {% if sort_by == 'joined' and sort_dir == 'asc' %}<i data-lucide="arrow-up"
+                                style="width:13px;height:13px;"></i>
+                            {% elif sort_by == 'joined' %}<i data-lucide="arrow-down"
+                                style="width:13px;height:13px;"></i>
+                            {% else %}<i data-lucide="arrow-up-down" style="width:13px;height:13px;"></i>{% endif %}
+                        </span>
+                    </span>
+                </th>
+                <th style="text-align:right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in users_data %}
+            <tr>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="admin-checkbox user-checkbox" value="{{ item.user.id }}"
+                        onchange="handleUserSelectionChange()">
+                </td>
+                <td>
+                    {% url 'admin_user_detail' item.user.id as url_user_detail %}
+                    {% include "components/admin/user_avatar.html" with user=item.user link=url_user_detail %}
+                </td>
+                <td>
+                    {% if item.role == 'admin' %}
+                    <span class="role-badge role-badge-admin"><i data-lucide="shield-check"
+                            style="width:11px;height:11px;display:inline;"></i> Admin</span>
+                    {% elif item.role == 'teacher' %}
+                    <span class="role-badge role-badge-teacher"><i data-lucide="user-check"
+                            style="width:11px;height:11px;display:inline;"></i> Faculty</span>
+                    {% else %}
+                    <span class="role-badge role-badge-student"><i data-lucide="graduation-cap"
+                            style="width:11px;height:11px;display:inline;"></i> Student</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.user.is_active %}
+                    {% include "components/admin/status_pill.html" with status="active" %}
+                    {% else %}
+                    {% include "components/admin/status_pill.html" with status="suspended" label="Suspended" %}
+                    {% endif %}
+                </td>
+                <td style="font-size:0.83rem;color:var(--color-text-secondary);">
+                    {{ item.department|default:"—" }}
+                </td>
+                <td>
+                    {% if item.role == 'admin' %}
+                    <div style="font-size:.83rem;color:var(--color-primary);font-weight:600;">
+                        {{ item.admin_level }}
+                    </div>
+                    <div style="font-size:.73rem;color:var(--color-text-muted);margin-top:.1rem;">
+                        {% if item.user.is_superuser %}Superuser Access{% else %}Staff Portal Access{% endif %}
+                    </div>
+                    {% elif item.role == 'teacher' %}
+                    <div style="font-size:.83rem;color:var(--color-text-main);font-weight:600;">
+                        {{ item.courses_count }} classroom{{ item.courses_count|pluralize }} &bull; {{ item.classes_count }} session{{ item.classes_count|pluralize }}
+                    </div>
+                    <div style="font-size:.73rem;color:var(--color-text-muted);margin-top:.1rem;">
+                        {{ item.students_count }} student{{ item.students_count|pluralize }} taught
+                    </div>
+                    {% else %}
+                    <div style="font-size:.83rem;color:var(--color-text-main);font-weight:600;">
+                        {{ item.courses_count }} course{{ item.courses_count|pluralize }} enrolled
+                    </div>
+                    <div style="font-size:.73rem;color:var(--color-text-muted);margin-top:.1rem;">
+                        {% if item.attendance_pct is not None %}
+                        <span style="color:#059669;font-weight:700;">{{ item.attendance_pct }}% attendance</span> ({{ item.classes_count }} sessions)
+                        {% else %}
+                        {{ item.classes_count }} sessions attended
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="font-size:.82rem;color:var(--color-text-muted);white-space:nowrap;">
+                    {% if item.user.last_login %}
+                    {{ item.user.last_login|date:"M d, Y H:i" }}
+                    {% else %}
+                    <span style="opacity:0.6;">Never</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:.82rem;color:var(--color-text-muted);white-space:nowrap;">
+                    {{ item.user.date_joined|date:"M d, Y" }}
+                </td>
+                <td style="text-align:right;">
+                    <div class="admin-dropdown">
+                        <button type="button" class="btn-action-sm btn-action-secondary dropdown-toggle admin-action-btn"
+                            onclick="toggleDropdown(this)" title="Actions">
+                            <i data-lucide="more-vertical" style="width:14px;height:14px;"></i>
+                        </button>
+                        <div class="admin-dropdown-menu">
+                                <a href="{% url 'admin_user_detail' item.user.id %}" class="admin-dropdown-item">
+                                    <i data-lucide="eye"></i> View Profile
+                                </a>
+                                <a href="{% url 'admin_edit_user' item.user.id %}" class="admin-dropdown-item">
+                                    <i data-lucide="edit-3"></i> Edit Account
+                                </a>
+                                <button type="button" class="admin-dropdown-item"
+                                    onclick="triggerPasswordReset('{{ item.user.id }}', '{{ item.user.username }}')">
+                                    <i data-lucide="key-round"></i> Reset Password
+                                </button>
+                                {% if item.user != request.user %}
+                                <form method="POST" action="{% url 'admin_toggle_user_active' item.user.id %}"
+                                    style="margin:0;" data-loading data-loading-message="Updating status...">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="admin-dropdown-item {% if item.user.is_active %}danger{% endif %}"
+                                        data-confirm="Change status for @{{ item.user.username }}?"
+                                        data-confirm-title="{% if item.user.is_active %}Suspend User{% else %}Activate User{% endif %}"
+                                        data-confirm-desc="{% if item.user.is_active %}Suspending invalidates login sessions.{% else %}Restores platform access.{% endif %}"
+                                        data-confirm-variant="{% if item.user.is_active %}danger{% else %}primary{% endif %}"
+                                        data-confirm-text="{% if item.user.is_active %}Suspend{% else %}Activate{% endif %}">
+                                        {% if item.user.is_active %}
+                                        <i data-lucide="user-x"></i> Suspend
+                                        {% else %}
+                                        <i data-lucide="user-check"></i> Activate
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                <a href="{% url 'delete_user' item.user.id %}" class="admin-dropdown-item danger"
+                                    data-confirm="Soft-delete user @{{ item.user.username }}?"
+                                    data-confirm-title="Soft-Delete User"
+                                    data-confirm-desc="Archives user while preserving historical records."
+                                    data-confirm-variant="danger" data-confirm-require="{{ item.user.username }}"
+                                    data-confirm-text="Delete Account">
+                                    <i data-lucide="trash-2"></i> Delete Account
+                                </a>
+                                {% endif %}
+                            </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Unified Admin Pagination Component -->
+{% include "components/admin/pagination.html" with page_obj=page_obj js_func="navigateToPage" %}
+
+{% else %}
+{% include "components/admin/empty_state.html" with icon="user-x" title="No Users Found" description="No user accounts matched your search criteria or role filters." cta_text="Reset Filters" cta_icon="rotate-ccw" cta_url="?tab=all" %}
+{% endif %}

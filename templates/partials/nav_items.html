@@ -1,141 +1,200 @@
 {% load common_tags %}
-{% comment %} 
-    Role-based navigation items for sidebar.
+{% comment %}
+Role-based navigation items for sidebar.
 {% endcomment %}
 
 {% if user.is_authenticated %}
-    {% if user.is_superuser or user.userprofile.user_type == 'admin' %}
-        <!-- Executive Control Center -->
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Executive Control</div>
-            <a href="{% url 'admin_panel' %}" class="sidebar-nav-item {% is_active_nav request 'admin_panel' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
-                <span class="sidebar-nav-text">Control Center</span>
-            </a>
-            <a href="{% url 'admin_activity_feed' %}" class="sidebar-nav-item {% is_active_nav request 'admin_activity_feed' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="activity"></i></span>
-                <span class="sidebar-nav-text">Activity Audit Log</span>
-            </a>
-        </div>
-
-        <!-- User & Faculty Administration -->
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">User & Staff Admin</div>
-            <a href="{% url 'user_management' %}" class="sidebar-nav-item {% is_active_nav request 'user_management' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="users"></i></span>
-                <span class="sidebar-nav-text">User Directory</span>
-            </a>
-            <a href="{% url 'admin_all_teachers' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_teachers' 'admin_teacher_detail' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
-                <span class="sidebar-nav-text">Teacher Roster</span>
-            </a>
-        </div>
-
-        <!-- Academic & Live Sessions -->
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Academic & Live</div>
-            <a href="{% url 'admin_all_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_classrooms' 'admin_classroom_detail' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="book-open"></i></span>
-                <span class="sidebar-nav-text">Classroom Catalog</span>
-            </a>
-            <a href="{% url 'admin_all_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'admin_all_meetings' 'admin_meeting_detail' 'admin_live_meetings' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
-                <span class="sidebar-nav-text">Meetings & Sessions</span>
-            </a>
-        </div>
-
-        <!-- Infrastructure & Fleet -->
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Fleet & Content</div>
-            <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'admin_dashboard' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
-                <span class="sidebar-nav-text">Classroom Cameras</span>
-            </a>
-            <a href="{% url 'admin_content_manager' %}" class="sidebar-nav-item {% is_active_nav request 'admin_content_manager' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="folder-kanban"></i></span>
-                <span class="sidebar-nav-text">Content Manager</span>
-            </a>
-            <a href="{% url 'recordings_folder' %}" class="sidebar-nav-item {% is_active_nav request 'recordings_folder' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="library"></i></span>
-                <span class="sidebar-nav-text">Recordings Library</span>
-            </a>
-        </div>
-    {% elif user.userprofile.user_type == 'teacher' %}
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Academic</div>
-            <a href="{% url 'teacher_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_dashboard' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
-                <span class="sidebar-nav-text">Dashboard</span>
-            </a>
-            <a href="{% url 'teacher_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_classrooms' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
-                <span class="sidebar-nav-text">My Classrooms</span>
-            </a>
-            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
-                <span class="sidebar-nav-text">Digital Library</span>
-            </a>
-
-            <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_meetings' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
-                <span class="sidebar-nav-text">Meetings</span>
-            </a>
-            <a href="{% url 'teacher_camera_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_camera_dashboard' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
-                <span class="sidebar-nav-text">Classroom Studio</span>
-            </a>
-        </div>
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Content</div>
-            <a href="{% url 'manage_recordings' %}" class="sidebar-nav-item {% is_active_nav request 'manage_recordings' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
-                <span class="sidebar-nav-text">Manage Recordings</span>
-            </a>
-            <a href="{% url 'project_list' %}" class="sidebar-nav-item {% is_active_nav request 'project_list' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="film"></i></span>
-                <span class="sidebar-nav-text">Video Editor</span>
-            </a>
-        </div>
-    {% elif user.userprofile.user_type == 'student' %}
-        <div class="sidebar-nav-section">
-            <div class="sidebar-nav-title">Student Portal</div>
-            <a href="{% url 'student_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'student_dashboard' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
-                <span class="sidebar-nav-text">Home</span>
-            </a>
-            <a href="{% url 'student_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'student_classrooms' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
-                <span class="sidebar-nav-text">Classrooms</span>
-            </a>
-            <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
-                <span class="sidebar-nav-text">Digital Library</span>
-            </a>
-
-            <a href="{% url 'student_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'student_meetings' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
-                <span class="sidebar-nav-text">Meetings</span>
-            </a>
-            <a href="{% url 'student_lecture_list' %}" class="sidebar-nav-item {% is_active_nav request 'student_lecture_list' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
-                <span class="sidebar-nav-text">Lectures & Live</span>
-            </a>
-            <a href="{% url 'face_setup' %}" data-turbo="false" class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
-                <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
-                <span class="sidebar-nav-text">Face Identity</span>
-            </a>
-        </div>
+{% if user.is_superuser or user.userprofile.user_type == 'admin' %}
+<!-- Executive Control Center -->
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Executive Control</div>
+    <a href="{% url 'admin_panel' %}" class="sidebar-nav-item {% is_active_nav request 'admin_panel' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
+        <span class="sidebar-nav-text">Control Center</span>
+    </a>
+    {% if admin_perms.manage_settings or admin_perms.view_audit %}
+    <a href="{% url 'admin_system_health' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_system_health' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="activity"></i></span>
+        <span class="sidebar-nav-text">System Health</span>
+    </a>
     {% endif %}
+    {% if admin_perms.view_audit or admin_perms.export_data %}
+    <a href="{% url 'admin_reports' %}" class="sidebar-nav-item {% is_active_nav request 'admin_reports' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="bar-chart-3"></i></span>
+        <span class="sidebar-nav-text">Reports & Analytics</span>
+    </a>
+    {% endif %}
+    {% if admin_perms.view_audit %}
+    <a href="{% url 'admin_activity_feed' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_activity_feed' 'admin_security_audit' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="shield-check"></i></span>
+        <span class="sidebar-nav-text">Security & Audit</span>
+    </a>
+    {% endif %}
+    {% if admin_perms.manage_settings %}
+    <a href="{% url 'admin_settings' %}" class="sidebar-nav-item {% is_active_nav request 'admin_settings' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="settings"></i></span>
+        <span class="sidebar-nav-text">Settings</span>
+    </a>
+    <a href="{% url 'admin_roles' %}" class="sidebar-nav-item {% is_active_nav request 'admin_roles' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="shield"></i></span>
+        <span class="sidebar-nav-text">Roles & Permissions</span>
+    </a>
+    {% endif %}
+</div>
 
-    <div class="sidebar-nav-section">
-        <div class="sidebar-nav-title">Communication</div>
-        <a href="{% url 'inbox' %}" class="sidebar-nav-item {% is_active_nav request 'inbox' %}">
-            <span class="sidebar-nav-icon"><i data-lucide="message-square"></i></span>
-            <span class="sidebar-nav-text">Messages</span>
-        </a>
-        <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% is_active_nav request 'notifications_list' %}">
-            <span class="sidebar-nav-icon"><i data-lucide="bell"></i></span>
-            <span class="sidebar-nav-text">Notifications</span>
-        </a>
-    </div>
+<!-- User & Faculty Administration -->
+{% if admin_perms.manage_users or admin_perms.manage_settings %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">User & Staff Admin</div>
+    {% if admin_perms.manage_users %}
+    <a href="{% url 'user_management' %}"
+        class="sidebar-nav-item {% is_active_nav request 'user_management' 'admin_user_detail' 'admin_teacher_detail' 'admin_edit_user' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="users"></i></span>
+        <span class="sidebar-nav-text">User Directory</span>
+    </a>
+    <a href="{% url 'admin_approvals' %}" class="sidebar-nav-item {% is_active_nav request 'admin_approvals' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="check-square"></i></span>
+        <span class="sidebar-nav-text">Approvals</span>
+        {% if pending_approvals_count > 0 %}
+        <span class="sidebar-nav-badge"
+        style="margin-left: auto; background: var(--color-danger, #ef4444); color: white; border-radius: 9999px;
+        padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 700;">{{ pending_approvals_count }}</span>
+        {% endif %}
+    </a>
+    {% endif %}
+    {% if admin_perms.manage_settings %}
+    <a href="{% url 'admin_announcements' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_announcements' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="megaphone"></i></span>
+        <span class="sidebar-nav-text">Announcements</span>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Academic & Live Sessions -->
+{% if admin_perms.manage_courses or admin_perms.manage_sessions %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Academic & Live</div>
+    {% if admin_perms.manage_courses %}
+    <a href="{% url 'admin_all_classrooms' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_all_classrooms' 'admin_classroom_detail' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="book-open"></i></span>
+        <span class="sidebar-nav-text">Courses</span>
+    </a>
+    {% endif %}
+    {% if admin_perms.manage_sessions %}
+    <a href="{% url 'admin_all_meetings' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_all_meetings' 'admin_meeting_detail' 'admin_live_meetings' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
+        <span class="sidebar-nav-text">Live Sessions</span>
+    </a>
+    <a href="{% url 'admin_live_monitor' %}" class="sidebar-nav-item {% is_active_nav request 'admin_live_monitor' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="radio"></i></span>
+        <span class="sidebar-nav-text">Live Monitor</span>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Infrastructure & Fleet -->
+{% if admin_perms.manage_cameras %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Fleet & Content</div>
+    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'admin_dashboard' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
+        <span class="sidebar-nav-text">Classroom Cameras</span>
+    </a>
+    <a href="{% url 'admin_content_manager' %}"
+        class="sidebar-nav-item {% is_active_nav request 'admin_content_manager' 'recordings_folder' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="film"></i></span>
+        <span class="sidebar-nav-text">Media Library</span>
+    </a>
+</div>
+{% endif %}
+{% elif user.userprofile.user_type == 'teacher' %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Academic</div>
+    <a href="{% url 'teacher_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_dashboard' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
+        <span class="sidebar-nav-text">Dashboard</span>
+    </a>
+    <a href="{% url 'teacher_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_classrooms' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
+        <span class="sidebar-nav-text">My Classrooms</span>
+    </a>
+    <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
+        <span class="sidebar-nav-text">Digital Library</span>
+    </a>
+
+    <a href="{% url 'teacher_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'teacher_meetings' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
+        <span class="sidebar-nav-text">Meetings</span>
+    </a>
+    <a href="{% url 'teacher_camera_dashboard' %}"
+        class="sidebar-nav-item {% is_active_nav request 'teacher_camera_dashboard' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="camera"></i></span>
+        <span class="sidebar-nav-text">Classroom Studio</span>
+    </a>
+</div>
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Content</div>
+    <a href="{% url 'manage_recordings' %}" class="sidebar-nav-item {% is_active_nav request 'manage_recordings' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
+        <span class="sidebar-nav-text">Manage Recordings</span>
+    </a>
+    <a href="{% url 'project_list' %}" class="sidebar-nav-item {% is_active_nav request 'project_list' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="film"></i></span>
+        <span class="sidebar-nav-text">Video Editor</span>
+    </a>
+</div>
+{% elif user.userprofile.user_type == 'student' %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Student Portal</div>
+    <a href="{% url 'student_dashboard' %}" class="sidebar-nav-item {% is_active_nav request 'student_dashboard' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="layout-dashboard"></i></span>
+        <span class="sidebar-nav-text">Home</span>
+    </a>
+    <a href="{% url 'student_classrooms' %}" class="sidebar-nav-item {% is_active_nav request 'student_classrooms' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="school"></i></span>
+        <span class="sidebar-nav-text">Classrooms</span>
+    </a>
+    <a href="{% url 'digital_library' %}" class="sidebar-nav-item {% is_active_nav request 'digital_library' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="book-marked"></i></span>
+        <span class="sidebar-nav-text">Digital Library</span>
+    </a>
+
+    <a href="{% url 'student_meetings' %}" class="sidebar-nav-item {% is_active_nav request 'student_meetings' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="video"></i></span>
+        <span class="sidebar-nav-text">Meetings</span>
+    </a>
+    <a href="{% url 'student_lecture_list' %}"
+        class="sidebar-nav-item {% is_active_nav request 'student_lecture_list' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="play-circle"></i></span>
+        <span class="sidebar-nav-text">Lectures & Live</span>
+    </a>
+    <a href="{% url 'face_setup' %}" data-turbo="false"
+        class="sidebar-nav-item {% is_active_nav request 'face_setup' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="user-check"></i></span>
+        <span class="sidebar-nav-text">Face Identity</span>
+    </a>
+</div>
+{% endif %}
+
+{% if not user.is_superuser and user.userprofile.user_type != 'admin' %}
+<div class="sidebar-nav-section">
+    <div class="sidebar-nav-title">Communication</div>
+    <a href="{% url 'inbox' %}" class="sidebar-nav-item {% is_active_nav request 'inbox' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="message-square"></i></span>
+        <span class="sidebar-nav-text">Messages</span>
+    </a>
+    <a href="{% url 'notifications_list' %}" class="sidebar-nav-item {% is_active_nav request 'notifications_list' %}">
+        <span class="sidebar-nav-icon"><i data-lucide="bell"></i></span>
+        <span class="sidebar-nav-text">Notifications</span>
+    </a>
+</div>
+{% endif %}
 {% endif %}

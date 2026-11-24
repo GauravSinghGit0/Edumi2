@@ -24,6 +24,7 @@ from django.contrib.auth import get_user_model
 
 from ..models import Camera, CameraPermission
 from .utils import is_admin, can_view_camera, test_rtsp_paths
+from accounts.permissions import admin_permission_required
 
 logger = logging.getLogger("cameras")
 User = get_user_model()
@@ -72,11 +73,42 @@ _DEFAULT_PORT = {"ip_webcam": 8080, "droidcam": 4747, "rtsp": 554}
 # ===========================================================================
 
 @login_required
+@admin_permission_required('manage_cameras')
 def admin_dashboard(request):
     if not is_admin(request.user):
         return redirect("login")
+    from ..models import HeadCountLog
+    from django.utils import timezone
     cameras  = Camera.objects.all().order_by("-created_at")
     teachers = User.objects.filter(userprofile__user_type="teacher")
+
+    for cam in cameras:
+        # Latest headcount
+        latest_hc = HeadCountLog.objects.filter(camera_id=cam.id).order_by('-timestamp').first()
+        cam.current_headcount = latest_hc.head_count if latest_hc else 0
+
+        # Last seen computation
+        if cam.is_live:
+            cam.last_seen_display = "Live right now"
+            cam.is_online_status = True
+        elif latest_hc and latest_hc.timestamp:
+            diff = timezone.now() - latest_hc.timestamp
+            seconds = max(0, int(diff.total_seconds()))
+            if seconds < 60:
+                cam.last_seen_display = "Just now"
+            elif seconds < 3600:
+                cam.last_seen_display = f"{seconds // 60}m ago"
+            elif seconds < 86400:
+                cam.last_seen_display = f"{seconds // 3600}h ago"
+            else:
+                cam.last_seen_display = latest_hc.timestamp.strftime("%b %d, %Y")
+            cam.is_online_status = cam.is_active
+        else:
+            cam.last_seen_display = cam.created_at.strftime("%b %d, %Y") if cam.created_at else "Never"
+            cam.is_online_status = cam.is_active
+
+        cam.authorized_count = cam.get_authorized_teachers().count()
+
     return render(request, "cameras/control_room/admin_dashboard.html", {"cameras": cameras, "teachers": teachers})
 
 
@@ -85,9 +117,10 @@ def admin_dashboard(request):
 # ===========================================================================
 
 @login_required
+@admin_permission_required('manage_cameras')
 def add_camera(request):
     if not is_admin(request.user):
-        return JsonResponse({"status": "error", "message": "Permission denied"})
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
 
     if request.method == "POST":
         name        = request.POST.get("name", "").strip()
@@ -98,8 +131,27 @@ def add_camera(request):
         password    = request.POST.get("password", "").strip()
         stream_path = request.POST.get("stream_path", "").strip() or None
 
+        if not name:
+            return JsonResponse({"status": "error", "message": "Camera name is required."}, status=400)
+        if not ip_raw:
+            return JsonResponse({"status": "error", "message": "IP address or host URL is required."}, status=400)
+
+        # RTSP URL Validation
+        if cam_type == "rtsp":
+            if "://" in ip_raw and not ip_raw.startswith("rtsp://"):
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Invalid RTSP URL: RTSP cameras must start with 'rtsp://'."
+                }, status=400)
+
         default_port = _DEFAULT_PORT.get(cam_type, 554)
         ip_address, port, extracted_path = _clean_camera_network_input(ip_raw, port_raw, default_port)
+        if not ip_address:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid camera host or IP address provided."
+            }, status=400)
+
         if extracted_path and not stream_path:
             stream_path = extracted_path
 
@@ -120,9 +172,29 @@ def add_camera(request):
             username=username, password=password,
             stream_path=stream_path, is_active=True,
         )
+
+        try:
+            from common.activity import log_admin_action
+            from common.models import AdminAuditTrail
+            log_admin_action(
+                request,
+                action_type=AdminAuditTrail.ACTION_SETTINGS_CHANGED,
+                target=camera,
+                changes={
+                    'camera_created': {
+                        'name': name,
+                        'camera_type': cam_type,
+                        'ip_address': ip_address,
+                        'port': port
+                    }
+                }
+            )
+        except Exception as exc:
+            logger.warning(f"Audit log failed for add_camera: {exc}")
+
         return JsonResponse({
             "status": "success",
-            "message": f'Camera "{name}" added.',
+            "message": f'Camera "{name}" added successfully.',
             "camera_id": camera.id,
         })
 
@@ -134,27 +206,43 @@ def add_camera(request):
 # ===========================================================================
 
 @login_required
+@admin_permission_required('manage_cameras')
 def edit_camera(request, camera_id):
     if not is_admin(request.user):
-        return JsonResponse({"status": "error", "message": "Permission denied"})
+        return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
 
     try:
         camera = get_object_or_404(Camera, id=camera_id)
 
         if request.method == "POST":
             if "name" in request.POST:
+                name        = request.POST.get("name", "").strip() or camera.name
                 cam_type    = request.POST.get("camera_type", camera.camera_type)
+                ip_raw      = request.POST.get("ip_address", camera.ip_address).strip()
                 port_raw    = request.POST.get("port", "").strip()
                 stream_path = request.POST.get("stream_path", "").strip() or None
 
+                # RTSP URL Validation
+                if cam_type == "rtsp":
+                    if "://" in ip_raw and not ip_raw.startswith("rtsp://"):
+                        return JsonResponse({
+                            "status": "error",
+                            "message": "Invalid RTSP URL: RTSP cameras must start with 'rtsp://'."
+                        }, status=400)
+
                 default_port = _DEFAULT_PORT.get(cam_type, 554)
                 clean_ip, clean_port, extracted_path = _clean_camera_network_input(
-                    request.POST.get("ip_address", camera.ip_address),
+                    ip_raw,
                     port_raw,
                     default_port
                 )
+                if not clean_ip:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Invalid camera host or IP address provided."
+                    }, status=400)
 
-                camera.name        = request.POST.get("name", camera.name)
+                camera.name        = name
                 camera.camera_type = cam_type
                 camera.ip_address  = clean_ip
                 camera.username    = request.POST.get("username", "").strip()
@@ -180,6 +268,18 @@ def edit_camera(request, camera_id):
                     camera.stream_path = stream_path or "/mjpegfeed"
 
                 camera.save()
+
+                try:
+                    from common.activity import log_admin_action
+                    from common.models import AdminAuditTrail
+                    log_admin_action(
+                        request,
+                        action_type=AdminAuditTrail.ACTION_SETTINGS_CHANGED,
+                        target=camera,
+                        changes={'camera_updated': {'name': camera.name, 'type': camera.camera_type}}
+                    )
+                except Exception as exc:
+                    logger.warning(f"Audit log failed for edit_camera: {exc}")
 
             if "teachers" in request.POST or ("name" not in request.POST and "camera_id" in request.POST):
                 teacher_ids = request.POST.getlist("teachers")
@@ -213,20 +313,35 @@ def edit_camera(request, camera_id):
 # ===========================================================================
 
 @login_required
+@admin_permission_required('manage_cameras')
 def delete_camera(request, camera_id):
     if not is_admin(request.user):
         return JsonResponse({"status": "error", "message": "Permission denied"}, status=403)
 
     if request.method == "POST":
         camera = get_object_or_404(Camera, id=camera_id)
+        cam_name = camera.name
         try:
             from django.db import transaction
             from ..models import CameraPermission, CameraRecording
             with transaction.atomic():
                 CameraRecording.objects.filter(camera=camera).update(camera=None)
                 CameraPermission.objects.filter(camera=camera).delete()
+
+                try:
+                    from common.activity import log_admin_action
+                    from common.models import AdminAuditTrail
+                    log_admin_action(
+                        request,
+                        action_type=AdminAuditTrail.ACTION_SETTINGS_CHANGED,
+                        target=camera,
+                        changes={'camera_deleted': {'name': cam_name}}
+                    )
+                except Exception as exc:
+                    logger.warning(f"Audit log failed for delete_camera: {exc}")
+
                 camera.delete()
-            return JsonResponse({"status": "success"})
+            return JsonResponse({"status": "success", "message": f'Camera "{cam_name}" deleted.'})
         except Exception as exc:
             logger.error(f"delete_camera: {exc}")
             return JsonResponse({"status": "error", "message": str(exc)}, status=500)
@@ -455,6 +570,7 @@ def _offline_frame(camera):
 # ===========================================================================
 
 @login_required
+@admin_permission_required('manage_cameras')
 def test_camera(request, camera_id):
     """Live connectivity test for a saved camera."""
     if not is_admin(request.user):
@@ -502,9 +618,11 @@ def test_camera(request, camera_id):
 
     ok = any(r["status"] == "success" for r in results)
     return JsonResponse({
+        "status": "success" if ok else "error",
         "camera_id": camera_id, "camera_name": camera.name,
         "url_tested": full_url, "results": results,
         "overall_status": "success" if ok else "failed",
+        "message": f"Camera '{camera.name}' connected successfully." if ok else f"Unable to establish stream with '{camera.name}'."
     })
 
 

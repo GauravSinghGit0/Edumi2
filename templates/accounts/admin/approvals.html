@@ -1,0 +1,430 @@
+{% extends 'layouts/admin_base.html' %}
+{% load static common_tags %}
+
+{% block admin_extra_css %}
+<style>
+    .approvals-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .approval-kpi-card {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-lg, 0.75rem);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .approval-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    }
+
+    .approval-kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    .approval-kpi-content {
+        flex: 1;
+    }
+
+    .approval-kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--color-text-muted, #64748b);
+        margin-bottom: 0.25rem;
+    }
+
+    .approval-kpi-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--color-text-main, #0f172a);
+        line-height: 1.1;
+    }
+
+    /* Sub-tabs bar */
+    .admin-tabs-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--color-border, #e2e8f0);
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+    }
+
+    .admin-tab-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--color-text-muted, #64748b);
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .admin-tab-link:hover {
+        color: var(--color-primary, #7c3aed);
+    }
+
+    .admin-tab-link.active {
+        color: var(--color-primary, #7c3aed);
+        border-bottom-color: var(--color-primary, #7c3aed);
+    }
+
+    .admin-tab-badge {
+        padding: 0.15rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: var(--color-bg-hover, #f1f5f9);
+        color: var(--color-text-muted, #64748b);
+    }
+
+    .admin-tab-link.active .admin-tab-badge {
+        background: rgba(124, 58, 237, 0.15);
+        color: var(--color-primary, #7c3aed);
+    }
+
+    /* Bulk toolbar */
+    .bulk-toolbar {
+        background: var(--color-surface, #ffffff);
+        border: 1px solid var(--color-border, #e2e8f0);
+        border-radius: var(--radius-md, 0.5rem);
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        animation: fadeIn 0.15s ease;
+    }
+
+    .bulk-toolbar.visible {
+        display: flex;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .badge-enrollment {
+        background: rgba(59, 130, 246, 0.12);
+        color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .badge-teacher {
+        background: rgba(168, 85, 247, 0.12);
+        color: #9333ea;
+        border: 1px solid rgba(168, 85, 247, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_title %}Approvals Queue{% endblock %}
+
+{% block page_heading %}<i data-lucide="check-square" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 0.5rem; color: var(--color-primary, #8b5cf6);"></i>Approvals Queue{% endblock %}
+
+{% block page_subheading %}
+<p class="admin-subtitle">Review and approve classroom enrollment requests and faculty registration requests.</p>
+{% endblock %}
+
+{% block admin_content %}
+    <!-- Top KPI Cards -->
+    <div class="approvals-kpi-grid">
+        <div class="approval-kpi-card">
+            <div class="approval-kpi-icon" style="background: rgba(124, 58, 237, 0.12); color: #7c3aed;">
+                <i data-lucide="inbox"></i>
+            </div>
+            <div class="approval-kpi-content">
+                <div class="approval-kpi-label">Total Pending Requests</div>
+                <div class="approval-kpi-value">{{ total_pending_count }}</div>
+            </div>
+        </div>
+
+        <div class="approval-kpi-card">
+            <div class="approval-kpi-icon" style="background: rgba(59, 130, 246, 0.12); color: #2563eb;">
+                <i data-lucide="book-open"></i>
+            </div>
+            <div class="approval-kpi-content">
+                <div class="approval-kpi-label">Classroom Enrollments</div>
+                <div class="approval-kpi-value">{{ enrollments_count }}</div>
+            </div>
+        </div>
+
+        <div class="approval-kpi-card">
+            <div class="approval-kpi-icon" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+                <i data-lucide="graduation-cap"></i>
+            </div>
+            <div class="approval-kpi-content">
+                <div class="approval-kpi-label">Teacher Signups</div>
+                <div class="approval-kpi-value">{{ teachers_count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub-tabs Navigation -->
+    <div class="admin-tabs-nav">
+        <a href="?tab=all{% if search_query %}&search={{ search_query }}{% endif %}"
+            class="admin-tab-link {% if tab == 'all' %}active{% endif %}">
+            <i data-lucide="layers" style="width: 16px; height: 16px;"></i> All Requests
+            <span class="admin-tab-badge">{{ total_pending_count }}</span>
+        </a>
+        <a href="?tab=enrollments{% if search_query %}&search={{ search_query }}{% endif %}"
+            class="admin-tab-link {% if tab == 'enrollments' %}active{% endif %}">
+            <i data-lucide="book-open" style="width: 16px; height: 16px;"></i> Classroom Enrollments
+            <span class="admin-tab-badge">{{ enrollments_count }}</span>
+        </a>
+        <a href="?tab=teachers{% if search_query %}&search={{ search_query }}{% endif %}"
+            class="admin-tab-link {% if tab == 'teachers' %}active{% endif %}">
+            <i data-lucide="users" style="width: 16px; height: 16px;"></i> Teacher Signups
+            <span class="admin-tab-badge">{{ teachers_count }}</span>
+        </a>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="admin-card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+        <form method="GET" action="{% url 'admin_approvals' %}"
+            style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <div class="admin-search-wrapper" style="flex: 2; min-width: 260px;">
+                <i data-lucide="search" class="admin-search-icon"></i>
+                <input type="text" name="search" class="admin-search-input"
+                    placeholder="Search by student, teacher, classroom, or department..." value="{{ search_query }}">
+            </div>
+            <button type="submit" class="btn-action btn-action-primary" style="height: 42px;">
+                <i data-lucide="filter"></i> Filter
+            </button>
+            {% if search_query %}
+            <a href="?tab={{ tab }}" class="btn-action btn-action-secondary" style="height: 42px;">
+                <i data-lucide="rotate-ccw"></i> Reset
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Bulk Action Toolbar -->
+    <form id="bulkActionForm" method="POST" action="{% url 'admin_approvals_bulk' %}">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <input type="hidden" name="bulk_action" id="bulkActionInput" value="approve">
+
+        <div id="bulkToolbar" class="bulk-toolbar">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-weight: 700; color: var(--color-primary); font-size: 0.9rem;">
+                    <span id="selectedCountBadge">0</span> item(s) selected
+                </span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" class="btn-action btn-action-primary" onclick="submitBulkAction('approve')"
+                    style="height: 36px; background: #10b981; border-color: #10b981;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Bulk Approve
+                </button>
+                <button type="button" class="btn-action btn-action-secondary" onclick="submitBulkAction('reject')"
+                    style="height: 36px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                    <i data-lucide="x-circle" style="width: 14px; height: 14px;"></i> Bulk Reject
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="admin-card">
+            {% if page_obj and page_obj.object_list %}
+            <div class="admin-table-wrapper" style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)"
+                                    style="cursor: pointer; width: 16px; height: 16px;">
+                            </th>
+                            <th style="width: 140px;">Type</th>
+                            <th>Requestor / User</th>
+                            <th>Target / Details</th>
+                            <th style="width: 150px;">Requested At</th>
+                            <th style="width: 160px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in page_obj %}
+                        <tr>
+                            <td style="text-align: center;">
+                                {% if item.type == 'enrollment' %}
+                                <input type="checkbox" name="enrollment_ids" value="{{ item.membership_id }}"
+                                    class="item-checkbox" onchange="updateSelectedCount()"
+                                    style="cursor: pointer; width: 16px; height: 16px;">
+                                {% else %}
+                                <input type="checkbox" name="teacher_ids" value="{{ item.user_id }}"
+                                    class="item-checkbox" onchange="updateSelectedCount()"
+                                    style="cursor: pointer; width: 16px; height: 16px;">
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.type == 'enrollment' %}
+                                <span class="status-pill badge-enrollment"
+                                    style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                                    <i data-lucide="book-open" style="width: 12px; height: 12px;"></i> Enrollment
+                                </span>
+                                {% else %}
+                                <span class="status-pill badge-teacher"
+                                    style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                                    <i data-lucide="graduation-cap" style="width: 12px; height: 12px;"></i> Teacher
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <div
+                                        style="width: 34px; height: 34px; border-radius: 50%; background: var(--color-bg-hover); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary); font-size: 0.85rem;">
+                                        {{ item.user.username|first|upper }}
+                                    </div>
+                                    <div>
+                                        <div
+                                            style="font-weight: 600; color: var(--color-text-main); font-size: 0.875rem;">
+                                            {{ item.user.get_full_name|default:item.user.username }}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                                            @{{ item.user.username }} &bull; {{ item.user.email }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600; color: var(--color-text-main); font-size: 0.875rem;">
+                                    {{ item.title }}
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.15rem;">
+                                    {{ item.subtitle }}
+                                </div>
+                            </td>
+                            <td style="font-size: 0.825rem; color: var(--color-text-muted); white-space: nowrap;">
+                                {{ item.date|date:"M d, Y" }}
+                                <div style="font-size: 0.72rem;">{{ item.date|date:"H:i" }}</div>
+                            </td>
+                            <td style="text-align: right; white-space: nowrap;">
+                                <div style="display: inline-flex; gap: 0.4rem;">
+                                    {% if item.type == 'enrollment' %}
+                                    <button type="button" class="btn-action-sm"
+                                        onclick="singleAction('{% url 'admin_approval_enrollment_action' item.membership_id 'approve' %}', 'Approve enrollment for {{ item.user.username }}?')"
+                                        style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);"
+                                        title="Approve Enrollment">
+                                        <i data-lucide="check" style="width: 14px; height: 14px;"></i> Approve
+                                    </button>
+                                    <button type="button" class="btn-action-sm"
+                                        onclick="singleAction('{% url 'admin_approval_enrollment_action' item.membership_id 'reject' %}', 'Decline enrollment for {{ item.user.username }}?')"
+                                        style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);"
+                                        title="Decline Enrollment">
+                                        <i data-lucide="x" style="width: 14px; height: 14px;"></i> Reject
+                                    </button>
+                                    {% else %}
+                                    <button type="button" class="btn-action-sm"
+                                        onclick="singleAction('{% url 'admin_approval_teacher_action' item.user_id 'approve' %}', 'Approve teacher registration for {{ item.user.username }}?')"
+                                        style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);"
+                                        title="Approve Teacher">
+                                        <i data-lucide="check" style="width: 14px; height: 14px;"></i> Approve
+                                    </button>
+                                    <button type="button" class="btn-action-sm"
+                                        onclick="singleAction('{% url 'admin_approval_teacher_action' item.user_id 'reject' %}', 'Reject teacher registration for {{ item.user.username }}?')"
+                                        style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);"
+                                        title="Reject Teacher">
+                                        <i data-lucide="x" style="width: 14px; height: 14px;"></i> Reject
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            {% include "components/admin/pagination.html" with page_obj=page_obj query_params=request.GET %}
+            {% endif %}
+
+            {% else %}
+            <div class="admin-card-body">
+                {% include "components/admin/empty_state.html" with icon="check-circle-2" title="No Pending Requests" description="All enrollment and teacher registration requests have been reviewed and approved." %}
+            </div>
+            {% endif %}
+        </div>
+    </form>
+
+<!-- Standalone Action Form for Single Item Clicks -->
+<form id="singleActionForm" method="POST" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+    function toggleSelectAll(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.item-checkbox:checked');
+        const badge = document.getElementById('selectedCountBadge');
+        const toolbar = document.getElementById('bulkToolbar');
+
+        if (badge) badge.textContent = checked.length;
+        if (toolbar) {
+            if (checked.length > 0) {
+                toolbar.classList.add('visible');
+            } else {
+                toolbar.classList.remove('visible');
+            }
+        }
+    }
+
+    function submitBulkAction(action) {
+        const checked = document.querySelectorAll('.item-checkbox:checked');
+        if (checked.length === 0) {
+            alert("Please select at least one item.");
+            return;
+        }
+        const verb = action === 'approve' ? 'approve' : 'reject';
+        if (!confirm(`Are you sure you want to ${verb} the ${checked.length} selected request(s)?`)) {
+            return;
+        }
+        document.getElementById('bulkActionInput').value = action;
+        document.getElementById('bulkActionForm').submit();
+    }
+
+    function singleAction(url, confirmMessage) {
+        if (confirm(confirmMessage)) {
+            const form = document.getElementById('singleActionForm');
+            form.action = url;
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

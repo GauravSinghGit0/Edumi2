@@ -1,7 +1,7 @@
 {% extends 'layouts/sidebar_base.html' %}
 {% load static %}
 
-{% block page_title %}{{ target_user.get_full_name|default:target_user.username }} — 360 Dossier | EduMi Admin{% endblock %}
+{% block page_title %}{{ target_user.get_full_name|default:target_user.username }} — 360 Profile | EduMi Admin{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin_modern.css' %}">
@@ -16,13 +16,7 @@
 <div class="admin-container">
 
   <!-- Breadcrumbs Bar -->
-  <div class="admin-breadcrumbs">
-    <a href="{% url 'admin_panel' %}">Home</a>
-    <span class="separator">/</span>
-    <a href="{% url 'user_management' %}">User Directory</a>
-    <span class="separator">/</span>
-    <span class="current">{{ target_user.get_full_name|default:target_user.username }}</span>
-  </div>
+  {% include "components/admin/breadcrumbs.html" with crumbs=breadcrumb_list %}
 
   <!-- Profile Hero -->
   <div class="profile-hero">
@@ -70,11 +64,18 @@
         <a href="{% url 'admin_edit_user' target_user.id %}" class="btn-action btn-action-primary">
           <i data-lucide="edit-3"></i> Edit Account
         </a>
+        <button type="button" class="btn-action btn-action-secondary" onclick="triggerPasswordReset('{{ target_user.id }}', '{{ target_user.username }}')">
+          <i data-lucide="key-round"></i> Reset Password
+        </button>
         {% if target_user != request.user %}
-        <form method="POST" action="{% url 'admin_toggle_user_active' target_user.id %}" style="display:inline;">
+        <form method="POST" action="{% url 'admin_toggle_user_active' target_user.id %}" style="display:inline;" data-loading data-loading-message="Updating user status...">
           {% csrf_token %}
           <button type="submit" class="btn-action {% if target_user.is_active %}btn-action-danger{% else %}btn-action-success{% endif %}"
-                  onclick="return confirm('{% if target_user.is_active %}Suspend{% else %}Activate{% endif %} this account?')">
+                  data-confirm="{% if target_user.is_active %}Suspend account @{{ target_user.username }}?{% else %}Activate account @{{ target_user.username }}?{% endif %}"
+                  data-confirm-title="{% if target_user.is_active %}Suspend User Account{% else %}Activate User Account{% endif %}"
+                  data-confirm-desc="{% if target_user.is_active %}Suspending this user invalidates active login sessions and blocks portal access.{% else %}Activating restores immediate portal access.{% endif %}"
+                  data-confirm-variant="{% if target_user.is_active %}danger{% else %}primary{% endif %}"
+                  data-confirm-text="{% if target_user.is_active %}Suspend User{% else %}Activate User{% endif %}">
             {% if target_user.is_active %}
               <i data-lucide="user-x"></i> Suspend
             {% else %}
@@ -83,7 +84,14 @@
           </button>
         </form>
         <a href="{% url 'delete_user' target_user.id %}" class="btn-action btn-action-danger"
-           onclick="return confirm('PERMANENTLY DELETE user @{{ target_user.username }}? This action cannot be undone.');">
+           data-loading data-loading-message="Deleting user account..."
+           data-confirm="PERMANENTLY DELETE user @{{ target_user.username }}? This action cannot be undone."
+           data-confirm-title="Delete User Account"
+           data-confirm-desc="Permanent deletion will purge profile records, credentials, and associated user states. Type the username below to confirm."
+           data-confirm-impact="User credentials revoked;Permanent deletion of user metadata;Historical audit logs retain username reference"
+           data-confirm-variant="danger"
+           data-confirm-require="{{ target_user.username }}"
+           data-confirm-text="Delete Account">
           <i data-lucide="trash-2"></i> Delete User
         </a>
         {% endif %}
@@ -542,12 +550,94 @@
 
 </div><!-- end admin-container -->
 
+<!-- Modal: Password Reset Link Generated -->
+<div id="passwordResetModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 520px;">
+        <div class="admin-modal-header">
+            <h3><i data-lucide="key-round"></i> Password Reset Link Generated</h3>
+            <button type="button" class="admin-modal-close" onclick="closeModal('passwordResetModal')">&times;</button>
+        </div>
+        <div class="admin-modal-body">
+            <p style="font-size:0.875rem;color:var(--color-text-secondary);margin-bottom:0.75rem;">
+                A secure one-time password reset link has been generated for <strong id="resetTargetUserText">@{{ target_user.username }}</strong>.
+            </p>
+            <div style="margin-bottom: 1rem;">
+                <label style="display:block;font-weight:600;font-size:0.82rem;margin-bottom:0.35rem;">Reset URL</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="resetUrlInput" readonly class="filter-input" style="width:100%;font-family:monospace;font-size:0.8rem;background:var(--color-bg-app);" onclick="this.select()">
+                    <button type="button" class="btn-action btn-action-primary" onclick="copyResetUrl()">
+                        <i data-lucide="copy"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--color-text-muted);">
+                This link allows setting a new account credential without requiring current password verification. Valid for 24 hours.
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button type="button" class="btn-action btn-action-secondary" onclick="closeModal('passwordResetModal')">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
 function switchTab(tabId) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tabId).classList.add('active');
   document.querySelector('.tab-btn[data-tab="' + tabId + '"]').classList.add('active');
+}
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.add('active');
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove('active');
+}
+
+function triggerPasswordReset(userId, username) {
+  EdumiConfirm.show({
+      title: `Reset Password for @${username}`,
+      description: `Generate a secure one-time password reset link for @${username}? This event will be logged in the Security Audit Trail.`,
+      variant: 'primary',
+      confirmText: 'Generate Reset Link'
+  }).then(ok => {
+      if (!ok) return;
+
+      fetch(`/admin/users/${userId}/reset-password/`, {
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'X-Requested-With': 'XMLHttpRequest'
+          }
+      })
+      .then(res => res.json())
+      .then(data => {
+          if (data.status === 'success') {
+              document.getElementById('resetTargetUserText').textContent = `@${data.username}`;
+              document.getElementById('resetUrlInput').value = data.reset_url;
+              openModal('passwordResetModal');
+              if (window.EdumiToast) EdumiToast.success('Password reset link created.');
+          } else {
+              if (window.EdumiToast) EdumiToast.error(data.message || 'Failed to generate link.');
+          }
+      })
+      .catch(err => {
+          console.error(err);
+          if (window.EdumiToast) EdumiToast.error('Network error generating reset link.');
+      });
+  });
+}
+
+function copyResetUrl() {
+  const input = document.getElementById('resetUrlInput');
+  input.select();
+  navigator.clipboard.writeText(input.value).then(() => {
+      if (window.EdumiToast) EdumiToast.success('Password reset link copied to clipboard!');
+  });
 }
 </script>
 {% endblock %}

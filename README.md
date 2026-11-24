@@ -72,6 +72,7 @@
 | **Video Editing Studio** | • Browser-based non-destructive timeline video editor (Canva/CapCut-style multi-track timeline).<br/>• Modular `UnifiedMediaUploader` handling video, audio, and images with client-side duration extraction, chunked parallel uploads (>10MB), and standard upload (<=10MB) with zero page reloads.<br/>• Sub-10 second 360p ultrafast proxy generation with 95ms seek latency for smooth scrubbing.<br/>• Multi-track audio overlay (linked & separated modes), volume balance, SVG waveforms, trim, split, rotate, resize, and custom text captions.<br/>• Web-optimized `-movflags +faststart` timeline compiler rendering via Celery workers. |
 | **Multimedia Compression Engine** | • Centralized `EduMiCompressionService` delivering domain-adaptive compression across all assets.<br/>• 3-phase dynamic chunked parallel transcoder with keyframe GOP boundary splitting.<br/>• Dual export pipeline (H.264 web stream + H.265 cold storage archive). |
 | **Enterprise Authentication** | • 6-digit email OTP verification with signed cryptographic fallback tokens.<br/>• Automated in-memory WebP avatar compression on save (75-80% smaller avatars).<br/>• Sliding-window rate limiters to protect against brute-force attacks and credential stuffing.<br/>• Strict role-based access control (Admin, Teacher, Student). |
+| **Enterprise Governance & Admin Control Center** | • Universal Command Palette (<kbd>Ctrl+K</kbd>) for instant keyboard-driven search across actions, users, courses, and live sessions.<br/>• Granular 7-flag Role-Based Access Control (`AdminRole`: Super Admin, Academic Admin, Attendance Auditor, IT Admin) with `@admin_permission_required` and 403 Forbidden protection.<br/>• Real-time System Health Telemetry Dashboard with auto-refresh monitoring LiveKit SFU, Redis, Celery, Database latency, and Disk storage allocation.<br/>• 3-Step Bulk User CSV Importer Wizard with row validation, background Celery processing, and downloadable error reports.<br/>• Live Session Monitor with emergency force-end controls and audit logging.<br/>• Centralized Approvals Queue for student enrollment and teacher onboarding.<br/>• Campus Announcements with targeted audience delivery via WebSockets.<br/>• Institutional Reports with dynamic CSV and ReportLab PDF document export.<br/>• Immutable Security Audit Trail (`AdminAuditTrail`) with visual side-by-side JSON before/after state diffs. |
 | **Messaging & Notifications** | • 1-to-1 direct messaging and campus-wide real-time WebSocket announcements.<br/>• Persistent in-app notifications for classes, assignment deadlines, and grade releases. |
 
 ---
@@ -272,25 +273,32 @@ Key parameters in `.env`:
 
 ## 🧪 Diagnostic & Test Utilities
 
-EduMi includes automated tools in `scripts/` to verify infrastructure health:
+EduMi includes automated tools and management commands to verify infrastructure health and seed presentation environments:
 
-1. **Django System Health & Model Checks:**
+1. **Seed Realistic Demonstration Dataset:**
    ```bash
-   python manage.py check
-   python manage.py test
+   # Seeds 3 Admins, 8 Teachers, 60 Students, 10 Courses, 30 Sessions,
+   # verified Attendance records, evaluated Submissions, and 45 Audit Logs:
+   python manage.py seed_demo_data --clean-test-users
    ```
 
-2. **Test SMTP Email & OTP Delivery:**
+2. **Django System Health & Regression Test Suite:**
+   ```bash
+   python manage.py check
+   python manage.py test accounts.tests.CommandPaletteTests accounts.tests.GranularAdminRBACTests accounts.tests.ApprovalsAndAnnouncementsTests accounts.tests.ReportsAndAnalyticsTests accounts.tests.SettingsAndGovernanceTests accounts.tests.UserDirectoryUpgradeTests accounts.tests.SystemHealthTests accounts.tests.AdminPortalBugFixesTests
+   ```
+
+3. **Test SMTP Email & OTP Delivery:**
    ```bash
    python scripts/test_smtp.py student@yourcollege.ac.in --verbose
    ```
 
-3. **Generate HTTPS SSL Certificates:**
+4. **Generate HTTPS SSL Certificates:**
    ```bash
    python scripts/generate_ssl_cert.py
    ```
 
-4. **Firewall & Certificate Helpers (Windows):**
+5. **Firewall & Certificate Helpers (Windows):**
    ```powershell
    # Add firewall exceptions for ports 8002, 8008, 7880-7882:
    .\scripts\allow_firewall.ps1
@@ -299,7 +307,7 @@ EduMi includes automated tools in `scripts/` to verify infrastructure health:
    .\scripts\trust_ssl_cert.ps1
    ```
 
-5. **Live Health Endpoint:**
+6. **Live Health Endpoint:**
    ```bash
    curl -k https://localhost:8002/health/
    ```
@@ -311,7 +319,7 @@ EduMi includes automated tools in `scripts/` to verify infrastructure health:
 ```
 Edumi2/
 ├── academics/               # Institutional academic management, semesters, and departments
-├── accounts/                # Authentication, profiles, OTPs, rate-limiting & direct messaging
+├── accounts/                # Authentication, profiles, OTPs, rate-limiting, RBAC & direct messaging
 ├── assignments/             # Homework submissions, timed quizzes, and automatic grading
 ├── attendance/              # YuNet + SFace biometric recognition, attendance ledgers
 ├── cameras/                 # Smart classroom RTSP cameras, lecture recording engine, and occupancy counting
@@ -321,7 +329,7 @@ Edumi2/
 ├── rag_assistant/           # Academic document search and AI study assistant (RAG engine)
 ├── video_editing/           # Non-destructive in-browser video editor & FFmpeg filtergraphs
 ├── videos/                  # On-demand lecture library with multi-bitrate HLS streaming
-├── common/                  # Cross-app utilities, telemetry, audit logs, magic-byte checks
+├── common/                  # Cross-app utilities, telemetry, audit logs, magic-byte checks, SiteSetting & AdminRole
 ├── config/                  # Microservice configurations (livekit.yaml)
 ├── scripts/                 # SSL generation, firewall tools, SMTP verification scripts
 ├── templates/               # Semantic HTML5 templates (responsive layouts, modular partials)
@@ -337,22 +345,38 @@ Edumi2/
 
 ## 👥 User Roles & Permissions
 
+EduMi enforces enterprise Granular Role-Based Access Control (RBAC) across administrative and academic operations:
+
 ```
-                     ┌───────────────────────────┐
-                     │        Admin / Root       │
-                     │ (Full Platform Oversight) │
-                     └─────────────┬─────────────┘
-                                   │
-                 ┌─────────────────┴─────────────────┐
-                 │                                   │
-   ┌─────────────▼─────────────┐       ┌─────────────▼─────────────┐
-   │          Teacher          │       │          Student          │
-   │  • Schedule Live Classes  │       │  • Join Approved Classes  │
-   │  • Host WebRTC Rooms      │       │  • Attend Live Sessions   │
-   │  • View Biometric Reports │       │  • Complete Face Setup    │
-   │  • Manage Assignments     │       │  • Submit Work & Quizzes  │
-   │  • Access Classroom Studio│       │  • Watch Lecture Library  │
-   └───────────────────────────┘       └───────────────────────────┘
+                      ┌──────────────────────────────────────────────┐
+                      │          Super Admin (Full Access)           │
+                      │           (rajesh.sharma / root)             │
+                      └──────────────────────┬───────────────────────┘
+                                             │
+         ┌───────────────────────────────────┼───────────────────────────────────┐
+         │                                   │                                   │
+┌────────▼──────────────┐         ┌──────────▼──────────┐             ┌──────────▼──────────┐
+│    Academic Admin     │         │ Attendance Auditor  │             │      IT Admin       │
+│    (priya.patel)      │         │                     │             │   (vikram.singh)    │
+├───────────────────────┤         ├─────────────────────┤             ├─────────────────────┤
+│• Manage Courses       │         │• View Audit Trail   │             │• System Health      │
+│• Manage Sessions      │         │• Export Attendance  │             │• Camera Gateway     │
+│• Approvals Queue      │         │• Attendance Reports │             │• Platform Settings  │
+│• Export Reports       │         │• Review Biometrics  │             │• Audit Logs         │
+└───────────────────────┘         └─────────────────────┘             └─────────────────────┘
+         │                                   │                                   │
+         └───────────────────────────────────┼───────────────────────────────────┘
+                                             │
+                        ┌────────────────────┴────────────────────┐
+                        │                                         │
+          ┌─────────────▼─────────────┐             ┌─────────────▼─────────────┐
+          │          Teacher          │             │          Student          │
+          │  • Schedule Live Classes  │             │  • Join Approved Classes  │
+          │  • Host WebRTC Rooms      │             │  • Attend Live Sessions   │
+          │  • View Biometric Reports │             │  • Complete Face Setup    │
+          │  • Manage Assignments     │             │  • Submit Work & Quizzes  │
+          │  • Access Classroom Studio│             │  • Watch Lecture Library  │
+          └───────────────────────────┘             └───────────────────────────┘
 ```
 
 ---

@@ -1,0 +1,577 @@
+<!-- Command Palette Modal (Ctrl+K) -->
+<div id="commandPaletteOverlay" class="cmd-palette-overlay" role="dialog" aria-modal="true" aria-label="Command Palette" style="display: none;">
+    <div class="cmd-palette-backdrop" onclick="closeCommandPalette()"></div>
+    <div class="cmd-palette-modal">
+        <!-- Search Input Bar -->
+        <div class="cmd-palette-header">
+            <i data-lucide="search" class="cmd-palette-search-icon"></i>
+            <input type="text" id="cmdPaletteInput" class="cmd-palette-input" 
+                   placeholder="Search users, courses, live sessions, or actions... (Esc to close)" 
+                   autocomplete="off" spellcheck="false" 
+                   role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="cmdPaletteResults">
+            <div class="cmd-palette-shortcuts">
+                <kbd class="cmd-kbd">ESC</kbd>
+            </div>
+        </div>
+
+        <!-- Quick Filter Category Tabs -->
+        <div class="cmd-palette-filters">
+            <button type="button" class="cmd-filter-pill active" data-filter="all" onclick="filterCmdPalette('all', this)">All</button>
+            <button type="button" class="cmd-filter-pill" data-filter="Quick Actions" onclick="filterCmdPalette('Quick Actions', this)">Actions</button>
+            <button type="button" class="cmd-filter-pill" data-filter="Users" onclick="filterCmdPalette('Users', this)">Users</button>
+            <button type="button" class="cmd-filter-pill" data-filter="Courses" onclick="filterCmdPalette('Courses', this)">Courses</button>
+            <button type="button" class="cmd-filter-pill" data-filter="Live Sessions" onclick="filterCmdPalette('Live Sessions', this)">Sessions</button>
+        </div>
+
+        <!-- Results Body -->
+        <div class="cmd-palette-body" id="cmdPaletteResults" role="listbox">
+            <div class="cmd-palette-loading" id="cmdPaletteLoading" style="display: none;">
+                <div class="cmd-spinner"></div>
+                <span>Searching workspace...</span>
+            </div>
+            <div class="cmd-palette-list" id="cmdPaletteList">
+                <!-- Dynamically rendered via JS -->
+            </div>
+            <div class="cmd-palette-empty" id="cmdPaletteEmpty" style="display: none;">
+                <i data-lucide="help-circle" style="width: 32px; height: 32px; opacity: 0.5; margin-bottom: 0.5rem;"></i>
+                <div style="font-weight: 600;">No matching results found</div>
+                <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.25rem;">Try searching for a user name, course title, or action like "import"</div>
+            </div>
+        </div>
+
+        <!-- Footer with Navigation Hints -->
+        <div class="cmd-palette-footer">
+            <div class="cmd-footer-hint">
+                <kbd class="cmd-kbd-sm">&uarr;</kbd><kbd class="cmd-kbd-sm">&darr;</kbd> <span>Navigate</span>
+            </div>
+            <div class="cmd-footer-hint">
+                <kbd class="cmd-kbd-sm">&crarr;</kbd> <span>Open</span>
+            </div>
+            <div class="cmd-footer-hint">
+                <kbd class="cmd-kbd-sm">Esc</kbd> <span>Close</span>
+            </div>
+            <div class="cmd-footer-brand">
+                <span>EduMi Command</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Command Palette Styles */
+.cmd-palette-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: clamp(60px, 12vh, 120px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease-out;
+}
+.cmd-palette-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.cmd-palette-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.cmd-palette-modal {
+    position: relative;
+    width: 90%;
+    max-width: 640px;
+    background: var(--color-bg-card, #ffffff);
+    color: var(--color-text-main, #0f172a);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    transform: scale(0.97) translateY(-8px);
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+}
+.cmd-palette-overlay.active .cmd-palette-modal {
+    transform: scale(1) translateY(0);
+}
+.cmd-palette-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-bg-main, #f8fafc);
+}
+.cmd-palette-search-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--color-primary, #8b5cf6);
+    flex-shrink: 0;
+}
+.cmd-palette-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-text-main, #0f172a);
+}
+.cmd-palette-input::placeholder {
+    color: var(--color-text-muted, #94a3b8);
+}
+.cmd-palette-shortcuts {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.cmd-kbd {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.7rem;
+    font-family: inherit;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.cmd-kbd-sm {
+    display: inline-block;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: var(--color-bg-card, #ffffff);
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 4px;
+    margin-right: 0.2rem;
+}
+.cmd-palette-filters {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    background: var(--color-bg-card, #ffffff);
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    overflow-x: auto;
+}
+.cmd-filter-pill {
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: var(--color-bg-main, #f8fafc);
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.cmd-filter-pill:hover,
+.cmd-filter-pill.active {
+    background: var(--color-primary, #8b5cf6);
+    color: #ffffff;
+    border-color: var(--color-primary, #8b5cf6);
+}
+.cmd-palette-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+    min-height: 200px;
+    max-height: 52vh;
+}
+.cmd-category-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted, #64748b);
+    padding: 0.5rem 0.5rem 0.25rem 0.5rem;
+    margin-top: 0.25rem;
+}
+.cmd-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid transparent;
+}
+.cmd-item:hover,
+.cmd-item.selected {
+    background: var(--color-bg-hover, #f1f5f9);
+    border-color: var(--color-border, #e2e8f0);
+}
+.dark-mode .cmd-item:hover,
+.dark-mode .cmd-item.selected {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.25);
+}
+.cmd-item-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--color-primary, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.cmd-item-icon-box i {
+    width: 16px;
+    height: 16px;
+}
+.cmd-item-content {
+    flex: 1;
+    min-width: 0;
+}
+.cmd-item-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-main, #0f172a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cmd-item-subtitle {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 0.1rem;
+}
+.cmd-item-badge {
+    padding: 0.15rem 0.45rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--color-bg-main, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    color: var(--color-text-muted, #64748b);
+    flex-shrink: 0;
+}
+.cmd-palette-loading,
+.cmd-palette-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.85rem;
+}
+.cmd-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--color-border, #e2e8f0);
+    border-top-color: var(--color-primary, #8b5cf6);
+    border-radius: 50%;
+    animation: cmdSpin 0.7s linear infinite;
+    margin-bottom: 0.6rem;
+}
+@keyframes cmdSpin {
+    to { transform: rotate(360deg); }
+}
+.cmd-palette-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1.25rem;
+    background: var(--color-bg-main, #f8fafc);
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #64748b);
+}
+.cmd-footer-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.cmd-footer-brand {
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    color: var(--color-primary, #8b5cf6);
+    text-transform: uppercase;
+}
+
+/* Dark Mode Overrides */
+.dark-mode .cmd-palette-modal {
+    background: #1e1e2d;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #f1f5f9;
+}
+.dark-mode .cmd-palette-header,
+.dark-mode .cmd-palette-footer {
+    background: #181824;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.dark-mode .cmd-palette-filters {
+    background: #1e1e2d;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.dark-mode .cmd-filter-pill {
+    background: #181824;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+.dark-mode .cmd-kbd,
+.dark-mode .cmd-kbd-sm {
+    background: #2b2b3b;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+.dark-mode .cmd-item-title {
+    color: #f8fafc;
+}
+.dark-mode .cmd-item-badge {
+    background: #181824;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+</style>
+
+<script>
+(function() {
+    let currentResults = [];
+    let selectedIndex = 0;
+    let activeFilter = 'all';
+    let debounceTimer = null;
+
+    window.openCommandPalette = function() {
+        const overlay = document.getElementById('commandPaletteOverlay');
+        const input = document.getElementById('cmdPaletteInput');
+        if (!overlay || !input) return;
+
+        overlay.style.display = 'flex';
+        // force reflow
+        void overlay.offsetWidth;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        input.value = '';
+        input.focus();
+        fetchCommandPaletteResults('');
+    };
+
+    window.closeCommandPalette = function() {
+        const overlay = document.getElementById('commandPaletteOverlay');
+        if (!overlay) return;
+
+        overlay.classList.remove('active');
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 180);
+    };
+
+    window.toggleCommandPalette = function() {
+        const overlay = document.getElementById('commandPaletteOverlay');
+        if (overlay && overlay.classList.contains('active')) {
+            closeCommandPalette();
+        } else {
+            openCommandPalette();
+        }
+    };
+
+    window.filterCmdPalette = function(category, btn) {
+        activeFilter = category;
+        document.querySelectorAll('.cmd-filter-pill').forEach(p => p.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderItems();
+    };
+
+    function fetchCommandPaletteResults(query) {
+        const loading = document.getElementById('cmdPaletteLoading');
+        const empty = document.getElementById('cmdPaletteEmpty');
+        const list = document.getElementById('cmdPaletteList');
+        
+        if (loading) loading.style.display = 'flex';
+        if (empty) empty.style.display = 'none';
+
+        fetch(`/admin/api/command-palette/?q=${encodeURIComponent(query)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (loading) loading.style.display = 'none';
+            if (data.status === 'success') {
+                currentResults = data.results || [];
+                renderItems();
+            }
+        })
+        .catch(err => {
+            if (loading) loading.style.display = 'none';
+            console.error('Command palette fetch error:', err);
+        });
+    }
+
+    function renderItems() {
+        const list = document.getElementById('cmdPaletteList');
+        const empty = document.getElementById('cmdPaletteEmpty');
+        if (!list) return;
+
+        const filtered = activeFilter === 'all' 
+            ? currentResults 
+            : currentResults.filter(item => item.category === activeFilter);
+
+        list.innerHTML = '';
+        selectedIndex = 0;
+
+        if (filtered.length === 0) {
+            if (empty) empty.style.display = 'flex';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        // Group by category
+        const groups = {};
+        filtered.forEach(item => {
+            if (!groups[item.category]) groups[item.category] = [];
+            groups[item.category].push(item);
+        });
+
+        let flatIndex = 0;
+        for (const [catName, items] of Object.entries(groups)) {
+            const catHeader = document.createElement('div');
+            catHeader.className = 'cmd-category-title';
+            catHeader.textContent = catName;
+            list.appendChild(catHeader);
+
+            items.forEach(item => {
+                const el = document.createElement('a');
+                el.href = item.url;
+                el.className = 'cmd-item' + (flatIndex === 0 ? ' selected' : '');
+                el.setAttribute('data-index', flatIndex);
+                el.setAttribute('role', 'option');
+                el.id = `cmd-item-${flatIndex}`;
+
+                el.innerHTML = `
+                    <div class="cmd-item-icon-box">
+                        <i data-lucide="${item.icon || 'arrow-right'}"></i>
+                    </div>
+                    <div class="cmd-item-content">
+                        <div class="cmd-item-title">${escapeHtml(item.title)}</div>
+                        <div class="cmd-item-subtitle">${escapeHtml(item.subtitle)}</div>
+                    </div>
+                    <span class="cmd-item-badge">${escapeHtml(item.badge || item.category)}</span>
+                `;
+
+                el.addEventListener('mouseenter', function() {
+                    setSelectedIndex(parseInt(this.getAttribute('data-index'), 10));
+                });
+
+                el.addEventListener('click', function(e) {
+                    closeCommandPalette();
+                });
+
+                list.appendChild(el);
+                flatIndex++;
+            });
+        }
+
+        if (window.lucide && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }
+
+    function setSelectedIndex(index) {
+        const items = document.querySelectorAll('.cmd-item');
+        if (!items.length) return;
+
+        if (index < 0) index = items.length - 1;
+        if (index >= items.length) index = 0;
+
+        items.forEach(el => el.classList.remove('selected'));
+        selectedIndex = index;
+
+        const current = items[selectedIndex];
+        if (current) {
+            current.classList.add('selected');
+            current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Keyboard Shortcuts (Ctrl+K or Cmd+K)
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+K or Cmd+K
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+            e.preventDefault();
+            toggleCommandPalette();
+            return;
+        }
+
+        const overlay = document.getElementById('commandPaletteOverlay');
+        if (!overlay || !overlay.classList.contains('active')) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeCommandPalette();
+            return;
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex(selectedIndex + 1);
+            return;
+        }
+
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex(selectedIndex - 1);
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            const items = document.querySelectorAll('.cmd-item');
+            if (items[selectedIndex]) {
+                e.preventDefault();
+                items[selectedIndex].click();
+                window.location.href = items[selectedIndex].href;
+            }
+            return;
+        }
+    });
+
+    // Input Search Debounce
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('cmdPaletteInput');
+        if (input) {
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    fetchCommandPaletteResults(input.value.trim());
+                }, 160);
+            });
+        }
+    });
+})();
+</script>

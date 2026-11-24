@@ -1,0 +1,201 @@
+<!-- =========================================================
+     REUSABLE ADMIN CONFIRMATION MODAL COMPONENT (JS + CSS)
+     Replaces raw browser confirm() dialogs with accessible,
+     governance-grade modal supporting:
+     - Danger / Primary / Warning variants
+     - Impact summary bullet points
+     - "Type name to unlock" for destructive safety
+     - Promise-based JS API (await EdumiConfirm.show({...}))
+     - Declarative data-confirm attributes on HTML elements
+     ========================================================= -->
+<div id="edumiConfirmModal" class="admin-modal-overlay edumi-confirm-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="admin-modal-card edumi-confirm-card">
+        <div class="edumi-confirm-header">
+            <div id="edumiConfirmIcon" class="edumi-confirm-badge danger">
+                <i data-lucide="alert-triangle"></i>
+            </div>
+            <div class="edumi-confirm-titles">
+                <h3 id="edumiConfirmTitle">Confirm Action</h3>
+                <p id="edumiConfirmDesc">Are you sure you want to proceed with this administrative action?</p>
+            </div>
+            <button type="button" class="admin-modal-close" onclick="EdumiConfirm.cancel()">&times;</button>
+        </div>
+
+        <!-- Impact Summary List (optional) -->
+        <div id="edumiConfirmImpactBox" class="edumi-confirm-impact" style="display: none;">
+            <div class="edumi-impact-title">
+                <i data-lucide="shield-alert" style="width: 15px; height: 15px;"></i> Impact Summary
+            </div>
+            <ul id="edumiConfirmImpactList"></ul>
+        </div>
+
+        <!-- Type Name to Confirm Input (optional for destructive actions) -->
+        <div id="edumiConfirmPromptBox" class="edumi-confirm-prompt" style="display: none;">
+            <label id="edumiConfirmPromptLabel" for="edumiConfirmPromptInput">
+                Type <strong id="edumiConfirmMatchTarget"></strong> to confirm:
+            </label>
+            <input type="text" id="edumiConfirmPromptInput" class="admin-search-input" autocomplete="off" placeholder="Type target name to unlock confirm">
+        </div>
+
+        <div class="admin-modal-footer edumi-confirm-footer">
+            <button type="button" id="edumiConfirmCancelBtn" class="btn-action btn-action-secondary" onclick="EdumiConfirm.cancel()">
+                Cancel
+            </button>
+            <button type="button" id="edumiConfirmActionBtn" class="btn-action btn-action-danger">
+                <span id="edumiConfirmBtnText">Confirm</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    if (window.EdumiConfirm) return;
+
+    window.EdumiConfirm = {
+        _resolve: null,
+        _matchText: '',
+
+        show(options) {
+            return new Promise((resolve) => {
+                this._resolve = resolve;
+                const modal = document.getElementById('edumiConfirmModal');
+                if (!modal) {
+                    resolve(window.confirm(options.title || options.description || 'Confirm?'));
+                    return;
+                }
+
+                const titleEl = document.getElementById('edumiConfirmTitle');
+                const descEl = document.getElementById('edumiConfirmDesc');
+                const iconBadge = document.getElementById('edumiConfirmIcon');
+                const impactBox = document.getElementById('edumiConfirmImpactBox');
+                const impactList = document.getElementById('edumiConfirmImpactList');
+                const promptBox = document.getElementById('edumiConfirmPromptBox');
+                const matchTargetEl = document.getElementById('edumiConfirmMatchTarget');
+                const promptInput = document.getElementById('edumiConfirmPromptInput');
+                const actionBtn = document.getElementById('edumiConfirmActionBtn');
+                const cancelBtn = document.getElementById('edumiConfirmCancelBtn');
+                const btnText = document.getElementById('edumiConfirmBtnText');
+
+                const variant = options.variant || 'danger';
+                const title = options.title || 'Confirm Action';
+                const desc = options.description || '';
+                const confirmText = options.confirmText || (variant === 'danger' ? 'Proceed' : 'Confirm');
+                const cancelText = options.cancelText || 'Cancel';
+                const impacts = options.impact || [];
+                this._matchText = (options.requireText || '').trim();
+
+                titleEl.textContent = title;
+                descEl.textContent = desc;
+                btnText.textContent = confirmText;
+                cancelBtn.textContent = cancelText;
+
+                // Variant styling
+                actionBtn.className = `btn-action btn-action-${variant}`;
+                iconBadge.className = `edumi-confirm-badge ${variant}`;
+
+                const iconMap = {
+                    danger: 'alert-triangle',
+                    warning: 'alert-circle',
+                    primary: 'check-circle',
+                    success: 'check-circle'
+                };
+                iconBadge.innerHTML = `<i data-lucide="${iconMap[variant] || 'alert-triangle'}"></i>`;
+                if (window.lucide && lucide.createIcons) {
+                    lucide.createIcons({ root: iconBadge });
+                }
+
+                // Impact summary
+                if (impacts && impacts.length > 0) {
+                    impactList.innerHTML = impacts.map(item => `<li>${item}</li>`).join('');
+                    impactBox.style.display = 'block';
+                } else {
+                    impactBox.style.display = 'none';
+                    impactList.innerHTML = '';
+                }
+
+                // Type name to confirm input
+                if (this._matchText) {
+                    promptBox.style.display = 'block';
+                    matchTargetEl.textContent = this._matchText;
+                    promptInput.value = '';
+                    actionBtn.disabled = true;
+                    actionBtn.style.opacity = '0.5';
+                    actionBtn.style.cursor = 'not-allowed';
+
+                    promptInput.oninput = () => {
+                        const matched = promptInput.value.trim() === this._matchText;
+                        actionBtn.disabled = !matched;
+                        actionBtn.style.opacity = matched ? '1' : '0.5';
+                        actionBtn.style.cursor = matched ? 'pointer' : 'not-allowed';
+                    };
+                } else {
+                    promptBox.style.display = 'none';
+                    actionBtn.disabled = false;
+                    actionBtn.style.opacity = '1';
+                    actionBtn.style.cursor = 'pointer';
+                }
+
+                actionBtn.onclick = () => {
+                    this.close();
+                    if (typeof options.onConfirm === 'function') {
+                        options.onConfirm();
+                    }
+                    resolve(true);
+                };
+
+                modal.classList.add('active');
+                if (this._matchText) {
+                    setTimeout(() => promptInput.focus(), 150);
+                }
+            });
+        },
+
+        cancel() {
+            this.close();
+            if (this._resolve) this._resolve(false);
+        },
+
+        close() {
+            const modal = document.getElementById('edumiConfirmModal');
+            if (modal) modal.classList.remove('active');
+        }
+    };
+
+    // Global event delegation for data-confirm attributes
+    document.addEventListener('click', async (e) => {
+        const trigger = e.target.closest('[data-confirm]');
+        if (!trigger) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const title = trigger.dataset.confirmTitle || 'Confirm Action';
+        const description = trigger.dataset.confirmDesc || trigger.dataset.confirm || 'Are you sure you want to proceed?';
+        const variant = trigger.dataset.confirmVariant || 'danger';
+        const confirmText = trigger.dataset.confirmText || (variant === 'danger' ? 'Proceed' : 'Confirm');
+        const requireText = trigger.dataset.confirmRequire || '';
+        const impactRaw = trigger.dataset.confirmImpact || '';
+        const impact = impactRaw ? impactRaw.split(';').map(s => s.trim()).filter(Boolean) : [];
+
+        const confirmed = await EdumiConfirm.show({
+            title,
+            description,
+            variant,
+            confirmText,
+            requireText,
+            impact
+        });
+
+        if (confirmed) {
+            if (trigger.tagName === 'A' && trigger.href) {
+                window.location.href = trigger.href;
+            } else if (trigger.form) {
+                trigger.form.submit();
+            } else if (trigger.closest('form')) {
+                trigger.closest('form').submit();
+            }
+        }
+    });
+})();
+</script>

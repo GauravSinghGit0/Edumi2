@@ -1,18 +1,48 @@
-# 🛠️ Common Module & Multimedia Compression Engine
+# 🛠️ Common Module, Governance & Multimedia Compression Engine
 
 <details open>
 <summary><b>1. Core Purpose</b></summary>
-The `common` app provides shared enterprise infrastructure across the entire EduMi2 ecosystem:
+The `common` app provides shared enterprise infrastructure across the entire EduMi ecosystem:
 - **Unified Multimedia Compression Engine (`EduMiCompressionService`)**: Benchmark-proven domain-adaptive codecs across images, classroom lecture archival, proxy streaming, and video transcoding.
+- **Institutional Governance & Audit Infrastructure**:
+  - `AdminRole`: 7-flag granular Role-Based Access Control model.
+  - `AdminAuditTrail`: Immutable compliance logging with side-by-side JSON state diffs.
+  - `SiteSetting`: Centralized settings store for institution, academic, attendance, and security configurations with Redis caching.
+  - `Announcement`: Cohort broadcast notification system integrated with Django Channels WebSockets.
+- **Microservice Health Telemetry (`common.system_health`)**: Non-blocking asynchronous probing of LiveKit SFU, Redis, Celery, Database, and Disk Storage with 5-second socket timeouts and 15-second caching.
 - **Database & Model Mixins**: Abstract models for audit timestamps (`TimeStampedModel`) and non-destructive soft deletion (`SoftDeleteMixin`).
 - **Binary Signature File Validation**: Strict magic-byte inspection protecting file uploads against extension spoofing.
 - **Field-Level Cryptography**: At-rest AES-256 column encryption (`EncryptedTextField`).
-- **Shared Template Tags & Utilities**: Global pagination, duration formatters, and identity helpers.
 </details>
 
 <details open>
-<summary><b>2. Rationale & Architecture</b></summary>
-Promotes strict DRY (Don't Repeat Yourself) principles and clean architecture. Heavy multimedia processing, cryptography, and safety validations are centralized in `common` and consumed uniformly by `accounts`, `cameras`, `video_editing`, `videos`, and `meetings`. This completely eliminates code duplication (e.g., ad-hoc FFmpeg subprocess calls scattered across apps) and guarantees consistent compression presets platform-wide.
+<summary><b>2. Institutional Governance & Telemetry Engine</b></summary>
+
+### 1. Granular RBAC Model (`AdminRole`)
+- Stores 7 granular capability flags: `manage_users`, `manage_courses`, `manage_sessions`, `view_audit`, `manage_settings`, `manage_cameras`, `export_data`.
+- Protects system roles with `is_system_role=True` and provides `seed_default_roles()` classmethod.
+
+### 2. Immutable Audit Trail (`AdminAuditTrail`)
+- Records administrative operations: `USER_CREATED`, `USER_SUSPENDED`, `ROLE_CHANGED`, `PASSWORD_RESET`, `CLASSROOM_CREATED`, `CLASSROOM_ARCHIVED`, `ENROLLMENT_APPROVED`, `DATA_EXPORTED`, `SETTINGS_CHANGED`, `BULK_ACTION`.
+- Contains `changes_json` capturing before/after attribute mutations, rendered dynamically in the admin UI via the slide-out visual diff drawer.
+
+### 3. Real-Time System Health Service (`system_health.py`)
+- Independent, decoupled health checks ensuring the admin portal never hangs:
+  - `check_livekit_sfu()`: LiveKit port 7880 probe & active room counting via REST API.
+  - `check_redis()`: Ping round-trip latency (ms) and memory usage.
+  - `check_celery()`: Active worker status, concurrency, and queue depths.
+  - `check_database()`: Database engine check and query response time.
+  - `check_storage()`: Disk allocation breakdown for recordings, uploads, and biometric assets.
+  - `check_camera_gateway()`: Camera streaming microservice port 8008 health check.
+- **Resilience**: Every individual check operates under a 5.0-second socket timeout and results are cached for 15 seconds.
+
+### 4. Dynamic Platform Settings (`SiteSetting`)
+- Provides key-value institutional configuration across:
+  - *Institution*: Name, branding, support contact.
+  - *Academic*: Semesters and departments.
+  - *Attendance*: Face-match threshold, late-join duration window.
+  - *Security*: Password policy, session timeouts.
+  - *Email*: SMTP host, port, credentials, and live test email utility.
 </details>
 
 <details open>
@@ -54,10 +84,12 @@ Inspects binary file headers before writing uploads to disk:
 <details>
 <summary><b>5. Key Files Breakdown</b></summary>
 
+- `models.py`: Defines `AdminRole`, `AdminAuditTrail`, `SiteSetting`, `Announcement`, and `UserActivityLog`.
+- `system_health.py`: Resilient infrastructure health checker with 5s timeouts and 15s caching.
+- `announcement_service.py`: Dispatcher routing announcements to notifications and WebSockets.
 - `compression_service.py`: High-performance singleton wrapping FFmpeg, FFprobe, and Pillow for all multimedia compression operations.
 - `validators.py`: Binary header validator functions preventing extension spoofing and malicious payload execution.
 - `encryption.py`: Custom Django database fields with automatic transparent cryptography.
-- `models.py`: Abstract base classes (`SoftDeleteMixin`, `TimeStampedModel`).
-- `utils.py`: Helper functions for file operations, timezone formatting, and unified JSON envelopes.
-- `templatetags/common_tags.py`: Template filters for UI duration formatting, file sizes, and role badges.
+- `templatetags/common_tags.py`: Template filters for UI duration formatting, file sizes, role badges, and permission checks.
+- `templates/components/admin/breadcrumbs.html`: Standardized reusable breadcrumb component with Lucide chevron dividers and automatic title fallbacks.
 </details>

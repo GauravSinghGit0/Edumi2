@@ -107,7 +107,10 @@ def get_timeline_feed(user=None, limit=30):
 
     # 2. Integrate real milestone records from DB if activity log is sparse
     from django.apps import apps
-    ClassroomMembership = apps.get_model('academics' if getattr(settings, 'FEATURE_USE_NEW_ACADEMICS_APP', False) else 'meetings', 'ClassroomMembership')
+    try:
+        ClassroomMembership = apps.get_model('academics', 'ClassroomMembership')
+    except LookupError:
+        ClassroomMembership = apps.get_model('meetings', 'ClassroomMembership')
     MeetingParticipant = apps.get_model('meetings', 'MeetingParticipant')
     from assignments.models import AssignmentSubmission, QuizSubmission
 
@@ -253,3 +256,70 @@ def _get_action_color(action):
         ACTION_TEACHER_CREATED_CLASS: '#ec4899',
     }
     return colors.get(action, '#6366f1')
+
+
+def log_admin_action(request, action_type, target=None, changes=None):
+    """
+    Log an administrative governance action into AdminAuditTrail.
+    - request: HttpRequest containing admin user and client metadata (or None)
+    - action_type: One of AdminAuditTrail.ACTION_* choices
+    - target: Model instance (User, Classroom, ClassroomMembership, Meeting, etc.), string, or dict
+    - changes: Optional dictionary representing before/after diff or action parameters
+    """
+    from common.models import AdminAuditTrail
+
+    admin_user = None
+    ip = None
+    user_agent = ''
+
+    if request:
+        if hasattr(request, 'user') and request.user.is_authenticated:
+            admin_user = request.user
+        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded:
+            ip = x_forwarded.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+
+    target_type = ''
+    target_id = ''
+    target_label = ''
+
+    if target is not None:
+        if isinstance(target, str):
+            target_type = 'System'
+            target_id = ''
+            target_label = target
+        elif hasattr(target, '_meta'):
+            target_type = target.__class__.__name__
+            target_id = str(getattr(target, 'pk', '') or '')
+            if hasattr(target, 'get_full_name') and hasattr(target, 'username'):
+                full_name = target.get_full_name()
+                target_label = f"@{target.username}" + (f" ({full_name})" if full_name else "")
+            elif hasattr(target, 'title'):
+                target_label = str(target.title)
+            elif hasattr(target, 'name'):
+                target_label = str(target.name)
+            elif hasattr(target, 'student') and hasattr(target, 'classroom'):
+                target_label = f"Student @{getattr(target.student, 'username', '')} in {getattr(target.classroom, 'title', '')}"
+            else:
+                target_label = str(target)
+        elif isinstance(target, dict):
+            target_type = str(target.get('type', 'Dict'))
+            target_id = str(target.get('id', ''))
+            target_label = str(target.get('label', ''))
+
+    changes_dict = changes if isinstance(changes, dict) else ({} if changes is None else {'details': str(changes)})
+
+    return AdminAuditTrail.objects.create(
+        admin_user=admin_user,
+        action_type=action_type,
+        target_type=target_type,
+        target_id=target_id,
+        target_label=target_label,
+        ip_address=ip,
+        user_agent=user_agent,
+        changes_json=changes_dict,
+    )
+
